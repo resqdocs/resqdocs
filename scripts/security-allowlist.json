@@ -1,0 +1,127 @@
+{
+  "note": "Begruendete Ausnahmen fuer scripts/security-check.mjs. Jeder Eintrag: file (Pfad-Teilstring), term (Begriff oder 'ip'/'email'/'*'), optional contains (Zeilen-Kontext), reason.",
+  "allow": [
+    {
+      "file": "apps/pico-pwa/package.json",
+      "term": "private",
+      "contains": "\"private\": true",
+      "reason": "npm-Standardfeld gegen versehentliches Publish"
+    },
+    {
+      "file": ".github/workflows/",
+      "term": "token",
+      "reason": "GitHub-eigenes Actions-Token (secrets.GITHUB_TOKEN), kein eigenes Secret"
+    },
+    {
+      "file": ".github/workflows/",
+      "term": "secret",
+      "reason": "Verweis auf GitHub-eigene secrets-Syntax"
+    },
+    {
+      "file": "fastlane/Appfile",
+      "term": "team_id",
+      "contains": "ENV",
+      "reason": "Platzhalter ueber Umgebungsvariable, kein echter Wert"
+    },
+    {
+      "file": "fastlane/Fastfile",
+      "term": "fastlane",
+      "reason": "Werkzeugname im eigenen Konfig-Kommentar"
+    },
+    {
+      "file": "fastlane/Fastfile",
+      "term": "api_key",
+      "contains": "ENV",
+      "reason": "Schluessel kommt ausschliesslich aus Umgebungsvariablen"
+    },
+    {
+      "file": "fastlane/Fastfile",
+      "term": "api_key",
+      "contains": "api_key:",
+      "reason": "Parametername der Fastlane-API, kein Wert"
+    },
+    {
+      "file": "docs/android-release.md",
+      "term": "keystore",
+      "reason": "generische Anleitung zum Erstellen eines EIGENEN Keystores"
+    },
+    {
+      "file": "docs/android-release.md",
+      "term": "password",
+      "reason": "Anleitung nennt Platzhalter, keine echten Werte"
+    },
+    {
+      "file": "docs/android-release.md",
+      "term": "certificate",
+      "reason": "generische Signier-Anleitung"
+    },
+    {
+      "file": "docs/android-release.md",
+      "term": "production",
+      "reason": "beschreibt Play-Store-Track-Konzept allgemein"
+    },
+    {
+      "file": "docs/android-release.md",
+      "term": "internal",
+      "reason": "beschreibt Play-Store-Track-Konzept allgemein"
+    },
+    {
+      "file": "docs/android-release.md",
+      "term": "firebase",
+      "reason": "Hinweis, dass KEIN Firebase verwendet wird"
+    },
+    {
+      "file": "docs/android.md",
+      "term": "keystore",
+      "reason": "generische Build-Anleitung"
+    },
+    {
+      "file": "docs/android.md",
+      "term": "firebase",
+      "reason": "Hinweis, dass KEIN Firebase/GMS verwendet wird"
+    },
+    {
+      "file": "docs/data-flow.md",
+      "term": "secret",
+      "contains": "keine",
+      "reason": "Aussage: keine Secrets im Code/Repo"
+    },
+    {
+      "file": "docs/pico-api.md",
+      "term": "token",
+      "reason": "Aussage: kein Token-Auth im MVP; Seam-Beschreibung"
+    },
+    {
+      "file": "docs/pico-api.md",
+      "term": "internal",
+      "reason": "technischer Begriff in API-Beschreibung"
+    },
+    {
+      "file": "docs/sources.md",
+      "term": "production",
+      "reason": "Zitat/Quellenbeschreibung"
+    },
+    {
+      "file": "src/storage/storage.test.ts",
+      "term": "ip",
+      "reason": "fiktive Test-Adressen (10.0.0.x), keine reale Infrastruktur"
+    },
+    {
+      "file": "firmware/bridge/bridge_s2/bridge_s2.ino",
+      "term": "ip",
+      "contains": "192.168.4.1",
+      "reason": "dokumentierter arduino-pico-Core-Default im Kommentar"
+    },
+    {
+      "file": "firmware/bridge/slice_b_bridge/slice_b_bridge.ino",
+      "term": "ip",
+      "reason": "historischer AP-Default des Lernstands, lokale AP-Adresse"
+    },
+    {
+      "file": "fastlane/Fastfile",
+      "term": "api_key",
+      "contains": "app_store_connect_api_key",
+      "reason": "Fastlane-Funktionsname, kein Wert"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Hygiene-Gate vor jedem Push: prueft den kompletten Arbeitsbaum.
+# Aktivierung einmalig: git config core.hooksPath hooks
+exec node scripts/security-check.mjs

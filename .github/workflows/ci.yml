@@ -1,5 +1,5 @@
 # CI: Typecheck, Build und Tests der App + geteilten Pakete.
-# Laeuft ohne Secrets und ohne private Infrastruktur.
+# Laeuft ohne Zugangsdaten und ohne externe Abhaengigkeiten.
 name: ci
 on:
   push:
