@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ResQDocs</string>
+    <string name="title_activity_main">ResQDocs</string>
+    <string name="package_name">com.example.resqdocs</string>
+    <string name="custom_url_scheme">com.example.resqdocs</string>
+</resources>

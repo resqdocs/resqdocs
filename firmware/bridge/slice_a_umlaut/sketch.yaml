@@ -1,0 +1,5 @@
+# Slice A — USB-HID umlaut typer.
+# DEFAULT USB stack (Pico-SDK): the bundled Keyboard lib #errors under
+# usbstack=tinyusb, so do NOT add a tinyusb suffix to the FQBN.
+default_fqbn: rp2040:rp2040:rpipico2w
+# Pico 1 (RP2040) fallback: rp2040:rp2040:rpipico

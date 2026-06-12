@@ -1,0 +1,40 @@
+{
+  "name": "@resqdocs/pico-pwa",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "ios": "bash scripts/open-ios.sh",
+    "android": "bash scripts/open-android.sh",
+    "test:shared": "node --test ../../packages/shared/medplan/medplan.test.mjs ../../packages/shared/tools/scores.test.mjs",
+    "test:app": "node --test --experimental-strip-types src/composables/caseState.test.ts src/composables/creatorSession.test.ts src/composables/creatorSessionStore.test.ts src/composables/useDisclaimer.test.ts src/storage/storage.test.ts src/storage/sqlite/sqliteLibraryRepository.test.ts src/pico/picoClient.test.ts src/pico/firmwareUpdate.test.ts src/pico/firmwareNotice.test.ts src/medplan/useMedplanScan.test.ts src/medications/useMedicationLookup.test.ts",
+    "test": "npm run test:shared && npm run test:app"
+  },
+  "dependencies": {
+    "@capacitor-community/sqlite": "^8.1.0",
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/ios": "^8.4.0",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/share": "^8.0.1",
+    "@zxing/browser": "^0.2.0",
+    "@zxing/library": "^0.22.0",
+    "vue": "^3.5.38"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.4.0",
+    "@tailwindcss/vite": "^4.3.1",
+    "@types/node": "^24.12.3",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vue/tsconfig": "^0.9.1",
+    "daisyui": "^5.5.23",
+    "tailwindcss": "^4.3.1",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.16",
+    "vue-tsc": "^3.3.4"
+  }
+}

@@ -1,0 +1,3 @@
+# Slice B — live bridge (WLAN-AP + web form -> USB-HID typer).
+# Pico 2 W (has WiFi). DEFAULT USB stack (bundled Keyboard #errors under tinyusb).
+default_fqbn: rp2040:rp2040:rpipico2w

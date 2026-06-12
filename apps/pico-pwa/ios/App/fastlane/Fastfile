@@ -1,0 +1,40 @@
+# Fastlane — ResQDocs iOS (#TestFlight).
+# Auth über App-Store-Connect-API-Key (.p8) - bevorzugt, kein 2FA-Theater.
+# Erforderliche ENV (lokal in .env oder Shell, NICHT committen):
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH (Pfad zur AuthKey_XXXX.p8)
+# Voraussetzung: vorher im Repo-Root  npm run build && npx cap sync ios
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Build + Upload nach TestFlight"
+  lane :beta do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["ASC_KEY_PATH"],
+      in_house: false
+    )
+
+    # Build-Nummer auf TestFlight-Stand + 1 (vermeidet Kollisionen).
+    increment_build_number(
+      xcodeproj: "App.xcodeproj",
+      build_number: latest_testflight_build_number(api_key: api_key) + 1
+    )
+
+    build_app(
+      workspace: "App.xcworkspace",
+      scheme: "App",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "./build",
+      clean: true
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true, # nicht auf Apple-Verarbeitung warten
+      distribute_external: false               # erst intern; externe Gruppe danach in ASC freigeben
+    )
+  end
+end

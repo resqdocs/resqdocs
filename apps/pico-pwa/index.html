@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- viewport-fit=cover: aktiviert env(safe-area-inset-*) auf iOS (Notch/Home-Indikator, #27).
+         maximum-scale/user-scalable: App-UI ohne Pinch-/Fokus-Zoom (WKWebView respektiert das;
+         der System-Zoom der Bedienungshilfen bleibt verfuegbar, #29). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+    <title>pico-pwa-base</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

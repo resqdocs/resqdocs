@@ -1,0 +1,34 @@
+App/build
+App/Pods
+App/output
+App/App/public
+DerivedData
+xcuserdata
+*.xcuserstate
+*.xcscmblueprint
+timeline.xctimeline
+
+# Build-/Distributionsartefakte
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Swift Package Manager (lokaler Build-Cache)
+.swiftpm/
+.build/
+
+# Cordova plugins for Capacitor
+capacitor-cordova-ios-plugins
+
+# Hinweis: Podfile.lock BLEIBT versioniert (pinnt Pod-Versionen reproduzierbar).
+
+# Generated Config files
+App/App/capacitor.config.json
+App/App/config.xml
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+*.p8
+.env
+build/

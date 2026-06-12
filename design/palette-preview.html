@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResQDocs Farbpalette - Vorschau</title>
+<style>
+  /* Eigenständige Vorschau zu design/colors.md - keine externen Requests. */
+  :root{
+    --navy-900:#1F2B4D; --navy-700:#2E3F6E; --navy-100:#E2E7F2;
+    --slate-700:#3F4A63; --coral-500:#F0503C; --coral-600:#C73A28;
+    --coral-300:#FF7A66; --coral-100:#FDE5E1; --bg-light:#F7F8FB;
+    --success-700:#1A7F4B; --warning-700:#8A5A00; --error-700:#B3261E;
+    --dark-bg:#141B30; --dark-text:#E7EBF5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--navy-900);background:#fff}
+  main{max-width:960px;margin:0 auto;padding:32px 20px 64px}
+  h1{font-size:1.6rem;margin:0 0 4px} h2{font-size:1.1rem;margin:32px 0 12px}
+  .sub{color:var(--slate-700);font-size:.9rem;margin:0 0 24px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .sw{border-radius:12px;overflow:hidden;border:1px solid var(--navy-100)}
+  .sw .c{height:72px} .sw .m{padding:8px 10px;font-size:.78rem;line-height:1.35}
+  .sw .m b{display:block} .sw .m code{color:var(--slate-700)}
+  .pair{border-radius:12px;padding:14px 16px;margin-bottom:10px;font-size:.95rem}
+  .ratio{float:right;font-size:.78rem;opacity:.75}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+  .btn{border:none;border-radius:10px;padding:12px 20px;font-weight:600;font-size:.95rem}
+  .badge{display:inline-block;border-radius:999px;padding:4px 12px;font-size:.8rem;font-weight:600}
+  .panel{border-radius:16px;padding:20px;margin-top:8px}
+  .warn{background:var(--coral-100);border-left:4px solid var(--coral-600);padding:12px 14px;border-radius:8px;font-size:.9rem}
+  .ekg{stroke:var(--coral-500);stroke-width:6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<main>
+  <h1>Res<span style="color:var(--coral-600)">Q</span>Docs Farbpalette</h1>
+  <p class="sub">Vorschau zu <code>design/colors.md</code> · alle Kontrastwerte WCAG-nachgerechnet · Direktive: seriös, Koralle nur als Akzent</p>
+
+  <h2>Töne</h2>
+  <div class="grid">
+    <div class="sw"><div class="c" style="background:var(--navy-900)"></div><div class="m"><b>navy-900</b><code>#1F2B4D</code> Text, Marke</div></div>
+    <div class="sw"><div class="c" style="background:var(--navy-700)"></div><div class="m"><b>navy-700</b><code>#2E3F6E</code> Hover dunkel</div></div>
+    <div class="sw"><div class="c" style="background:var(--navy-100)"></div><div class="m"><b>navy-100</b><code>#E2E7F2</code> Karten hell</div></div>
+    <div class="sw"><div class="c" style="background:var(--slate-700)"></div><div class="m"><b>slate-700</b><code>#3F4A63</code> Sekundärtext</div></div>
+    <div class="sw"><div class="c" style="background:var(--coral-500)"></div><div class="m"><b>coral-500</b><code>#F0503C</code> Marke/Grafik - kein Text auf hell!</div></div>
+    <div class="sw"><div class="c" style="background:var(--coral-600)"></div><div class="m"><b>coral-600</b><code>#C73A28</code> Akzent-Text, Primary</div></div>
+    <div class="sw"><div class="c" style="background:var(--coral-300)"></div><div class="m"><b>coral-300</b><code>#FF7A66</code> Akzent im Dark-Theme</div></div>
+    <div class="sw"><div class="c" style="background:var(--coral-100)"></div><div class="m"><b>coral-100</b><code>#FDE5E1</code> Akzent-Hintergrund</div></div>
+    <div class="sw"><div class="c" style="background:var(--bg-light)"></div><div class="m"><b>bg-light</b><code>#F7F8FB</code> App-Hintergrund</div></div>
+    <div class="sw"><div class="c" style="background:var(--success-700)"></div><div class="m"><b>success-700</b><code>#1A7F4B</code></div></div>
+    <div class="sw"><div class="c" style="background:var(--warning-700)"></div><div class="m"><b>warning-700</b><code>#8A5A00</code></div></div>
+    <div class="sw"><div class="c" style="background:var(--error-700)"></div><div class="m"><b>error-700</b><code>#B3261E</code></div></div>
+    <div class="sw"><div class="c" style="background:var(--dark-bg)"></div><div class="m"><b>dark-bg</b><code>#141B30</code> Dark-Hintergrund</div></div>
+    <div class="sw"><div class="c" style="background:var(--dark-text);border-bottom:1px solid var(--navy-100)"></div><div class="m"><b>dark-text</b><code>#E7EBF5</code></div></div>
+  </div>
+
+  <h2>Freigegebene Text-Paare (hell)</h2>
+  <div class="pair" style="background:#fff;border:1px solid var(--navy-100);color:var(--navy-900)">Primärtext navy-900 auf Weiß <span class="ratio">13,9 : 1 ✅</span></div>
+  <div class="pair" style="background:var(--bg-light);color:var(--navy-900)">Primärtext auf bg-light <span class="ratio">13,1 : 1 ✅</span></div>
+  <div class="pair" style="background:#fff;border:1px solid var(--navy-100);color:var(--slate-700)">Sekundärtext slate-700 auf Weiß <span class="ratio">8,9 : 1 ✅</span></div>
+  <div class="pair" style="background:#fff;border:1px solid var(--navy-100);color:var(--coral-600)">Akzent-Text coral-600 auf Weiß <span class="ratio">5,2 : 1 ✅</span></div>
+  <div class="pair" style="background:#fff;border:1px solid var(--navy-100);color:var(--coral-500)">⚠️ Original-Koralle als Text - NUR groß/Grafik erlaubt <span class="ratio">3,55 : 1 ❌ Text</span></div>
+  <div class="pair" style="background:var(--coral-100);color:var(--navy-900)">Navy auf coral-100 (Badges/Hinweise) <span class="ratio">11,6 : 1 ✅</span></div>
+  <div class="pair" style="background:var(--navy-100);color:var(--navy-900)">Navy auf navy-100 (Karten) <span class="ratio">11,2 : 1 ✅</span></div>
+
+  <h2>Bedienelemente (Beispiel, zurückhaltend)</h2>
+  <div class="row">
+    <button class="btn" style="background:var(--coral-600);color:#fff">Primäraktion</button>
+    <button class="btn" style="background:var(--navy-900);color:#fff">Sekundär</button>
+    <button class="btn" style="background:#fff;color:var(--navy-900);border:1.5px solid var(--navy-100)">Neutral</button>
+    <span class="badge" style="background:var(--coral-100);color:var(--coral-600)">aktiv</span>
+    <span class="badge" style="background:var(--navy-100);color:var(--navy-900)">neutral</span>
+  </div>
+  <div class="row">
+    <span class="badge" style="background:#fff;border:1.5px solid var(--success-700);color:var(--success-700)">✓ erreichbar</span>
+    <span class="badge" style="background:#fff;border:1.5px solid var(--warning-700);color:var(--warning-700)">Seite 2 fehlt</span>
+    <span class="badge" style="background:#fff;border:1.5px solid var(--error-700);color:var(--error-700)">Fehler</span>
+  </div>
+  <div class="warn"><b>Hinweis-Beispiel:</b> Hilfsmittel, kein Ersatz - so sähe der Disclaimer im neuen Theme aus.</div>
+
+  <h2>Dark-Theme</h2>
+  <div class="panel" style="background:var(--dark-bg);color:var(--dark-text)">
+    <p style="margin:0 0 8px"><b>Primärtext</b> auf dark-bg <span class="ratio" style="color:var(--dark-text)">14,3 : 1 ✅</span></p>
+    <p style="margin:0 0 8px;color:var(--coral-300)">Akzent coral-300 auf dark-bg <span class="ratio">6,7 : 1 ✅</span></p>
+    <p style="margin:0 0 14px;color:var(--coral-500)">Marken-Koralle auf dark-bg (Grafik/Text ok) <span class="ratio">4,8 : 1 ✅</span></p>
+    <div class="row" style="margin:0">
+      <button class="btn" style="background:var(--coral-300);color:var(--dark-bg)">Primäraktion</button>
+      <button class="btn" style="background:transparent;color:var(--dark-text);border:1.5px solid var(--navy-700)">Neutral</button>
+    </div>
+    <svg viewBox="0 0 400 60" style="width:100%;max-width:420px;margin-top:14px" aria-label="EKG-Akzent">
+      <path class="ekg" d="M0 32.5 H10 c 2.5,-3.25 7.5,-3.25 10,0 H26 l 2,2 1.75,-26 1.5,29 3.75,-5 H45 c 4.5,-2 8.75,-7 11,-7 c 3,0 5.5,5 7,7 H100" transform="translate(10,0) scale(3.8,1)" vector-effect="non-scaling-stroke"/>
+    </svg>
+  </div>
+</main>
+</body>
+</html>

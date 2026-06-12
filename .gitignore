@@ -1,0 +1,47 @@
+# --- Secrets / environment -------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# Keys & certificates (never commit real ones)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+# Mobile signing material (Android keystores, Apple provisioning/keys)
+*.jks
+*.keystore
+keystore.properties
+*.mobileprovision
+*.cer
+*.p8
+
+# Private / local working files
+secrets/
+private/
+.local/
+.cache/
+
+# --- Dependencies & build output -------------------------------------------
+node_modules/
+dist/
+build/
+coverage/
+
+# Firmware build output (compile artifacts)
+firmware/bridge/build/
+# Note: firmware/bridge/dist/*.uf2 are intentionally tracked as prebuilt
+# flashing artifacts (a deliberate project exception, documented in the
+# firmware README). General dist/ output elsewhere stays ignored.
+
+# Capacitor native projects: SIND versioniert (Capacitor-Standardpraxis, #25) -
+# sie tragen echte Konfiguration (Info.plist-Berechtigungen, ATS, Signing).
+# Build-/Pod-Artefakte filtert das jeweilige ios|android/.gitignore.
+
+# --- OS ---------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# Core-Dumps
+core

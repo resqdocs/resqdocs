@@ -1,0 +1,24 @@
+# CI: Typecheck, Build und Tests der App + geteilten Pakete.
+# Laeuft ohne Secrets und ohne private Infrastruktur.
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/pico-pwa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/pico-pwa/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test

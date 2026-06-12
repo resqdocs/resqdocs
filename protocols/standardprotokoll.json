@@ -1,0 +1,288 @@
+{
+  "schemaVersion": "0.2.0",
+  "id": "standard",
+  "title": "Beispiel-Vorlage",
+  "example": true,
+  "lang": "de",
+  "meta": {
+    "source": "Generische Funktionsdemo - zeigt alle App-Funktionen (Variablen, Platzhalter, Bedingungen, Punkttypen, Tools). KEIN reales Einsatzprotokoll, bewusst neutral gehalten."
+  },
+  "variables": [
+    {
+      "id": "geschlecht",
+      "label": "Geschlecht",
+      "type": "select",
+      "grammar": "de-gender",
+      "default": "w",
+      "options": [
+        { "value": "w", "label": "weiblich" },
+        { "value": "m", "label": "männlich" },
+        { "value": "d", "label": "divers" }
+      ]
+    },
+    {
+      "id": "alter",
+      "label": "Alter (Jahre)",
+      "type": "number",
+      "default": ""
+    },
+    {
+      "id": "raucher",
+      "label": "Raucht",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "id": "einsatzart",
+      "label": "Einsatzart",
+      "type": "select",
+      "default": "internistisch",
+      "options": [
+        { "value": "internistisch", "label": "internistisch" },
+        { "value": "traumatologisch", "label": "traumatologisch" },
+        { "value": "neurologisch", "label": "neurologisch" }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "id": "hinweis",
+      "title": "Über diese Vorlage",
+      "points": [
+        {
+          "type": "text",
+          "id": "demo_hinweis",
+          "content": "Funktionsdemo: zeigt beispielhaft alle Bausteine der App. Zum Anpassen oben „Duplizieren\" - die Kopie ist frei bearbeitbar."
+        }
+      ]
+    },
+    {
+      "id": "situation",
+      "title": "Situation & Anamnese",
+      "points": [
+        {
+          "type": "text",
+          "id": "intro",
+          "content": "{{der_die}} {{patient}} ({{var:alter}} Jahre) wird im Rahmen eines {{var:einsatzart}}-Einsatzes versorgt."
+        },
+        {
+          "type": "field",
+          "id": "auffindesituation",
+          "title": "Auffindesituation",
+          "label": "",
+          "multiline": true
+        },
+        {
+          "type": "field",
+          "id": "einsatzort",
+          "label": "Einsatzort",
+          "options": ["Wohnung", "öffentlicher Raum", "Arbeitsplatz", "Pflegeeinrichtung"]
+        },
+        {
+          "type": "field",
+          "id": "schwangerschaft",
+          "label": "Schwangerschaft",
+          "visibleIf": { "var": "geschlecht", "eq": "w" }
+        }
+      ]
+    },
+    {
+      "id": "xabcde",
+      "title": "xABCDE",
+      "points": [
+        {
+          "type": "findingGroup",
+          "key": "x",
+          "collapsible": true,
+          "findings": [
+            { "id": "x_blutung", "label": "kritische Blutung", "normal": "keine kritische Blutung" }
+          ]
+        },
+        {
+          "type": "findingGroup",
+          "key": "A",
+          "collapsible": true,
+          "findings": [
+            {
+              "id": "a_atemweg",
+              "label": "Atemweg",
+              "normal": "Atemweg frei",
+              "variants": ["Atemweg frei", "Atemweg frei nach Esmarch-Handgriff", "Atemweg mit Guedel-Tubus gesichert"]
+            }
+          ]
+        },
+        {
+          "type": "findingGroup",
+          "key": "B",
+          "collapsible": true,
+          "findings": [
+            { "id": "b_atmung", "label": "Atmung", "normal": "Atmung regelrecht, seitengleich belüftet" },
+            { "id": "b_spo2", "label": "SpO2", "normal": "SpO2 im Normbereich" }
+          ]
+        },
+        {
+          "type": "findingGroup",
+          "key": "C",
+          "collapsible": true,
+          "findings": [
+            { "id": "c_kreislauf", "label": "Kreislauf", "normal": "Kreislauf stabil, Rekap < 2 s" },
+            { "id": "c_reanimation", "label": "Reanimation", "normal": "keine Reanimation erforderlich" }
+          ]
+        },
+        {
+          "type": "findingGroup",
+          "key": "D",
+          "collapsible": true,
+          "findings": [
+            { "id": "d_neuro", "label": "Neurologie", "normal": "wach, voll orientiert, GCS 15, Pupillen isokor" }
+          ]
+        },
+        {
+          "type": "findingGroup",
+          "key": "E",
+          "collapsible": true,
+          "findings": [
+            { "id": "e_haut", "label": "Haut/Exploration", "normal": "Haut rosig, warm, trocken; keine äußeren Verletzungen" }
+          ]
+        },
+        {
+          "type": "field",
+          "id": "reanimation_details",
+          "label": "Reanimation - Details",
+          "multiline": true,
+          "visibleIf": { "point": "c_reanimation", "state": "abnormal" }
+        }
+      ]
+    },
+    {
+      "id": "messwerte",
+      "title": "Messwerte & Rechner",
+      "points": [
+        {
+          "type": "field",
+          "id": "vitalwerte",
+          "label": "Vitalparameter / NEWS2",
+          "tool": "news2"
+        },
+        {
+          "type": "field",
+          "id": "ekg_lagetyp",
+          "label": "EKG-Lagetyp",
+          "tool": "ekgAxis"
+        },
+        {
+          "type": "field",
+          "id": "ekg_befund",
+          "label": "EKG-Befund / Rhythmus",
+          "tool": "ekgReferenz"
+        },
+        {
+          "type": "field",
+          "id": "koerpermasse",
+          "label": "Körpermaße / BMI",
+          "tool": "bmi"
+        },
+        {
+          "type": "field",
+          "id": "schlaganfalltest",
+          "label": "Schlaganfall-Schnelltest (LAMS)",
+          "tool": "lams",
+          "visibleIf": { "var": "einsatzart", "eq": "neurologisch" }
+        },
+        {
+          "type": "field",
+          "id": "packyears",
+          "label": "Pack-Years",
+          "tool": "packYears",
+          "visibleIf": { "var": "raucher", "truthy": true }
+        }
+      ]
+    },
+    {
+      "id": "vorgeschichte",
+      "title": "Vorgeschichte & Medikation",
+      "points": [
+        { "type": "medikamente", "id": "medikationsplan", "label": "Medikation" },
+        {
+          "type": "list",
+          "id": "allergien",
+          "label": "Allergien",
+          "entries": ["keine bekannt"]
+        },
+        {
+          "type": "list",
+          "id": "vorerkrankungen",
+          "label": "Vorerkrankungen",
+          "entries": []
+        },
+        {
+          "type": "finding",
+          "id": "impfstatus",
+          "label": "Impfstatus",
+          "normal": "Impfstatus laut Angabe aktuell"
+        },
+        {
+          "type": "field",
+          "id": "unfallmechanismus",
+          "label": "Unfallmechanismus",
+          "multiline": true,
+          "visibleIf": { "var": "einsatzart", "in": ["traumatologisch", "neurologisch"] }
+        }
+      ]
+    },
+    {
+      "id": "massnahmen",
+      "title": "Maßnahmen & Verlauf",
+      "points": [
+        {
+          "type": "finding",
+          "id": "monitoring",
+          "label": "Monitoring",
+          "normal": "kontinuierliches Monitoring etabliert"
+        },
+        {
+          "type": "list",
+          "id": "massnahmen_liste",
+          "label": "durchgeführte Maßnahmen",
+          "entries": []
+        }
+      ]
+    },
+    {
+      "id": "transportverweigerung",
+      "title": "Transportverweigerung",
+      "optional": true,
+      "points": [
+        {
+          "type": "text",
+          "id": "verweigerung_aufklaerung",
+          "content": "{{der_die}} {{patient}} wurde über die Risiken einer Transportverweigerung aufgeklärt und entscheidet sich nach Aufklärung eigenverantwortlich dagegen."
+        },
+        {
+          "type": "field",
+          "id": "verweigerung_unterschrift",
+          "label": "Unterschrift",
+          "tool": "signature"
+        }
+      ]
+    },
+    {
+      "id": "uebergabe",
+      "title": "Übergabe",
+      "points": [
+        {
+          "type": "field",
+          "id": "uebergabe_an",
+          "label": "Übergabe an",
+          "required": true,
+          "options": ["Notärztin/Notarzt", "Zielklinik", "Hausärztin/Hausarzt", "weiterbehandelnder RTW"]
+        },
+        {
+          "type": "text",
+          "id": "uebergabe_schluss",
+          "content": "Übergabe erfolgt; {{er_sie}} ist zum Zeitpunkt der Übergabe ansprechbar und kreislaufstabil."
+        }
+      ]
+    }
+  ]
+}

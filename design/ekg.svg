@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" role="img" aria-label="EKG: ein Sinusschlag (PQRST)">
+  <!--
+    Kanonische EKG-Kurve (#80) - EIN Sinusschlag, Ableitung II.
+    Massstab: 1 ms = 0,8 px (x) · 1 mV = 160 px (y) · Nulllinie y=260.
+
+    Konstruiert aus Lehrbuch-Normwerten (Quellen: LITFL ECG Library
+    https://litfl.com/p-wave-ecg-library/ · https://litfl.com/pr-interval-ecg-library/
+    · https://litfl.com/qrs-interval-ecg-library/ · https://litfl.com/t-wave-ecg-library/):
+      P-Welle:      Dauer 100 ms (x 80-160), Amplitude +0,15 mV (24 px), rund
+      PR-Intervall: 160 ms (P-Beginn x80 bis QRS-Beginn x208)
+      QRS-Komplex:  ~90 ms (x 208-280): Q -0,10 mV · R +1,20 mV (Spitze x238)
+                    · S -0,25 mV · Rueckkehr zur Nulllinie
+      ST-Strecke:   isoelektrisch, 100 ms (x 280-360)
+      T-Welle:      Dauer 180 ms (x 360-504), Amplitude +0,35 mV (56 px),
+                    asymmetrisch (langsamer Anstieg, steilerer Abfall)
+    Verhaeltnisse: R dominiert; T (0,35 mV) > P (0,15 mV); T ≈ 0,3 x R
+    (Norm: 1/8 bis 2/3 der R-Amplitude).
+    FACHLICHE ABNAHME: Maintainer (Rettungsdienst) - siehe Issue #80.
+  -->
+  <path fill="none" stroke="#F0503C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"
+        d="M0 260
+           H80
+           c 20,-26 60,-26 80,0
+           H208
+           l 16,16
+           l 14,-208
+           l 12,232
+           l 30,-40
+           H360
+           c 36,-16 70,-56 87,-56
+           c 23,0 43,40 57,56
+           H800"/>
+</svg>

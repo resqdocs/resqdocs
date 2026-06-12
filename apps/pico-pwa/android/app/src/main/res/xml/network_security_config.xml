@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext-HTTP wird AUSSCHLIESSLICH fuer die lokale ResQDocs-Bridge (Pico) im
+  WLAN benoetigt. Die Bridge hat eine vom Nutzer eingetragene, dynamische lokale
+  Adresse (z. B. 192.168.x.x oder ein .local-mDNS-Name). Androids
+  network-security-config kann IP-/Subnetz-Bereiche nicht per domain-config
+  einschraenken, daher wird Cleartext generell erlaubt.
+
+  Das spiegelt die iOS-Ausnahme NSAllowsLocalNetworking (siehe Info.plist).
+  Die App ruft sonst KEINE http://-Adresse auf: Der PZN-Datenbank-Abruf laeuft
+  ausschliesslich ueber HTTPS, jede andere Netzwerk-Kommunikation findet nicht
+  statt (keine Analytik/Telemetrie/CDN — siehe Datenschutz-Policy).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

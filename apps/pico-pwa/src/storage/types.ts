@@ -1,0 +1,101 @@
+// storage/types.ts — Verträge der gekapselten Storage-/Repository-Schicht (DR-0004).
+//
+// UI und Creator-Session kennen NUR diese Interfaces — nicht, ob die Daten aus
+// Memory, Capacitor Preferences oder (später, #13-F2) SQLite kommen.
+//
+// Datenschutz (S3 / DR-0004): NUR neutrale Daten. Keine Patientendaten, keine
+// Einsatzdaten, kein caseState im Storage.
+import type { Protocol, Block } from '@shared/creator/creator.mjs'
+
+export type Theme = 'system' | 'light' | 'dark'
+
+/** Kleine, flache App-Einstellungen → Capacitor Preferences. KEINE Patientendaten. */
+export interface AppSettings {
+  defaultOs: string
+  theme: Theme
+  lastSelectedProtocolId: string | null
+  /** Persönliches Standard-Protokoll: im Einsatz beim App-Start vorausgewählt. null = erstes. */
+  defaultProtocolId: string | null
+  privacyNoticeAccepted: boolean
+  /** Basis-URL der lokalen Pico-Bridge (S2-Default 10.10.10.1). Keine Patientendaten/Secrets. */
+  picoBaseUrl: string
+  /** Theme-Familie (#78): 'classic' = bisherige daisyUI-Themes, 'resqdocs' = Logofarben. */
+  themeFamily: 'classic' | 'resqdocs'
+  /** Gesehene/verstandene Erklär-Hinweise (#72), ids. */
+  dismissedHints: string[]
+  /** Überschriftenmuster der Ausgabe (#68): '{titel}'-Platzhalter. */
+  headingPattern: string
+  /** Füllzeichen der Kopfzeile (1 Zeichen; leer = keine Auffüllung). */
+  headingFill: string
+  /** Zielbreite der Kopfzeile. */
+  headingWidth: number
+}
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  defaultOs: 'win_de',
+  theme: 'system',
+  lastSelectedProtocolId: null,
+  defaultProtocolId: null,
+  privacyNoticeAccepted: false,
+  picoBaseUrl: 'http://10.10.10.1',
+  themeFamily: 'classic',
+  dismissedHints: [],
+  headingPattern: '# {titel} ',
+  headingFill: '=',
+  headingWidth: 60,
+}
+
+/** Neutraler, wiederverwendbarer Block (z. B. „Mitfahrtverweigerung"). KEINE Patientendaten. */
+export interface LibraryBlock {
+  id: string
+  title: string
+  block: Block
+  createdAt: string
+  updatedAt: string
+}
+
+/** Neutraler Textbaustein. KEINE Patientendaten. */
+export interface LibrarySnippet {
+  id: string
+  title: string
+  text: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** Strukturierte, neutrale Bibliotheksdaten (SQLite nativ / Memory im Web-Dev). */
+export interface LibraryState {
+  protocols: Protocol[]
+  blocks: LibraryBlock[]
+  snippets: LibrarySnippet[]
+}
+
+/** Minimaler Key-Value-Adapter (z. B. über @capacitor/preferences oder Fake). */
+export interface KeyValueAdapter {
+  get(key: string): Promise<string | null>
+  set(key: string, value: string): Promise<void>
+  remove(key: string): Promise<void>
+}
+
+export interface SettingsRepository {
+  loadSettings(): Promise<AppSettings>
+  saveSettings(settings: AppSettings): Promise<void>
+  resetSettings(): Promise<void>
+}
+
+export interface LibraryRepository {
+  loadProtocols(): Promise<Protocol[]>
+  saveProtocol(protocol: Protocol): Promise<void>
+  deleteProtocol(protocolId: string): Promise<void>
+
+  loadBlocks(): Promise<LibraryBlock[]>
+  saveBlock(block: LibraryBlock): Promise<void>
+  deleteBlock(blockId: string): Promise<void>
+
+  loadSnippets(): Promise<LibrarySnippet[]>
+  saveSnippet(snippet: LibrarySnippet): Promise<void>
+  deleteSnippet(snippetId: string): Promise<void>
+
+  /** Löscht ALLE Library-Inhalte (Protokolle, Blöcke, Snippets) — NICHT die Settings. */
+  resetLibrary(): Promise<void>
+}

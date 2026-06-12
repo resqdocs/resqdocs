@@ -1,0 +1,147 @@
+/* Tailwind CSS v4 + daisyUI 5 — CSS-first config (no tailwind.config.js). */
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark;
+}
+
+/* Theme-Familie "ResQDocs" (#78): Logofarben, WCAG-geprueft (design/colors.md).
+   Zurueckhaltend gem. Serioes-Direktive: Koralle nur als Akzent.
+   "Klassisch" = eingebaute light/dark-Themes (unveraendert). */
+@plugin "daisyui/theme" {
+  name: "resqdocs";
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7f8fb;
+  --color-base-300: #e2e7f2;
+  --color-base-content: #1b2c56;
+  --color-primary: #c73a28;
+  --color-primary-content: #ffffff;
+  --color-secondary: #1b2c56;
+  --color-secondary-content: #ffffff;
+  --color-accent: #f05349;
+  --color-accent-content: #ffffff;
+  --color-neutral: #3f4a63;
+  --color-neutral-content: #ffffff;
+  --color-info: #2e3f6e;
+  --color-info-content: #ffffff;
+  --color-success: #1a7f4b;
+  --color-success-content: #ffffff;
+  --color-warning: #8a5a00;
+  --color-warning-content: #ffffff;
+  --color-error: #b3261e;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "resqdocs-dark";
+  color-scheme: dark;
+  --color-base-100: #141b30;
+  --color-base-200: #1a2340;
+  --color-base-300: #2e3f6e;
+  --color-base-content: #e7ebf5;
+  --color-primary: #ff7a66;
+  --color-primary-content: #141b30;
+  --color-secondary: #e2e7f2;
+  --color-secondary-content: #1b2c56;
+  --color-accent: #f05349;
+  --color-accent-content: #141b30;
+  --color-neutral: #2e3f6e;
+  --color-neutral-content: #e7ebf5;
+  --color-info: #7fa3e8;
+  --color-info-content: #141b30;
+  --color-success: #3fbf7f;
+  --color-success-content: #141b30;
+  --color-warning: #e8b33c;
+  --color-warning-content: #141b30;
+  --color-error: #ff6b5e;
+  --color-error-content: #141b30;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* Mobile-first base: full-height app, comfortable touch defaults. */
+html,
+body,
+#app {
+  height: 100%;
+}
+body {
+  margin: 0;
+}
+
+/* App-Gefuehl statt Webseite (iOS/WKWebView, #29):
+   - keine Textselektion/Callout beim (Doppel-)Tippen auf Bedienelemente
+     ("markiert alle"-Effekt in Befundgruppen),
+   - kein Tap-Highlight, kein Doppeltipp-Zoom (touch-action),
+   - Eingabefelder bleiben voll selektier-/editierbar. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+input,
+textarea,
+[contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Touch-Tap-Targets (#38): daisyUI xs/sm-Bedienelemente sind auf Touch zu
+   klein (btn-xs ~24 px; Apple empfiehlt 44 pt). Auf Geraeten mit grobem
+   Zeiger (Finger) anheben - Desktop/Maus bleibt kompakt. Unlayered CSS
+   gewinnt gegen die daisyUI-@layer-Regeln. */
+@media (pointer: coarse) {
+  .btn-xs,
+  .btn-sm {
+    height: 2.75rem;
+    min-height: 2.75rem;
+    padding-inline: 1rem;
+    font-size: 0.875rem;
+  }
+  .select-xs,
+  .select-sm {
+    height: 2.75rem;
+    font-size: 0.875rem;
+  }
+  .input-xs,
+  .input-sm {
+    height: 2.75rem;
+    font-size: 1rem;
+  }
+  .textarea-xs,
+  .textarea-sm {
+    font-size: 1rem;
+  }
+  .checkbox {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+/* Kopfzeilen-Marke: helle Variante (Navy hell) auf dunklen Themes, sonst Navy.
+   Deckt alle Theme-Faelle ab (classic/resqdocs x hell/dunkel/system). */
+.brand-logo-dark { display: none; }
+[data-theme="dark"] .brand-logo-light,
+[data-theme="resqdocs-dark"] .brand-logo-light { display: none; }
+[data-theme="dark"] .brand-logo-dark,
+[data-theme="resqdocs-dark"] .brand-logo-dark { display: inline; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .brand-logo-light { display: none; }
+  :root:not([data-theme]) .brand-logo-dark { display: inline; }
+}

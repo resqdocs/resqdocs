@@ -1,0 +1,392 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://resqdocs.org/schema/protocol.schema.json",
+  "title": "ResQDocs Protokoll (Entwurf, in Entwicklung)",
+  "description": "Datenmodell eines nutzerdefinierten Protokolls (Bloecke -> Punkte) mit Variablen, Platzhaltern und Bedingungen. Siehe SCHEMA.md.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "blocks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lang": {
+      "type": "string",
+      "default": "de"
+    },
+    "meta": {
+      "type": "object",
+      "description": "Optionale, neutrale Metadaten (keine Patientendaten).",
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string"
+        }
+      }
+    },
+    "variables": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/variable"
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/block"
+      }
+    },
+    "example": {
+      "type": "boolean",
+      "description": "Schreibgeschuetzte Beispiel-Vorlage (#example): im Editor nicht aenderbar, nur duplizierbar."
+    }
+  },
+  "$defs": {
+    "variable": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "select",
+            "boolean",
+            "text",
+            "number"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "value",
+              "label"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "default": {},
+        "grammar": {
+          "enum": [
+            "de-gender"
+          ]
+        }
+      },
+      "if": {
+        "properties": {
+          "type": {
+            "const": "select"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "options"
+        ]
+      }
+    },
+    "predicate": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "var": {
+          "type": "string"
+        },
+        "point": {
+          "type": "string"
+        },
+        "eq": {},
+        "in": {
+          "type": "array"
+        },
+        "truthy": {
+          "type": "boolean"
+        },
+        "filled": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "normal",
+            "abnormal"
+          ]
+        },
+        "all": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/predicate"
+          }
+        },
+        "any": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/predicate"
+          }
+        },
+        "not": {
+          "$ref": "#/$defs/predicate"
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "points"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "visibleIf": {
+          "$ref": "#/$defs/predicate"
+        },
+        "snippetSlot": {
+          "type": "string"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/point"
+          }
+        }
+      }
+    },
+    "point": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "field",
+            "finding",
+            "findingGroup",
+            "list",
+            "text",
+            "medikamente"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Pflichtpunkt (#71): 'immer dokumentieren' - der Einsatz bietet den Zustand 'nicht erhoben' NICHT an. Default false (alles abwaehlbar)."
+        },
+        "visibleIf": {
+          "$ref": "#/$defs/predicate"
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "type": {
+              "const": "field"
+            },
+            "title": {
+              "type": "string",
+              "description": "Anzeige-Titel fuer Editor/Einsatz (#70). Taucht NICHT in der getippten Ausgabe auf; das (ggf. leere) label wird getippt."
+            },
+            "default": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            },
+            "options": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "multiline": {
+              "type": "boolean",
+              "description": "Langer Freitext (#91): im Einsatz Tap -> Modal-Editor mit grossem Textbereich. Default false."
+            },
+            "tool": {
+              "type": "string",
+              "description": "Optionales Feld-Tool (#54): id aus der App-Tool-Registry (z. B. medplanScan, packYears, bmi, lams, news2). Reines UI-Feature ohne Renderer-Wirkung."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "finding"
+            },
+            "normal": {
+              "type": "string"
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Alternative Normalbefund-Texte (#73); im Einsatz waehlbar. Default bleibt 'normal'."
+            },
+            "value": {
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "normal",
+                "abnormal"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "normal"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "findingGroup"
+            },
+            "key": {
+              "type": "string"
+            },
+            "collapsible": {
+              "type": "boolean",
+              "description": "Einsatzansicht rendert die Gruppe einklappbar (#42). Reines UI-Flag ohne Renderer-Wirkung."
+            },
+            "findings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "normal"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "normal": {
+                    "type": "string"
+                  },
+                  "variants": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "enum": [
+                      "normal",
+                      "abnormal"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "key",
+            "findings"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "list"
+            },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "entries"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "text"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "content"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "medikamente"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "description": "Medikamente (#146): Zeilen {name, dosierung, kommentar} entstehen NUR im Einsatz - Vorlagen enthalten keine Patientendaten."
+        }
+      ]
+    }
+  }
+}

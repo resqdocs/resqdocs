@@ -1,0 +1,2 @@
+# Build artifacts (.uf2 etc.) — produced by arduino-cli compile --output-dir
+build/
