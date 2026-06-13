@@ -11,7 +11,9 @@
     "android": "bash scripts/open-android.sh",
     "test:shared": "node --test ../../packages/shared/medplan/medplan.test.mjs ../../packages/shared/tools/scores.test.mjs",
     "test:app": "node --test --experimental-strip-types src/composables/caseState.test.ts src/composables/creatorSession.test.ts src/composables/creatorSessionStore.test.ts src/composables/useDisclaimer.test.ts src/storage/storage.test.ts src/storage/sqlite/sqliteLibraryRepository.test.ts src/pico/picoClient.test.ts src/pico/firmwareUpdate.test.ts src/pico/firmwareNotice.test.ts src/medplan/useMedplanScan.test.ts src/medications/useMedicationLookup.test.ts",
-    "test": "npm run test:shared && npm run test:app"
+    "test": "npm run test:shared && npm run test:app",
+    "setup:hooks": "sh ../../scripts/setup-hooks.sh",
+    "security:check": "node ../../scripts/security-check.mjs"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "^8.1.0",

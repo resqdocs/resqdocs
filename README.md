@@ -74,6 +74,16 @@ bleibt außerhalb des Repos).
 Der Medikationsplan-Scan löst PZN über eine offene CC0-Datenbank auf:
 [resqdocs/pzn-data](https://github.com/resqdocs/pzn-data) — Beiträge willkommen.
 
+## Entwicklung
+
+Nach dem Klonen einmalig die Git-Hooks aktivieren (empfohlen; die CI prüft verbindlich):
+
+```bash
+sh scripts/setup-hooks.sh
+```
+
+Details: [docs/security-checks.md](docs/security-checks.md)
+
 ## Beitragen
 
 Siehe [CONTRIBUTING.md](CONTRIBUTING.md) und [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

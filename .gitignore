@@ -45,3 +45,6 @@ Thumbs.db
 
 # Core-Dumps
 core
+
+# Lokale Zusatzmuster fuer scripts/security-check.mjs (nie versionieren)
+.security-patterns.local.json
