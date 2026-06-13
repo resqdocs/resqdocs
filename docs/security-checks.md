@@ -9,17 +9,27 @@ personenbezogene Daten, interne Konfigurationswerte).
 ```bash
 node scripts/security-check.mjs            # kompletter Arbeitsbaum
 node scripts/security-check.mjs --staged   # nur gestagte Dateien
+node scripts/security-check.mjs --selftest # Matcher-Selbsttest (laeuft auch in der CI)
 ```
+
+Die Begriffs-Erkennung deckt typische Schreibweisen ab: Trenner `_`, `-`, `.`
+und Leerzeichen sowie camelCase (`apiToken`, `API_TOKEN`, `api-token`,
+`api.token`, `clientSecret`, `FOO_TOKEN`, ...).
 
 Exit-Code 0 = sauber; bei Befunden listet das Skript jede Fundstelle einzeln.
 
 ## Git-Hooks aktivieren (empfohlen)
 
-Einmalig pro Klon:
+Einmalig pro Klon — eine der beiden Varianten:
 
 ```bash
-git config core.hooksPath hooks
+sh scripts/setup-hooks.sh          # vom Repo-Root
+# oder aus apps/pico-pwa heraus:
+npm run setup:hooks
 ```
+
+Lokale Hooks sind **empfohlen** (schnelles Feedback); **verbindlich blockiert
+die CI** — ein Pull Request mit Befunden kann nicht gemergt werden.
 
 Danach läuft der Check automatisch:
 

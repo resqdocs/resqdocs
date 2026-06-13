@@ -10,12 +10,14 @@
     {
       "file": ".github/workflows/",
       "term": "token",
-      "reason": "GitHub-eigenes Actions-Token (secrets.GITHUB_TOKEN), kein eigenes Secret"
+      "contains": "GITHUB_TOKEN",
+      "reason": "GitHub-eigenes Actions-Token, kein eigenes Secret"
     },
     {
       "file": ".github/workflows/",
-      "term": "secret",
-      "reason": "Verweis auf GitHub-eigene secrets-Syntax"
+      "term": "token",
+      "contains": "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+      "reason": "gh-CLI-Variable, gespeist aus dem GitHub-eigenen Token"
     },
     {
       "file": "fastlane/Appfile",
@@ -122,6 +124,86 @@
       "term": "api_key",
       "contains": "app_store_connect_api_key",
       "reason": "Fastlane-Funktionsname, kein Wert"
+    },
+    {
+      "file": "docs/security-checks.md",
+      "term": "*",
+      "reason": "Dokumentation des Checks benennt die geprueften Begriffe selbst"
+    },
+    {
+      "file": "README.md",
+      "term": "bundle_id",
+      "reason": "Anleitung: Platzhalter-Bundle-ID durch eigene ersetzen"
+    },
+    {
+      "file": "README.md",
+      "term": "app_store",
+      "reason": "Hinweis: eigene Entwicklerkonten fuer Store-Releases noetig"
+    },
+    {
+      "file": "README.md",
+      "term": "play_store",
+      "reason": "Hinweis: eigene Entwicklerkonten fuer Store-Releases noetig"
+    },
+    {
+      "file": "fastlane/",
+      "term": "app_store",
+      "reason": "Fastlane-Funktions-/Konzeptname, Werte nur aus ENV"
+    },
+    {
+      "file": "fastlane/",
+      "term": "issuer",
+      "reason": "ENV-Platzhalter ASC_ISSUER_ID, kein Wert"
+    },
+    {
+      "file": "fastlane/",
+      "term": "issuer_id",
+      "reason": "ENV-Platzhalter ASC_ISSUER_ID, kein Wert"
+    },
+    {
+      "file": "fastlane/Appfile",
+      "term": "api_key",
+      "reason": "Kommentar verweist auf ENV-basierte Authentifizierung"
+    },
+    {
+      "file": "docs/android-release.md",
+      "term": "play_store",
+      "reason": "generische Release-Anleitung fuer EIGENE Konten"
+    },
+    {
+      "file": "docs/android-release.md",
+      "term": "google_play",
+      "reason": "generische Release-Anleitung fuer EIGENE Konten"
+    },
+    {
+      "file": "docs/android-release.md",
+      "term": "bundle_id",
+      "reason": "Platzhalter-App-ID dokumentiert"
+    },
+    {
+      "file": "docs/android.md",
+      "term": "play_store",
+      "reason": "generische Build-/Vertriebsdoku"
+    },
+    {
+      "file": "docs/android.md",
+      "term": "google_play",
+      "reason": "generische Build-/Vertriebsdoku (kein GMS)"
+    },
+    {
+      "file": "docs/android.md",
+      "term": "bundle_id",
+      "reason": "Platzhalter-App-ID dokumentiert"
+    },
+    {
+      "file": "docs/data-flow.md",
+      "term": "api_key",
+      "reason": "Aussage, dass KEIN API-Key verwendet wird"
+    },
+    {
+      "file": "fastlane/Fastfile",
+      "term": "api_key",
+      "reason": "Kommentar + Funktionsname zur ENV-basierten Authentifizierung, keine Werte"
     }
   ]
 }
