@@ -1,9 +1,10 @@
 // useMedicationLookup.ts - PZN→Name-Aufloesung, offline-first (#11).
 //
-// Quelle: das CC0-Community-Woerterbuch (resqdocs-pzn-data), als versioniertes
-// Release-Artefakt. Der Lookup laeuft IMMER rein lokal aus dem Cache; der Sync
-// ist NUTZERINITIIERT (Button in den Einstellungen) und laedt nur bei neuer
-// Version - der einzige erlaubte Remote-Abruf neben der Bridge (SECURITY.md).
+// Quelle: das CC0-Community-Woerterbuch, ausgeliefert als statisches, versioniertes
+// Artefakt ueber die offizielle Webseite (manifest.json + Daten-Datei). Der Lookup
+// laeuft IMMER rein lokal aus dem Cache; der Sync ist NUTZERINITIIERT (Button in den
+// Einstellungen) und laedt nur bei neuer Version - der einzige erlaubte Remote-Abruf
+// neben der Bridge (SECURITY.md).
 // Community-Daten sind UNVERIFIZIERT: Aufloesungen werden als 'community'
 // markiert angezeigt (pruefbarer Entwurf).
 import { computed, reactive } from 'vue'
@@ -11,9 +12,12 @@ import type { HttpAdapter } from '../pico/picoTypes.ts'
 import type { KeyValueAdapter } from '../storage/types.ts'
 import { loadDictionary, saveDictionary, type MedicationDictionary } from './medicationStore.ts'
 
-/** Release-API des Daten-Repos (oeffentlich, kein Token). Seam: spaeter als Einstellung. */
-export const PZN_RELEASES_API =
-  'https://api.github.com/repos/resqdocs/pzn-data/releases/latest'
+/**
+ * Manifest des PZN-Woerterbuchs, ausgeliefert ueber die offizielle Webseite
+ * (statisch, HTTPS, kein Token). Das Daten-Artefakt liegt relativ daneben
+ * (manifest.file). Seam: spaeter als Einstellung ueberschreibbar.
+ */
+export const PZN_MANIFEST_URL = 'https://resqdocs.app/pzn/manifest.json'
 
 interface LookupState {
   loaded: boolean
@@ -25,7 +29,7 @@ interface LookupState {
   fetchedAt: string | null
 }
 
-export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, apiUrl = PZN_RELEASES_API) {
+export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, manifestUrl = PZN_MANIFEST_URL) {
   const state = reactive<LookupState>({
     loaded: false, busy: false, error: null,
     version: null, count: 0, updated: null, fetchedAt: null,
@@ -53,33 +57,31 @@ export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, a
     return entries[pzn] ?? null
   }
 
+  /** Daten-Artefakt liegt relativ zum Manifest (gleiches Verzeichnis). */
+  function resolveDataUrl(file: string): string {
+    return manifestUrl.replace(/[^/]*$/, '') + file
+  }
+
   /**
-   * Nutzerinitiierter Sync: Manifest des neuesten Releases pruefen, Artefakt
-   * nur bei neuer Version laden. Liefert eine kurze Statusmeldung.
+   * Nutzerinitiierter Sync: Manifest pruefen, Daten-Artefakt nur bei neuer
+   * Version laden. Liefert eine kurze Statusmeldung.
    */
   async function syncNow(): Promise<string> {
     state.busy = true
     state.error = null
     try {
       await ensureLoaded()
-      const rel = await http.get(apiUrl, { connectTimeout: 8000, readTimeout: 8000 })
-      if (rel.status === 404) return 'Noch kein Release im Daten-Repo.'
-      if (rel.status < 200 || rel.status >= 300) throw new Error(`Release-Abfrage fehlgeschlagen (HTTP ${rel.status})`)
-      const relData = (typeof rel.data === 'string' ? JSON.parse(rel.data) : rel.data) as {
-        assets?: { name: string; browser_download_url: string }[]
-      }
-      const manifestAsset = relData.assets?.find((a) => a.name === 'manifest.json')
-      if (!manifestAsset) return 'Release ohne manifest.json - Daten-Repo pruefen.'
-      const mf = await http.get(manifestAsset.browser_download_url, { connectTimeout: 8000, readTimeout: 8000 })
+      const mf = await http.get(manifestUrl, { connectTimeout: 8000, readTimeout: 8000 })
+      if (mf.status === 404) return 'Noch keine Daten veröffentlicht.'
+      if (mf.status < 200 || mf.status >= 300) throw new Error(`Manifest-Abruf fehlgeschlagen (HTTP ${mf.status})`)
       const manifest = (typeof mf.data === 'string' ? JSON.parse(mf.data) : mf.data) as {
         version: number; count: number; updated: string; file: string
       }
+      if (!manifest?.file || typeof manifest.version !== 'number') return 'Ungültiges Manifest - Datenquelle prüfen.'
       if (state.version !== null && manifest.version <= state.version) {
         return `Bereits aktuell (Version ${state.version}, ${state.count} Einträge).`
       }
-      const dataAsset = relData.assets?.find((a) => a.name === manifest.file)
-      if (!dataAsset) return `Artefakt ${manifest.file} fehlt im Release.`
-      const res = await http.get(dataAsset.browser_download_url, { connectTimeout: 8000, readTimeout: 30000 })
+      const res = await http.get(resolveDataUrl(manifest.file), { connectTimeout: 8000, readTimeout: 30000 })
       if (res.status < 200 || res.status >= 300) throw new Error(`Download fehlgeschlagen (HTTP ${res.status})`)
       const artifact = (typeof res.data === 'string' ? JSON.parse(res.data) : res.data) as {
         version: number; updated: string; count: number; entries: Record<string, string>

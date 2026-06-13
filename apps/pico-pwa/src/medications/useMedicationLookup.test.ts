@@ -16,12 +16,6 @@ function fakeKv(): KeyValueAdapter & { dump: Record<string, string> } {
   }
 }
 
-const RELEASE = {
-  assets: [
-    { name: 'manifest.json', browser_download_url: 'https://x/manifest.json' },
-    { name: 'medications.v2.json', browser_download_url: 'https://x/medications.v2.json' },
-  ],
-}
 const MANIFEST = { version: 2, count: 2, updated: '2026-06-10T00:00:00Z', file: 'medications.v2.json' }
 const ARTIFACT = { version: 2, count: 2, updated: '2026-06-10T00:00:00Z', entries: { '04527098': 'Ibuflam 600 mg', '17260627': 'Ramipril 5 mg' } }
 
@@ -34,22 +28,24 @@ function fakeHttp(map: Record<string, HttpResponse>): HttpAdapter & { calls: str
   }
 }
 
-const API = 'https://api/releases/latest'
+// Manifest-URL + relativ daneben liegendes Daten-Artefakt (wie auf resqdocs.app/pzn/).
+const MANIFEST_URL = 'https://example.test/pzn/manifest.json'
+const DATA_URL = 'https://example.test/pzn/medications.v2.json'
 
 test('syncNow lädt Manifest + Artefakt, persistiert, resolve trifft offline', async () => {
   const kv = fakeKv()
   const http = fakeHttp({
-    [API]: { status: 200, data: RELEASE },
-    'https://x/manifest.json': { status: 200, data: MANIFEST },
-    'https://x/medications.v2.json': { status: 200, data: ARTIFACT },
+    [MANIFEST_URL]: { status: 200, data: MANIFEST },
+    [DATA_URL]: { status: 200, data: ARTIFACT },
   })
-  const l = createMedicationLookup(http, kv, API)
+  const l = createMedicationLookup(http, kv, MANIFEST_URL)
   const msg = await l.syncNow()
   assert.match(msg, /Version 2/)
+  assert.ok(http.calls.includes(DATA_URL), 'Daten-URL relativ zum Manifest aufgelöst')
   assert.equal(l.resolve('04527098'), 'Ibuflam 600 mg')
   assert.equal(l.resolve('00000000'), null)
   // Offline-Neustart: zweite Instanz lädt aus dem Cache, KEIN HTTP nötig
-  const l2 = createMedicationLookup(fakeHttp({}), kv, API)
+  const l2 = createMedicationLookup(fakeHttp({}), kv, MANIFEST_URL)
   await l2.ensureLoaded()
   assert.equal(l2.resolve('17260627'), 'Ramipril 5 mg')
   assert.equal(l2.state.version, 2)
@@ -58,23 +54,22 @@ test('syncNow lädt Manifest + Artefakt, persistiert, resolve trifft offline', a
 test('syncNow: gleiche Version lädt das Artefakt NICHT erneut', async () => {
   const kv = fakeKv()
   const http = fakeHttp({
-    [API]: { status: 200, data: RELEASE },
-    'https://x/manifest.json': { status: 200, data: MANIFEST },
-    'https://x/medications.v2.json': { status: 200, data: ARTIFACT },
+    [MANIFEST_URL]: { status: 200, data: MANIFEST },
+    [DATA_URL]: { status: 200, data: ARTIFACT },
   })
-  const l = createMedicationLookup(http, kv, API)
+  const l = createMedicationLookup(http, kv, MANIFEST_URL)
   await l.syncNow()
   const before = http.calls.length
   const msg = await l.syncNow()
   assert.match(msg, /Bereits aktuell/)
-  assert.equal(http.calls.filter((u) => u.endsWith('medications.v2.json')).length, 1)
-  assert.equal(http.calls.length, before + 2) // nur Release + Manifest erneut
+  assert.equal(http.calls.filter((u) => u === DATA_URL).length, 1)
+  assert.equal(http.calls.length, before + 1) // nur das Manifest erneut
 })
 
-test('syncNow: kein Release (404) ist kein Fehler', async () => {
-  const l = createMedicationLookup(fakeHttp({ [API]: { status: 404, data: null } }), fakeKv(), API)
+test('syncNow: keine Daten (404) ist kein Fehler', async () => {
+  const l = createMedicationLookup(fakeHttp({ [MANIFEST_URL]: { status: 404, data: null } }), fakeKv(), MANIFEST_URL)
   const msg = await l.syncNow()
-  assert.match(msg, /kein Release/i)
+  assert.match(msg, /keine Daten/i)
   assert.equal(l.state.error, null)
 })
 
