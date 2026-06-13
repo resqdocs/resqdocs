@@ -1,0 +1,4 @@
+#!/bin/sh
+# Hygiene-Gate vor jedem Commit: prueft die gestagten Dateien.
+# Aktivierung einmalig: git config core.hooksPath hooks
+exec node scripts/security-check.mjs --staged

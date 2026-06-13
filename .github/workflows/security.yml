@@ -1,0 +1,17 @@
+# Hygiene-Gate in der CI: gleicher Check wie lokal (scripts/security-check.mjs).
+name: security
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/security-check.mjs --selftest
+      - run: node scripts/security-check.mjs
