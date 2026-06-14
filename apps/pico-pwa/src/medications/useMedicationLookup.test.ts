@@ -73,6 +73,26 @@ test('syncNow: keine Daten (404) ist kein Fehler', async () => {
   assert.equal(l.state.error, null)
 })
 
+test('resolve normalisiert PZN auf 8 Stellen (BMP ohne fuehrende Null)', async () => {
+  const kv = fakeKv()
+  const http = fakeHttp({
+    [MANIFEST_URL]: { status: 200, data: MANIFEST },
+    [DATA_URL]: { status: 200, data: ARTIFACT },
+  })
+  const l = createMedicationLookup(http, kv, MANIFEST_URL)
+  await l.syncNow()
+  // Key im Woerterbuch ist 8-stellig "04527098".
+  assert.equal(l.resolve('04527098'), 'Ibuflam 600 mg', 'exakter 8-stelliger Treffer bleibt')
+  assert.equal(l.resolve('4527098'), 'Ibuflam 600 mg', 'BMP-Wert ohne fuehrende Null trifft')
+  assert.equal(l.resolve('  4527098 '), 'Ibuflam 600 mg', 'Whitespace wird toleriert')
+  // Robustheit: leere/ungueltige Eingaben brechen nicht, liefern null.
+  assert.equal(l.resolve(''), null)
+  assert.equal(l.resolve('abc'), null)
+  assert.equal(l.resolve('99999999'), null, 'unbekannte PZN -> null')
+  // >8 Ziffern werden NICHT gekuerzt -> kein (falscher) Treffer.
+  assert.equal(l.resolve('045270989'), null, '9-stelliger Wert wird nicht gekuerzt -> null')
+})
+
 test('Quelltext-Garantie: Medications-Schicht loggt nicht, kein Browser-Storage', () => {
   for (const f of ['useMedicationLookup.ts', 'medicationStore.ts']) {
     const src = readFileSync(new URL(`./${f}`, import.meta.url), 'utf8')

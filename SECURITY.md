@@ -18,8 +18,16 @@ Rückmeldung; feste Reaktionszeiten können nicht garantiert werden (Open-Source
 Die App telefoniert **nirgendwo** hin. Die einzigen erlaubten Remote-Verbindungen:
 
 1. **Lokale Pico-Bridge** (LAN, `http://10.10.10.1` bzw. konfigurierte Base-URL).
-2. **PZN-Wörterbuch-Abruf** (geplant, #11): Versions-/Manifest-Check + Download des
-   CC0-Artefakts - nur neutrale Referenzdaten, keine Patientendaten, nutzerinitiiert.
+2. **PZN-Wörterbuch-Abruf** (#11): Versions-/Manifest-Check + Download des
+   CC0-Artefakts - nur neutrale Referenzdaten, keine Patientendaten.
+   - **Standard: kein automatischer Abruf.** Die Aktualisierung ist
+     **nutzerinitiiert** - der Download der PZN-Datendatei geschieht ausschließlich
+     auf „Jetzt aktualisieren".
+   - **Optionaler Opt-in-Hinweis (Default aus):** Auf Wunsch prüft die App im
+     Hintergrund **nur die `manifest.json`** (kleine Versionsangabe), um auf eine
+     neue Datenbank-Version hinzuweisen. Sie lädt dabei **nicht** automatisch die
+     Datendatei; die eigentliche Aktualisierung bleibt nutzerinitiiert. Fehler
+     dieses Checks werden still behandelt (keine Fehlermeldung).
 
 **Keine Analytics, keine Telemetrie, keine Crash-Reporter, keine SDK-Heimsender, keine
 CDNs/Web-Fonts.** Jede neue Dependency wird vor Aufnahme auf Telemetrie-Verhalten geprüft

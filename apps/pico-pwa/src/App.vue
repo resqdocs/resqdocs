@@ -6,17 +6,27 @@ import BausteineTab from '@/components/library/BausteineTab.vue'
 import SettingsTab from '@/components/settings/SettingsTab.vue'
 import DisclaimerGate from '@/components/DisclaimerGate.vue'
 import FirmwareNoticeBanner from '@/components/FirmwareNoticeBanner.vue'
+import PznNoticeBanner from '@/components/PznNoticeBanner.vue'
 import TabGuide, { TAB_GUIDE_HINT_ID } from '@/components/TabGuide.vue'
 import { usePicoApi, type OsMode } from '@/composables/usePicoApi'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
 import { useFirmwareNotice } from '@/pico/useFirmwareNotice'
 import { useStorage } from '@/storage/useStorage'
+import { useMedicationLookup } from '@/medications/useMedicationLookup'
+import { usePznNotice } from '@/medications/usePznNotice'
 
 // App-Einstellungen laden + Storage-Backend wählen (nativ → SQLite, Web → Memory). Einmalig, idempotent.
 const storage = useStorage()
-onMounted(() => {
-  void storage.loadSettings()
+const pznLookup = useMedicationLookup()
+const pznNotice = usePznNotice()
+onMounted(async () => {
   void storage.initLibrary()
+  // Settings zuerst (await): der optionale Hintergrund-Check liest das Opt-in.
+  await storage.loadSettings()
+  // PZN-Aktualitaets-Hinweis: erst Cache laden (fuer den lokalen Alters-Hinweis,
+  // ohne Netz), dann optionalen Hintergrund-Check (NUR bei aktivem Opt-in).
+  await pznLookup.ensureLoaded()
+  void pznNotice.maybeCheck()
 })
 
 // Dauerhaft ausblendbarer Hinweis (#72-Mechanik): id landet in settings.dismissedHints
@@ -199,6 +209,10 @@ async function doSend(): Promise<void> {
     <!-- Globaler Firmware-Update-Hinweis (#134): erscheint nach einem Bridge-Kontakt
          mit veralteter Firmware, auf allen Tabs; Update direkt im Banner. -->
     <FirmwareNoticeBanner />
+
+    <!-- Globaler PZN-Aktualitaets-Hinweis: lokaler Alters-Hinweis (ohne Netz) bzw.
+         bei aktivem Opt-in eine echte neue Version; Sync direkt im Banner. -->
+    <PznNoticeBanner />
 
     <!-- Mobile-first; auf Tablet/Desktop waechst der Container mit (statt 576-px-Spalte, #23) -->
     <main class="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 md:max-w-3xl md:p-6 xl:max-w-5xl">

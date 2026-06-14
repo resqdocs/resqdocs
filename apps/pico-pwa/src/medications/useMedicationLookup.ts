@@ -52,14 +52,50 @@ export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, m
     state.loaded = true
   }
 
-  /** Rein lokale Aufloesung; null wenn unbekannt/kein Woerterbuch. */
+  /**
+   * Rein lokale Aufloesung; null wenn unbekannt/kein Woerterbuch.
+   *
+   * PZN-Schluessel sind 8-stellig (mit fuehrender Null), BMP liefert sie aber oft
+   * ohne fuehrende Null (z. B. "2953075"). Aufloesung:
+   * - exakter Treffer wird bevorzugt (bestehende 8-stellige Werte unveraendert);
+   * - sonst wird der Wert getrimmt und auf Ziffern reduziert;
+   * - rein numerische Werte mit WENIGER als 8 Stellen werden links mit Nullen
+   *   aufgefuellt (padStart) und nachgeschlagen;
+   * - Werte mit MEHR als 8 Ziffern werden NICHT gekuerzt -> kein Treffer (null);
+   * - leere/nicht-numerische Eingaben liefern null.
+   */
   function resolve(pzn: string): string | null {
-    return entries[pzn] ?? null
+    if (!pzn) return null
+    const direct = entries[pzn]
+    if (direct !== undefined) return direct
+    const digits = pzn.trim().replace(/\D/g, '')
+    if (!digits) return null
+    // Kein Truncate: >8 Ziffern bleiben unveraendert und treffen den 8-stelligen
+    // Key nicht -> null (lieber kein Treffer als ein falscher).
+    return entries[digits.padStart(8, '0')] ?? null
   }
 
   /** Daten-Artefakt liegt relativ zum Manifest (gleiches Verzeichnis). */
   function resolveDataUrl(file: string): string {
     return manifestUrl.replace(/[^/]*$/, '') + file
+  }
+
+  /**
+   * Nur die (winzige) Manifest-Version lesen - fuer den optionalen
+   * Hintergrund-Aktualitaets-Check (pznNotice, Opt-in). Laedt NICHT die Daten-
+   * Datei. Liefert die Remote-Version oder null (Fehler/404/ungueltig werden
+   * geschluckt - der Check darf nie stoeren). Einzige Remote-URL bleibt das
+   * Manifest dieser App-Konstante (SECURITY.md, Single Source).
+   */
+  async function fetchRemoteVersion(): Promise<number | null> {
+    try {
+      const mf = await http.get(manifestUrl, { connectTimeout: 8000, readTimeout: 8000 })
+      if (mf.status < 200 || mf.status >= 300) return null
+      const manifest = (typeof mf.data === 'string' ? JSON.parse(mf.data) : mf.data) as { version?: unknown }
+      return typeof manifest?.version === 'number' ? manifest.version : null
+    } catch {
+      return null
+    }
   }
 
   /**
@@ -110,7 +146,7 @@ export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, m
       : `Version ${state.version} · ${state.count} Einträge · Datenstand ${state.updated?.slice(0, 10) ?? '?'}`,
   )
 
-  return { state, status, ensureLoaded, resolve, syncNow }
+  return { state, status, ensureLoaded, resolve, syncNow, fetchRemoteVersion }
 }
 
 // --- App-Singleton (UI greift nur hierueber zu) --------------------------------

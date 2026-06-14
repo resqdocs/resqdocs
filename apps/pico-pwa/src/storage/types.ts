@@ -29,6 +29,12 @@ export interface AppSettings {
   headingFill: string
   /** Zielbreite der Kopfzeile. */
   headingWidth: number
+  /**
+   * Opt-in: im Hintergrund (gedrosselt) pruefen, ob eine neue Version des
+   * PZN-Woerterbuchs vorliegt. Aus = nur lokaler Alters-Hinweis ohne Netzabruf.
+   * Default false (Netzwerk-Policy: kein automatisches Phone-Home ohne Zustimmung).
+   */
+  pznAutoCheck: boolean
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -43,6 +49,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   headingPattern: '# {titel} ',
   headingFill: '=',
   headingWidth: 60,
+  pznAutoCheck: false,
 }
 
 /** Neutraler, wiederverwendbarer Block (z. B. „Mitfahrtverweigerung"). KEINE Patientendaten. */

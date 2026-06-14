@@ -26,6 +26,7 @@ function sanitize(s: Partial<AppSettings> | null | undefined): AppSettings {
     headingFill: typeof s?.headingFill === 'string' ? s.headingFill.slice(0, 1) : DEFAULT_SETTINGS.headingFill,
     headingWidth: Number.isFinite(Number(s?.headingWidth)) && Number(s?.headingWidth) > 0
       ? Math.min(200, Math.round(Number(s?.headingWidth))) : DEFAULT_SETTINGS.headingWidth,
+    pznAutoCheck: s?.pznAutoCheck === true,
   }
 }
 
