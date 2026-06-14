@@ -17,8 +17,8 @@ test('Default-Settings laden, wenn nichts gespeichert ist', async () => {
 test('Settings speichern und laden (Round-Trip)', async () => {
   const adapter = createFakeKeyValueAdapter()
   const repo = createSettingsRepository(adapter)
-  await repo.saveSettings({ defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40 })
-  assert.deepEqual(await repo.loadSettings(), { defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40 })
+  await repo.saveSettings({ defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40, pznAutoCheck: true })
+  assert.deepEqual(await repo.loadSettings(), { defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40, pznAutoCheck: true })
 })
 
 test('Settings zurücksetzen', async () => {
@@ -40,7 +40,7 @@ test('Settings-Repository speichert NUR die bekannten Felder (kein Protokoll/Fre
     protocols: [{ id: 'x' }], patientName: 'Mustermann',
   })
   const stored = JSON.parse(adapter.dump()[SETTINGS_KEY])
-  assert.deepEqual(Object.keys(stored).sort(), ['defaultOs', 'defaultProtocolId', 'dismissedHints', 'headingFill', 'headingPattern', 'headingWidth', 'lastSelectedProtocolId', 'picoBaseUrl', 'privacyNoticeAccepted', 'theme', 'themeFamily'])
+  assert.deepEqual(Object.keys(stored).sort(), ['defaultOs', 'defaultProtocolId', 'dismissedHints', 'headingFill', 'headingPattern', 'headingWidth', 'lastSelectedProtocolId', 'picoBaseUrl', 'privacyNoticeAccepted', 'pznAutoCheck', 'theme', 'themeFamily'])
   assert.ok(!('protocols' in stored) && !('patientName' in stored))
 })
 
