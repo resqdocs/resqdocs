@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 The ResQDocs project contributors
 # ResQDocs — Umlaut- & Sonderzeichen-Test (CircuitPython, Pico 1 / RP2040)
 #
 # ZWECK: Pruefen, ob Umlaute UND Sonderzeichen als USB-HID-Tastatur korrekt am

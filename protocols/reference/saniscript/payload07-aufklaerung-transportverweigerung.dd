@@ -1,0 +1,21 @@
+ATTACKMODE HID
+DELAY 50
+STRING Mit meiner Unterschrift unter dieses Dokument bestätige ich, dass ich vom Rettungsdienstpersonal umfassend über meinen Gesundheitszustand, die beobachteten Symptome, die potenziellen Risiken einer Nichtbehandlung sowie über mögliche weitere Vorgehensweisen im Bedarfsfall informiert wurde. Mir wurde klar gemacht, dass das Rettungsdienstpersonal, trotz seiner hohen Qualifikation und Erfahrung in der Notfallversorgung, nicht aus ärztlichem Personal besteht und daher keine abschließende medizinische Diagnose stellen kann. Ungeachtet dessen wurde mir zu meinem Schutz und aus rechtlichen Gründen ein Transport in ein Krankenhaus oder eine andere medizinische Behandlungseinrichtung angeboten.
+ENTER
+ENTER
+STRING Ich wurde nicht nur über die Risiken einer Nichtbehandlung aufgeklärt, sondern auch darüber informiert, wie ich bei einer Verschlechterung meines Zustandes oder bei der Notwendigkeit weiterer medizinischer Abklärung vorgehen kann. Dazu gehört die Möglichkeit, jederzeit meinen Hausarzt zu konsultieren, den ärztlichen Bereitschaftsdienst unter der Nummer 116 117 zu kontaktieren oder im Falle eines akuten Notfalls den Rettungsdienst über die Notrufnummer 112 zu rufen.
+ENTER
+ENTER
+STRING Die Entscheidung gegen einen Transport in ein Krankenhaus erfolgte auf Basis einer gemeinsamen Absprache mit dem Rettungsdienstpersonal, nachdem mir alle relevanten Informationen, einschließlich der möglichen Konsequenzen meiner Entscheidung und der Schritte, die ich im Falle einer Verschlechterung meines Gesundheitszustandes unternehmen sollte, umfassend und verständlich erläutert wurden.
+ENTER
+ENTER
+STRING Dieser Entscheidungsprozess, das Bewusstsein über die Qualifikation des Rettungsdienstpersonals als nicht-ärztliches Personal, die damit verbundenen Informationen und die empfohlenen weiteren Vorgehensweisen wurden mir vor der Unterzeichnung dieses Dokuments nochmals detailliert vorgebracht. Mit meiner Unterschrift bestätige ich meine Kenntnisnahme und mein Einverständnis mit der getroffenen Entscheidung, der umfassenden Aufklärung durch das Rettungsdienstpersonal und der Richtigkeit der hier dokumentierten Sachverhalte.
+ENTER
+ENTER
+STRING         Patient                                                              Angehörigen | Zeuge
+ENTER
+ENTER
+ENTER
+ENTER
+STRING ___________________________________________________________________________________________________
+ATTACKMODE OFF

@@ -48,3 +48,6 @@ core
 
 # Lokale Zusatzmuster fuer scripts/security-check.mjs (nie versionieren)
 .security-patterns.local.json
+
+# github/licensed cache (ephemer im CI; NICHT committen)
+.licenses/

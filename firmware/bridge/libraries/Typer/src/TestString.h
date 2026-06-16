@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 The ResQDocs project contributors
 /*
   TestString.h — canonical Issue #1 umlaut/special-char test string.
 

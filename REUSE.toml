@@ -1,0 +1,62 @@
+version = 1
+
+# REUSE-Annotationen für nicht-kommentierbare Firmware-Artefakte (#6-Folge,
+# License-Compliance-CI). Eigene Firmware-QUELLEN tragen bereits SPDX-/Copyright-
+# Header (#178) und werden NICHT hier annotiert (REUSE liest die Header direkt).
+# Diese Datei deckt nur die kompilierten Binär-Artefakte ab, die keine Header
+# tragen können. Belege: FIRMWARE_THIRD_PARTY_NOTICES.md, firmware/bridge/README.md.
+#
+# Geltungsbereich bewusst auf Firmware-Artefakte beschränkt (Säule B). Eine
+# repo-weite REUSE-Abdeckung (SPDX-Header/Annotationen für App-/Doku-Dateien) ist
+# ein separater, noch offener Schritt — siehe Audit/Bericht (nicht hier massen-editiert).
+
+# S2-Bridge: produktive Binary (App-Bundle) + BOOTSEL-.uf2 + Slice-B (mit WLAN).
+# Enthalten: eigener Code (GPL-3.0-or-later) + arduino-pico Core (LGPL-2.1-or-later)
+# + pico-sdk/lwIP/LittleFS (BSD-3-Clause) + DHCP/Crypto (MIT) + CYW43-WLAN-Blob
+# (LicenseRef-CYW43-RP, separat/gerätegebunden).
+[[annotations]]
+path = [
+  "apps/pico-pwa/src/assets/firmware/bridge_s2.bin",
+  "firmware/bridge/dist/bridge_s2.pico2w.uf2",
+  "firmware/bridge/dist/slice_b_bridge.pico2w.uf2",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = [
+  "2026 The ResQDocs project contributors",
+  "Earle F. Philhower, III (arduino-pico)",
+  "2020 Raspberry Pi (Trading) Ltd. (pico-sdk)",
+  "2019-2022 George Robotics Pty Ltd (CYW43 firmware)",
+]
+SPDX-License-Identifier = "GPL-3.0-or-later AND LGPL-2.1-or-later AND BSD-3-Clause AND MIT AND LicenseRef-CYW43-RP"
+
+# Slice A: Umlaut-Typer ohne WLAN → KEIN CYW43-Blob enthalten.
+[[annotations]]
+path = "firmware/bridge/dist/slice_a_umlaut.pico2w.uf2"
+precedence = "aggregate"
+SPDX-FileCopyrightText = [
+  "2026 The ResQDocs project contributors",
+  "Earle F. Philhower, III (arduino-pico)",
+  "2020 Raspberry Pi (Trading) Ltd. (pico-sdk)",
+]
+SPDX-License-Identifier = "GPL-3.0-or-later AND LGPL-2.1-or-later AND BSD-3-Clause AND MIT"
+
+# OTA-Manifest: eigene Build-Metadaten (Version/Größe/sha256/Signatur).
+[[annotations]]
+path = "apps/pico-pwa/src/assets/firmware/bridge_s2.manifest.json"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 The ResQDocs project contributors"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Eigene Firmware-Metadaten ohne (sinnvollen) Header: generierter Public-Key-Header,
+# Arduino-Metadaten (library.properties / sketch.yaml). Eigener Code → GPL-3.0-or-later.
+# (Die kompilierbaren Firmware-Quellen tragen bereits SPDX-Header aus #178.)
+[[annotations]]
+path = [
+  "firmware/bridge/bridge_s2/OtaPublicKey.h",
+  "firmware/bridge/libraries/Typer/library.properties",
+  "firmware/bridge/slice_a_umlaut/sketch.yaml",
+  "firmware/bridge/slice_b_bridge/sketch.yaml",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 The ResQDocs project contributors"
+SPDX-License-Identifier = "GPL-3.0-or-later"

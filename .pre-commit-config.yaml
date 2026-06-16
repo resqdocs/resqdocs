@@ -1,0 +1,9 @@
+# Optional, LOKAL: REUSE-Lint vor dem Commit, damit Lizenz-Lücken früh auffallen.
+# NICHT erzwungen — wird erst durch `pipx install pre-commit && pre-commit install`
+# aktiviert. Quelle: https://reuse.software/dev/ · https://codeberg.org/fsfe/reuse-tool
+repos:
+  - repo: https://codeberg.org/fsfe/reuse-tool
+    # rev an den gewünschten reuse-tool-Release pinnen (lokal getestet: 6.2.0).
+    rev: v5.0.2
+    hooks:
+      - id: reuse

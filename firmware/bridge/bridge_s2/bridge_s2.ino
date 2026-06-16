@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 The ResQDocs project contributors
 /*
   ResQDocs — S2-Bridge (Issue #14): die produktive Bridge-Firmware nach dem
   S2-API-Vertrag (docs/pico-api.md). Ersetzt das Slice-B-HTML-Formular durch
@@ -42,7 +44,7 @@
 
 using namespace rq;
 
-static const char* FW_VERSION  = "0.3.2";  // 0.3.2: AP-IP-Fix #132 (0.3.1 war der lokale Roundtrip-Test)
+static const char* FW_VERSION  = "0.3.3";  // 0.3.2: AP-IP-Fix #132 (0.3.1 war der lokale Roundtrip-Test)
 static const char* API_VERSION = "0.1.0";
 static const char* AP_PREFIX   = "ResQDocs-";
 static const char* AP_PASS     = "resqdocs2026";  // fix/oeffentlich (S2)

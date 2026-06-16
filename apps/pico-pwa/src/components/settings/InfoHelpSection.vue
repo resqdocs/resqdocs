@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useStorage } from '@/storage/useStorage'
+import { useUsageNotice } from '@/composables/useUsageNotice'
 
 /** Info & Hilfe (#14-A). Kurze, neutrale Hinweise — keine Rechtsberatung, keine Garantien.
- * Plus: Erklär-Hinweise zurücksetzen (#72). */
+ * Plus: Erklär-Hinweise zurücksetzen (#72) und „Hinweis zur Nutzung" erneut anzeigen. */
 const { settings, saveSettings } = useStorage()
+const usageNotice = useUsageNotice()
 function resetHints(): void {
   settings.dismissedHints = []
   void saveSettings()
@@ -35,7 +37,8 @@ function resetHints(): void {
       <p class="text-sm text-base-content/70">
         ResQDocs ist ein <strong>Open-Source-Projekt</strong> — Mitwirken (Issues, Beiträge) ist willkommen.
       </p>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <button class="btn btn-sm" type="button" @click="usageNotice.show()">Hinweis zur Nutzung</button>
         <button class="btn btn-sm" type="button" @click="resetHints">Alle Hinweise erneut anzeigen</button>
         <span v-if="!settings.dismissedHints.length" class="text-xs text-base-content/50">keine ausgeblendet</span>
       </div>

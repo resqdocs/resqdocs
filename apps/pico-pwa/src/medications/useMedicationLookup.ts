@@ -11,6 +11,7 @@ import { computed, reactive } from 'vue'
 import type { HttpAdapter } from '../pico/picoTypes.ts'
 import type { KeyValueAdapter } from '../storage/types.ts'
 import { loadDictionary, saveDictionary, type MedicationDictionary } from './medicationStore.ts'
+import { PZN_DICTIONARY_ENABLED } from './featureFlags.ts'
 
 /**
  * Manifest des PZN-Woerterbuchs, ausgeliefert ueber die offizielle Webseite
@@ -29,7 +30,14 @@ interface LookupState {
   fetchedAt: string | null
 }
 
-export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, manifestUrl = PZN_MANIFEST_URL) {
+export function createMedicationLookup(
+  http: HttpAdapter,
+  kv: KeyValueAdapter,
+  manifestUrl = PZN_MANIFEST_URL,
+  // Deaktiviert per Default (IFA/DSGVO, featureFlags). Injizierbar, damit der
+  // erhaltene Code-Pfad hinter dem Flag testbar bleibt.
+  enabled: boolean = PZN_DICTIONARY_ENABLED,
+) {
   const state = reactive<LookupState>({
     loaded: false, busy: false, error: null,
     version: null, count: 0, updated: null, fetchedAt: null,
@@ -47,6 +55,8 @@ export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, m
   /** Cache laden (einmalig, offline). */
   async function ensureLoaded(): Promise<void> {
     if (state.loaded) return
+    // Deaktiviert (IFA/DSGVO): kein Wörterbuch laden, keine Auflösung. Code bleibt.
+    if (!enabled) { state.loaded = true; return }
     const d = await loadDictionary(kv)
     if (d) applyDictionary(d)
     state.loaded = true
@@ -65,6 +75,8 @@ export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, m
    * - leere/nicht-numerische Eingaben liefern null.
    */
   function resolve(pzn: string): string | null {
+    // Deaktiviert (IFA/DSGVO): KEINE automatische PZN→Name-Auflösung.
+    if (!enabled) return null
     if (!pzn) return null
     const direct = entries[pzn]
     if (direct !== undefined) return direct
@@ -88,6 +100,8 @@ export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, m
    * Manifest dieser App-Konstante (SECURITY.md, Single Source).
    */
   async function fetchRemoteVersion(): Promise<number | null> {
+    // Deaktiviert (IFA/DSGVO): KEIN Netzabruf.
+    if (!enabled) return null
     try {
       const mf = await http.get(manifestUrl, { connectTimeout: 8000, readTimeout: 8000 })
       if (mf.status < 200 || mf.status >= 300) return null
@@ -103,6 +117,8 @@ export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, m
    * Version laden. Liefert eine kurze Statusmeldung.
    */
   async function syncNow(): Promise<string> {
+    // Deaktiviert (IFA/DSGVO): KEIN Download eines PZN-Datenbestands.
+    if (!enabled) return 'PZN-Wörterbuch deaktiviert.'
     state.busy = true
     state.error = null
     try {

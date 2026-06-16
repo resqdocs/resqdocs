@@ -2,6 +2,7 @@
   "name": "@resqdocs/pico-pwa",
   "private": true,
   "version": "0.0.0",
+  "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,12 +10,9 @@
     "preview": "vite preview",
     "ios": "bash scripts/open-ios.sh",
     "android": "bash scripts/open-android.sh",
-    "test:shared": "node --test ../../packages/shared/medplan/medplan.test.mjs ../../packages/shared/tools/scores.test.mjs",
-    "test:app": "node --test --experimental-strip-types src/composables/caseState.test.ts src/composables/creatorSession.test.ts src/composables/creatorSessionStore.test.ts src/composables/useDisclaimer.test.ts src/storage/storage.test.ts src/storage/sqlite/sqliteLibraryRepository.test.ts src/pico/picoClient.test.ts src/pico/firmwareUpdate.test.ts src/pico/firmwareNotice.test.ts src/medplan/useMedplanScan.test.ts src/medications/useMedicationLookup.test.ts src/medications/pznNotice.test.ts",
-    "test": "npm run test:shared && npm run test:app",
-    "test:pzn-live": "node --experimental-strip-types scripts/check-pzn-live.mjs",
-    "setup:hooks": "sh ../../scripts/setup-hooks.sh",
-    "security:check": "node ../../scripts/security-check.mjs"
+    "test:shared": "node --test ../../packages/shared/creator/creator.test.mjs ../../packages/shared/renderer/render.test.mjs ../../packages/shared/renderer/runtime.test.mjs ../../packages/shared/medplan/medplan.test.mjs ../../packages/shared/tools/scores.test.mjs",
+    "test:app": "node --test --experimental-strip-types src/composables/caseState.test.ts src/composables/temporaryCaseDraft.test.ts src/composables/temporaryCaseDraftRepository.test.ts src/composables/temporaryCaseDraftController.test.ts src/composables/creatorSession.test.ts src/composables/creatorSessionStore.test.ts src/composables/useDisclaimer.test.ts src/composables/useUsageNotice.test.ts src/storage/storage.test.ts src/storage/sqlite/sqliteLibraryRepository.test.ts src/pico/picoClient.test.ts src/pico/firmwareUpdate.test.ts src/pico/firmwareNotice.test.ts src/pico/firmwareArtifacts.test.ts src/medplan/useMedplanScan.test.ts src/medplan/scannerMode.test.ts src/medications/useMedicationLookup.test.ts src/medications/pznNotice.test.ts src/medications/packageScan.test.ts src/medications/pznLibrary.test.ts src/medications/pznLibraryRepository.test.ts",
+    "test": "npm run test:shared && npm run test:app"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "^8.1.0",

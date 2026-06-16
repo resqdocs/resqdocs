@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "lang": "de",
+  "note": "Freie Textbausteine für Sonderfälle. 'slot' verweist auf section.snippetSlot der Vorlage. Seed aus payload16; erweiterbar (z. B. Transportverweigerung-Langform aus reference/saniscript/payload07 & payload15).",
+  "snippets": [
+    { "id": "ve_pflegeueberleitung", "slot": "vorerkrankungen",
+      "label": "Siehe Pflegeüberleitung", "text": "Siehe Pflegeüberleitung" },
+    { "id": "ve_medplan", "slot": "vorerkrankungen",
+      "label": "Aus Medikamentenplan abgeleitet",
+      "text": "VE aus dem vorhandenen Medikamentenplan abgeleitet." },
+    { "id": "transport_einsatzort", "slot": "transport",
+      "label": "Verbleib am Einsatzort", "text": "Pat. verbleibt am Einsatzort" },
+    { "id": "transport_hausarzt", "slot": "transport",
+      "label": "Hausarzt aufsuchen", "text": "Pat. sucht zeitnah den Hausarzt auf" }
+  ]
+}

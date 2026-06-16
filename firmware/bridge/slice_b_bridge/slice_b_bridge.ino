@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 The ResQDocs project contributors
 /*
   ResQDocs — Slice B: live bridge. WLAN-AP + web form -> types received text
   via the SAME Typer module as Slice A (no typing logic duplicated here).

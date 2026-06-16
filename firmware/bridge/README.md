@@ -99,8 +99,14 @@ node scripts/ota/upload.mjs \
   --manifest firmware/bridge/dist/bridge_s2.pico2w.0.3.0.manifest.json
 ```
 
-**Henne-Ei:** Firmware ≤ 0.2.0 hat kein OTA — das **erste** Update auf 0.3.0
-erfolgt einmalig manuell per BOOTSEL (`.uf2`). Danach geht alles ueber WLAN.
+**Henne-Ei:** Firmware ≤ 0.2.0 hat **kein OTA**. Eine Pico mit ≤ 0.2.0 kann ein
+neues Release daher NICHT drahtlos ziehen — sie muss **einmalig per BOOTSEL** mit
+der **aktuellen** `.uf2` (`dist/bridge_s2.pico2w.uf2`, OTA-fähig ab 0.3.0) geflasht
+werden. Danach laufen alle weiteren Updates ueber WLAN (OTA).
+**WICHTIG:** `dist/bridge_s2.pico2w.uf2` MUSS bei jedem `FW_VERSION`-Bump neu gebaut
+und mitcommittet werden — sonst landet ein BOOTSEL-Flash auf einem veralteten
+(ggf. OTA-losen) Stand. Der Konsistenz-Check `src/pico/firmwareArtifacts.test.ts`
+(in der App) erzwingt, dass die committete `.uf2` die aktuelle `FW_VERSION` enthaelt.
 **Fallback bleibt immer BOOTSEL** (kein A/B-Rollback): schlaegt ein Update vor
 dem Reboot fehl, bleibt die alte Firmware aktiv; nur ein Stromausfall exakt
 waehrend des Bootloader-Flashens erfordert den manuellen Weg.
