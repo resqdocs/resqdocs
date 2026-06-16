@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useStorage } from '@/storage/useStorage'
-import { SCANNER_MODE_LABELS, NATIVE_SCANNER_AVAILABLE, type ScannerMode } from '@/medplan/scannerMode'
+import { SCANNER_MODE_LABELS, type ScannerMode } from '@/medplan/scannerMode'
+import { nativeDatamatrixScanAvailable } from '@/medplan/nativeDatamatrixScan'
 
 /**
  * Scanner-Modus (#170) - Test-/Vergleichseinstellung fuer den BMP-Data-Matrix-Scan.
@@ -9,6 +10,9 @@ import { SCANNER_MODE_LABELS, NATIVE_SCANNER_AVAILABLE, type ScannerMode } from 
  * Datenschutz: rein lokale Auswahl, kein Netz/Telemetrie.
  */
 const storage = useStorage()
+// #170: „Native ZXing-C++" ist nur auf Android waehlbar (natives Plugin, kameranativ); umgeht den
+// WebView-Kamera-Crash. iOS/Web nutzen weiter den WebView-Scanner.
+const nativeAvailable = nativeDatamatrixScanAvailable()
 
 function onChange(e: Event): void {
   storage.settings.scannerMode = (e.target as HTMLSelectElement).value as ScannerMode
@@ -28,14 +32,15 @@ function onChange(e: Event): void {
         <option value="auto">{{ SCANNER_MODE_LABELS.auto }}</option>
         <option value="webview_standard">{{ SCANNER_MODE_LABELS.webview_standard }}</option>
         <option value="webview_optimized">{{ SCANNER_MODE_LABELS.webview_optimized }}</option>
-        <option value="native_zxingcpp" :disabled="!NATIVE_SCANNER_AVAILABLE">
-          {{ SCANNER_MODE_LABELS.native_zxingcpp }}{{ NATIVE_SCANNER_AVAILABLE ? '' : ' — noch nicht verfügbar' }}
+        <option value="native_zxingcpp" :disabled="!nativeAvailable">
+          {{ SCANNER_MODE_LABELS.native_zxingcpp }}{{ nativeAvailable ? ' (Android, kameranativ)' : ' — nur auf Android' }}
         </option>
       </select>
       <p class="text-xs text-base-content/60">
-        „WebView Standard" = bisheriger Scanner, „WebView optimiert" = mit Tuning (schnelleres
-        Decodieren, höhere Auflösung, Fokus). Im Scanner selbst gibt es zusätzlich einen
-        Schnellumschalter. Es werden keine Bilddaten gespeichert oder übertragen.
+        Auf Android nutzt „Automatisch" jetzt den nativen Decoder (kameranativ, ohne den
+        WebView-Kamera-Crash). „WebView Standard/optimiert" bleiben als Fallback wählbar. Im
+        WebView-Scanner gibt es zusätzlich einen Schnellumschalter. Es werden keine Bilddaten
+        gespeichert oder übertragen.
       </p>
     </div>
   </section>
