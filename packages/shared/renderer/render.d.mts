@@ -10,6 +10,13 @@ export interface MedikamenteRow {
   name: string
   dosierung?: string
   kommentar?: string
+  /**
+   * Optionale Roh-PZN „im Hintergrund" (#184): bleibt am Eintrag hinterlegt, auch
+   * wenn der Nutzer den Namen überschreibt. NUR für den bewussten Einzel-Transfer
+   * in die PZN-Bibliothek; rein additiv, vom Renderer ignoriert (keine Linkage,
+   * verlässt das Einsatz-/Protokoll-Datenmodell nur durch eine Nutzerhandlung).
+   */
+  pzn?: string
 }
 
 /** Per-id override: free text, explicit value/state, replacement list entries, or medication rows. */

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 The ResQDocs project contributors
 /*
   OtaUpdate.h — OTA-Update-Logik der S2-Bridge (Issue #130).
 

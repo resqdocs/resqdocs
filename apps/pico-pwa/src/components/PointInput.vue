@@ -4,6 +4,9 @@ import BefundItem, { type BefundValue } from '@/components/BefundItem.vue'
 import TriStateToggle, { type TriState } from '@/components/TriStateToggle.vue'
 import LongTextModal from '@/components/LongTextModal.vue'
 import MedplanScanSection from '@/components/MedplanScanSection.vue'
+import PackageScanOverlay from '@/components/PackageScanOverlay.vue'
+import { useMedicationLookup } from '@/medications/useMedicationLookup'
+import { extractPznFromPackageCode, packageScanName, type PackageBarcodeFormat } from '@/medications/packageScan'
 import type { MedikamenteRow, ProtocolPoint } from '@shared/renderer/render.mjs'
 import type { PointValue } from '@/composables/caseState'
 
@@ -31,7 +34,7 @@ function r(input: string | undefined): string {
 
 /**
  * UI-Fallback ohne `label`: ID lesbar machen (vorerkrankungen -> Vorerkrankungen).
- * Nur Anzeige - die Renderer-Ausgabe bleibt label-frei (label-frei bleibt die Ausgabe, #27).
+ * Nur Anzeige - die Renderer-Ausgabe bleibt label-frei (payload16-treu, #27).
  */
 function humanize(id: string | undefined): string {
   const s = (id ?? '').replace(/[-_]+/g, ' ')
@@ -125,6 +128,35 @@ function applyScannedRows(rows: MedikamenteRow[]): void {
   // Gescannte Zeilen ergaenzen den Bestand (Patient nimmt ggf. mehr als im Plan).
   setMedRows([...medRows(), ...rows])
   medScanOpen.value = false
+}
+
+// --- Packungs-Scan pro Zeile (#167): EINE Packung -> PZN -> Name in GENAU diese Zeile.
+// Getrennt vom BMP-Scan. Datensparsam: nur die PZN/der Name werden uebernommen,
+// nie die Roh-Payload (Serien-/Chargen-/Verfalldaten werden in der Extraktion verworfen).
+const pkgScanRow = ref<number | null>(null)
+const pkgScanMsg = ref<string | null>(null)
+const lookup = useMedicationLookup()
+void lookup.ensureLoaded()
+
+function openPackageScan(i: number): void {
+  pkgScanMsg.value = null
+  pkgScanRow.value = i
+}
+function addAndScanPackage(): void {
+  const rows = [...medRows(), { name: '', dosierung: '', kommentar: '' }]
+  setMedRows(rows)
+  openPackageScan(rows.length - 1)
+}
+function onPackageDecoded(p: { text: string; format: PackageBarcodeFormat }): void {
+  const i = pkgScanRow.value
+  pkgScanRow.value = null
+  if (i === null) return
+  const pzn = extractPznFromPackageCode(p.text, p.format)
+  if (!pzn) { pkgScanMsg.value = 'Keine PZN im Packungscode gefunden.'; return } // Zeile unveraendert
+  const name = packageScanName(pzn, lookup.resolve(pzn))
+  // NUR diese Zeile fuellen; Dosierung/Kommentar bleiben erhalten.
+  setMedRows(medRows().map((r, idx) => (idx === i ? { ...r, name } : r)))
+  pkgScanMsg.value = `Übernommen: ${name}`
 }
 </script>
 
@@ -254,6 +286,18 @@ function applyScannedRows(rows: MedikamenteRow[]): void {
         <button
           class="btn btn-ghost btn-xs shrink-0"
           type="button"
+          :aria-label="`Medikament ${i + 1}: Barcode scannen`"
+          title="Barcode scannen"
+          @click="openPackageScan(i)"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4" aria-hidden="true">
+            <path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2" stroke-linecap="round" />
+            <path d="M7 8v8M10 8v8M13 8v8M16 8v8" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button
+          class="btn btn-ghost btn-xs shrink-0"
+          type="button"
           :aria-label="`Medikament ${i + 1} entfernen`"
           @click="removeMedRow(i)"
         >✕</button>
@@ -283,10 +327,15 @@ function applyScannedRows(rows: MedikamenteRow[]): void {
 
     <div class="flex flex-wrap gap-2">
       <button class="btn btn-sm" type="button" @click="addMedRow">+ Medikament</button>
+      <button class="btn btn-sm" type="button" @click="addAndScanPackage">Packung scannen</button>
       <button class="btn btn-sm" type="button" @click="medScanOpen = !medScanOpen">
         {{ medScanOpen ? 'Scanner schließen' : 'BMP scannen' }}
       </button>
     </div>
+    <p v-if="pkgScanMsg" class="text-xs text-base-content/70">{{ pkgScanMsg }}</p>
     <MedplanScanSection v-if="medScanOpen" structured @apply-rows="applyScannedRows" />
+
+    <!-- Packungs-Scan (#167): EINE Packung in die gewaehlte Zeile; getrennt vom BMP-Scan. -->
+    <PackageScanOverlay v-if="pkgScanRow !== null" @decoded="onPackageDecoded" @cancel="pkgScanRow = null" />
   </div>
 </template>

@@ -32,20 +32,32 @@ function fakeHttp(map: Record<string, HttpResponse>): HttpAdapter & { calls: str
 const MANIFEST_URL = 'https://example.test/pzn/manifest.json'
 const DATA_URL = 'https://example.test/pzn/medications.v2.json'
 
+test('DEAKTIVIERT (Default-Flag): kein Netz, keine Auflösung, kein Sync (IFA/DSGVO)', async () => {
+  const kv = fakeKv()
+  const http = fakeHttp({ [MANIFEST_URL]: { status: 200, data: MANIFEST }, [DATA_URL]: { status: 200, data: ARTIFACT } })
+  // Ohne `enabled`-Override -> Default = PZN_DICTIONARY_ENABLED (false).
+  const l = createMedicationLookup(http, kv, MANIFEST_URL)
+  await l.ensureLoaded()
+  assert.equal(l.resolve('04527098'), null, 'keine automatische Auflösung')
+  assert.equal(await l.fetchRemoteVersion(), null, 'kein Versionsabruf')
+  assert.equal(await l.syncNow(), 'PZN-Wörterbuch deaktiviert.')
+  assert.deepEqual(http.calls, [], 'KEIN Netzzugriff')
+})
+
 test('syncNow lädt Manifest + Artefakt, persistiert, resolve trifft offline', async () => {
   const kv = fakeKv()
   const http = fakeHttp({
     [MANIFEST_URL]: { status: 200, data: MANIFEST },
     [DATA_URL]: { status: 200, data: ARTIFACT },
   })
-  const l = createMedicationLookup(http, kv, MANIFEST_URL)
+  const l = createMedicationLookup(http, kv, MANIFEST_URL, true)
   const msg = await l.syncNow()
   assert.match(msg, /Version 2/)
   assert.ok(http.calls.includes(DATA_URL), 'Daten-URL relativ zum Manifest aufgelöst')
   assert.equal(l.resolve('04527098'), 'Ibuflam 600 mg')
   assert.equal(l.resolve('00000000'), null)
   // Offline-Neustart: zweite Instanz lädt aus dem Cache, KEIN HTTP nötig
-  const l2 = createMedicationLookup(fakeHttp({}), kv, MANIFEST_URL)
+  const l2 = createMedicationLookup(fakeHttp({}), kv, MANIFEST_URL, true)
   await l2.ensureLoaded()
   assert.equal(l2.resolve('17260627'), 'Ramipril 5 mg')
   assert.equal(l2.state.version, 2)
@@ -57,7 +69,7 @@ test('syncNow: gleiche Version lädt das Artefakt NICHT erneut', async () => {
     [MANIFEST_URL]: { status: 200, data: MANIFEST },
     [DATA_URL]: { status: 200, data: ARTIFACT },
   })
-  const l = createMedicationLookup(http, kv, MANIFEST_URL)
+  const l = createMedicationLookup(http, kv, MANIFEST_URL, true)
   await l.syncNow()
   const before = http.calls.length
   const msg = await l.syncNow()
@@ -67,7 +79,7 @@ test('syncNow: gleiche Version lädt das Artefakt NICHT erneut', async () => {
 })
 
 test('syncNow: keine Daten (404) ist kein Fehler', async () => {
-  const l = createMedicationLookup(fakeHttp({ [MANIFEST_URL]: { status: 404, data: null } }), fakeKv(), MANIFEST_URL)
+  const l = createMedicationLookup(fakeHttp({ [MANIFEST_URL]: { status: 404, data: null } }), fakeKv(), MANIFEST_URL, true)
   const msg = await l.syncNow()
   assert.match(msg, /keine Daten/i)
   assert.equal(l.state.error, null)
@@ -79,7 +91,7 @@ test('resolve normalisiert PZN auf 8 Stellen (BMP ohne fuehrende Null)', async (
     [MANIFEST_URL]: { status: 200, data: MANIFEST },
     [DATA_URL]: { status: 200, data: ARTIFACT },
   })
-  const l = createMedicationLookup(http, kv, MANIFEST_URL)
+  const l = createMedicationLookup(http, kv, MANIFEST_URL, true)
   await l.syncNow()
   // Key im Woerterbuch ist 8-stellig "04527098".
   assert.equal(l.resolve('04527098'), 'Ibuflam 600 mg', 'exakter 8-stelliger Treffer bleibt')

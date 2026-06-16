@@ -35,6 +35,19 @@ test('ingest() übernimmt Medikationszeilen in den Entwurf', () => {
   assert.equal(s.ausstellerRolle.value, '')
 })
 
+test('#184: structuredRows trägt die Roh-PZN; Name-Overwrite behält die PZN', () => {
+  const s = useMedplanScan()
+  s.ingest(EINSEITIG) // ein Medikament, nur PZN (2455874)
+  assert.equal(s.structuredRows.value.length, 1)
+  assert.equal(s.structuredRows.value[0].pzn, '2455874')
+  assert.match(s.structuredRows.value[0].name, /^PZN 2455874/) // PZN im Namensfeld
+  s.updateRowName(0, 'ASS 100') // Nutzer überschreibt den Namen
+  assert.equal(s.structuredRows.value[0].name, 'ASS 100')
+  assert.equal(s.structuredRows.value[0].pzn, '2455874', 'PZN bleibt „im Hintergrund"')
+  // draftRows (fürs Protokoll) trägt die PZN ebenfalls weiter.
+  assert.equal(s.draftRows.value[0].pzn, '2455874')
+})
+
 test('mehrseitig: missingPages führt durch den Scan, Vollständigkeit erkannt', () => {
   const s = useMedplanScan()
   s.ingest(SEITE_1)
@@ -88,7 +101,7 @@ test('Entwurf bearbeiten/entfernen; draftText: eine Zeile je Medikament, Leeres 
 
 const MIT_ARZT =
   '<MP v="025" U="CC" l="de-DE"><P g="E" f="M"/>' +
-  '<A lanr="987654321" n="Praxis Dr. Demo" s="Weg 1" z="12345" c="Musterstadt" p="0123-456" e="x@y.z"/>' +
+  '<A lanr="987654321" n="Praxis Dr. Demo" s="Weg 1" z="55278" c="Musterstadt" p="06733-123" e="x@y.z"/>' +
   '<S><M p="230272" m="1" du="1"/></S></MP>'
 
 test('Aussteller wird erkannt, aber NUR bei gewaehlter Rolle uebernommen (Default: nicht)', () => {
@@ -99,7 +112,7 @@ test('Aussteller wird erkannt, aber NUR bei gewaehlter Rolle uebernommen (Defaul
   assert.ok(!s.draftText.value.includes('Demo'), 'ohne Auswahl kein Arzt im Text')
   s.ausstellerRolle.value = 'Hausarzt'
   assert.ok(
-    s.draftText.value.startsWith('Hausarzt: Praxis Dr. Demo, Musterstadt, LANR 987654321, Tel. 0123-456\n'),
+    s.draftText.value.startsWith('Hausarzt: Praxis Dr. Demo, Musterstadt, LANR 987654321, Tel. 06733-123\n'),
     s.draftText.value,
   )
   // Nicht gelesene A-Attribute duerfen nirgends auftauchen
@@ -153,7 +166,7 @@ test('draftRows: removeRow haelt Text- und Strukturpfad synchron; reset leert be
 })
 
 // --- #164: End-to-End-Regression - realer 14-Medikamente-Plan, anonymisiert
-// (kein P/A/C/O-Element, U auf Nullen) -> Parsen + PZN-Normalisierung +
+// (kein P/A/C/O-Element, U auf Nullen) -> Parsen + PZN-Normalisierung (#162) +
 // Aufloesung gegen ein synthetisches Test-Woerterbuch + Render-Ausgabe. ---
 const UKF_164 =
   '<MP v="026" U="00000000000000000000000000000000" l="de-DE"><S>' +
@@ -180,7 +193,7 @@ async function lookupWith(dict: Record<string, string>) {
   kv.dump['medications.dictionary'] = JSON.stringify({
     version: 1, count: Object.keys(dict).length, updated: '2026-06-13', fetchedAt: '2026-06-13', entries: dict,
   })
-  const l = createMedicationLookup(fakeHttp({}), kv, MANIFEST_URL)
+  const l = createMedicationLookup(fakeHttp({}), kv, MANIFEST_URL, true)
   await l.ensureLoaded()
   return l
 }
@@ -189,11 +202,12 @@ test('#164 E2E: 14 Medikamente, alle PZN normalisiert + aufgeloest, keine Verlus
   const lookup = await lookupWith(TEST_DICT)
   const s = useMedplanScan((pzn) => lookup.resolve(pzn))
   assert.equal(s.ingest(UKF_164), true)
+  assert.equal(s.draftRows.value.length, 14, 'alle 14 strukturierten Zeilen erhalten')
   assert.equal(s.draftRows.value.length, 14, 'keine Zeile weggefiltert')
   for (const row of s.draftRows.value) {
     assert.match(row.name ?? '', /^Test-Medikament \d\d \(PZN /, `aufgeloest: ${row.name}`)
   }
-  // Sub-8-stellige PZN korrekt normalisiert aufgeloest.
+  // Sub-8-stellige PZN korrekt normalisiert aufgeloest (Kernfall #162/#164).
   assert.match(s.draftRows.value[1].name, /^Test-Medikament 02 \(PZN 2953075,/)
   assert.match(s.draftRows.value[6].name, /^Test-Medikament 07 \(PZN 524306,/)
   // Eintrag mit t/i bleibt erhalten + aufgeloest.

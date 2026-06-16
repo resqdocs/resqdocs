@@ -1,0 +1,47 @@
+# github/licensed — npm-/App-Lizenz-Compliance (Säule A).
+# Docs: https://github.com/licensee/licensed/blob/main/docs/configuration.md
+#
+# Die `allowed`-Liste ist NICHT erfunden, sondern aus dem REAL vorgefundenen
+# Produktions-Dependency-Baum belegt (`npm ls --omit=dev --all`):
+#   MIT, Apache-2.0, ISC, BSD-2-Clause, BSD-3-Clause, 0BSD, GPL-3.0-or-later (self),
+#   sowie SPDX-Ausdrücke (MIT OR GPL-3.0-or-later)=jszip, (MIT AND Zlib)=pako,
+#   (Unlicense OR Apache-2.0)=@zxing/text-encoding.
+# Die SPDX-Atome dieser Ausdrücke (unlicense, zlib) sind daher mit aufgenommen.
+#
+# CI-Verhalten: `licensed cache` (ephemer) -> `licensed status`. KEIN Cache-Push
+# nach dev. `status` schlägt fehl bei nicht erlaubter/fehlender/veralteter Lizenz
+# oder neuer (transitiver) Abhängigkeit ohne Eintrag.
+
+sources:
+  npm: true
+
+allowed:
+  - mit              # 50+ Pakete (vue, @capacitor/*, @zxing/browser, …)
+  - apache-2.0       # @zxing/library, typescript, localforage, browser-fs-access
+  - isc              # @capacitor/synapse, inherits, picocolors
+  - bsd-2-clause     # entities
+  - bsd-3-clause     # source-map-js
+  - 0bsd             # tslib
+  - unlicense        # SPDX-Atom aus "(Unlicense OR Apache-2.0)" (@zxing/text-encoding)
+  - zlib             # SPDX-Atom aus "(MIT AND Zlib)" (pako)
+  - gpl-3.0-or-later # eigenes Projekt (@resqdocs/pico-pwa, @resqdocs/landing-page)
+  # Projektweit erlaubt, aktuell NICHT im npm-Baum (Firmware/Daten, via REUSE bzw.
+  # separates pzn-data-Repo geführt) — für Konsistenz dokumentiert:
+  - lgpl-2.1-or-later # Firmware-Drittkomponenten (arduino-pico Core, Keyboard, EEPROM)
+  - cc0-1.0           # PZN-Daten (separates Repo resqdocs/pzn-data)
+
+# Keine `reviewed`-Einträge nötig: alle vorgefundenen Lizenzen/SPDX-Ausdrücke werden
+# bereits durch `allowed` erfüllt (dual-license OR/AND wird von licensed ausgewertet).
+reviewed: {}
+
+# Keine `ignored`-Einträge: es werden keine intern-/test-only-Pakete ausgeschlossen.
+ignored: {}
+
+# Monorepo: zwei npm-Apps; jede mit eigenem Cache.
+apps:
+  - name: pico-pwa
+    source_path: apps/pico-pwa
+    cache_path: .licenses/pico-pwa
+  - name: landing-page
+    source_path: apps/landing-page
+    cache_path: .licenses/landing-page

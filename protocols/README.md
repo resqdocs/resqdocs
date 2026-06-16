@@ -1,15 +1,23 @@
-# protocols/ — Protokoll-Schema & Beispiel-Vorlage
+# protocols/ — Standardprotokoll & Snippets
 
-Das Datenmodell der Dokumentation als **versionierte Daten**, getrennt von App und Firmware.
+Die Inhalte der Dokumentation als **versionierte Daten**, getrennt von App und Firmware.
 
-- **Schema** [`protocol.schema.json`](protocol.schema.json) + Spezifikation
-  [`SCHEMA.md`](SCHEMA.md): Vorlagen bestehen aus Blöcken → Punkten mit Variablen,
-  Bedingungen (`visibleIf`), `de-gender`-Grammatik und Spezialelementen
-  (z. B. `medikamente`). Datenformat = **JSON** (sprachneutral, in App und Tests nutzbar).
-- **Beispiel-Vorlage** [`standardprotokoll.json`](standardprotokoll.json): die in der App
-  ausgelieferte, bewusst **neutrale Funktionsdemo** — zeigt alle Punkttypen, Variablen,
-  Platzhalter, Bedingungen und Feld-Tools. Kein reales Einsatzprotokoll: Jede Organisation
-  erstellt ihre eigenen Vorlagen direkt in der App (Protokoll-Kreator).
+## Modell (Slice 2 — umgesetzt)
 
-Der Renderer (`render(template, values) → Klartext`) lebt in
-[`packages/shared/renderer/`](../packages/shared/renderer/).
+- **Standardprotokoll** als maschinenlesbare **Vorlage** [`standardprotokoll.json`](standardprotokoll.json):
+  11 Abschnitte (Alarmierung, Allergien, Vorerkrankungen, Anamnese, **xABCDE**, Risikofaktoren,
+  Dauermedikation, Impf-Status, Verlauf/Maßnahmen, Transport/Verbleib, Aufklärung). xABCDE ist
+  **klinisch-semantisch** modelliert: jeder Buchstabe (x/A/B/C/D/E) ist eine Gruppe atomarer
+  Befunde, jeder einzeln „normal ↔ auffällig" schaltbar.
+- **Snippet-Bibliothek** [`snippets.json`](snippets.json): freie Textbausteine für Sonderfälle.
+- **Renderer** [`renderer/render.mjs`](renderer/render.mjs): reine, abhängigkeitsfreie Funktion
+  `render(template, values) → Klartext`. Tests: `node --test protocols/renderer/render.test.mjs`.
+
+Format & Renderer-Vertrag: siehe [`SCHEMA.md`](SCHEMA.md). Datenformat = **JSON** (sprachneutral,
+in der späteren PWA und in den Tests nutzbar).
+
+## `reference/`
+
+Original-Inhalte der Vorläuferlösung „SaniScript" (DuckyScript-Payloads), als Seed für das
+Datenmodell gesichert — die Upload-Quelle ist flüchtig. Diese Dateien sind **Referenz**, kein
+Produktivformat.

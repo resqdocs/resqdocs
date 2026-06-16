@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 The ResQDocs project contributors
 /*
   WebForm.h — minimal Composer form served by the bridge over its WLAN-AP.
   accept-charset=UTF-8 so umlauts/special chars reach the firmware as UTF-8.

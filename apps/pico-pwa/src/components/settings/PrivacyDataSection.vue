@@ -2,17 +2,33 @@
 import { ref } from 'vue'
 import { useStorage } from '@/storage/useStorage'
 import { useBausteine } from '@/composables/useBausteine'
+import { useTemporaryCaseDraft } from '@/composables/useTemporaryCaseDraft'
+import {
+  CASE_DRAFT_TTL_MIN_HOURS,
+  CASE_DRAFT_TTL_MAX_HOURS,
+} from '@/composables/temporaryCaseDraft'
 
 /**
  * Datenschutz & lokale Daten (#14-A). Lösch-Aktionen laufen ausschließlich über
  * die gekapselte Storage-Schicht (useStorage) — KEINE direkte SQLite-/Preferences-
- * Nutzung. Bestätigung vor jeder Löschung. `caseState` ist flüchtig und wird hier
- * NICHT angefasst (Sitzung-Reset bleibt im Einsatz-Tab).
+ * Nutzung. Bestätigung vor jeder Löschung. Der temporäre Einsatzentwurf (#173) wird
+ * über sein gekapseltes Repository (useTemporaryCaseDraft) verworfen.
  */
 const storage = useStorage()
 const bausteine = useBausteine()
+const draft = useTemporaryCaseDraft()
 
-type Pending = 'library' | 'settings' | 'all' | null
+const TTL_OPTIONS = Array.from(
+  { length: CASE_DRAFT_TTL_MAX_HOURS - CASE_DRAFT_TTL_MIN_HOURS + 1 },
+  (_, i) => CASE_DRAFT_TTL_MIN_HOURS + i,
+)
+
+function onTtlChange(e: Event): void {
+  const h = Number((e.target as HTMLSelectElement).value)
+  void storage.saveSettings({ caseDraftTtlHours: h })
+}
+
+type Pending = 'library' | 'settings' | 'all' | 'draft' | null
 const pending = ref<Pending>(null)
 const busy = ref(false)
 const status = ref<{ kind: 'ok' | 'err'; msg: string } | null>(null)
@@ -27,6 +43,11 @@ async function run(action: Pending): Promise<void> {
     }
     if (action === 'settings' || action === 'all') {
       await storage.resetSettings()
+    }
+    // Temporären Einsatzentwurf verwerfen (#173): bei „nur Entwurf" und „Alles".
+    if (action === 'draft' || action === 'all') {
+      await draft.discard()
+      draft.clearNotice()
     }
     status.value = { kind: 'ok', msg: 'Erledigt.' }
   } catch (e) {
@@ -50,6 +71,27 @@ async function run(action: Pending): Promise<void> {
         <li>Die lokale Bibliothek enthält <strong>nur neutrale Vorlagen</strong> (Protokolle, Bausteine, Snippets).</li>
       </ul>
 
+      <!-- Temporärer Einsatzentwurf (#173): TTL-Auswahl + verwerfen -->
+      <div class="rounded-lg bg-base-200/60 p-3">
+        <label class="flex flex-wrap items-center justify-between gap-2">
+          <span class="text-sm font-medium">Temporären Einsatzentwurf löschen nach</span>
+          <select
+            class="select select-bordered select-sm"
+            :value="storage.settings.caseDraftTtlHours"
+            aria-label="Ablaufzeit des temporären Einsatzentwurfs in Stunden"
+            @change="onTtlChange"
+          >
+            <option v-for="h in TTL_OPTIONS" :key="h" :value="h">{{ h }} {{ h === 1 ? 'Stunde' : 'Stunden' }}</option>
+          </select>
+        </label>
+        <p class="mt-1 text-xs text-base-content/60">
+          Laufende Entwürfe werden nur lokal gespeichert und nach Inaktivität automatisch gelöscht.
+        </p>
+        <button class="btn btn-outline btn-xs mt-2" type="button" :disabled="busy" @click="pending = 'draft'">
+          Temporären Entwurf verwerfen
+        </button>
+      </div>
+
       <div class="flex flex-wrap gap-2">
         <button class="btn btn-outline btn-sm" type="button" :disabled="busy" @click="pending = 'library'">Library löschen</button>
         <button class="btn btn-outline btn-sm" type="button" :disabled="busy" @click="pending = 'settings'">App-Einstellungen zurücksetzen</button>
@@ -58,8 +100,9 @@ async function run(action: Pending): Promise<void> {
 
       <div v-if="pending" role="alert" class="alert alert-warning flex-col items-start gap-2 text-sm">
         <span v-if="pending === 'library'">„Library löschen" entfernt <strong>Protokolle, Bausteine und Snippets</strong> — App-Einstellungen bleiben.</span>
-        <span v-else-if="pending === 'settings'">„App-Einstellungen zurücksetzen" setzt nur die App-Einstellungen auf Standard — die Bibliothek bleibt.</span>
-        <span v-else>„Alles lokal zurücksetzen" löscht die <strong>gesamte Bibliothek</strong> und setzt die <strong>App-Einstellungen</strong> zurück. (Der flüchtige Einsatz-Zustand ist davon nicht betroffen.)</span>
+        <span v-else-if="pending === 'settings'">„App-Einstellungen zurücksetzen" setzt nur die App-Einstellungen auf Standard (inkl. Entwurf-Ablauf auf 3 Stunden) — die Bibliothek und ein laufender Entwurf bleiben.</span>
+        <span v-else-if="pending === 'draft'">„Temporären Entwurf verwerfen" löscht <strong>nur den laufenden temporären Einsatzentwurf</strong> — Einstellungen und Bibliothek bleiben.</span>
+        <span v-else>„Alles lokal zurücksetzen" löscht die <strong>gesamte Bibliothek</strong>, setzt die <strong>App-Einstellungen</strong> zurück und verwirft den <strong>temporären Einsatzentwurf</strong>. (Der flüchtige Einsatz-Zustand im Einsatz-Tab ist davon nicht betroffen.)</span>
         <div class="flex gap-2">
           <button class="btn btn-error btn-xs" type="button" :disabled="busy" @click="run(pending)">Bestätigen</button>
           <button class="btn btn-ghost btn-xs" type="button" :disabled="busy" @click="pending = null">Abbrechen</button>

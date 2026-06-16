@@ -52,6 +52,8 @@ export function publicKeyHeader(raw32) {
     rows.push('  ' + row.join(', '))
   }
   return [
+    '// SPDX-License-Identifier: GPL-3.0-or-later',
+    '// Copyright (C) 2026 The ResQDocs project contributors',
     '// OtaPublicKey.h - GENERIERT von scripts/ota/keygen.mjs, nicht von Hand editieren.',
     '// Ed25519-Public-Key des Maintainers; verifiziert OTA-Firmware vor dem Anwenden.',
     '#pragma once',

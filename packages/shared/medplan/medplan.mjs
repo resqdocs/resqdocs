@@ -204,7 +204,11 @@ export function medicationToText(med) {
  */
 export function medicationToRow(med) {
   const { head, dosisVoll, extras } = medicationParts(med)
-  return { name: head, dosierung: dosisVoll, kommentar: extras.join(' - ') }
+  const row = { name: head, dosierung: dosisVoll, kommentar: extras.join(' - ') }
+  // Roh-PZN „im Hintergrund" mitführen (#184): bleibt am Eintrag, auch wenn der
+  // Name überschrieben wird; nur für den bewussten Einzel-Transfer in die Bibliothek.
+  if (med.pzn) row.pzn = med.pzn
+  return row
 }
 
 /** Alle Zeilen eines geparsten Plans als Textblock (eine Zeile pro Medikament). */

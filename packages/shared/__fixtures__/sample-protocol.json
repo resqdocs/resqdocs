@@ -1,0 +1,416 @@
+{
+  "schemaVersion": "0.1.0",
+  "id": "standard",
+  "title": "Beispiel-Vorlage",
+  "example": true,
+  "lang": "de",
+  "blocks": [
+    {
+      "id": "alarmierung",
+      "title": "Alarmierung",
+      "points": [
+        {
+          "type": "field",
+          "id": "einsatzmeldung",
+          "label": "Einsatzmeldung",
+          "value": ""
+        },
+        {
+          "type": "field",
+          "id": "hinweis",
+          "label": "Hinweis",
+          "value": ""
+        },
+        {
+          "type": "finding",
+          "id": "anfahrt",
+          "label": "Anfahrt",
+          "state": "normal",
+          "normal": "ohne besondere Vorkommnisse"
+        }
+      ]
+    },
+    {
+      "id": "allergien",
+      "title": "Allergien",
+      "points": [
+        {
+          "type": "finding",
+          "id": "allergien_medikamente",
+          "label": "Medikamente",
+          "state": "normal",
+          "normal": "keine"
+        },
+        {
+          "type": "finding",
+          "id": "allergien_sonstige",
+          "label": "Sonstige",
+          "state": "normal",
+          "normal": "keine"
+        }
+      ]
+    },
+    {
+      "id": "vorerkrankungen",
+      "title": "Vorerkrankungen",
+      "snippetSlot": "vorerkrankungen",
+      "points": [
+        {
+          "type": "finding",
+          "id": "vorerkrankungen",
+          "state": "normal",
+          "normal": "Keine"
+        }
+      ]
+    },
+    {
+      "id": "anamnese",
+      "title": "Aktuelle Anamnese",
+      "points": [
+        {
+          "type": "field",
+          "id": "anamnese",
+          "label": "Was hat zur Alarmierung des RD geführt?",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "id": "xabcde",
+      "title": "xABCDE",
+      "points": [
+        {
+          "type": "findingGroup",
+          "key": "x",
+          "label": "kritische Blutung",
+          "findings": [
+            {
+              "id": "x_blutung",
+              "state": "normal",
+              "normal": "Keine kritische Blutung primär erkennbar"
+            }
+          ]
+        },
+        {
+          "type": "findingGroup",
+          "key": "A",
+          "label": "Atemweg",
+          "findings": [
+            {
+              "id": "a_visuell",
+              "state": "normal",
+              "normal": "visuell frei"
+            },
+            {
+              "id": "a_schwellung",
+              "state": "normal",
+              "normal": "Keine Schwellungen/Verlegungen"
+            },
+            {
+              "id": "a_blutung",
+              "state": "normal",
+              "normal": "Keine Blutung im Mund-/Rachenraum"
+            }
+          ]
+        },
+        {
+          "type": "findingGroup",
+          "key": "B",
+          "label": "Atmung",
+          "findings": [
+            {
+              "id": "b_atemgeraeusch",
+              "state": "normal",
+              "normal": "Kein path. Atemgeräusch/Atemmuster"
+            },
+            {
+              "id": "b_nebengeraeusch",
+              "state": "normal",
+              "normal": "Kein Schnarchen, Gurgeln oder Stridor"
+            },
+            {
+              "id": "b_suffizienz",
+              "state": "normal",
+              "normal": "Atmung ist suffizient"
+            },
+            {
+              "id": "b_auskultation",
+              "state": "normal",
+              "normal": "Beidseits auskultatorisch belüftet, frei ohne RGs"
+            },
+            {
+              "id": "b_dyspnoe",
+              "state": "normal",
+              "normal": "Keine Dyspnoe"
+            },
+            {
+              "id": "b_zyanose",
+              "state": "normal",
+              "normal": "Keine Zyanose"
+            },
+            {
+              "id": "b_hv",
+              "state": "normal",
+              "normal": "Keine gestauten HV"
+            },
+            {
+              "id": "b_exkursion",
+              "state": "normal",
+              "normal": "Normale Atemexkursionen"
+            },
+            {
+              "id": "b_hypoxie",
+              "state": "normal",
+              "normal": "Keine Hypoxiezeichen"
+            }
+          ]
+        },
+        {
+          "type": "findingGroup",
+          "key": "C",
+          "label": "Kreislauf",
+          "findings": [
+            {
+              "id": "c_status",
+              "state": "normal",
+              "normal": "Kreislaufstabil"
+            },
+            {
+              "id": "c_pulse",
+              "state": "normal",
+              "normal": "Pulse radial beidseits gut tastbar, rhythmisch und kräftig"
+            },
+            {
+              "id": "c_recap",
+              "state": "normal",
+              "normal": "Recap < 2sec"
+            },
+            {
+              "id": "c_schleimhaut",
+              "state": "normal",
+              "normal": "Schleimhäute rosig"
+            },
+            {
+              "id": "c_hauttemp",
+              "state": "normal",
+              "normal": "Hauttemperatur normal"
+            },
+            {
+              "id": "c_hautkolorit",
+              "state": "normal",
+              "normal": "Hautkolorit normal"
+            },
+            {
+              "id": "c_blutdruck",
+              "state": "normal",
+              "normal": "Normoton"
+            },
+            {
+              "id": "c_thorax",
+              "state": "normal",
+              "normal": "Keine thorakalen Beschwerden"
+            },
+            {
+              "id": "c_ekg",
+              "state": "normal",
+              "normal": "EKG: Sinusrhythmus, keine ST-Hebungen, keine ST-Senkungen"
+            }
+          ]
+        },
+        {
+          "type": "findingGroup",
+          "key": "D",
+          "label": "Defizit/Neurologie",
+          "findings": [
+            {
+              "id": "d_defizit",
+              "state": "normal",
+              "normal": "ohne vorbestehendes Defizit"
+            },
+            {
+              "id": "d_fast",
+              "state": "normal",
+              "normal": "[BE-]FAST: ohne path. Befund"
+            },
+            {
+              "id": "d_armvorhalte",
+              "state": "normal",
+              "normal": "Armvorhalteversuch ohne path. Befund"
+            },
+            {
+              "id": "d_fingernase",
+              "state": "normal",
+              "normal": "Finger-Nase-Versuch ohne path. Befund"
+            },
+            {
+              "id": "d_pupillen",
+              "state": "normal",
+              "normal": "Pupillen beidseits mittelweit isokor und prompt lichtreagibel"
+            },
+            {
+              "id": "d_zsop",
+              "state": "normal",
+              "normal": "ZSOP: orientiert"
+            },
+            {
+              "id": "d_bz",
+              "state": "normal",
+              "normal": "Normoglykäm"
+            }
+          ]
+        },
+        {
+          "type": "findingGroup",
+          "key": "E",
+          "label": "Exposition/Umgebung",
+          "findings": [
+            {
+              "id": "e_haut",
+              "state": "normal",
+              "normal": "Hautstatus: normal/trocken"
+            },
+            {
+              "id": "e_temp",
+              "state": "normal",
+              "normal": "Normotemperiert"
+            },
+            {
+              "id": "e_az",
+              "state": "normal",
+              "normal": "Pat. in gutem AZ"
+            },
+            {
+              "id": "e_bodycheck",
+              "label": "Bodycheck",
+              "state": "normal",
+              "normal": "ohne path. Befund"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "risikofaktoren",
+      "title": "Risikofaktoren",
+      "points": [
+        {
+          "type": "list",
+          "id": "risikofaktoren",
+          "entries": [
+            "Alter",
+            "Rauchen (py)",
+            "Alkohol",
+            "Drogen",
+            "sonstiges?"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dauermedikation",
+      "title": "Dauermedikation",
+      "snippetSlot": "dauermedikation",
+      "points": [
+        {
+          "type": "field",
+          "id": "dauermedikation",
+          "label": "",
+          "value": "",
+          "tool": "medplanScan"
+        }
+      ]
+    },
+    {
+      "id": "impfstatus",
+      "title": "Impf-Status",
+      "points": [
+        {
+          "type": "list",
+          "id": "impfstatus",
+          "entries": [
+            "Grippe/COVID Impfungen",
+            "Letzte Tetanus"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verlauf",
+      "title": "Verlauf / Maßnahmen",
+      "snippetSlot": "massnahmen",
+      "points": [
+        {
+          "type": "field",
+          "id": "verlauf",
+          "label": "Bei Eintreffen Rettungsdienst",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "id": "transport",
+      "title": "Transport bzw. Verbleib",
+      "snippetSlot": "transport",
+      "points": [
+        {
+          "type": "finding",
+          "id": "transport_komplikationen",
+          "state": "normal",
+          "normal": "ohne Komplikationen"
+        },
+        {
+          "type": "finding",
+          "id": "transport_massnahmen",
+          "state": "normal",
+          "normal": "keine weiteren Maßnahmen notwendig"
+        },
+        {
+          "type": "field",
+          "id": "transport_zielort",
+          "label": "am Zielort übergeben",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "id": "aufklaerung",
+      "title": "Aufklärung & Einverständnis",
+      "points": [
+        {
+          "type": "text",
+          "id": "aufklaerung_risiken",
+          "content": "Pat. bzw. bevollmächtigte- oder erziehungsberechtigte Person wurde über die möglichen Risiken und Nebenwirkungen der durchgeführten bzw. vorgeschlagenen medizinischen Maßnahmen aufgeklärt."
+        },
+        {
+          "type": "text",
+          "id": "aufklaerung_bgb",
+          "content": "Pat. bzw. bevollmächtigte- oder erziehungsberechtigte Person wurde nach BGB § 630 A - H aufgeklärt, hat dem zugestimmt und den Sachverhalt verstanden."
+        },
+        {
+          "type": "field",
+          "id": "aufklaerung_einwilligung",
+          "label": "Pat. willigt folgenden invasiven Maßnahmen RD ein",
+          "value": ""
+        },
+        {
+          "type": "text",
+          "id": "aufklaerung_mutmasslich",
+          "content": "Aufgrund des Zustandes nicht möglich. Alle Maßnahmen im mutmaßlichen Einverständnis."
+        },
+        {
+          "type": "text",
+          "id": "aufklaerung_transportangebot",
+          "content": "Ein grundsätzliches Transportangebot in eine Klinik wurde unterbreitet."
+        },
+        {
+          "type": "text",
+          "id": "aufklaerung_rueckmeldung",
+          "content": "Pat. bzw. bevollmächtigte- oder erziehungsberechtigte Person wurde darüber Informiert, dass jederzeit bei akuter Verschlechterung oder Meinungsänderung der Hausarzt, die ärztliche Bereitschaft (TEL: 116117) oder im Notfall der Rettungsdienst (112) erneut kontaktiert werden darf."
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "abgeleitet aus reference/saniscript/payload16-standardprotokoll.dd"
+  }
+}

@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs'
 import {
   parseMedplanMedications,
   medicationToText,
+  medicationToRow,
   medplanToText,
   dosierungToText,
   DOSIEREINHEIT,
@@ -36,6 +37,16 @@ const UKF_MIT_NAME =
 
 // Mehrseitig wie bmp-0005a/b: a="2" z="2".
 const UKF_SEITE_2 = '<MP v="025" U="BB" a="2" z="2" l="de-DE"><P g="R" f="T"/><S><M p="9900751" v="1" du="1"/></S></MP>'
+
+test('medicationToRow führt die Roh-PZN „im Hintergrund" mit (#184)', () => {
+  const r = parseMedplanMedications(UKF_NUR_PZN)
+  const row = medicationToRow(r.medications[0])
+  assert.equal(row.pzn, '230272') // PZN bleibt am strukturierten Eintrag hinterlegt
+  assert.match(row.name, /^PZN 230272/) // ohne Wörterbuch erscheint die PZN im Namensfeld
+  // Ein Eintrag mit Klartext-Namen, aber ohne PZN, trägt KEIN pzn-Feld.
+  const noPzn = medicationToRow({ name: 'Aspirin', wirkstoffe: [], dosierung: {} })
+  assert.equal('pzn' in noPzn, false)
+})
 
 test('parst Nur-PZN-Plan: alle 4 Zeilen, PZN + Dosierung + Grund/Hinweis', () => {
   const r = parseMedplanMedications(UKF_NUR_PZN)

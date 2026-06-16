@@ -204,6 +204,29 @@
       "file": "fastlane/Fastfile",
       "term": "api_key",
       "reason": "Kommentar + Funktionsname zur ENV-basierten Authentifizierung, keine Werte"
+    },
+    {
+      "file": ".env.example",
+      "term": "internal",
+      "contains": "private domains, internal IPs",
+      "reason": "Warnkommentar nennt 'internal IPs' als verboten; Datei enthaelt nur neutrale Platzhalter"
+    },
+    {
+      "file": ".env.example",
+      "term": "private",
+      "contains": "private domains, internal IPs",
+      "reason": "Warnkommentar nennt 'private domains' als verboten; Datei enthaelt nur neutrale Platzhalter"
+    },
+    {
+      "file": "docs/app-store-listing.md",
+      "term": "app_store",
+      "reason": "bewusst oeffentliche Store-/TestFlight-Listing-Doku; keine echten Store-Zugangsdaten"
+    },
+    {
+      "file": "packages/shared/__fixtures__/sample-protocol.json",
+      "term": "prompt",
+      "contains": "prompt lichtreagibel",
+      "reason": "medizinischer Fachbegriff (Pupillen-Lichtreaktion), kein KI-Prompt"
     }
   ]
 }

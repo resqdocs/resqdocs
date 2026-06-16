@@ -1,0 +1,111 @@
+ATTACKMODE HID
+DELAY 50
+STRING # Alarmierung ==============================================
+ENTER
+STRING - Einsatzmeldung:
+ENTER
+STRING - Hinweis:
+ENTER
+STRING - Anfahrt: ohne besondere Vorkommnise.
+ENTER
+ENTER
+STRING # Allergien ==============================================
+ENTER
+STRING Medikamente
+ENTER
+STRING  - keine
+ENTER
+STRING Sonstige:
+ENTER
+STRING  - keine
+ENTER
+ENTER
+STRING # Vorerkrankungen ========================================
+ENTER
+STRING Keine
+ENTER
+STRING Siehe Pflegeüberleitung
+ENTER
+STRING VE aus dem vorhandenen Medikamentenplan abgeleitet.
+ENTER
+ENTER
+STRING # Aktuelle Anamnese ======================================
+ENTER
+STRING Was hat zur Alarmierung des RD geführt?
+ENTER
+ENTER
+STRING # xABCDE ===============================================
+ENTER
+STRING x: Keine kritische Blutung primär erkennbar
+ENTER
+STRING A: visuell frei. Keine Schwellungen/Verlegungen. Keine Blutung im Mund-/ Rachenraum
+ENTER
+STRING B: Kein path Atemgeräusch/Atemmuster. Kein Schnarchen, Gurgeln oder Stridor. Atmung ist suffizient. Beidseits auskultatorisch belüftet, frei ohne RGs. Keine Dyspnoe. Keine Zyanose. Keine gestauten HV. Normale Atemexkursionen. Keine Hypoxiezeichen.
+ENTER
+STRING C: Kreislaufstabil. Pulse radial beidseits gut tastbar, rhythmisch und kräftig. Recap < 2sec. Schleimhäute rosig. Hauttemperatur normal. Hautkolorit normal. Normoton. Keine thorakalen Beschwerden. EKG: Sinusrhythmus, keine ST-Hebungen, keine ST-Senkungen.
+ENTER
+STRING D: ohne vorbestehendes Defizit. [BE-]FAST: ohne path. Befund. Armvorhalteversuch ohne path. Befund. Finger-Nase-Versuch ohne path. Befund. Pupillen beidseits mittelweit isokor und prompt lichtreagibel. ZSOP: orientiert. Normoglykäm
+ENTER
+STRING E: Hautstatus: normal/trocken. Normotemperiert. Pat in gutem/reduziertem AZ.
+ENTER
+STRING Bodycheck:
+ENTER
+STRING - ohne path. Befund.
+ENTER
+ENTER
+STRING # Risikofaktoren ==========================================
+ENTER
+STRING - Alter
+ENTER
+STRING - Rauchen (py)
+ENTER
+STRING - Alkohol
+ENTER
+STRING - Drogen
+ENTER
+STRING - sonstiges?
+ENTER
+ENTER
+STRING # Dauermedikation ========================================
+ENTER
+ENTER
+STRING # Impf-Status ============================================
+ENTER
+STRING - Grippe/COVID Impfungen
+ENTER
+STRING - Letzte Tetanus
+ENTER
+ENTER
+STRING # Verlauf / Maßnahmen ================================================
+ENTER
+STRING Bei Eintreffen Rettungsdienst 
+ENTER
+ENTER
+STRING # Transport bzw. Verbleib ===================================
+ENTER
+STRING - ohne Komplikationen.
+ENTER
+STRING - keine weiteren Maßnahmen notwendig
+ENTER
+STRING - am Zielort übergeben:
+ENTER
+ENTER
+STRING - Pat. verbleibt am Einsatzort
+ENTER
+STRING - Pat. sucht zeitnah den Hausarzt auf
+ENTER
+ENTER
+STRING # Aufklärung & Einverständnis ================================
+ENTER
+STRING - Pat. bzw. bevollmächtigte- oder erziehungsberechtigte Person wurde über die möglichen Risiken und Nebenwirkungen der durchgeführten bzw. vorgeschlagenen medizinischen Maßnahmen aufgeklärt.
+ENTER
+STRING - Pat. bzw. bevollmächtigte- oder erziehungsberechtigte Person wurde nach BGB § 630 A - H aufgeklärt, hat dem zugestimmt und den Sachverhalt verstanden.
+ENTER
+STRING - Pat. bzw. bevollmächtigte- oder erziehungsberechtigte Person willigt folgenden invasiven Maßnahmen RD ein:
+ENTER
+STRING - Aufgrund des Zustandes nicht möglich. Alle Maßnahmen im mutmaßlichen Einverständnis.
+ENTER
+STRING - Ein grundsätzliches Transportangebot in eine Klinik wurde unterbreitet.
+ENTER
+STRING - Pat. bzw. bevollmächtigte- oder erziehungsberechtigte Person wurde darüber Informiert, dass jederzeit bei akuter Verschlechterung oder Meinungsänderung der Hausarzt, die ärztliche Bereitschaft (TEL: 116117) oder im Notfall der Rettungsdienst (112) erneut kontaktiert werden darf.
+ATTACKMODE OFF

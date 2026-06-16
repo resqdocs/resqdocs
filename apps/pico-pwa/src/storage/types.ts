@@ -6,6 +6,7 @@
 // Datenschutz (S3 / DR-0004): NUR neutrale Daten. Keine Patientendaten, keine
 // Einsatzdaten, kein caseState im Storage.
 import type { Protocol, Block } from '@shared/creator/creator.mjs'
+import type { ScannerMode } from '../medplan/scannerMode.ts'
 
 export type Theme = 'system' | 'light' | 'dark'
 
@@ -35,6 +36,18 @@ export interface AppSettings {
    * Default false (Netzwerk-Policy: kein automatisches Phone-Home ohne Zustimmung).
    */
   pznAutoCheck: boolean
+  /**
+   * Scanner-Strategie fuer den BMP-Data-Matrix-Scan (#170). Zentrale Quelle;
+   * der Kamera-Schnellumschalter aendert genau diese Einstellung. Default 'auto'
+   * (faellt aktuell auf den optimierten WebView-Scanner; spaeter bevorzugt nativ).
+   */
+  scannerMode: ScannerMode
+  /**
+   * TTL des temporaeren Einsatzentwurfs (#173) in STUNDEN. Sliding-Idle: ein
+   * laufender Entwurf wird nach so vielen Stunden Inaktivitaet automatisch
+   * lokal geloescht. Bereich 1–5 h, Default 3 h.
+   */
+  caseDraftTtlHours: number
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -44,12 +57,15 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultProtocolId: null,
   privacyNoticeAccepted: false,
   picoBaseUrl: 'http://10.10.10.1',
-  themeFamily: 'classic',
+  // Default-Design: ResQDocs-Logofarben; Erscheinung folgt dem System (theme: 'system').
+  themeFamily: 'resqdocs',
   dismissedHints: [],
   headingPattern: '# {titel} ',
   headingFill: '=',
   headingWidth: 60,
   pznAutoCheck: false,
+  scannerMode: 'auto',
+  caseDraftTtlHours: 3,
 }
 
 /** Neutraler, wiederverwendbarer Block (z. B. „Mitfahrtverweigerung"). KEINE Patientendaten. */
