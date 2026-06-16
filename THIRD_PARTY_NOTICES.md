@@ -29,6 +29,7 @@ Direkte Runtime-Abhängigkeiten (`apps/pico-pwa/package.json`):
 | @capacitor/filesystem | 8.x | MIT | Copyright (c) 2025 Ionic | <https://github.com/ionic-team/capacitor-plugins> |
 | @capacitor/preferences | 8.x | MIT | Copyright 2020-present Ionic | <https://github.com/ionic-team/capacitor-plugins> |
 | @capacitor/share | 8.x | MIT | Copyright 2020-present Ionic | <https://github.com/ionic-team/capacitor-plugins> |
+| @capacitor/camera | 8.2.x | MIT | Copyright 2020-present Ionic | <https://github.com/ionic-team/capacitor-plugins> |
 | @capacitor-community/sqlite | 8.x | MIT | Copyright (c) 2020-2024 Quéau Jean Pierre | <https://github.com/capacitor-community/sqlite> |
 | @zxing/browser | 0.2.x | MIT | Copyright (c) 2018 ZXing for JS | <https://github.com/zxing-js/browser> |
 | @zxing/library | 0.22.x | Apache-2.0 | ZXing for JS (zxing-js project) | <https://zxing-js.github.io/library/> |
@@ -47,6 +48,14 @@ Mit ausgelieferte transitive Laufzeit-Abhängigkeiten:
 NOTICE-Inhalten nach Abschnitt 4(d) der Apache-2.0 besteht daher nicht. Der vollständige
 Apache-2.0-Lizenztext liegt dem Paket bei (`node_modules/@zxing/library/LICENSE`) und ist
 unter <https://www.apache.org/licenses/LICENSE-2.0> verfügbar.
+
+### Native Android-Abhängigkeit — ZXing-C++ (#170)
+
+Der native Data-Matrix-Scan auf Android (Scanner-Modus „Native ZXing-C++") nutzt die
+Gradle-/Maven-Abhängigkeit `io.github.zxing-cpp:android:3.0.2` (**Apache-2.0**),
+Copyright (c) ZXing-C++ Authors (Axel Waggershauser u. a.),
+<https://github.com/zxing-cpp/zxing-cpp>. Sie ist **GMS-frei** (kein Google ML Kit, keine
+Play Services). Apache-2.0-Lizenztext: <https://www.apache.org/licenses/LICENSE-2.0>.
 
 ### Nicht ausgelieferte transitive Abhängigkeiten (Hinweis)
 

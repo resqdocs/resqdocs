@@ -4,6 +4,8 @@ import { useMedplanScan } from '@/medplan/useMedplanScan'
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { usePznLibrary } from '@/medications/usePznLibrary'
 import MedplanScanOverlay from '@/components/MedplanScanOverlay.vue'
+import { useStorage } from '@/storage/useStorage'
+import { nativeDatamatrixScanAvailable, scanDatamatrixNative } from '@/medplan/nativeDatamatrixScan'
 import type { MedikamenteRow } from '@shared/renderer/render.mjs'
 
 /**
@@ -51,12 +53,43 @@ async function transferRow(i: number): Promise<void> {
   if (result !== 'invalid') transferState.value = { ...transferState.value, [i]: result }
 }
 
-const scanAvailable = computed(
+// Scanner-Weiche (#170): auf Android ist der native Pfad (Foto + ZXing-C++) jetzt der DEFAULT —
+// er umgeht die auf Adreno crashende WebView-Kamera (geraeteverifiziert). 'auto' UND
+// 'native_zxingcpp' -> nativ; 'webview_standard'/'webview_optimized' bleiben als bewusste
+// Fallback-Auswahl. iOS/Web nutzen weiter den getUserMedia-Overlay-Pfad (dort kein Crash).
+const storage = useStorage()
+const useNativeScan = computed(() => {
+  if (!nativeDatamatrixScanAvailable()) return false // nur Android (natives Plugin)
+  const m = storage.settings.scannerMode
+  return m === 'auto' || m === 'native_zxingcpp'
+})
+const webScanAvailable = computed(
   () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia,
 )
+const scanAvailable = computed(() => useNativeScan.value || webScanAvailable.value)
 const scanOpen = ref(false)
+const scanBusy = ref(false)
+const scanNotice = ref('')
 const manualOpen = ref(false)
 const manualText = ref('')
+
+async function onScanClick(): Promise<void> {
+  scanNotice.value = ''
+  if (!useNativeScan.value) {
+    scanOpen.value = true
+    return
+  }
+  scanBusy.value = true
+  try {
+    const res = await scanDatamatrixNative()
+    if (res.status === 'found') ingest(res.raw)
+    else if (res.status === 'notFound') scanNotice.value = 'Kein Data-Matrix-Code erkannt. Plan flach, gut ausgeleuchtet und formatfüllend fotografieren.'
+    else if (res.status === 'error') scanNotice.value = res.message
+    // 'cancelled' -> stillschweigend
+  } finally {
+    scanBusy.value = false
+  }
+}
 
 function onDecoded(raw: string): void {
   scanOpen.value = false
@@ -88,8 +121,8 @@ function onApply(): void {
     </div>
 
     <div class="flex flex-wrap gap-2">
-      <button v-if="scanAvailable" class="btn btn-sm btn-primary" type="button" @click="scanOpen = true">
-        Code scannen
+      <button v-if="scanAvailable" class="btn btn-sm btn-primary" type="button" :disabled="scanBusy" @click="onScanClick">
+        {{ scanBusy ? 'Scanne…' : 'Code scannen' }}
       </button>
       <button class="btn btn-sm btn-ghost" type="button" @click="manualOpen = !manualOpen">
         Text einfügen
@@ -109,6 +142,7 @@ function onApply(): void {
       <button class="btn btn-sm" type="button" :disabled="!manualText.trim()" @click="onManualAdd">Übernehmen</button>
     </div>
 
+    <p v-if="scanNotice" class="text-sm text-warning">{{ scanNotice }}</p>
     <p v-if="error" class="text-sm text-error">{{ error }}</p>
 
     <!-- Aussteller (#144): Opt-in - Default ist "nicht dokumentieren" -->

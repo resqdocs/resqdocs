@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'   // #170: natives ZXing-C++-Decoder-Plugin (Kotlin)
 
 android {
     namespace = "app.resqdocs"
@@ -40,6 +41,7 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    implementation 'io.github.zxing-cpp:android:3.0.2'   // #170 (Apache-2.0, GMS-frei, Data-Matrix-Decoder)
 }
 
 apply from: 'capacitor.build.gradle'
