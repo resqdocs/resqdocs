@@ -218,11 +218,6 @@
       "reason": "Warnkommentar nennt 'private domains' als verboten; Datei enthaelt nur neutrale Platzhalter"
     },
     {
-      "file": "docs/app-store-listing.md",
-      "term": "app_store",
-      "reason": "bewusst oeffentliche Store-/TestFlight-Listing-Doku; keine echten Store-Zugangsdaten"
-    },
-    {
       "file": "packages/shared/__fixtures__/sample-protocol.json",
       "term": "prompt",
       "contains": "prompt lichtreagibel",
