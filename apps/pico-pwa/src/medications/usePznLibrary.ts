@@ -1,90 +1,140 @@
-// usePznLibrary.ts — Vue-Anbindung (Singleton) der nutzergepflegten PZN-Bibliothek.
+// usePznLibrary.ts — Singleton der nutzergepflegten PZN-Bibliothek (#194/#195).
 //
-// Kapselt das Repository (Capacitor Preferences) + die reine Mengen-Logik. KEIN
-// Netzzugriff, KEINE automatische PZN→Name-Auflösung (Bezeichnungen kommen nur vom
-// Nutzer). Getrennt vom Einsatzentwurf/Protokoll (#173).
-import { ref } from 'vue'
+// Async, backend-gewählt: nativ → SQLite (skaliert auf ~317k), Web → Preferences-Blob.
+// list/page/search/entry/count laufen seitenweise (kein 317k im Speicher/DOM). Die
+// fachliche Logik (Sanitizing, feste Kategorien, Konflikt-/Merge-Regeln) bleibt in der
+// geteilten reinen pznLibrary.ts — höhere Operationen (addOne/upsert) wenden sie über
+// Ein-Eintrag-Mini-Libraries an, damit Verhalten auf beiden Backends identisch ist.
+import { Capacitor } from '@capacitor/core'
 import { preferencesAdapter } from '@/storage/preferencesAdapter'
-import { createPznLibraryRepository } from './pznLibraryRepository'
 import {
-  addManyDecoupled,
   addOne as addOnePure,
-  addPzn,
   emptyLibrary,
   exportLibrary,
-  getLabel as getLabelPure,
-  hasPzn,
-  importMerge,
+  fromEntries,
   listSorted,
   normalizePzn,
   parseImport,
-  removePzn,
-  setLabel as setLabelPure,
+  upsertEntry as upsertEntryPure,
+  type ImportMode,
   type PznEntry,
   type PznLibrary,
 } from './pznLibrary'
+import {
+  createPreferencesPznBackend,
+  type PznLibraryBackend,
+  type PznPageOpts,
+} from './pznLibraryBackend'
 
 function create() {
-  const repo = createPznLibraryRepository(preferencesAdapter)
-  const lib = ref<PznLibrary>(emptyLibrary())
-  let loaded = false
+  let readyPromise: Promise<PznLibraryBackend> | null = null
 
-  async function ensureLoaded(): Promise<void> {
-    if (loaded) return
-    lib.value = await repo.load()
-    loaded = true
-  }
-  async function persist(): Promise<void> {
-    await repo.save(lib.value)
-  }
-
-  /** Sortierte Liste (nach PZN) — keine Einfüge-Reihenfolge nach außen. */
-  function list(): PznEntry[] {
-    return listSorted(lib.value)
+  function ready(): Promise<PznLibraryBackend> {
+    if (!readyPromise) {
+      readyPromise = (async () => {
+        const backend = Capacitor.isNativePlatform()
+          ? (await import('./pznLibraryNativeBackend')).createNativePznBackend(preferencesAdapter)
+          : createPreferencesPznBackend(preferencesAdapter)
+        await backend.ensureReady()
+        return backend
+      })()
+    }
+    return readyPromise
   }
 
-  /** Eigene Bezeichnung zu einer PZN (Re-Scan-Vorbefüllung); null wenn unbekannt. */
-  function ownLabel(pzn: string): string | null {
-    return getLabelPure(lib.value, pzn)
+  /** Mini-Bibliothek mit genau diesem Eintrag (oder leer) — Träger für die reine Logik. */
+  function miniLib(pzn: string, cur: PznEntry | null): PznLibrary {
+    return cur
+      ? { version: 2, entries: { [pzn]: { wirkstoff: cur.wirkstoff, label: cur.label, category: cur.category, note: cur.note } } }
+      : emptyLibrary()
   }
 
-  async function add(raw: string, label?: string): Promise<void> {
-    lib.value = addPzn(lib.value, raw, label)
-    await persist()
+  async function ensureReady(): Promise<void> {
+    await ready()
   }
+
+  async function count(): Promise<number> {
+    return (await ready()).count()
+  }
+  async function page(opts: PznPageOpts): Promise<PznEntry[]> {
+    return (await ready()).page(opts)
+  }
+  async function search(query: string, opts: { offset: number; limit: number }): Promise<PznEntry[]> {
+    return (await ready()).search(query, opts)
+  }
+  async function entry(pzn: string): Promise<PznEntry | null> {
+    return (await ready()).getEntry(pzn)
+  }
+  /** Eigene Bezeichnung zu einer PZN (Scan-Match); null wenn unbekannt. */
+  async function ownLabel(pzn: string): Promise<string | null> {
+    const e = await (await ready()).getEntry(pzn)
+    return e ? e.label : null
+  }
+
   /**
-   * Einzel-Transfer aus dem Protokoll: GENAU EINE PZN (bewusste Nutzerhandlung,
-   * kein Bulk). Dedup + Konfliktregel (vorhandenes Label gewinnt). KEINE
-   * Gruppierung/Reihenfolge/Zeit/Fall-Verknüpfung. Liefert das Ergebnis zurück:
-   * 'invalid' (keine PZN), 'added' (neu) oder 'exists' (war schon da) — nur fürs UI-Feedback.
+   * Einzel-Transfer aus dem Protokoll (genau EINE PZN): Konfliktregel „vorhandenes
+   * nicht-leeres Label gewinnt" über die reine addOne-Logik. 'invalid'/'added'/'exists'.
    */
   async function addOne(raw: string, label?: string): Promise<'invalid' | 'added' | 'exists'> {
-    if (!normalizePzn(raw)) return 'invalid'
-    const already = hasPzn(lib.value, raw)
-    lib.value = addOnePure(lib.value, raw, label)
-    await persist()
-    return already ? 'exists' : 'added'
-  }
-  async function setLabel(pzn: string, label: string): Promise<void> {
-    lib.value = setLabelPure(lib.value, pzn, label)
-    await persist()
-  }
-  async function remove(pzn: string): Promise<void> {
-    lib.value = removePzn(lib.value, pzn)
-    await persist()
-  }
-  /** Plan-/Mehrfach-Scan ENTKOPPELT übernehmen (Reihenfolge/Gruppierung/Zeit fallen weg). */
-  async function addMany(rawPzns: string[]): Promise<void> {
-    lib.value = addManyDecoupled(lib.value, rawPzns)
-    await persist()
+    const norm = normalizePzn(raw)
+    if (!norm) return 'invalid'
+    const b = await ready()
+    const cur = await b.getEntry(norm)
+    const next = addOnePure(miniLib(norm, cur), norm, label)
+    await b.setEntry(norm, next.entries[norm])
+    return cur ? 'exists' : 'added'
   }
 
-  /** Backup: Export als JSON-String (nur PZN + Bezeichnungen, sortiert). */
-  function exportJson(): string {
-    return JSON.stringify(exportLibrary(lib.value), null, 2)
+  /**
+   * Erfassen/Aktualisieren aus der Verwaltung (bewusste Eingabe überschreibt die
+   * angegebenen Felder, lässt unangegebene unverändert). 'invalid'/'added'/'updated'.
+   */
+  async function upsert(
+    raw: string,
+    fields: { wirkstoff?: string; label?: string; category?: string; note?: string },
+  ): Promise<'invalid' | 'added' | 'updated'> {
+    const norm = normalizePzn(raw)
+    if (!norm) return 'invalid'
+    const b = await ready()
+    const cur = await b.getEntry(norm)
+    const next = upsertEntryPure(miniLib(norm, cur), norm, fields)
+    await b.setEntry(norm, next.entries[norm])
+    return cur ? 'updated' : 'added'
   }
-  /** Backup: Import/Restore (Mengen-Vereinigung; keine Linkage). false wenn ungültig. */
-  async function importJson(text: string): Promise<boolean> {
+
+  async function setWirkstoff(pzn: string, wirkstoff: string): Promise<void> {
+    await (await ready()).setWirkstoff(pzn, wirkstoff)
+  }
+  async function setLabel(pzn: string, label: string): Promise<void> {
+    await (await ready()).setLabel(pzn, label)
+  }
+  async function setCategory(pzn: string, category: string): Promise<void> {
+    await (await ready()).setCategory(pzn, category)
+  }
+  async function setNote(pzn: string, note: string): Promise<void> {
+    await (await ready()).setNote(pzn, note)
+  }
+  async function remove(pzn: string): Promise<void> {
+    await (await ready()).remove(pzn)
+  }
+  async function clear(): Promise<void> {
+    await (await ready()).clear()
+  }
+
+  /** Backup-Export als JSON-String (kompakte v2-Form, sortiert). */
+  async function exportJson(): Promise<string> {
+    const entries = await (await ready()).allSorted()
+    return JSON.stringify(exportLibrary(fromEntries(entries)), null, 2)
+  }
+  /**
+   * Backup-Import als MERGE (nie Ersetzen der ganzen Bibliothek). `mode` (Nutzerwahl):
+   * 'overwrite' = Duplikate überschreiben, 'skip' = nur fehlende ergänzen. false bei ungültig.
+   */
+  async function importJson(
+    text: string,
+    mode: ImportMode = 'overwrite',
+    onProgress?: (done: number, total: number) => void,
+  ): Promise<boolean> {
     let incoming: PznLibrary | null = null
     try {
       incoming = parseImport(JSON.parse(text))
@@ -92,12 +142,28 @@ function create() {
       incoming = null
     }
     if (!incoming) return false
-    lib.value = importMerge(lib.value, incoming)
-    await persist()
+    await (await ready()).bulkPut(listSorted(incoming), mode, undefined, onProgress)
     return true
   }
 
-  return { lib, list, ensureLoaded, ownLabel, add, addOne, setLabel, remove, addMany, exportJson, importJson }
+  return {
+    ensureReady,
+    count,
+    page,
+    search,
+    entry,
+    ownLabel,
+    addOne,
+    upsert,
+    setWirkstoff,
+    setLabel,
+    setCategory,
+    setNote,
+    remove,
+    clear,
+    exportJson,
+    importJson,
+  }
 }
 
 let shared: ReturnType<typeof create> | null = null

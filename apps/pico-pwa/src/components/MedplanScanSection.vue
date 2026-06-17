@@ -33,7 +33,7 @@ void lookup.ensureLoaded()
 // PZN-Bibliothek (#184): bewusster Einzel-Transfer GENAU EINER PZN pro Zeile.
 // Getrennter Store, keine Linkage/Gruppierung/Reihenfolge wird mitübertragen.
 const pznLibrary = usePznLibrary()
-void pznLibrary.ensureLoaded()
+void pznLibrary.ensureReady()
 /** Pro Zeilen-Index ein kurzes Transfer-Feedback ('added' | 'exists'). */
 const transferState = ref<Record<number, 'added' | 'exists'>>({})
 
@@ -53,13 +53,13 @@ async function transferRow(i: number): Promise<void> {
   if (result !== 'invalid') transferState.value = { ...transferState.value, [i]: result }
 }
 
-// Scanner-Weiche (#170): auf Android ist der native Pfad (Foto + ZXing-C++) jetzt der DEFAULT —
-// er umgeht die auf Adreno crashende WebView-Kamera (geraeteverifiziert). 'auto' UND
-// 'native_zxingcpp' -> nativ; 'webview_standard'/'webview_optimized' bleiben als bewusste
-// Fallback-Auswahl. iOS/Web nutzen weiter den getUserMedia-Overlay-Pfad (dort kein Crash).
+// Scanner-Weiche (#170): nativer Pfad (Foto + nativer Decoder) ist auf Android UND iOS der DEFAULT
+// (beide geraeteverifiziert) — Android: zxing-cpp (behebt den Adreno-WebView-GPU-Crash), iOS: Apple
+// Vision. 'auto' UND 'native_zxingcpp' -> nativ; 'webview_standard'/'webview_optimized' und Web ->
+// der getUserMedia-Overlay-Pfad (bewusste Fallback-Auswahl).
 const storage = useStorage()
 const useNativeScan = computed(() => {
-  if (!nativeDatamatrixScanAvailable()) return false // nur Android (natives Plugin)
+  if (!nativeDatamatrixScanAvailable()) return false
   const m = storage.settings.scannerMode
   return m === 'auto' || m === 'native_zxingcpp'
 })
@@ -73,6 +73,23 @@ const scanNotice = ref('')
 const manualOpen = ref(false)
 const manualText = ref('')
 
+/**
+ * Nach dem BMP-Parse: Namen aus DEINER Bibliothek nachziehen. Das IFA-Wörterbuch ist
+ * deaktiviert, also matcht der Ganzplan-Scan sonst NIE die Bibliothek. ownLabel/entry
+ * normalisieren die (im Plan oft 6-/7-stellige) PZN auf 8 Stellen; Wirkstoff hat Vorrang
+ * vor der Bezeichnung. Nur die „PZN <nr>"-Platzhalter werden ersetzt.
+ */
+async function resolveFromLibrary(): Promise<void> {
+  for (let i = 0; i < structuredRows.value.length; i++) {
+    const pzn = structuredRows.value[i]?.pzn
+    const name = (structuredRows.value[i]?.name ?? '').trim()
+    if (!pzn || !/^PZN \d/.test(name)) continue
+    const e = await pznLibrary.entry(pzn)
+    const resolved = e ? (e.wirkstoff || e.label) : ''
+    if (resolved) updateRowName(i, resolved)
+  }
+}
+
 async function onScanClick(): Promise<void> {
   scanNotice.value = ''
   if (!useNativeScan.value) {
@@ -82,7 +99,7 @@ async function onScanClick(): Promise<void> {
   scanBusy.value = true
   try {
     const res = await scanDatamatrixNative()
-    if (res.status === 'found') ingest(res.raw)
+    if (res.status === 'found') { ingest(res.raw); await resolveFromLibrary() }
     else if (res.status === 'notFound') scanNotice.value = 'Kein Data-Matrix-Code erkannt. Plan flach, gut ausgeleuchtet und formatfüllend fotografieren.'
     else if (res.status === 'error') scanNotice.value = res.message
     // 'cancelled' -> stillschweigend
@@ -91,12 +108,13 @@ async function onScanClick(): Promise<void> {
   }
 }
 
-function onDecoded(raw: string): void {
+async function onDecoded(raw: string): Promise<void> {
   scanOpen.value = false
   ingest(raw)
+  await resolveFromLibrary()
 }
-function onManualAdd(): void {
-  if (ingest(manualText.value.trim())) manualText.value = ''
+async function onManualAdd(): Promise<void> {
+  if (ingest(manualText.value.trim())) { manualText.value = ''; await resolveFromLibrary() }
 }
 function onApply(): void {
   if (props.structured) {

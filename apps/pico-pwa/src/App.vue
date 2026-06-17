@@ -164,7 +164,7 @@ async function doSend(): Promise<void> {
     statusIsError.value = true
     status.value = ok
       ? `Bridge erreichbar, aber Senden fehlgeschlagen: ${(e as Error).message}`
-      : 'Keine Bridge gefunden. Mit dem WLAN „ResQDocs-…" verbunden? IP in den Einstellungen prüfen.'
+      : 'Keine Bridge gefunden. Mit dem WLAN „ResQDocs-…" (Passwort resqdocs2026) verbunden? IP in den Einstellungen prüfen.'
   } finally {
     sending.value = false
   }
@@ -276,8 +276,8 @@ async function doSend(): Promise<void> {
               class="alert alert-error items-start gap-2 text-sm"
             >
               <span class="flex-1">
-                Keine Bridge gefunden. Mit dem WLAN „ResQDocs-…" verbunden? IP in den
-                Einstellungen prüfen.
+                Keine Bridge gefunden. Mit dem WLAN „ResQDocs-…" (Passwort resqdocs2026) verbunden?
+                IP in den Einstellungen prüfen.
               </span>
               <button class="btn btn-ghost btn-xs shrink-0" type="button" :disabled="checking" @click="check(true)">
                 Erneut prüfen

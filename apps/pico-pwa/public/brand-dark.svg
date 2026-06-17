@@ -8,7 +8,11 @@
       }
 
       .st1 {
-        fill: #fefefe;
+        /* Aussparungen (Buchstaben-Innenflächen, Q-Linse, Dokumentlinien): auf
+           dunklen Themes die HINTERGRUNDFARBE statt Weiß — sonst leuchten sie als
+           weiße Flecken. Dunkles Navy ~ base-100/200 beider Dark-Themes; auf der
+           hellen Dokumentfläche werden daraus lesbare dunkle „Textzeilen". */
+        fill: #141b30;
       }
 
       .st2 {

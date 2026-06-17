@@ -4,14 +4,14 @@ import { SCANNER_MODE_LABELS, type ScannerMode } from '@/medplan/scannerMode'
 import { nativeDatamatrixScanAvailable } from '@/medplan/nativeDatamatrixScan'
 
 /**
- * Scanner-Modus (#170) - Test-/Vergleichseinstellung fuer den BMP-Data-Matrix-Scan.
- * Zentrale Quelle der Strategie; der Kamera-Schnellumschalter aendert genau diesen
- * Wert. „Native ZXing-C++" ist aktuell deaktiviert (noch nicht verfuegbar).
+ * Scanner-Modus (#170) - Auswahl der Scan-Strategie fuer den BMP-Data-Matrix-Scan.
+ * Zentrale Quelle der Strategie; der Kamera-Schnellumschalter aendert genau diesen Wert.
  * Datenschutz: rein lokale Auswahl, kein Netz/Telemetrie.
  */
 const storage = useStorage()
-// #170: „Native ZXing-C++" ist nur auf Android waehlbar (natives Plugin, kameranativ); umgeht den
-// WebView-Kamera-Crash. iOS/Web nutzen weiter den WebView-Scanner.
+// #170: Der native, kameranative Scanner (Android: ZXing-C++, iOS: Apple Vision) ist in der App der
+// Default ('Automatisch'); Web nutzt den WebView-Scanner. Beide nativen Pfade sind geraeteverifiziert
+// und umgehen die WebView-Kamera.
 const nativeAvailable = nativeDatamatrixScanAvailable()
 
 function onChange(e: Event): void {
@@ -33,14 +33,13 @@ function onChange(e: Event): void {
         <option value="webview_standard">{{ SCANNER_MODE_LABELS.webview_standard }}</option>
         <option value="webview_optimized">{{ SCANNER_MODE_LABELS.webview_optimized }}</option>
         <option value="native_zxingcpp" :disabled="!nativeAvailable">
-          {{ SCANNER_MODE_LABELS.native_zxingcpp }}{{ nativeAvailable ? ' (Android, kameranativ)' : ' — nur auf Android' }}
+          {{ SCANNER_MODE_LABELS.native_zxingcpp }}{{ nativeAvailable ? '' : ' — nur in der App (Android/iOS)' }}
         </option>
       </select>
       <p class="text-xs text-base-content/60">
-        Auf Android nutzt „Automatisch" jetzt den nativen Decoder (kameranativ, ohne den
-        WebView-Kamera-Crash). „WebView Standard/optimiert" bleiben als Fallback wählbar. Im
-        WebView-Scanner gibt es zusätzlich einen Schnellumschalter. Es werden keine Bilddaten
-        gespeichert oder übertragen.
+        „Automatisch" nutzt in der App jetzt den nativen Decoder (kameranativ, ohne den
+        WebView-Kamera-Crash) — Android wie iOS. „WebView Standard/optimiert" bleiben als
+        Fallback wählbar. Es werden keine Bilddaten gespeichert oder übertragen.
       </p>
     </div>
   </section>

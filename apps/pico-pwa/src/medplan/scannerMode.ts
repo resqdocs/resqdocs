@@ -40,5 +40,5 @@ export const SCANNER_MODE_LABELS: Record<ScannerMode, string> = {
   auto: 'Automatisch',
   webview_standard: 'WebView Standard',
   webview_optimized: 'WebView optimiert',
-  native_zxingcpp: 'Native ZXing-C++',
+  native_zxingcpp: 'Nativ (kameranativ)', // Android: ZXing-C++, iOS: Apple Vision
 }

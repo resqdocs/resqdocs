@@ -105,7 +105,7 @@ function onTouchEnd(e: TouchEvent): void {
             <li class="card bg-base-100 shadow-sm">
               <div class="card-body flex-row items-center gap-3 p-4">
                 <span class="badge badge-primary badge-lg shrink-0">2</span>
-                <p class="text-sm">Dein Handy verbindet sich mit dem <strong>WLAN der Bridge</strong> (ResQDocs-&lt;ID&gt;).</p>
+                <p class="text-sm">Dein Handy verbindet sich mit dem <strong>WLAN der Bridge</strong> (ResQDocs-&lt;ID&gt;, Passwort <code class="select-text font-mono">resqdocs2026</code>).</p>
               </div>
             </li>
             <li class="card bg-base-100 shadow-sm">

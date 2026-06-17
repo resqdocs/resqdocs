@@ -2,6 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { createMedicationLookup } from './useMedicationLookup.ts'
 import type { HttpAdapter, HttpResponse } from '../pico/picoTypes.ts'
 import type { KeyValueAdapter } from '../storage/types.ts'
@@ -16,8 +17,18 @@ function fakeKv(): KeyValueAdapter & { dump: Record<string, string> } {
   }
 }
 
-const MANIFEST = { version: 2, count: 2, updated: '2026-06-10T00:00:00Z', file: 'medications.v2.json' }
+// Unabhaengige SHA256-Referenz (node:crypto) — die App rechnet mit Web Crypto
+// (crypto.subtle); zwei Implementierungen muessen denselben Hex liefern.
+function sha256(text: string): string {
+  return createHash('sha256').update(text).digest('hex')
+}
+
+// Das Daten-Artefakt wird als ROHTEXT ausgeliefert (responseType 'text'), damit
+// der SHA256-Abgleich ueber die exakten Bytes laeuft (#160). Das Manifest fuehrt
+// daher die Pruefsumme genau dieses Textes.
 const ARTIFACT = { version: 2, count: 2, updated: '2026-06-10T00:00:00Z', entries: { '04527098': 'Ibuflam 600 mg', '17260627': 'Ramipril 5 mg' } }
+const ARTIFACT_TEXT = JSON.stringify(ARTIFACT)
+const MANIFEST = { version: 2, count: 2, updated: '2026-06-10T00:00:00Z', file: 'medications.v2.json', sha256: sha256(ARTIFACT_TEXT) }
 
 function fakeHttp(map: Record<string, HttpResponse>): HttpAdapter & { calls: string[] } {
   const calls: string[] = []
@@ -34,7 +45,7 @@ const DATA_URL = 'https://example.test/pzn/medications.v2.json'
 
 test('DEAKTIVIERT (Default-Flag): kein Netz, keine Auflösung, kein Sync (IFA/DSGVO)', async () => {
   const kv = fakeKv()
-  const http = fakeHttp({ [MANIFEST_URL]: { status: 200, data: MANIFEST }, [DATA_URL]: { status: 200, data: ARTIFACT } })
+  const http = fakeHttp({ [MANIFEST_URL]: { status: 200, data: MANIFEST }, [DATA_URL]: { status: 200, data: ARTIFACT_TEXT } })
   // Ohne `enabled`-Override -> Default = PZN_DICTIONARY_ENABLED (false).
   const l = createMedicationLookup(http, kv, MANIFEST_URL)
   await l.ensureLoaded()
@@ -44,11 +55,11 @@ test('DEAKTIVIERT (Default-Flag): kein Netz, keine Auflösung, kein Sync (IFA/DS
   assert.deepEqual(http.calls, [], 'KEIN Netzzugriff')
 })
 
-test('syncNow lädt Manifest + Artefakt, persistiert, resolve trifft offline', async () => {
+test('syncNow lädt Manifest + Artefakt, prüft SHA256, persistiert, resolve trifft offline', async () => {
   const kv = fakeKv()
   const http = fakeHttp({
     [MANIFEST_URL]: { status: 200, data: MANIFEST },
-    [DATA_URL]: { status: 200, data: ARTIFACT },
+    [DATA_URL]: { status: 200, data: ARTIFACT_TEXT },
   })
   const l = createMedicationLookup(http, kv, MANIFEST_URL, true)
   const msg = await l.syncNow()
@@ -67,7 +78,7 @@ test('syncNow: gleiche Version lädt das Artefakt NICHT erneut', async () => {
   const kv = fakeKv()
   const http = fakeHttp({
     [MANIFEST_URL]: { status: 200, data: MANIFEST },
-    [DATA_URL]: { status: 200, data: ARTIFACT },
+    [DATA_URL]: { status: 200, data: ARTIFACT_TEXT },
   })
   const l = createMedicationLookup(http, kv, MANIFEST_URL, true)
   await l.syncNow()
@@ -89,7 +100,7 @@ test('resolve normalisiert PZN auf 8 Stellen (BMP ohne fuehrende Null)', async (
   const kv = fakeKv()
   const http = fakeHttp({
     [MANIFEST_URL]: { status: 200, data: MANIFEST },
-    [DATA_URL]: { status: 200, data: ARTIFACT },
+    [DATA_URL]: { status: 200, data: ARTIFACT_TEXT },
   })
   const l = createMedicationLookup(http, kv, MANIFEST_URL, true)
   await l.syncNow()
@@ -103,6 +114,70 @@ test('resolve normalisiert PZN auf 8 Stellen (BMP ohne fuehrende Null)', async (
   assert.equal(l.resolve('99999999'), null, 'unbekannte PZN -> null')
   // >8 Ziffern werden NICHT gekuerzt -> kein (falscher) Treffer.
   assert.equal(l.resolve('045270989'), null, '9-stelliger Wert wird nicht gekuerzt -> null')
+})
+
+// --- Negativtests (#160 Punkt 3): Manifest/Artefakt-Härtung -------------------
+
+test('Negativ: Manifest-HTTP-500 → Fehlermeldung, error gesetzt, keine Daten', async () => {
+  const http = fakeHttp({ [MANIFEST_URL]: { status: 500, data: null }, [DATA_URL]: { status: 200, data: ARTIFACT_TEXT } })
+  const l = createMedicationLookup(http, fakeKv(), MANIFEST_URL, true)
+  const msg = await l.syncNow()
+  assert.match(msg, /fehlgeschlagen/i)
+  assert.match(msg, /HTTP 500/)
+  assert.match(l.state.error ?? '', /HTTP 500/)
+  assert.ok(!http.calls.includes(DATA_URL), 'Daten ohne gültiges Manifest nie geladen')
+})
+
+test('Negativ: Daten-HTTP-500 → Download fehlgeschlagen', async () => {
+  const http = fakeHttp({ [MANIFEST_URL]: { status: 200, data: MANIFEST }, [DATA_URL]: { status: 500, data: null } })
+  const l = createMedicationLookup(http, fakeKv(), MANIFEST_URL, true)
+  assert.match(await l.syncNow(), /Download fehlgeschlagen.*HTTP 500/)
+})
+
+test('Negativ: Manifest ohne sha256 → ungültig, Daten nie geladen', async () => {
+  const { sha256: _omit, ...noHash } = MANIFEST
+  const http = fakeHttp({ [MANIFEST_URL]: { status: 200, data: noHash }, [DATA_URL]: { status: 200, data: ARTIFACT_TEXT } })
+  const l = createMedicationLookup(http, fakeKv(), MANIFEST_URL, true)
+  assert.match(await l.syncNow(), /Ungültiges Manifest/)
+  assert.ok(!http.calls.includes(DATA_URL), 'ohne sha256 kein Download')
+})
+
+test('Negativ: Manifest ohne count/updated → ungültig (kein "undefined/0 Einträge")', async () => {
+  const bad = { version: 2, file: 'medications.v2.json', sha256: MANIFEST.sha256 } // count + updated fehlen
+  const l = createMedicationLookup(fakeHttp({ [MANIFEST_URL]: { status: 200, data: bad } }), fakeKv(), MANIFEST_URL, true)
+  assert.match(await l.syncNow(), /Ungültiges Manifest/)
+})
+
+test('Negativ: Manifest mit leerem file → ungültig', async () => {
+  const bad = { ...MANIFEST, file: '' }
+  const l = createMedicationLookup(fakeHttp({ [MANIFEST_URL]: { status: 200, data: bad } }), fakeKv(), MANIFEST_URL, true)
+  assert.match(await l.syncNow(), /Ungültiges Manifest/)
+})
+
+test('Negativ: SHA256-Mismatch → Integritätsprüfung schlägt fehl, nichts gespeichert', async () => {
+  const tampered = JSON.stringify({ ...ARTIFACT, entries: { '04527098': 'GEFÄLSCHT' } }) // andere Bytes → anderer Hash
+  const http = fakeHttp({ [MANIFEST_URL]: { status: 200, data: MANIFEST }, [DATA_URL]: { status: 200, data: tampered } })
+  const kv = fakeKv()
+  const l = createMedicationLookup(http, kv, MANIFEST_URL, true)
+  assert.match(await l.syncNow(), /Integrität/)
+  assert.equal(l.resolve('04527098'), null, 'manipulierte Daten nicht übernommen')
+  assert.deepEqual(kv.dump, {}, 'nichts persistiert')
+})
+
+test('Negativ: Artefakt ohne entries → ungültig (trotz korrekter Prüfsumme)', async () => {
+  const noEntries = JSON.stringify({ version: 2, count: 2, updated: '2026-06-10T00:00:00Z' }) // entries fehlt
+  const mf = { ...MANIFEST, sha256: sha256(noEntries) }
+  const http = fakeHttp({ [MANIFEST_URL]: { status: 200, data: mf }, [DATA_URL]: { status: 200, data: noEntries } })
+  const l = createMedicationLookup(http, fakeKv(), MANIFEST_URL, true)
+  assert.match(await l.syncNow(), /Pflichtfelder fehlen/)
+})
+
+test('Negativ: Datenartefakt kein JSON → Fehler (Prüfsumme passt, Parse schlägt fehl)', async () => {
+  const garbage = 'das ist kein json {{{'
+  const mf = { ...MANIFEST, sha256: sha256(garbage) }
+  const http = fakeHttp({ [MANIFEST_URL]: { status: 200, data: mf }, [DATA_URL]: { status: 200, data: garbage } })
+  const l = createMedicationLookup(http, fakeKv(), MANIFEST_URL, true)
+  assert.match(await l.syncNow(), /kein gültiges JSON/)
 })
 
 test('Quelltext-Garantie: Medications-Schicht loggt nicht, kein Browser-Storage', () => {

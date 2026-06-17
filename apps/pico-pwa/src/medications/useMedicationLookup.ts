@@ -20,6 +20,71 @@ import { PZN_DICTIONARY_ENABLED } from './featureFlags.ts'
  */
 export const PZN_MANIFEST_URL = 'https://resqdocs.app/pzn/manifest.json'
 
+/** Manifest des Daten-Artefakts (statisch ueber HTTPS, Vertrauensanker). */
+interface PznManifest {
+  version: number
+  count: number
+  updated: string
+  file: string
+  /** Hex-SHA256 ueber die EXAKTEN Bytes der Daten-Datei (Integritaet, #160). */
+  sha256: string
+}
+
+/** Das Daten-Artefakt selbst (gegen das Manifest pruefsummen-/feldvalidiert). */
+interface PznArtifact {
+  version: number
+  count: number
+  updated: string
+  entries: Record<string, string>
+}
+
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0
+}
+
+/**
+ * Strikte Manifest-Validierung (#160): alle Pflichtfelder mit korrektem Typ,
+ * inkl. des sha256-Felds. Liefert null statt einer Type-Assertion blind zu
+ * vertrauen — sonst koennten fehlende Felder als 'undefined/0 Eintraege' in der
+ * Statusanzeige landen.
+ */
+function parseManifest(raw: unknown): PznManifest | null {
+  if (!raw || typeof raw !== 'object') return null
+  const m = raw as Record<string, unknown>
+  if (typeof m.version !== 'number' || typeof m.count !== 'number') return null
+  if (!isNonEmptyString(m.updated) || !isNonEmptyString(m.file) || !isNonEmptyString(m.sha256)) return null
+  return { version: m.version, count: m.count, updated: m.updated, file: m.file, sha256: m.sha256 }
+}
+
+/** Strikte Artefakt-Validierung (#160): Pflichtfelder + entries als Objekt. */
+function parseArtifact(raw: unknown): PznArtifact | null {
+  if (!raw || typeof raw !== 'object') return null
+  const a = raw as Record<string, unknown>
+  if (typeof a.version !== 'number' || typeof a.count !== 'number') return null
+  if (!isNonEmptyString(a.updated)) return null
+  if (!a.entries || typeof a.entries !== 'object' || Array.isArray(a.entries)) return null
+  return { version: a.version, count: a.count, updated: a.updated, entries: a.entries as Record<string, string> }
+}
+
+function safeJsonParse(text: string): unknown {
+  try {
+    return JSON.parse(text)
+  } catch {
+    // Sentinel: gueltiges JSON kann nie `undefined` ergeben.
+    return undefined
+  }
+}
+
+/**
+ * Hex-SHA256 ueber den UTF-8-codierten Text. Web Crypto ist sowohl im WebView
+ * als auch in Node (globalThis.crypto.subtle) verfuegbar — keine Abhaengigkeit.
+ */
+async function sha256Hex(text: string): Promise<string> {
+  const bytes = new TextEncoder().encode(text)
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 interface LookupState {
   loaded: boolean
   busy: boolean
@@ -123,27 +188,36 @@ export function createMedicationLookup(
     state.error = null
     try {
       await ensureLoaded()
-      const mf = await http.get(manifestUrl, { connectTimeout: 8000, readTimeout: 8000 })
-      if (mf.status === 404) return 'Noch keine Daten veröffentlicht.'
-      if (mf.status < 200 || mf.status >= 300) throw new Error(`Manifest-Abruf fehlgeschlagen (HTTP ${mf.status})`)
-      const manifest = (typeof mf.data === 'string' ? JSON.parse(mf.data) : mf.data) as {
-        version: number; count: number; updated: string; file: string
-      }
-      if (!manifest?.file || typeof manifest.version !== 'number') return 'Ungültiges Manifest - Datenquelle prüfen.'
+      const mfRes = await http.get(manifestUrl, { connectTimeout: 8000, readTimeout: 8000 })
+      if (mfRes.status === 404) return 'Noch keine Daten veröffentlicht.'
+      if (mfRes.status < 200 || mfRes.status >= 300) throw new Error(`Manifest-Abruf fehlgeschlagen (HTTP ${mfRes.status})`)
+      const manifest = parseManifest(typeof mfRes.data === 'string' ? safeJsonParse(mfRes.data) : mfRes.data)
+      if (!manifest) return 'Ungültiges Manifest - Datenquelle prüfen.'
       if (state.version !== null && manifest.version <= state.version) {
         return `Bereits aktuell (Version ${state.version}, ${state.count} Einträge).`
       }
-      const res = await http.get(resolveDataUrl(manifest.file), { connectTimeout: 8000, readTimeout: 30000 })
-      if (res.status < 200 || res.status >= 300) throw new Error(`Download fehlgeschlagen (HTTP ${res.status})`)
-      const artifact = (typeof res.data === 'string' ? JSON.parse(res.data) : res.data) as {
-        version: number; updated: string; count: number; entries: Record<string, string>
+      // Daten-Artefakt als ROHTEXT laden — nur ueber die exakten gelieferten Bytes
+      // ist der SHA256-Abgleich (Supply-Chain-Haertung, #160) verlaesslich.
+      const dataRes = await http.get(resolveDataUrl(manifest.file), {
+        connectTimeout: 8000, readTimeout: 30000, responseType: 'text',
+      })
+      if (dataRes.status < 200 || dataRes.status >= 300) throw new Error(`Download fehlgeschlagen (HTTP ${dataRes.status})`)
+      const text = typeof dataRes.data === 'string' ? dataRes.data : JSON.stringify(dataRes.data)
+      // (1) Integritaet ZUERST: nicht vertrauenswuerdige Bytes erst pruefen, dann parsen.
+      const digest = await sha256Hex(text)
+      if (digest !== manifest.sha256.toLowerCase()) {
+        throw new Error('Integritätsprüfung fehlgeschlagen (SHA256 weicht ab).')
       }
+      const parsed = safeJsonParse(text)
+      if (parsed === undefined) throw new Error('Datenartefakt ist kein gültiges JSON.')
+      const artifact = parseArtifact(parsed)
+      if (!artifact) throw new Error('Ungültiges Datenartefakt - Pflichtfelder fehlen.')
       const dict: MedicationDictionary = {
         version: artifact.version,
         count: artifact.count,
         updated: artifact.updated,
         fetchedAt: new Date().toISOString(),
-        entries: artifact.entries ?? {},
+        entries: artifact.entries,
       }
       await saveDictionary(kv, dict)
       applyDictionary(dict)

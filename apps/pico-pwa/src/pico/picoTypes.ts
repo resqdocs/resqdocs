@@ -65,6 +65,12 @@ export interface HttpRequestOptions {
   headers?: Record<string, string>
   connectTimeout?: number
   readTimeout?: number
+  /**
+   * Erzwingt das Antwortformat. 'json' (Default) parst automatisch; 'text'
+   * liefert den ROHTEXT unveraendert - noetig, wenn ueber die exakten Bytes
+   * eine Pruefsumme (SHA256) gebildet werden muss (#160, Supply-Chain).
+   */
+  responseType?: 'json' | 'text'
 }
 
 export interface HttpAdapter {

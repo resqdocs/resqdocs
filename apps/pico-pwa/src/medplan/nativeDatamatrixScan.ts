@@ -1,9 +1,9 @@
-// nativeDatamatrixScan.ts (#170) — nativer BMP-Data-Matrix-Scan (Android-only).
+// nativeDatamatrixScan.ts (#170) — nativer BMP-Data-Matrix-Scan (Android + iOS).
 //
 // Architektur (belegt durch Crash-Research, siehe datamatrixDecoder.ts):
 //   native Einzel-Foto-Aufnahme (@capacitor/camera, System-/Geraete-Kamera) ->
-//   ZXing-C++-Decode (DatamatrixDecoder, Data Matrix, tryHarder) -> Roh-UKF-String.
-// KEIN getUserMedia, KEIN WebView-<video>/Canvas-GPU-Pfad -> umgeht den WebView-GPU-Crash.
+//   nativer Decode (DatamatrixDecoder: Android=ZXing-C++, iOS=Apple Vision) -> Roh-UKF-String.
+// KEIN getUserMedia, KEIN WebView-<video>/Canvas-GPU-Pfad -> umgeht den WebView-GPU-Crash (Android).
 //
 // Datenschutz (Patientenplaene): saveToGallery:false (kein Galerie-Eintrag), das aufgenommene
 // Still wird nur im Speicher dekodiert und danach fallen gelassen (kein Halten/Persistieren),
@@ -12,9 +12,10 @@ import { Capacitor } from '@capacitor/core'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { DatamatrixDecoder } from './datamatrixDecoder'
 
-/** Nativer Pfad nur auf Android (Plugin ist Android-only; iOS/Web nutzen den WebView-Scanner). */
+/** Nativer Pfad auf Android (zxing-cpp) UND iOS (Apple Vision); Web nutzt den WebView-Scanner. */
 export function nativeDatamatrixScanAvailable(): boolean {
-  return Capacitor.getPlatform() === 'android'
+  const p = Capacitor.getPlatform()
+  return p === 'android' || p === 'ios'
 }
 
 export type NativeScanResult =
@@ -40,10 +41,12 @@ export async function scanDatamatrixNative(): Promise<NativeScanResult> {
     })
     base64 = photo.base64String
   } catch (e) {
-    const msg = (e as Error)?.message ?? ''
+    const msg = (e as Error)?.message ?? String(e)
     // @capacitor/camera meldet Nutzer-Abbruch ueber die Fehlermeldung.
     if (/cancel/i.test(msg)) return { status: 'cancelled' }
-    return { status: 'error', message: 'Kamera nicht verfügbar oder Zugriff verweigert.' }
+    // Diagnose (#170): den ECHTEN Plugin-Grund zeigen (z. B. fehlende Usage-Description,
+    // 'denied', 'not available') statt einer generischen Meldung.
+    return { status: 'error', message: msg ? `Kamera-/Scan-Fehler: ${msg}` : 'Kamera nicht verfügbar oder Zugriff verweigert.' }
   }
   if (!base64) return { status: 'cancelled' }
   try {

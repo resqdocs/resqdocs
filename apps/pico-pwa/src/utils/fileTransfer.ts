@@ -5,6 +5,7 @@
 // (creatorSession.ts). Protokolle sind neutrale Vorlagen (data-flow.md);
 // native Plugins arbeiten lokal, kein Netz.
 import { Capacitor } from '@capacitor/core'
+import { bytesToBase64 } from './gzip'
 
 /**
  * Teilt JSON über den nativen System-Dialog (#76): temporäre Datei im
@@ -59,4 +60,45 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 /** Liest eine ausgewählte Datei als Text. */
 export function readTextFile(file: File): Promise<string> {
   return file.text()
+}
+
+/** Liest eine ausgewählte Datei als Bytes (für gezippte Backups). */
+export async function readBinaryFile(file: File): Promise<Uint8Array> {
+  return new Uint8Array(await file.arrayBuffer())
+}
+
+/**
+ * Teilt Binärdaten (z. B. gezipptes Backup) über den nativen Share-Dialog; im Web
+ * Fallback auf Blob-Download. Capacitor Filesystem schreibt Binärdaten base64 (ohne
+ * `encoding`-Angabe).
+ */
+export async function shareBinary(
+  filename: string,
+  bytes: Uint8Array,
+  mime = 'application/gzip',
+): Promise<void> {
+  if (!Capacitor.isNativePlatform()) {
+    const blob = new Blob([bytes as BlobPart], { type: mime })
+    const url = URL.createObjectURL(blob)
+    try {
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    } finally {
+      URL.revokeObjectURL(url)
+    }
+    return
+  }
+  const { Filesystem, Directory } = await import('@capacitor/filesystem')
+  const { Share } = await import('@capacitor/share')
+  await Filesystem.writeFile({ path: filename, data: bytesToBase64(bytes), directory: Directory.Cache })
+  const { uri } = await Filesystem.getUri({ path: filename, directory: Directory.Cache })
+  try {
+    await Share.share({ title: filename, files: [uri], dialogTitle: 'Exportieren' })
+  } finally {
+    setTimeout(() => { void Filesystem.deleteFile({ path: filename, directory: Directory.Cache }).catch(() => {}) }, 10000)
+  }
 }

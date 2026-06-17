@@ -222,6 +222,16 @@
       "term": "prompt",
       "contains": "prompt lichtreagibel",
       "reason": "medizinischer Fachbegriff (Pupillen-Lichtreaktion), kein KI-Prompt"
+    },
+    {
+      "file": "apps/pico-pwa/android/app/build.gradle",
+      "term": "keystore",
+      "reason": "generische Release-Signing-Verdrahtung: liest aus externer, gitignorierter key.properties; keine Keystore-Werte/Pfade im Code"
+    },
+    {
+      "file": "apps/pico-pwa/android/app/build.gradle",
+      "term": "password",
+      "reason": "Property-Namen storePassword/keyPassword im Signing-Config; Werte kommen aus externer key.properties, nie im Repo"
     }
   ]
 }

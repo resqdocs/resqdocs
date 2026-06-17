@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createFakeSqlClient } from './fakeSqlClient.ts'
-import { runMigrations, getUserVersion, LATEST_VERSION, LIBRARY_PROTOCOLS_TABLE } from './sqliteMigrations.ts'
+import { runMigrations, getUserVersion, LATEST_VERSION, LIBRARY_PROTOCOLS_TABLE, MIGRATIONS } from './sqliteMigrations.ts'
 import { createLibraryRepositoryOnClient } from './sqliteLibraryRepository.ts'
 
 const proto = (id: string, title = id) => ({ schemaVersion: '0.1.0', id, title, blocks: [], variables: [] })
@@ -17,28 +17,41 @@ test('Migration ist idempotent', async () => {
   assert.ok(client.hasTable(LIBRARY_PROTOCOLS_TABLE))
 })
 
-test('user_version: frisch 0, nach Migration LATEST (=2), idempotent; alle Tabellen', async () => {
+test('user_version: frisch 0, nach Migration LATEST (=5), idempotent; alle Tabellen', async () => {
   const client = createFakeSqlClient()
   assert.equal(await getUserVersion(client), 0)
   assert.equal(await runMigrations(client), LATEST_VERSION)
   assert.equal(await getUserVersion(client), LATEST_VERSION)
-  assert.equal(LATEST_VERSION, 2)
+  assert.equal(LATEST_VERSION, 5)
   assert.ok(client.hasTable('library_protocols'))
   assert.ok(client.hasTable('library_blocks'))
   assert.ok(client.hasTable('library_snippets'))
+  assert.ok(client.hasTable('pzn_entries')) // #194/#195: PZN-Bibliothek (Migration v3)
   // erneuter Lauf ändert nichts (keine DDL, Version bleibt)
   assert.equal(await runMigrations(client), LATEST_VERSION)
   assert.equal(await getUserVersion(client), LATEST_VERSION)
 })
 
-test('Migration v1→v2: bestehende v1-DB erhält nur die neuen Tabellen', async () => {
+test('Android-Splitter-Sicherheit: CREATE-TRIGGER-Statements enthalten kein ";\\n"', () => {
+  // getStatementsArray des Android-Plugins zerschneidet Statements an ";\n" — ein
+  // mehrzeiliger BEGIN…END-Trigger würde zerrissen und die Migration bräche auf Android.
+  // Diese Trigger MÜSSEN einzeilig bleiben.
+  const triggers = MIGRATIONS.flatMap((m) => m.statements).filter((s) => /CREATE TRIGGER/i.test(s))
+  assert.ok(triggers.length >= 3, 'die drei pzn_fts-Trigger müssen existieren')
+  for (const t of triggers) {
+    assert.ok(!t.includes(';\n'), `Trigger darf kein ";\\n" enthalten (Android-Splitter): ${t.slice(0, 70)}…`)
+  }
+})
+
+test('Migration v1→aktuell: bestehende v1-DB erhält nur die neuen Tabellen', async () => {
   const client = createFakeSqlClient()
   // simuliere DB auf v1 (nur protocols vorhanden)
   await client.execute('CREATE TABLE IF NOT EXISTS library_protocols (id TEXT)')
   await client.execute('PRAGMA user_version = 1')
   await runMigrations(client)
-  assert.equal(await getUserVersion(client), 2)
+  assert.equal(await getUserVersion(client), LATEST_VERSION)
   assert.ok(client.hasTable('library_blocks') && client.hasTable('library_snippets'))
+  assert.ok(client.hasTable('pzn_entries'))
 })
 
 test('saveProtocol + loadProtocols Roundtrip', async () => {
