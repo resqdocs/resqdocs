@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { render, type ProtocolTemplate, type ProtocolBlock } from '@shared/renderer/render.mjs'
 import {
   buildContext,
@@ -10,6 +10,8 @@ import { standardprotokoll } from '@/data/protocols'
 import { useCaseState } from './useCaseState'
 import { useCreatorSession } from './useCreatorSession'
 import { useStorage } from '@/storage/useStorage'
+import { useTemporaryCaseDraft } from './useTemporaryCaseDraft'
+import type { CaseState, PointValue } from './caseState'
 
 /**
  * Laufzeit-/Einsatzansicht: bindet eine Protokoll-Vorlage an einen flüchtigen
@@ -61,11 +63,65 @@ export function useProtocolRuntime() {
 
   const caseState = useCaseState(() => protocol.value)
 
-  /** Vorlage wechseln: verwirft den flüchtigen Einsatz-Zustand (Aufrufer bestätigt vorher). */
+  // Temporärer Einsatzentwurf (#173): persistiert NUR bei echten Änderungen und
+  // läuft nach Inaktivität (TTL) ab. Reines Anzeigen/Navigieren verlängert nicht.
+  const draft = useTemporaryCaseDraft()
+
+  /** Plain-Snapshot des flüchtigen Zustands (für die TTL-Persistenz). */
+  function snapshot(): CaseState {
+    return {
+      variableValues: { ...caseState.state.variableValues },
+      values: { ...caseState.state.values },
+      activeBlocks: [...caseState.state.activeBlocks],
+    }
+  }
+  /** Nach einer ECHTEN Änderung: Timer verlängern + (gedrosselt) speichern. */
+  function persistChange(): void {
+    draft.markChanged(snapshot, runtimeProtocolId.value)
+  }
+
+  // Mutatoren mit TTL-Persistenz umhüllen — die DREI sind die einzigen echten
+  // Änderungseingänge (Analyse #173). blockActive/state bleiben unverändert.
+  function setVariable(id: string, value: unknown): void {
+    caseState.setVariable(id, value)
+    persistChange()
+  }
+  function setValue(id: string, value: PointValue | undefined): void {
+    caseState.setValue(id, value)
+    persistChange()
+  }
+  function toggleBlock(blockId: string, on?: boolean): void {
+    caseState.toggleBlock(blockId, on)
+    persistChange()
+  }
+  /** „Sitzung zurücksetzen": flüchtigen Zustand UND den temporären Entwurf verwerfen. */
+  function reset(): void {
+    caseState.reset()
+    void draft.discard()
+  }
+
+  // Resume-/periodischer Ablaufcheck (App.vue) leert bei Ablauf den sichtbaren Zustand.
+  onMounted(() => {
+    draft.setClearHandler(() => caseState.reset())
+    void draft.restore((d) => {
+      if (d.protocolId && availableProtocols.value.some((p) => p.id === d.protocolId)) {
+        pickedProtocolId.value = d.protocolId
+      }
+      caseState.state.variableValues = d.state.variableValues
+      caseState.state.values = d.state.values
+      caseState.state.activeBlocks = d.state.activeBlocks
+    })
+  })
+  // Beim Unmount den Clear-Handler abmelden: sonst riefe der App-Lifecycle-Check
+  // (App.vue) später in den caseState einer abgebauten Komponente (stale callback).
+  onUnmounted(() => draft.setClearHandler(null))
+
+  /** Vorlage wechseln: verwirft den flüchtigen Einsatz-Zustand UND den temporären Entwurf. */
   function selectRuntimeProtocol(id: string): void {
     if (id === runtimeProtocolId.value) return
     pickedProtocolId.value = id
     caseState.reset()
+    void draft.discard()
   }
 
   /** Ob die aktuell gewählte Vorlage als persönlicher Standard gesetzt ist. */
@@ -129,7 +185,15 @@ export function useProtocolRuntime() {
     selectRuntimeProtocol,
     isDefaultProtocol,
     setDefaultProtocol,
-    ...caseState,
+    state: caseState.state,
+    blockActive: caseState.blockActive,
+    setVariable,
+    setValue,
+    toggleBlock,
+    reset,
+    // Temporärer Einsatzentwurf (#173): Ablauf-Hinweis für die Einsatz-Ansicht.
+    draftExpiredNotice: draft.expiredNotice,
+    dismissDraftNotice: draft.clearNotice,
     preview,
     displayBlocks,
     visiblePointsOf,

@@ -11,6 +11,7 @@ import type { SqlClient } from './sqlClient'
 export const LIBRARY_PROTOCOLS_TABLE = 'library_protocols'
 export const LIBRARY_BLOCKS_TABLE = 'library_blocks'
 export const LIBRARY_SNIPPETS_TABLE = 'library_snippets'
+export const PZN_ENTRIES_TABLE = 'pzn_entries'
 
 export interface Migration {
   version: number
@@ -51,6 +52,50 @@ export const MIGRATIONS: Migration[] = [
        );`,
     ],
   },
+  {
+    // #194/#195: PZN-Bibliothek als DSGVO-entkoppelte Menge eindeutiger PZN.
+    // BEWUSST OHNE created_at/updated_at und ohne jede Reihenfolge-/Quelle-Spalte:
+    // die Tabelle darf NICHT rekonstruieren, welche PZN zusammen erfasst wurden.
+    // pzn ist der natürliche Schlüssel (Set/Dedup); sortiert/paginiert wird NUR nach pzn,
+    // nie nach rowid/Einfügereihenfolge.
+    version: 3,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS pzn_entries (
+         pzn TEXT PRIMARY KEY NOT NULL,
+         label TEXT NOT NULL DEFAULT '',
+         category TEXT NOT NULL DEFAULT '',
+         note TEXT NOT NULL DEFAULT ''
+       );`,
+    ],
+  },
+  {
+    // #194: PZN-Bibliothek um den Wirkstoff erweitern (wichtiger als die Bezeichnung).
+    // Additiv via ALTER (frische DBs aus v3 wie bestehende Dev-DBs erhalten die Spalte);
+    // bestehende Zeilen bekommen den Default ''.
+    version: 4,
+    statements: [
+      `ALTER TABLE pzn_entries ADD COLUMN wirkstoff TEXT NOT NULL DEFAULT '';`,
+    ],
+  },
+  {
+    // #195: FTS5-Volltextindex für flüssige Suche bei ~317k. External-content über
+    // pzn_entries (keine Datenverdopplung), gehalten durch AFTER-Trigger; `rebuild`
+    // indiziert vorhandene Zeilen einmalig. DSGVO: pzn_fts.rowid dient NUR dem Join,
+    // wird NIE ausgegeben/sortiert — kanonische Ordnung bleibt ORDER BY pzn. Alles
+    // IF NOT EXISTS → idempotent/race-sicher.
+    version: 5,
+    statements: [
+      `CREATE VIRTUAL TABLE IF NOT EXISTS pzn_fts USING fts5(wirkstoff, label, category, note, content='pzn_entries', content_rowid='rowid', tokenize='unicode61 remove_diacritics 2');`,
+      // WICHTIG: Die drei Trigger MÜSSEN EINZEILIG bleiben (kein internes ";\n").
+      // Der Android-Plugin-Splitter (getStatementsArray) zerschneidet Statements an
+      // ";\n" und würde mehrzeilige BEGIN…END-Trigger zerreißen → execSQL wirft → die
+      // ganze Migration bricht auf JEDEM Android-Start ab. Einzeilig ⇒ 1 Element ⇒ ok.
+      `CREATE TRIGGER IF NOT EXISTS pzn_fts_ai AFTER INSERT ON pzn_entries BEGIN INSERT INTO pzn_fts(rowid, wirkstoff, label, category, note) VALUES (new.rowid, new.wirkstoff, new.label, new.category, new.note); END;`,
+      `CREATE TRIGGER IF NOT EXISTS pzn_fts_ad AFTER DELETE ON pzn_entries BEGIN INSERT INTO pzn_fts(pzn_fts, rowid, wirkstoff, label, category, note) VALUES ('delete', old.rowid, old.wirkstoff, old.label, old.category, old.note); END;`,
+      `CREATE TRIGGER IF NOT EXISTS pzn_fts_au AFTER UPDATE ON pzn_entries BEGIN INSERT INTO pzn_fts(pzn_fts, rowid, wirkstoff, label, category, note) VALUES ('delete', old.rowid, old.wirkstoff, old.label, old.category, old.note); INSERT INTO pzn_fts(rowid, wirkstoff, label, category, note) VALUES (new.rowid, new.wirkstoff, new.label, new.category, new.note); END;`,
+      `INSERT INTO pzn_fts(pzn_fts) VALUES('rebuild');`,
+    ],
+  },
 ]
 
 /** Höchste definierte Schema-Version. */
@@ -72,7 +117,16 @@ export async function runMigrations(client: SqlClient): Promise<number> {
   for (const migration of MIGRATIONS) {
     if (migration.version <= current) continue
     try {
-      for (const statement of migration.statements) await client.execute(statement)
+      for (const statement of migration.statements) {
+        try {
+          await client.execute(statement)
+        } catch (err) {
+          // ALTER ... ADD COLUMN ist nicht idempotent: existiert die Spalte bereits
+          // (z. B. durch einen nebenläufigen/vorherigen Lauf), als erledigt behandeln.
+          if (/duplicate column/i.test((err as Error).message)) continue
+          throw err
+        }
+      }
       // PRAGMA akzeptiert keine gebundenen Parameter → Version ist eine feste Zahl.
       await client.execute(`PRAGMA user_version = ${migration.version}`)
     } catch (err) {

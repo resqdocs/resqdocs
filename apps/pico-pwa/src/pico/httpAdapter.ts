@@ -13,6 +13,9 @@ export const capacitorHttpAdapter: HttpAdapter = {
       headers: opts.headers,
       connectTimeout: opts.connectTimeout,
       readTimeout: opts.readTimeout,
+      // 'text' → CapacitorHttp gibt den Rohtext zurueck (kein Auto-Parse), damit
+      // der Aufrufer die exakten Bytes pruefsummen kann (#160).
+      responseType: opts.responseType,
     })
     return { status: res.status, data: res.data }
   },

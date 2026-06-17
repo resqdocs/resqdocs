@@ -21,16 +21,15 @@
       <div>
         <h4 class="mb-1 text-sm font-semibold">Impressum</h4>
         <p class="text-xs text-base-content/60">Angaben gemäß § 5 DDG</p>
-        <!-- Platzhalter: Der Betreiber dieser App-Distribution traegt hier die
-             eigenen ladungsfaehigen Angaben ein (Pflicht nach § 5 DDG). -->
         <div class="mt-2 space-y-0.5 text-sm leading-relaxed">
-          <p>[Name des Anbieters]</p>
-          <p>[Strasse und Hausnummer]</p>
+          <p>[Anbieter]</p>
+          <p>[Name]</p>
+          <p>[Anschrift]</p>
           <p>[PLZ Ort]</p>
-          <p>[Land]</p>
+          <p>Deutschland</p>
         </div>
         <div class="mt-2 space-y-0.5 text-sm leading-relaxed">
-          <p><span class="text-base-content/60">E-Mail:</span> [Kontakt-E-Mail]</p>
+          <p><span class="text-base-content/60">E-Mail:</span> support@resqdocs.app</p>
         </div>
         <p class="mt-2 text-sm">
           <span class="text-base-content/60">Verantwortlich für den Inhalt:</span> [Name]
@@ -44,7 +43,8 @@
         <h4 class="mb-1 text-sm font-semibold">Datenschutzerklärung</h4>
         <div class="space-y-3 text-sm leading-relaxed text-base-content/90">
           <p>
-            <strong>Verantwortlicher:</strong> [Anbieter-Angaben wie im Impressum].
+            <strong>Verantwortlicher:</strong> [Anbieter], [Name],
+            [Anschrift], [PLZ Ort], support@resqdocs.app (siehe Impressum).
           </p>
           <p>
             <strong>Grundsatz:</strong> ResQDocs ist ein Hilfsmittel zur Einsatzdokumentation. Die App

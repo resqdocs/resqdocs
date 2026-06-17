@@ -68,3 +68,20 @@ D (vertagen) — MVP bliebe nicht real nutzbar (nichts überlebt App-Neustart).
 - `useStorage()`/Repository-Interface + In-Memory-Fake für Tests.
 - Anbindung der Creator-Session an `library` (Laden/Speichern als **bewusste** Nutzeraktion).
 - Bausteine- und Einstellungen-Tabs (S4) auf dieser Schicht.
+
+## Nachtrag (#173): begrenzter temporärer Einsatzentwurf
+
+Die ursprüngliche Regel „`caseState` wird NIE persistiert" gilt weiterhin für die
+**typisierte Repository-Schicht** (Settings, Library = nur neutrale Daten). #173 führt
+einen **bewusst eng begrenzten Ausnahmefall** ein: ein laufender Einsatzentwurf darf
+kurzfristig **lokal** fortgesetzt werden (auch über App-Neustart), wird aber per
+**Sliding-Idle-TTL** (1–5 h, Default 3 h) nach Inaktivität **automatisch gelöscht**.
+
+Leitplanken: eigenes, gekapseltes Modul (`composables/temporaryCaseDraft*`, Key
+`case.draft.temp`) über denselben `KeyValueAdapter` wie `creatorSessionStore` — **kein**
+direkter Browser-Storage. Gespeichert wird **nur** der aktuelle Arbeitsstand (die drei
+caseState-Sammlungen) — **keine** Roh-BMP-/Barcode-Payloads, **keine** Bilder, **keine**
+Telemetrie, **kein** Netz/Sync/Cloud, **kein** Archiv. Ablaufprüfung beim Start, beim
+Resume (`visibilitychange`) und vor jedem Laden/Speichern; abgelaufene Entwürfe werden vor
+jeder Anzeige gelöscht. Grundlage: DSGVO Art. 5/25 (Datenminimierung, Speicherbegrenzung,
+Privacy-by-Default), OWASP HTML5 Storage Cheat Sheet.

@@ -18,7 +18,7 @@ diese Datei deckt nur das *Veröffentlichen* ab.
   Push-/Geolocation-Plugins genutzt werden.
 - **Datenschutz-URL:** `https://resqdocs.app/datenschutz` (für Play „Data safety"
   + Store-Eintrag) und `https://resqdocs.app/impressum`.
-- **App-ID:** `com.example.resqdocs` (Platzhalter - eigene Bundle-ID eintragen). Build-Tooling: JDK 21, Android SDK (Platform/
+- **App-ID:** `app.resqdocs`. Build-Tooling: JDK 21, Android SDK (Platform/
   Build-Tools 36), Gradle-Wrapper 8.14.3.
 
 ## Versionierung
@@ -48,7 +48,7 @@ Keystore-Dateien (`*.jks`, `*.keystore`, `keystore.properties`) sind in
 
 1. **Projekt aktuell machen & öffnen** (Terminal):
    ```bash
-   git checkout main && git pull && \
+   cd ~/ResQDocs && git checkout dev && git pull && \
    cd apps/pico-pwa && npm install && npm run build && \
    npx cap sync android && npx cap open android
    ```
@@ -67,7 +67,7 @@ Keystore-Dateien (`*.jks`, `*.keystore`, `keystore.properties`) sind in
    - **Password** + Confirm
    - **Alias:** `resqdocs-upload`, **Key Password** (darf gleich sein)
    - **Validity (years):** **30**
-   - **Certificate:** Name, Organization = eigene Angaben,
+   - **Certificate:** Name, Organization = „your-organization",
      Ort, Bundesland, **Country Code = DE**
    - **OK** → **Next**
 
@@ -166,7 +166,7 @@ Zwei Wege:
 1. **Offizielles F-Droid-Repo** (mehr Aufwand, größere Reichweite):
    - Metadaten-YAML aus Template (`templates/build-gradle.yml`) erstellen, Build-
      Rezept (npm-`prebuild` + Gradle) eintragen.
-   - Lokal prüfen: `fdroid readmeta`, `fdroid lint`, `fdroid build -v -l com.example.resqdocs`.
+   - Lokal prüfen: `fdroid readmeta`, `fdroid lint`, `fdroid build -v -l app.resqdocs`.
    - **Merge-Request** im `fdroiddata`-GitLab; nach Merge 24–48 h bis sichtbar.
 
 2. **Eigenes F-Droid-Repo** (einfachster Start):

@@ -77,6 +77,18 @@ export function useMedplanScan(resolvePzn?: (pzn: string) => string | null) {
     rows.value = rows.value.map((r, i) => (i === index ? text : r))
   }
 
+  /**
+   * Nur den NAMEN einer strukturierten Zeile überschreiben (#184). Die Roh-PZN
+   * (`pzn`) bleibt am Eintrag „im Hintergrund" hinterlegt — Dosierung/Kommentar
+   * unverändert. So kann der Nutzer den Namen anpassen, ohne die PZN zu verlieren
+   * (für den späteren Einzel-Transfer in die Bibliothek).
+   */
+  function updateRowName(index: number, name: string): void {
+    structuredRows.value = structuredRows.value.map((r, i) =>
+      i === index ? { ...r, name } : r,
+    )
+  }
+
   function removeRow(index: number): void {
     rows.value = rows.value.filter((_, i) => i !== index)
     structuredRows.value = structuredRows.value.filter((_, i) => i !== index)
@@ -127,9 +139,9 @@ export function useMedplanScan(resolvePzn?: (pzn: string) => string | null) {
   })
 
   return {
-    error, rows, totalPages, scannedPages,
+    error, rows, structuredRows, totalPages, scannedPages,
     aussteller, ausstellerRolle,
     missingPages, draftText, draftRows,
-    ingest, updateRow, removeRow, reset,
+    ingest, updateRow, updateRowName, removeRow, reset,
   }
 }

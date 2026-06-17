@@ -2,6 +2,7 @@
 // Speichert AUSSCHLIESSLICH die bekannten AppSettings-Felder (Sanitize) — nie
 // Protokolle, Bausteine oder Patientendaten. Frei von Capacitor → pur testbar.
 import { DEFAULT_SETTINGS, type AppSettings, type KeyValueAdapter, type SettingsRepository } from './types.ts'
+import { SCANNER_MODES, type ScannerMode } from '../medplan/scannerMode.ts'
 
 export const SETTINGS_KEY = 'app.settings'
 
@@ -17,7 +18,10 @@ function sanitize(s: Partial<AppSettings> | null | undefined): AppSettings {
     privacyNoticeAccepted: s?.privacyNoticeAccepted === true,
     // nur http(s)-URLs; sonst Default (keine Patientendaten/Secrets erlaubt).
     picoBaseUrl: typeof url === 'string' && /^https?:\/\//.test(url) ? url : DEFAULT_SETTINGS.picoBaseUrl,
-    themeFamily: s?.themeFamily === 'resqdocs' ? 'resqdocs' : DEFAULT_SETTINGS.themeFamily,
+    // Beide gueltigen Familien bewahren (sonst wuerde der neue Default 'resqdocs'
+    // ein bewusst gespeichertes 'classic' ueberschreiben). Nur Ungueltiges -> Default.
+    themeFamily: s?.themeFamily === 'classic' || s?.themeFamily === 'resqdocs'
+      ? s.themeFamily : DEFAULT_SETTINGS.themeFamily,
     dismissedHints: Array.isArray(s?.dismissedHints)
       ? s.dismissedHints.filter((x): x is string => typeof x === 'string').slice(0, 200)
       : DEFAULT_SETTINGS.dismissedHints,
@@ -26,6 +30,13 @@ function sanitize(s: Partial<AppSettings> | null | undefined): AppSettings {
     headingFill: typeof s?.headingFill === 'string' ? s.headingFill.slice(0, 1) : DEFAULT_SETTINGS.headingFill,
     headingWidth: Number.isFinite(Number(s?.headingWidth)) && Number(s?.headingWidth) > 0
       ? Math.min(200, Math.round(Number(s?.headingWidth))) : DEFAULT_SETTINGS.headingWidth,
+    pznAutoCheck: s?.pznAutoCheck === true,
+    scannerMode: SCANNER_MODES.includes(s?.scannerMode as ScannerMode)
+      ? (s!.scannerMode as ScannerMode) : DEFAULT_SETTINGS.scannerMode,
+    // TTL des temporaeren Einsatzentwurfs (#173): nur 1–5 ganze Stunden, sonst Default 3.
+    caseDraftTtlHours: Number.isFinite(Number(s?.caseDraftTtlHours))
+      ? Math.max(1, Math.min(5, Math.round(Number(s?.caseDraftTtlHours))))
+      : DEFAULT_SETTINGS.caseDraftTtlHours,
   }
 }
 

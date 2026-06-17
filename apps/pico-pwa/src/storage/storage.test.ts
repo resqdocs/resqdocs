@@ -14,11 +14,92 @@ test('Default-Settings laden, wenn nichts gespeichert ist', async () => {
   assert.deepEqual(await repo.loadSettings(), DEFAULT_SETTINGS)
 })
 
+test('Neuinstallation: Design=ResQDocs, Erscheinung=System, Scanner=Automatisch', async () => {
+  const repo = createSettingsRepository(createFakeKeyValueAdapter())
+  const s = await repo.loadSettings()
+  assert.equal(s.themeFamily, 'resqdocs') // App-Design: ResQDocs-Logofarben
+  assert.equal(s.theme, 'system') // Erscheinung folgt dem System
+  assert.equal(s.scannerMode, 'auto')
+})
+
+test('Reset setzt die neuen Defaults (ResQDocs / System / auto)', async () => {
+  const adapter = createFakeKeyValueAdapter()
+  const repo = createSettingsRepository(adapter)
+  // vorher bewusst abweichend speichern
+  await repo.saveSettings({ ...DEFAULT_SETTINGS, themeFamily: 'classic', theme: 'dark', scannerMode: 'webview_standard' })
+  await repo.resetSettings()
+  const s = await repo.loadSettings()
+  assert.equal(s.themeFamily, 'resqdocs')
+  assert.equal(s.theme, 'system')
+  assert.equal(s.scannerMode, 'auto')
+})
+
+test('Bestehende Installation: gueltige Werte (auch classic) bleiben erhalten', async () => {
+  const adapter = createFakeKeyValueAdapter()
+  const repo = createSettingsRepository(adapter)
+  await repo.saveSettings({ ...DEFAULT_SETTINGS, themeFamily: 'classic', theme: 'light', scannerMode: 'webview_optimized' })
+  const s = await repo.loadSettings()
+  assert.equal(s.themeFamily, 'classic', 'bewusst gewaehltes classic wird NICHT durch neuen Default ueberschrieben')
+  assert.equal(s.theme, 'light')
+  assert.equal(s.scannerMode, 'webview_optimized')
+})
+
+test('Update-Szenario: fehlender neuer Key bekommt Default, vorhandene bleiben', async () => {
+  // aelterer Storage OHNE den neuen Key scannerMode, aber mit eigenen Werten:
+  const stored: Record<string, unknown> = { ...DEFAULT_SETTINGS, defaultOs: 'mac_de', theme: 'dark', themeFamily: 'classic' }
+  delete stored.scannerMode
+  const adapter = createFakeKeyValueAdapter({ [SETTINGS_KEY]: JSON.stringify(stored) })
+  const s = await createSettingsRepository(adapter).loadSettings()
+  assert.equal(s.scannerMode, 'auto', 'fehlender neuer Key -> Default')
+  assert.equal(s.defaultOs, 'mac_de', 'vorhandener Key bleibt unveraendert')
+  assert.equal(s.theme, 'dark')
+  assert.equal(s.themeFamily, 'classic')
+})
+
+test('caseDraftTtlHours (#173): Default 3, gueltig 1–5, sonst geklemmt/gerundet', async () => {
+  const repo = createSettingsRepository(createFakeKeyValueAdapter())
+  assert.equal((await repo.loadSettings()).caseDraftTtlHours, 3, 'Default 3 h')
+
+  for (const [input, expected] of [[1, 1], [5, 5], [0, 1], [9, 5], [2.4, 2]] as const) {
+    const a = createFakeKeyValueAdapter()
+    const r = createSettingsRepository(a)
+    await r.saveSettings({ ...DEFAULT_SETTINGS, caseDraftTtlHours: input })
+    assert.equal((await r.loadSettings()).caseDraftTtlHours, expected, `${input} -> ${expected}`)
+  }
+})
+
+test('caseDraftTtlHours (#173): Update laesst bestehende Settings unberuehrt, fehlender Key -> 3', async () => {
+  const stored: Record<string, unknown> = { ...DEFAULT_SETTINGS, defaultOs: 'mac_de' }
+  delete stored.caseDraftTtlHours
+  const adapter = createFakeKeyValueAdapter({ [SETTINGS_KEY]: JSON.stringify(stored) })
+  const s = await createSettingsRepository(adapter).loadSettings()
+  assert.equal(s.caseDraftTtlHours, 3, 'fehlender neuer Key -> Default 3')
+  assert.equal(s.defaultOs, 'mac_de', 'bestehende Settings bleiben')
+})
+
+test('caseDraftTtlHours (#173): Reset setzt auf 3 h zurueck', async () => {
+  const adapter = createFakeKeyValueAdapter()
+  const repo = createSettingsRepository(adapter)
+  await repo.saveSettings({ ...DEFAULT_SETTINGS, caseDraftTtlHours: 5 })
+  await repo.resetSettings()
+  assert.equal((await repo.loadSettings()).caseDraftTtlHours, 3)
+})
+
+test('Ungueltige Werte werden weiterhin sanitizt (-> neue Defaults)', async () => {
+  const adapter = createFakeKeyValueAdapter({
+    [SETTINGS_KEY]: JSON.stringify({ themeFamily: 'bogus', theme: 'neon', scannerMode: 'quantum' }),
+  })
+  const s = await createSettingsRepository(adapter).loadSettings()
+  assert.equal(s.themeFamily, 'resqdocs')
+  assert.equal(s.theme, 'system')
+  assert.equal(s.scannerMode, 'auto')
+})
+
 test('Settings speichern und laden (Round-Trip)', async () => {
   const adapter = createFakeKeyValueAdapter()
   const repo = createSettingsRepository(adapter)
-  await repo.saveSettings({ defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40 })
-  assert.deepEqual(await repo.loadSettings(), { defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40 })
+  await repo.saveSettings({ defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40, pznAutoCheck: true, scannerMode: 'webview_standard', caseDraftTtlHours: 4 })
+  assert.deepEqual(await repo.loadSettings(), { defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40, pznAutoCheck: true, scannerMode: 'webview_standard', caseDraftTtlHours: 4 })
 })
 
 test('Settings zurücksetzen', async () => {
@@ -40,7 +121,7 @@ test('Settings-Repository speichert NUR die bekannten Felder (kein Protokoll/Fre
     protocols: [{ id: 'x' }], patientName: 'Mustermann',
   })
   const stored = JSON.parse(adapter.dump()[SETTINGS_KEY])
-  assert.deepEqual(Object.keys(stored).sort(), ['defaultOs', 'defaultProtocolId', 'dismissedHints', 'headingFill', 'headingPattern', 'headingWidth', 'lastSelectedProtocolId', 'picoBaseUrl', 'privacyNoticeAccepted', 'theme', 'themeFamily'])
+  assert.deepEqual(Object.keys(stored).sort(), ['caseDraftTtlHours', 'defaultOs', 'defaultProtocolId', 'dismissedHints', 'headingFill', 'headingPattern', 'headingWidth', 'lastSelectedProtocolId', 'picoBaseUrl', 'privacyNoticeAccepted', 'pznAutoCheck', 'scannerMode', 'theme', 'themeFamily'])
   assert.ok(!('protocols' in stored) && !('patientName' in stored))
 })
 

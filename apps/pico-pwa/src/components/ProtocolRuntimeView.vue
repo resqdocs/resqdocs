@@ -11,8 +11,9 @@ import { useProtocolRuntime } from '@/composables/useProtocolRuntime'
  * Laufzeit-/Einsatzansicht (NICHT der Protokoll-Kreator #13).
  *
  * Flow: Protokoll laden → Variablen setzen → Punkte ausfüllen/aktivieren →
- * optionale Blöcke aktivieren → Renderer-Vorschau. Der gesamte Zustand ist
- * flüchtig (caseState) und wird nicht persistiert.
+ * optionale Blöcke aktivieren → Renderer-Vorschau. Der Zustand (caseState) ist
+ * flüchtig; als temporärer Einsatzentwurf (#173) wird er bei echten Änderungen
+ * NUR lokal zwischengespeichert und nach Inaktivität (TTL) automatisch gelöscht.
  *
  * Die fertige Klartext-Ausgabe wird über `v-model:output` nach außen gegeben,
  * damit die Pico-Anbindung (Shell) sauber getrennt bleibt.
@@ -37,6 +38,8 @@ const {
   visiblePointsOf,
   blockVisible,
   resolveText,
+  draftExpiredNotice,
+  dismissDraftNotice,
 } = useProtocolRuntime()
 
 // Vorlagenwechsel (#44): bestehende Einsatz-Eingaben gehen verloren -> bestätigen.
@@ -71,8 +74,13 @@ function applyToolResult(pointId: string, text: string): void {
     <div class="md:col-span-2">
       <h1 class="text-lg font-semibold">{{ resolveText(protocol.title ?? '') }}</h1>
       <p class="text-xs text-base-content/60">
-        Einsatzansicht (Entwurf). Eingaben sind flüchtig und werden nicht gespeichert.
+        Einsatzansicht (Entwurf). Nur lokal zwischengespeichert und nach Inaktivität automatisch gelöscht.
       </p>
+      <!-- Temporärer Einsatzentwurf (#173): neutraler Hinweis nach automatischer Löschung -->
+      <div v-if="draftExpiredNotice" role="status" class="alert alert-info mt-2 py-2 text-sm">
+        <span>Der temporäre Einsatzentwurf wurde aus Datenschutzgründen gelöscht.</span>
+        <button class="btn btn-ghost btn-xs" type="button" @click="dismissDraftNotice()">OK</button>
+      </div>
       <div class="mt-1 text-xs">
         <InlineHint
           id="tristate"

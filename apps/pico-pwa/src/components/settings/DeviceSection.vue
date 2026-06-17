@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { Capacitor } from '@capacitor/core'
+import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-settings'
 import { usePicoDevice } from '@/pico/usePicoDevice'
 import { useFirmwareUpdate } from '@/pico/useFirmwareUpdate'
 import { isValidSsidId } from '@/pico/picoClient'
@@ -51,6 +53,19 @@ async function onSend(): Promise<void> {
   const r = await sendTest()
   sendMsg.value = r.ok ? `Gesendet (${r.typed ?? 0} Zeichen getippt).` : `Senden fehlgeschlagen: ${r.error ?? ''}`
 }
+// „WLAN-Einstellungen öffnen" NUR auf Android: dort springt der System-Intent
+// direkt zur WLAN-Seite. iOS lässt das offiziell nicht zu (privates App-prefs-
+// Schema = App-Store-Risiko) — dort steht WLAN + Passwort daneben nur als Text,
+// kein (irreführender/toter) Button. optionIOS bleibt nur zur Typ-Erfüllung.
+const platform = Capacitor.getPlatform()
+async function openWifiSettings(): Promise<void> {
+  try {
+    await NativeSettings.open({ optionAndroid: AndroidSettings.Wifi, optionIOS: IOSSettings.App })
+  } catch {
+    /* nur nativ verfügbar; Web/Fehler still ignorieren */
+  }
+}
+
 async function onSetSsid(): Promise<void> {
   ssidMsg.value = null
   const id = ssidDraft.value.trim()
@@ -77,6 +92,31 @@ async function onSetSsid(): Promise<void> {
         >
           {{ reachable === true ? 'erreichbar' : reachable === false ? 'nicht erreichbar' : 'unbekannt' }}
         </span>
+      </div>
+
+      <!-- WLAN-Zugang zur Bridge: SSID-Schema + bewusst öffentliches Passwort sichtbar,
+           damit ein neuer Nutzer sein Handy ohne Suche verbinden kann. select-text hebt
+           die app-weite user-select:none-Sperre für diese Werte auf (kopierbar). -->
+      <div class="rounded-lg bg-base-200 p-3 text-sm">
+        <p class="mb-1 font-medium">Handy mit dem Bridge-WLAN verbinden</p>
+        <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+          <dt class="text-base-content/60">WLAN</dt>
+          <dd><code class="select-text font-mono">ResQDocs-&lt;ID&gt;</code></dd>
+          <dt class="text-base-content/60">Passwort</dt>
+          <dd><code class="select-text font-mono">resqdocs2026</code></dd>
+          <dt class="text-base-content/60">Adresse</dt>
+          <dd><code class="select-text font-mono">http://10.10.10.1</code></dd>
+        </dl>
+        <button
+          v-if="platform === 'android'"
+          class="btn btn-outline btn-sm mt-2"
+          type="button"
+          @click="openWifiSettings"
+        >WLAN-Einstellungen öffnen</button>
+        <p class="mt-1 text-xs text-base-content/60">
+          Das Passwort ist für alle Bridges gleich und bewusst öffentlich — die Bridge tippt nur
+          Text und speichert nichts.
+        </p>
       </div>
 
       <label class="form-control">

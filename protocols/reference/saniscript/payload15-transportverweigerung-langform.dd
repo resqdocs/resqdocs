@@ -1,0 +1,31 @@
+ATTACKMODE HID
+DELAY 50
+STRING Abschließend möchten wir in diesem Protokoll nochmals nachdrücklich darauf hinweisen, dass aufgrund der im Rettungsdienst gegebenen Limitationen bezüglich Untersuchungstechniken und medizinischer Möglichkeiten, 
+STRING eine umfassende Beurteilung Ihrer Symptome nicht möglich ist. Eine ärztliche Untersuchung hat bis zu diesem Zeitpunkt nicht stattgefunden. Die im Einsatz beobachteten Symptome 
+STRING (näher beschrieben im vorherigen Teil dieses Protokolls) erlauben keine abschließende Aussage über mögliche gesundheitliche Risiken. 
+ENTER
+ENTER
+STRING Angesichts dieser Umstände empfehlen wir dringend, weitere diagnostische Schritte sowie eventuell erforderliche therapeutische Maßnahmen durch eine Ärztin oder einen Arzt in einer geeigneten medizinischen Einrichtung 
+STRING durchführen zu lassen. Eine Verzögerung oder Unterlassung einer medizinischen Behandlung kann zu schwerwiegenden und dauerhaften Gesundheitsschäden führen, deren Spektrum von einer Verschlimmerung des aktuellen Zustandes 
+STRING bis hin zu irreversiblen Schäden oder sogar dem Tod reichen kann.
+ENTER
+ENTER
+STRING Trotz eingehender Aufklärung über mögliche Risiken und ohne ärztliche Untersuchung wurde der Transport in ein Krankenhaus oder eine andere Behandlungseinrichtung abgelehnt. 
+ENTER
+ENTER
+STRING Abschließend möchten wir betonen, dass Sie bei einer akuten Verschlechterung Ihres Zustands, einer Meinungsänderung bezüglich der Notwendigkeit medizinischer Behandlung oder bei neuen Beschwerden, jederzeit Ihren Hausarzt, 
+STRING den ärztlichen Bereitschaftsdienst (Tel: 116 117) oder im Falle eines Notfalls den Rettungsdienst (Tel: 112) kontaktieren können. Diese sind rund um die Uhr erreichbar, um Ihnen im Bedarfsfall die notwendige medizinische 
+STRING Versorgung zukommen zu lassen.
+ENTER
+ENTER
+STRING Durch Ihre Unterschrift bestätigen Sie, dass Sie über die empfohlene medizinische Weiterbehandlung informiert wurden und dennoch den Transport in eine weiterführende Behandlungseinrichtung unter bewusster Inkaufnahme 
+STRING möglicher schwerwiegender Folgen, bis hin zum Tod, ablehnen. Sie wurden ebenfalls darüber in Kenntnis gesetzt, dass Sie bei einer Verschlechterung Ihres Zustands oder bei neuen Beschwerden jederzeit ärztliche Hilfe in Anspruch nehmen können.
+ENTER
+ENTER
+STRING         Patient                                                              Angehörigen | Zeuge
+ENTER
+ENTER
+ENTER
+ENTER
+STRING ___________________________________________________________________________________________________
+ATTACKMODE OFF

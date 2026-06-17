@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs'
 import {
   parseMedplanMedications,
   medicationToText,
+  medicationToRow,
   medplanToText,
   dosierungToText,
   DOSIEREINHEIT,
@@ -36,6 +37,16 @@ const UKF_MIT_NAME =
 
 // Mehrseitig wie bmp-0005a/b: a="2" z="2".
 const UKF_SEITE_2 = '<MP v="025" U="BB" a="2" z="2" l="de-DE"><P g="R" f="T"/><S><M p="9900751" v="1" du="1"/></S></MP>'
+
+test('medicationToRow führt die Roh-PZN „im Hintergrund" mit (#184)', () => {
+  const r = parseMedplanMedications(UKF_NUR_PZN)
+  const row = medicationToRow(r.medications[0])
+  assert.equal(row.pzn, '230272') // PZN bleibt am strukturierten Eintrag hinterlegt
+  assert.match(row.name, /^PZN 230272/) // ohne Wörterbuch erscheint die PZN im Namensfeld
+  // Ein Eintrag mit Klartext-Namen, aber ohne PZN, trägt KEIN pzn-Feld.
+  const noPzn = medicationToRow({ name: 'Aspirin', wirkstoffe: [], dosierung: {} })
+  assert.equal('pzn' in noPzn, false)
+})
 
 test('parst Nur-PZN-Plan: alle 4 Zeilen, PZN + Dosierung + Grund/Hinweis', () => {
   const r = parseMedplanMedications(UKF_NUR_PZN)
@@ -137,6 +148,51 @@ test('medplanToText: eine Zeile pro Medikament', () => {
   assert.equal(text.split('\n').length, 4)
   assert.ok(text.includes('PZN 558736'))
   assert.ok(!/Erika|Musterfrau/.test(text))
+})
+
+// --- #164: realer 14-Medikamente-Plan, anonymisiert (kein P/A/C/O-Element,
+// U auf Nullen gesetzt) - sichert vollstaendige Extraktion + Erhalt ab. ---
+const UKF_164 =
+  '<MP v="026" U="00000000000000000000000000000000" l="de-DE"><S>' +
+  '<M p="18827585" m="1" v="1" /><M p="2953075" m="1/2" du="1" />' +
+  '<M p="2227825" m="1" /><M p="3028737" t="Mo, Mi , Fr abends" i="jeweils 1 Tablette" />' +
+  '<M p="12482636" m="1" v="1" du="1" /><M p="11851965" m="1" du="1" />' +
+  '<M p="524306" v="1" /><M p="1841954" m="1" />' +
+  '<M p="14155841" m="1" v="1" du="1" /><M p="5510970" m="1" />' +
+  '<M p="6551971" m="1/2" d="1/2" /><M p="9474975" m="1" v="1" />' +
+  '<M p="1038950" m="1" v="1" /><M p="6444040" m="1" d="1" v="1" h="1" dud="bei Bed." />' +
+  '</S></MP>'
+
+test('#164: 14-Medikamente-Plan wird vollstaendig geparst (kein Verlust)', () => {
+  const { medications } = parseMedplanMedications(UKF_164)
+  assert.equal(medications.length, 14, 'alle 14 <M>-Eintraege erkannt')
+  // PZN exakt wie im BMP (Roh-Wert; Normalisierung passiert erst beim Lookup, #162).
+  assert.deepEqual(
+    medications.map((m) => m.pzn),
+    ['18827585', '2953075', '2227825', '3028737', '12482636', '11851965', '524306',
+      '1841954', '14155841', '5510970', '6551971', '9474975', '1038950', '6444040'],
+  )
+  // Eintrag mit t/i (Freitext-Dosierung + Hinweis) geht nicht verloren.
+  const ti = medications[3]
+  assert.equal(ti.pzn, '3028737')
+  assert.equal(ti.dosierung.freitext, 'Mo, Mi , Fr abends')
+  assert.equal(ti.hinweis, 'jeweils 1 Tablette')
+  // Eintrag mit nur einem Dosierungsfeld (v) geht nicht verloren.
+  assert.equal(medications[6].pzn, '524306')
+  assert.equal(medications[6].dosierung.abends, '1')
+})
+
+test('#164: medicationToText/Row - keine fuehrenden Striche, keine leeren Zeilen', () => {
+  const { medications } = parseMedplanMedications(UKF_164)
+  const text = medplanToText({ medications })
+  const lines = text.split('\n')
+  assert.equal(lines.length, 14, 'genau 14 Zeilen, keine zusaetzlichen Leerzeilen')
+  for (const line of lines) {
+    assert.ok(line.trim().length > 0, 'keine leere Zeile')
+    assert.ok(!line.startsWith('-'), `keine fuehrenden Striche: "${line}"`)
+  }
+  // Ohne Wörterbuch faellt der Name auf "PZN <roh>" zurueck (kein Crash, kein Verlust).
+  assert.match(medicationToText(medications[1]), /^PZN 2953075: 1\/2-0-0-0/)
 })
 
 test('Code-Tabellen: Stichproben gegen die KBV-Schluesseltabellen', () => {

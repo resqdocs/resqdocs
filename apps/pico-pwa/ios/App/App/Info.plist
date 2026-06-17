@@ -31,6 +31,10 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Die Kamera wird ausschließlich zum Scannen des Medikationsplan-Codes (BMP) verwendet. Es werden keine Fotos gespeichert.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Wird vom Kamera-Framework vorausgesetzt. ResQDocs greift NICHT auf deine Mediathek zu – der Medikationsplan-Code (BMP) wird nur live gescannt, nichts wird gelesen.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Wird vom Kamera-Framework vorausgesetzt. ResQDocs speichert KEINE Fotos in deiner Mediathek – die Aufnahme dient nur dem Scannen und wird sofort verworfen.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>ResQDocs verbindet sich im lokalen WLAN direkt mit der ResQDocs-Bridge (Pico), um Text zu übertragen. Es findet keine Internet-Kommunikation statt.</string>
 	<key>UILaunchStoryboardName</key>

@@ -16,5 +16,13 @@ Externe Pakete und Abhängigkeiten unterliegen ihren eigenen Lizenzen; siehe
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Für diese Pakete wird keine eigene
 Gewährleistung übernommen.
 
+Die Bridge-Firmware wird als Binary mit der App ausgeliefert und ist **getrennt** lizenziert
+(eigene Quellen `GPL-3.0-or-later`, [`firmware/LICENSE`](firmware/LICENSE)); ihre
+Drittkomponenten haben eigene Lizenzpflichten — Details in
+[`FIRMWARE_THIRD_PARTY_NOTICES.md`](FIRMWARE_THIRD_PARTY_NOTICES.md).
+
+Name, Logo und Marke „ResQDocs" werden durch die Code-Lizenz nicht freigegeben; siehe
+[`TRADEMARKS.md`](TRADEMARKS.md).
+
 ResQDocs ist ein Hilfsmittel und kein Medizinprodukt. Es ersetzt keine fachliche, medizinische oder
 rechtliche Bewertung. Dies ist keine Rechtsberatung.

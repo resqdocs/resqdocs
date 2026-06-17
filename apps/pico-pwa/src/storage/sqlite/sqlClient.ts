@@ -15,4 +15,10 @@ export interface SqlClient {
   run(statement: string, values?: unknown[]): Promise<void>
   /** Lesendes Statement → Zeilen. */
   query(statement: string, values?: unknown[]): Promise<SqlRow[]>
+  /**
+   * Bündelt mehrere Schreibvorgänge in EINER Transaktion (Performance bei
+   * Massen-Inserts, Atomarität: alles-oder-nichts). Die in `work` ausgeführten
+   * run()-Aufrufe gehören zu dieser Transaktion; bei Fehler wird zurückgerollt.
+   */
+  transaction(work: () => Promise<void>): Promise<void>
 }

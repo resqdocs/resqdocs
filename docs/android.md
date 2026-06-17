@@ -4,7 +4,7 @@ Die Android-App teilt sich den kompletten Web-/Logikcode mit iOS — gleiche
 Capacitor-Konfiguration, gleiche `dist/`-Assets. Plattform-Projekt liegt unter
 `apps/pico-pwa/android/`.
 
-App-ID: `com.example.resqdocs` (Platzhalter - eigene Bundle-ID eintragen, identisch zu iOS). App-Name: `ResQDocs`.
+App-ID: `com.example.resqdocs` (identisch zu iOS). App-Name: `ResQDocs`.
 
 ## Plattform-Politik (verbindlich)
 

@@ -1,95 +1,106 @@
 # ResQDocs
 
-**Schnelle, strukturierte Einsatzdokumentation für den Rettungsdienst — getippt von einer USB-Bridge direkt ins Zielsystem.**
+**Open-Source-Hilfsmittel zur Strukturierung und Vorbereitung rettungsdienstlicher Dokumentation.**
 
-ResQDocs ersetzt mühsames Tippen auf Einsatzgeräten (z. B. NIDA-Pads) durch eine
-Smartphone-App: Dokumentieren per Vorlagen, Textbausteinen und Medikationsplan-Scan,
-Übertragen per Knopfdruck — eine Mikrocontroller-Bridge tippt den fertigen Text als
-USB-Tastatur in das Zielgerät. Keine Cloud, keine Telemetrie, keine dauerhafte
-Speicherung von Patientendaten.
+ResQDocs hilft dabei, Dokumentationstexte mobil-first und strukturiert vorzubereiten und sie
+über eine kleine, lokal angebundene Hardware-Brücke (Raspberry Pi Pico 2 W als USB-HID-Tastatur)
+in ein Zielsystem zu übertragen. Ziel ist weniger Reibung bei der Dokumentation an unkomfortablen
+Eingabegeräten — nicht der Ersatz vorhandener Systeme.
 
-> **Hinweis:** ResQDocs ist ein Dokumentations-Hilfsmittel und **kein Medizinprodukt**.
-> Verantwortung für Vorgehen, Bewertung und Dokumentation bleibt beim Anwender.
-> Details: [docs/disclaimer.md](docs/disclaimer.md)
+> Status: in aktiver Entwicklung. Nutzung ohne Gewähr.
 
-## Wie es funktioniert
+## Fachlicher Hinweis
+
+Diese App ist eine technische Hilfestellung zur Strukturierung und Vorbereitung von Dokumentation.
+Sie ersetzt keine fachliche Entscheidung, keine lokale Vorgabe und keine eigenverantwortliche
+Dokumentation.
+
+Der Maintainer kann persönliche Protokollpräferenzen und Musterprotokolle bereitstellen. Diese sind
+unverbindliche Beispiele. Wer die App verwendet, ist selbst dafür verantwortlich, Vorgehen,
+Handlungen und Dokumentation fachlich, rechtlich und organisatorisch zu prüfen.
+
+## Datenschutz (Kurzfassung)
+
+Entwickelt mit Fokus auf Datenminimierung. **Patientendaten werden durch die Anwendung nicht
+dauerhaft gespeichert** — Eingaben und Scans werden nur zur unmittelbaren Verarbeitung verwendet und
+anschließend verworfen. Nutzer sind für bewusst gespeicherte oder exportierte Inhalte selbst
+verantwortlich. Dies ist keine Rechtsberatung; Einsatz und Konfiguration müssen durch die
+verantwortliche Stelle geprüft werden. Details: [`docs/`](docs/).
+
+## Architektur (Überblick)
 
 ```
-Smartphone-App (Composer)  --WLAN-->  Bridge (Raspberry Pi Pico 2 W)  --USB-HID-->  Zielgerät
-   Vorlagen, Bausteine,                 tippt als USB-Tastatur,            NIDA, iPad,
-   BMP-Scan, Klartext                   korrekte Umlaute/Sonderzeichen     Windows, macOS
+Vue 3 + Vite + Tailwind CSS + Konsta UI / daisyUI   (apps/pico-pwa)
+   ↓ lokal-first, Composition API, gekapselte Services
+Capacitor                                            (native Hülle iOS/Android)
+   ↓ CapacitorHttp (lokales HTTP, kein Mixed-Content)
+Raspberry Pi Pico 2 W                                (lokaler HTTP-Endpunkt / Access Point)
+   → tippt den Text als USB-HID-Tastatur ins Zielsystem
 ```
 
-- **App** (`apps/pico-pwa`): Vue 3 + Capacitor (iOS/Android), komplett offline-fähig.
-  Eigener Protokoll-Kreator: jede Organisation baut ihre eigenen Vorlagen.
-- **Bridge-Firmware** (`firmware/`): arduino-pico (C++), USB-HID-Tastatur + WLAN-AP,
-  signierte OTA-Updates (Ed25519). Umlaute/Sonderzeichen pro Ziel-OS korrekt
-  (`win_de`, `mac_de`, `ios`) — siehe [docs/umlauts.md](docs/umlauts.md).
-- **Geteilte Pakete** (`packages/shared`): Protokoll-Schema, Renderer, Medikationsplan-
-  Parser (BMP), medizinische Rechenhilfen (mit Quellen: [docs/medical-sources.md](docs/medical-sources.md)).
+Die App ist die gemeinsame Vue-3-Codebasis; der Pico bleibt ein einfacher, robuster HTTP-Endpunkt.
 
-Architektur im Detail: [docs/architecture.md](docs/architecture.md) ·
-Bridge-HTTP-API: [docs/pico-api.md](docs/pico-api.md) ·
-Datenfluss & Datenschutz: [docs/data-flow.md](docs/data-flow.md)
+## Monorepo-Struktur
 
-## Datenschutz-Grundsätze
+```
+apps/pico-pwa/      Mobile-first Composer-App (Vue 3 + Capacitor)
+apps/landing-page/  Open-Source-Landing-Page (statisch, Docker, HTTP)
+packages/shared/    geteilte Logik (z. B. Protokoll-Renderer)
+firmware/           Bridge-Firmware für den Pico 2 W
+protocols/          maschinenlesbares Protokoll-Datenmodell
+docs/               Projekt-, Datenschutz- und Sicherheitsdokumentation
+```
 
-- Patientendaten existieren nur flüchtig im RAM für die aktuelle Ausgabe — kein Auto-Save, keine Übertragung an Server.
-- Die App spricht ausschließlich die lokale Bridge (WLAN) und optional eine
-  PZN→Medikamentenname-Datenbank (HTTPS, bewusste Nutzeraktion) an.
-- Kein Tracking, keine Analytics, keine Werbe-SDKs, keine Crash-Reporter.
+App und Landing Page sind logisch und technisch getrennt und werden separat gebaut.
 
-## Lokales Build
+## Builds (Maintainer)
 
-Voraussetzungen: Node.js 22+, npm.
+Alle Befehle inklusive `git pull` und `npm install` - einfach komplett kopieren.
+Repo-Pfad ggf. anpassen.
+
+**iOS** (öffnet garantiert die `.xcworkspace`, nie das `.xcodeproj` - bug-106-sicher):
 
 ```bash
-cd apps/pico-pwa
-npm install
-npm run build     # Typecheck (vue-tsc) + Vite-Build
-npm test          # Tests (shared + App)
+cd ~/ResQDocs && git checkout dev && git pull
+cd apps/pico-pwa && npm run ios
+# In Xcode: ggf. Version/Build hochzählen -> Product -> Archive -> TestFlight
 ```
 
-**Native Apps (iOS/Android):** Das Repository enthält die Capacitor-Projekte.
-Für eigene Builds eigene Konfigurationswerte hinterlegen (Bundle-ID, Signing):
-
-- Platzhalter-Bundle-ID `com.example.resqdocs` in `apps/pico-pwa/capacitor.config.ts`,
-  `android/app/build.gradle` und im Xcode-Projekt durch die eigene ID ersetzen.
-- iOS: eigenes Apple-Developer-Team in Xcode (Signing & Capabilities) wählen;
-  CocoaPods erforderlich, immer die `.xcworkspace` öffnen. Komfort: `npm run ios`.
-- Android: eigene Signing-Konfiguration anlegen — siehe
-  [docs/android.md](docs/android.md) und [docs/android-release.md](docs/android-release.md).
-  Komfort: `npm run android`.
-
-Produktive App-Store- oder Play-Store-Releases erfordern eigene Entwicklerkonten
-und eigene Signing-Konfigurationen.
-
-**Firmware:** Build mit `arduino-cli` und dem arduino-pico-Core für `rpipico2w` —
-Anleitung in [firmware/README.md](firmware/README.md). Für signierte OTA-Updates
-eigenes Schlüsselpaar erzeugen: `node scripts/ota/keygen.mjs` (privater Schlüssel
-bleibt außerhalb des Repos).
-
-## Medikamenten-Datenbank (PZN)
-
-Der Medikationsplan-Scan löst PZN über eine offene CC0-Datenbank auf:
-[resqdocs/pzn-data](https://github.com/resqdocs/pzn-data) — Beiträge willkommen.
-
-## Entwicklung
-
-Nach dem Klonen einmalig die Git-Hooks aktivieren (empfohlen; die CI prüft verbindlich):
+**Android** (öffnet Android Studio):
 
 ```bash
-sh scripts/setup-hooks.sh
+cd ~/ResQDocs && git checkout dev && git pull
+cd apps/pico-pwa && npm run android
 ```
 
-Details: [docs/security-checks.md](docs/security-checks.md)
+**Android direkt als APK** (ohne Studio, z. B. zum Verteilen an Tester per Sideload):
 
-## Beitragen
+```bash
+cd ~/ResQDocs && git checkout dev && git pull
+cd apps/pico-pwa && npm install && npm run build && npx cap sync android
+cd android && ./gradlew assembleDebug && open app/build/outputs/apk/debug/
+```
 
-Siehe [CONTRIBUTING.md](CONTRIBUTING.md) und [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-Sicherheitsmeldungen: [SECURITY.md](SECURITY.md).
+Web-Dev, Tests und weitere Befehle: `docs/manual-test-current-state.md`.
+Firmware-Build und OTA-Release: `firmware/bridge/README.md`.
 
 ## Lizenz
 
-[GPL-3.0-or-later](LICENSE) · Hinweise zu Drittanbietern:
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+GNU General Public License v3.0 or later — `SPDX-License-Identifier: GPL-3.0-or-later`.
+Vollständiger Text: [`LICENSE`](LICENSE). Externe Pakete unterliegen ihren eigenen Lizenzen
+(siehe [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)).
+
+Nutzungs- und Haftungshinweis (Hilfsmittel, keine medizinische Entscheidung, ohne Gewähr):
+siehe [`DISCLAIMER.md`](DISCLAIMER.md).
+
+Die Bridge-Firmware wird als Binary mit der App ausgeliefert und ist **getrennt** lizenziert
+(eigene Quellen `GPL-3.0-or-later`, [`firmware/LICENSE`](firmware/LICENSE)); ihre
+Drittkomponenten haben eigene Lizenzpflichten — siehe
+[`FIRMWARE_THIRD_PARTY_NOTICES.md`](FIRMWARE_THIRD_PARTY_NOTICES.md).
+
+Open Source und kostenlos verfügbar. Nutzung ohne Garantie oder Gewährleistung.
+
+## Mitwirken & Sicherheit
+
+- Beiträge: [`CONTRIBUTING.md`](CONTRIBUTING.md) · Verhaltenskodex: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+- Sicherheitsprobleme melden: [`SECURITY.md`](SECURITY.md)

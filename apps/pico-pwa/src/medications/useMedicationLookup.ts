@@ -1,19 +1,89 @@
 // useMedicationLookup.ts - PZN→Name-Aufloesung, offline-first (#11).
 //
-// Quelle: das CC0-Community-Woerterbuch (resqdocs-pzn-data), als versioniertes
-// Release-Artefakt. Der Lookup laeuft IMMER rein lokal aus dem Cache; der Sync
-// ist NUTZERINITIIERT (Button in den Einstellungen) und laedt nur bei neuer
-// Version - der einzige erlaubte Remote-Abruf neben der Bridge (SECURITY.md).
+// Quelle: das CC0-Community-Woerterbuch, ausgeliefert als statisches, versioniertes
+// Artefakt ueber die offizielle Webseite (manifest.json + Daten-Datei). Der Lookup
+// laeuft IMMER rein lokal aus dem Cache; der Sync ist NUTZERINITIIERT (Button in den
+// Einstellungen) und laedt nur bei neuer Version - der einzige erlaubte Remote-Abruf
+// neben der Bridge (SECURITY.md).
 // Community-Daten sind UNVERIFIZIERT: Aufloesungen werden als 'community'
 // markiert angezeigt (pruefbarer Entwurf).
 import { computed, reactive } from 'vue'
 import type { HttpAdapter } from '../pico/picoTypes.ts'
 import type { KeyValueAdapter } from '../storage/types.ts'
 import { loadDictionary, saveDictionary, type MedicationDictionary } from './medicationStore.ts'
+import { PZN_DICTIONARY_ENABLED } from './featureFlags.ts'
 
-/** Release-API des Daten-Repos (oeffentlich, kein Token). Seam: spaeter als Einstellung. */
-export const PZN_RELEASES_API =
-  'https://api.github.com/repos/resqdocs/pzn-data/releases/latest'
+/**
+ * Manifest des PZN-Woerterbuchs, ausgeliefert ueber die offizielle Webseite
+ * (statisch, HTTPS, kein Token). Das Daten-Artefakt liegt relativ daneben
+ * (manifest.file). Seam: spaeter als Einstellung ueberschreibbar.
+ */
+export const PZN_MANIFEST_URL = 'https://resqdocs.app/pzn/manifest.json'
+
+/** Manifest des Daten-Artefakts (statisch ueber HTTPS, Vertrauensanker). */
+interface PznManifest {
+  version: number
+  count: number
+  updated: string
+  file: string
+  /** Hex-SHA256 ueber die EXAKTEN Bytes der Daten-Datei (Integritaet, #160). */
+  sha256: string
+}
+
+/** Das Daten-Artefakt selbst (gegen das Manifest pruefsummen-/feldvalidiert). */
+interface PznArtifact {
+  version: number
+  count: number
+  updated: string
+  entries: Record<string, string>
+}
+
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0
+}
+
+/**
+ * Strikte Manifest-Validierung (#160): alle Pflichtfelder mit korrektem Typ,
+ * inkl. des sha256-Felds. Liefert null statt einer Type-Assertion blind zu
+ * vertrauen — sonst koennten fehlende Felder als 'undefined/0 Eintraege' in der
+ * Statusanzeige landen.
+ */
+function parseManifest(raw: unknown): PznManifest | null {
+  if (!raw || typeof raw !== 'object') return null
+  const m = raw as Record<string, unknown>
+  if (typeof m.version !== 'number' || typeof m.count !== 'number') return null
+  if (!isNonEmptyString(m.updated) || !isNonEmptyString(m.file) || !isNonEmptyString(m.sha256)) return null
+  return { version: m.version, count: m.count, updated: m.updated, file: m.file, sha256: m.sha256 }
+}
+
+/** Strikte Artefakt-Validierung (#160): Pflichtfelder + entries als Objekt. */
+function parseArtifact(raw: unknown): PznArtifact | null {
+  if (!raw || typeof raw !== 'object') return null
+  const a = raw as Record<string, unknown>
+  if (typeof a.version !== 'number' || typeof a.count !== 'number') return null
+  if (!isNonEmptyString(a.updated)) return null
+  if (!a.entries || typeof a.entries !== 'object' || Array.isArray(a.entries)) return null
+  return { version: a.version, count: a.count, updated: a.updated, entries: a.entries as Record<string, string> }
+}
+
+function safeJsonParse(text: string): unknown {
+  try {
+    return JSON.parse(text)
+  } catch {
+    // Sentinel: gueltiges JSON kann nie `undefined` ergeben.
+    return undefined
+  }
+}
+
+/**
+ * Hex-SHA256 ueber den UTF-8-codierten Text. Web Crypto ist sowohl im WebView
+ * als auch in Node (globalThis.crypto.subtle) verfuegbar — keine Abhaengigkeit.
+ */
+async function sha256Hex(text: string): Promise<string> {
+  const bytes = new TextEncoder().encode(text)
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
 
 interface LookupState {
   loaded: boolean
@@ -25,7 +95,14 @@ interface LookupState {
   fetchedAt: string | null
 }
 
-export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, apiUrl = PZN_RELEASES_API) {
+export function createMedicationLookup(
+  http: HttpAdapter,
+  kv: KeyValueAdapter,
+  manifestUrl = PZN_MANIFEST_URL,
+  // Deaktiviert per Default (IFA/DSGVO, featureFlags). Injizierbar, damit der
+  // erhaltene Code-Pfad hinter dem Flag testbar bleibt.
+  enabled: boolean = PZN_DICTIONARY_ENABLED,
+) {
   const state = reactive<LookupState>({
     loaded: false, busy: false, error: null,
     version: null, count: 0, updated: null, fetchedAt: null,
@@ -43,53 +120,104 @@ export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, a
   /** Cache laden (einmalig, offline). */
   async function ensureLoaded(): Promise<void> {
     if (state.loaded) return
+    // Deaktiviert (IFA/DSGVO): kein Wörterbuch laden, keine Auflösung. Code bleibt.
+    if (!enabled) { state.loaded = true; return }
     const d = await loadDictionary(kv)
     if (d) applyDictionary(d)
     state.loaded = true
   }
 
-  /** Rein lokale Aufloesung; null wenn unbekannt/kein Woerterbuch. */
+  /**
+   * Rein lokale Aufloesung; null wenn unbekannt/kein Woerterbuch.
+   *
+   * PZN-Schluessel sind 8-stellig (mit fuehrender Null), BMP liefert sie aber oft
+   * ohne fuehrende Null (z. B. "2953075"). Aufloesung:
+   * - exakter Treffer wird bevorzugt (bestehende 8-stellige Werte unveraendert);
+   * - sonst wird der Wert getrimmt und auf Ziffern reduziert;
+   * - rein numerische Werte mit WENIGER als 8 Stellen werden links mit Nullen
+   *   aufgefuellt (padStart) und nachgeschlagen;
+   * - Werte mit MEHR als 8 Ziffern werden NICHT gekuerzt -> kein Treffer (null);
+   * - leere/nicht-numerische Eingaben liefern null.
+   */
   function resolve(pzn: string): string | null {
-    return entries[pzn] ?? null
+    // Deaktiviert (IFA/DSGVO): KEINE automatische PZN→Name-Auflösung.
+    if (!enabled) return null
+    if (!pzn) return null
+    const direct = entries[pzn]
+    if (direct !== undefined) return direct
+    const digits = pzn.trim().replace(/\D/g, '')
+    if (!digits) return null
+    // Kein Truncate: >8 Ziffern bleiben unveraendert und treffen den 8-stelligen
+    // Key nicht -> null (lieber kein Treffer als ein falscher).
+    return entries[digits.padStart(8, '0')] ?? null
+  }
+
+  /** Daten-Artefakt liegt relativ zum Manifest (gleiches Verzeichnis). */
+  function resolveDataUrl(file: string): string {
+    return manifestUrl.replace(/[^/]*$/, '') + file
   }
 
   /**
-   * Nutzerinitiierter Sync: Manifest des neuesten Releases pruefen, Artefakt
-   * nur bei neuer Version laden. Liefert eine kurze Statusmeldung.
+   * Nur die (winzige) Manifest-Version lesen - fuer den optionalen
+   * Hintergrund-Aktualitaets-Check (pznNotice, Opt-in). Laedt NICHT die Daten-
+   * Datei. Liefert die Remote-Version oder null (Fehler/404/ungueltig werden
+   * geschluckt - der Check darf nie stoeren). Einzige Remote-URL bleibt das
+   * Manifest dieser App-Konstante (SECURITY.md, Single Source).
+   */
+  async function fetchRemoteVersion(): Promise<number | null> {
+    // Deaktiviert (IFA/DSGVO): KEIN Netzabruf.
+    if (!enabled) return null
+    try {
+      const mf = await http.get(manifestUrl, { connectTimeout: 8000, readTimeout: 8000 })
+      if (mf.status < 200 || mf.status >= 300) return null
+      const manifest = (typeof mf.data === 'string' ? JSON.parse(mf.data) : mf.data) as { version?: unknown }
+      return typeof manifest?.version === 'number' ? manifest.version : null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Nutzerinitiierter Sync: Manifest pruefen, Daten-Artefakt nur bei neuer
+   * Version laden. Liefert eine kurze Statusmeldung.
    */
   async function syncNow(): Promise<string> {
+    // Deaktiviert (IFA/DSGVO): KEIN Download eines PZN-Datenbestands.
+    if (!enabled) return 'PZN-Wörterbuch deaktiviert.'
     state.busy = true
     state.error = null
     try {
       await ensureLoaded()
-      const rel = await http.get(apiUrl, { connectTimeout: 8000, readTimeout: 8000 })
-      if (rel.status === 404) return 'Noch kein Release im Daten-Repo.'
-      if (rel.status < 200 || rel.status >= 300) throw new Error(`Release-Abfrage fehlgeschlagen (HTTP ${rel.status})`)
-      const relData = (typeof rel.data === 'string' ? JSON.parse(rel.data) : rel.data) as {
-        assets?: { name: string; browser_download_url: string }[]
-      }
-      const manifestAsset = relData.assets?.find((a) => a.name === 'manifest.json')
-      if (!manifestAsset) return 'Release ohne manifest.json - Daten-Repo pruefen.'
-      const mf = await http.get(manifestAsset.browser_download_url, { connectTimeout: 8000, readTimeout: 8000 })
-      const manifest = (typeof mf.data === 'string' ? JSON.parse(mf.data) : mf.data) as {
-        version: number; count: number; updated: string; file: string
-      }
+      const mfRes = await http.get(manifestUrl, { connectTimeout: 8000, readTimeout: 8000 })
+      if (mfRes.status === 404) return 'Noch keine Daten veröffentlicht.'
+      if (mfRes.status < 200 || mfRes.status >= 300) throw new Error(`Manifest-Abruf fehlgeschlagen (HTTP ${mfRes.status})`)
+      const manifest = parseManifest(typeof mfRes.data === 'string' ? safeJsonParse(mfRes.data) : mfRes.data)
+      if (!manifest) return 'Ungültiges Manifest - Datenquelle prüfen.'
       if (state.version !== null && manifest.version <= state.version) {
         return `Bereits aktuell (Version ${state.version}, ${state.count} Einträge).`
       }
-      const dataAsset = relData.assets?.find((a) => a.name === manifest.file)
-      if (!dataAsset) return `Artefakt ${manifest.file} fehlt im Release.`
-      const res = await http.get(dataAsset.browser_download_url, { connectTimeout: 8000, readTimeout: 30000 })
-      if (res.status < 200 || res.status >= 300) throw new Error(`Download fehlgeschlagen (HTTP ${res.status})`)
-      const artifact = (typeof res.data === 'string' ? JSON.parse(res.data) : res.data) as {
-        version: number; updated: string; count: number; entries: Record<string, string>
+      // Daten-Artefakt als ROHTEXT laden — nur ueber die exakten gelieferten Bytes
+      // ist der SHA256-Abgleich (Supply-Chain-Haertung, #160) verlaesslich.
+      const dataRes = await http.get(resolveDataUrl(manifest.file), {
+        connectTimeout: 8000, readTimeout: 30000, responseType: 'text',
+      })
+      if (dataRes.status < 200 || dataRes.status >= 300) throw new Error(`Download fehlgeschlagen (HTTP ${dataRes.status})`)
+      const text = typeof dataRes.data === 'string' ? dataRes.data : JSON.stringify(dataRes.data)
+      // (1) Integritaet ZUERST: nicht vertrauenswuerdige Bytes erst pruefen, dann parsen.
+      const digest = await sha256Hex(text)
+      if (digest !== manifest.sha256.toLowerCase()) {
+        throw new Error('Integritätsprüfung fehlgeschlagen (SHA256 weicht ab).')
       }
+      const parsed = safeJsonParse(text)
+      if (parsed === undefined) throw new Error('Datenartefakt ist kein gültiges JSON.')
+      const artifact = parseArtifact(parsed)
+      if (!artifact) throw new Error('Ungültiges Datenartefakt - Pflichtfelder fehlen.')
       const dict: MedicationDictionary = {
         version: artifact.version,
         count: artifact.count,
         updated: artifact.updated,
         fetchedAt: new Date().toISOString(),
-        entries: artifact.entries ?? {},
+        entries: artifact.entries,
       }
       await saveDictionary(kv, dict)
       applyDictionary(dict)
@@ -108,7 +236,7 @@ export function createMedicationLookup(http: HttpAdapter, kv: KeyValueAdapter, a
       : `Version ${state.version} · ${state.count} Einträge · Datenstand ${state.updated?.slice(0, 10) ?? '?'}`,
   )
 
-  return { state, status, ensureLoaded, resolve, syncNow }
+  return { state, status, ensureLoaded, resolve, syncNow, fetchRemoteVersion }
 }
 
 // --- App-Singleton (UI greift nur hierueber zu) --------------------------------

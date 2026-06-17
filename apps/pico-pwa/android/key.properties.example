@@ -1,0 +1,7 @@
+# Vorlage fuer die Android-Release-Signierung.
+# Echte Datei: apps/pico-pwa/android/key.properties (gitignored, NIE einchecken).
+# Der Keystore selbst liegt ausserhalb des Repos; hier nur sein Pfad + Zugangsdaten.
+storeFile=/absolute/path/to/your-upload.jks
+storePassword=CHANGEME
+keyAlias=your-alias
+keyPassword=CHANGEME

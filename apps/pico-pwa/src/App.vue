@@ -1,22 +1,44 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, watchEffect, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, watchEffect, nextTick } from 'vue'
 import ProtocolRuntimeView from '@/components/ProtocolRuntimeView.vue'
 import ProtocolsTab from '@/components/protocols/ProtocolsTab.vue'
 import BausteineTab from '@/components/library/BausteineTab.vue'
 import SettingsTab from '@/components/settings/SettingsTab.vue'
 import DisclaimerGate from '@/components/DisclaimerGate.vue'
+import UsageNoticeModal from '@/components/UsageNoticeModal.vue'
 import FirmwareNoticeBanner from '@/components/FirmwareNoticeBanner.vue'
+import PznNoticeBanner from '@/components/PznNoticeBanner.vue'
 import TabGuide, { TAB_GUIDE_HINT_ID } from '@/components/TabGuide.vue'
 import { usePicoApi, type OsMode } from '@/composables/usePicoApi'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
 import { useFirmwareNotice } from '@/pico/useFirmwareNotice'
 import { useStorage } from '@/storage/useStorage'
+import { useMedicationLookup } from '@/medications/useMedicationLookup'
+import { usePznNotice } from '@/medications/usePznNotice'
+import { PZN_DICTIONARY_ENABLED } from '@/medications/featureFlags'
+import { useTemporaryCaseDraft } from '@/composables/useTemporaryCaseDraft'
+import { useUsageNotice } from '@/composables/useUsageNotice'
 
 // App-Einstellungen laden + Storage-Backend wählen (nativ → SQLite, Web → Memory). Einmalig, idempotent.
 const storage = useStorage()
-onMounted(() => {
-  void storage.loadSettings()
+const pznLookup = useMedicationLookup()
+const pznNotice = usePznNotice()
+onMounted(async () => {
   void storage.initLibrary()
+  // Settings zuerst (await): der optionale Hintergrund-Check liest das Opt-in.
+  await storage.loadSettings()
+  // PZN-Wörterbuch (Netz-Download) ist deaktiviert (IFA/DSGVO) → nur bei aktivem
+  // Flag laden/prüfen. ensureLoaded/maybeCheck sind sonst No-ops (kein Netz).
+  if (PZN_DICTIONARY_ENABLED) {
+    await pznLookup.ensureLoaded()
+    void pznNotice.maybeCheck()
+  }
+})
+
+// „Hinweis zur Nutzung" (einmalig beim ersten Start, danach über Einstellungen).
+const usageNotice = useUsageNotice()
+watchEffect(() => {
+  if (usageNotice.ready.value) usageNotice.checkFirstStart()
 })
 
 // Dauerhaft ausblendbarer Hinweis (#72-Mechanik): id landet in settings.dismissedHints
@@ -93,6 +115,23 @@ watch(activeTab, (t) => {
   if (t === 'einsatz') void check()
 })
 
+// Temporärer Einsatzentwurf (#173): Ablaufprüfung beim App-Resume und sparsam
+// periodisch, solange die App offen ist. `visibilitychange` deckt iOS/Android-
+// WebView (Vorder-/Hintergrund) UND Web ab — ohne zusätzliche Capacitor-Plugins.
+// Der App-Start wird vom Einsatz-Runtime (restore) selbst geprüft.
+const draft = useTemporaryCaseDraft()
+function onVisible(): void {
+  if (document.visibilityState === 'visible') void draft.checkExpiry()
+}
+const draftExpiryTimer = window.setInterval(() => {
+  if (document.visibilityState === 'visible') void draft.checkExpiry()
+}, 60_000)
+onMounted(() => document.addEventListener('visibilitychange', onVisible))
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', onVisible)
+  window.clearInterval(draftExpiryTimer)
+})
+
 // Verantwortungs-Hinweis vor dem Übertragen: EINMAL pro Sitzung (flüchtiges Flag,
 // nicht persistiert → erscheint nach jedem App-Start beim ersten Senden erneut).
 const transferConfirmed = ref(false)
@@ -125,7 +164,7 @@ async function doSend(): Promise<void> {
     statusIsError.value = true
     status.value = ok
       ? `Bridge erreichbar, aber Senden fehlgeschlagen: ${(e as Error).message}`
-      : 'Keine Bridge gefunden. Mit dem WLAN „ResQDocs-…" verbunden? IP in den Einstellungen prüfen.'
+      : 'Keine Bridge gefunden. Mit dem WLAN „ResQDocs-…" (Passwort resqdocs2026) verbunden? IP in den Einstellungen prüfen.'
   } finally {
     sending.value = false
   }
@@ -135,6 +174,7 @@ async function doSend(): Promise<void> {
 <template>
   <!-- Haftungsausschluss-Gate: Erst-Start + nach jedem Update (blockt bis bestätigt) -->
   <DisclaimerGate />
+  <UsageNoticeModal />
 
   <!-- Welcome-Seite (#138/#142): vollflaechig, erscheint nach dem Disclaimer
        (liegt unter dessen z-50); ueber das ?-Symbol im Header wieder abrufbar. -->
@@ -154,7 +194,7 @@ async function doSend(): Promise<void> {
           <h2 id="transfer-modal-title" class="card-title text-base">Vor dem Übertragen</h2>
           <p class="text-sm text-base-content/80">
             Hilfsmittel, kein Ersatz: Du bleibst für Vorgehen, Bewertung und Dokumentation selbst
-            verantwortlich. Patientendaten werden nicht dauerhaft gespeichert.
+            verantwortlich.
           </p>
           <div class="card-actions justify-end">
             <button class="btn btn-ghost btn-sm" type="button" @click="showTransferModal = false">
@@ -200,6 +240,9 @@ async function doSend(): Promise<void> {
          mit veralteter Firmware, auf allen Tabs; Update direkt im Banner. -->
     <FirmwareNoticeBanner />
 
+    <!-- Globaler PZN-Aktualitaets-Hinweis — deaktiviert (IFA/DSGVO), nur bei aktivem Flag. -->
+    <PznNoticeBanner v-if="PZN_DICTIONARY_ENABLED" />
+
     <!-- Mobile-first; auf Tablet/Desktop waechst der Container mit (statt 576-px-Spalte, #23) -->
     <main class="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 md:max-w-3xl md:p-6 xl:max-w-5xl">
       <!-- Einsatz (Composer) — caseState bleibt beim Tabwechsel erhalten (v-show) -->
@@ -212,7 +255,7 @@ async function doSend(): Promise<void> {
         >
           <span class="flex-1">
             Hilfsmittel, kein Ersatz: Du bleibst für Vorgehen, Bewertung und Dokumentation selbst
-            verantwortlich. Patientendaten werden nicht dauerhaft gespeichert.
+            verantwortlich.
           </span>
           <button
             type="button"
@@ -233,8 +276,8 @@ async function doSend(): Promise<void> {
               class="alert alert-error items-start gap-2 text-sm"
             >
               <span class="flex-1">
-                Keine Bridge gefunden. Mit dem WLAN „ResQDocs-…" verbunden? IP in den
-                Einstellungen prüfen.
+                Keine Bridge gefunden. Mit dem WLAN „ResQDocs-…" (Passwort resqdocs2026) verbunden?
+                IP in den Einstellungen prüfen.
               </span>
               <button class="btn btn-ghost btn-xs shrink-0" type="button" :disabled="checking" @click="check(true)">
                 Erneut prüfen

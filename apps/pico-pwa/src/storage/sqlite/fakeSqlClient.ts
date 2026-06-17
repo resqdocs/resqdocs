@@ -67,6 +67,10 @@ export function createFakeSqlClient(): FakeSqlClient {
       }
       return []
     },
+    async transaction(work) {
+      // In-Memory-Fake: keine echte Transaktion nötig — work einfach ausführen.
+      await work()
+    },
     rows(table = 'library_protocols') {
       return [...ensure(table).values()]
     },

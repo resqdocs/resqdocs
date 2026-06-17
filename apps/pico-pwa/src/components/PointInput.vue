@@ -4,6 +4,10 @@ import BefundItem, { type BefundValue } from '@/components/BefundItem.vue'
 import TriStateToggle, { type TriState } from '@/components/TriStateToggle.vue'
 import LongTextModal from '@/components/LongTextModal.vue'
 import MedplanScanSection from '@/components/MedplanScanSection.vue'
+import PackageScanOverlay from '@/components/PackageScanOverlay.vue'
+import { useMedicationLookup } from '@/medications/useMedicationLookup'
+import { usePznLibrary } from '@/medications/usePznLibrary'
+import { extractPznFromPackageCode, packageScanName, type PackageBarcodeFormat } from '@/medications/packageScan'
 import type { MedikamenteRow, ProtocolPoint } from '@shared/renderer/render.mjs'
 import type { PointValue } from '@/composables/caseState'
 
@@ -31,7 +35,7 @@ function r(input: string | undefined): string {
 
 /**
  * UI-Fallback ohne `label`: ID lesbar machen (vorerkrankungen -> Vorerkrankungen).
- * Nur Anzeige - die Renderer-Ausgabe bleibt label-frei (label-frei bleibt die Ausgabe, #27).
+ * Nur Anzeige - die Renderer-Ausgabe bleibt label-frei (payload16-treu, #27).
  */
 function humanize(id: string | undefined): string {
   const s = (id ?? '').replace(/[-_]+/g, ' ')
@@ -125,6 +129,63 @@ function applyScannedRows(rows: MedikamenteRow[]): void {
   // Gescannte Zeilen ergaenzen den Bestand (Patient nimmt ggf. mehr als im Plan).
   setMedRows([...medRows(), ...rows])
   medScanOpen.value = false
+}
+
+// --- Packungs-Scan pro Zeile (#167): EINE Packung -> PZN -> Name in GENAU diese Zeile.
+// Getrennt vom BMP-Scan. Datensparsam: nur die PZN/der Name werden uebernommen,
+// nie die Roh-Payload (Serien-/Chargen-/Verfalldaten werden in der Extraktion verworfen).
+const pkgScanRow = ref<number | null>(null)
+const pkgScanMsg = ref<string | null>(null)
+const lookup = useMedicationLookup()
+void lookup.ensureLoaded()
+
+// Persönliche PZN-Bibliothek (#184/#190): liefert beim Packungsscan den selbst
+// vergebenen Namen (Match) und nimmt eine gescannte PZN per Einzel-Transfer auf.
+// DSGVO-konform: patientenentkoppelt (Mengen-Semantik), nur lokal, nie geteilt.
+const pznLibrary = usePznLibrary()
+void pznLibrary.ensureReady()
+/** Pro Zeilen-Index ein kurzes Transfer-Feedback ('added' | 'exists'). */
+const transferState = ref<Record<number, 'added' | 'exists'>>({})
+
+/** Roh-PZN „im Hintergrund" der Zeile (vom Packungsscan hinterlegt). */
+function rowPzn(i: number): string | undefined {
+  return medRows()[i]?.pzn
+}
+/** Label-Vorschlag für den Transfer: der Name, aber NICHT der „PZN <nr>"-Platzhalter. */
+function rowLabel(i: number): string {
+  const name = (medRows()[i]?.name ?? '').trim()
+  return /^PZN \d/.test(name) ? '' : name
+}
+async function transferRow(i: number): Promise<void> {
+  const pzn = rowPzn(i)
+  if (!pzn) return
+  const result = await pznLibrary.addOne(pzn, rowLabel(i)) // genau EINE PZN (#184)
+  if (result !== 'invalid') transferState.value = { ...transferState.value, [i]: result }
+}
+
+function openPackageScan(i: number): void {
+  pkgScanMsg.value = null
+  pkgScanRow.value = i
+}
+function addAndScanPackage(): void {
+  const rows = [...medRows(), { name: '', dosierung: '', kommentar: '' }]
+  setMedRows(rows)
+  openPackageScan(rows.length - 1)
+}
+async function onPackageDecoded(p: { text: string; format: PackageBarcodeFormat }): Promise<void> {
+  const i = pkgScanRow.value
+  pkgScanRow.value = null
+  if (i === null) return
+  const pzn = extractPznFromPackageCode(p.text, p.format)
+  if (!pzn) { pkgScanMsg.value = 'Keine PZN im Packungscode gefunden.'; return } // Zeile unveraendert
+  // Name aus DEINER Bibliothek bevorzugen (das IFA-Wörterbuch ist deaktiviert und
+  // liefert nichts); sonst Community-Wörterbuch, sonst reiner PZN-Platzhalter.
+  const own = ((await pznLibrary.ownLabel(pzn)) ?? '').trim()
+  const name = own || packageScanName(pzn, lookup.resolve(pzn))
+  // NUR diese Zeile fuellen; Dosierung/Kommentar bleiben erhalten. Roh-PZN „im
+  // Hintergrund" mitführen (#184) — Grundlage für Match + Einzel-Transfer (wird nicht gerendert).
+  setMedRows(medRows().map((r, idx) => (idx === i ? { ...r, name, pzn } : r)))
+  pkgScanMsg.value = own ? `Aus deiner Bibliothek übernommen: ${name}` : `Übernommen: ${name}`
 }
 </script>
 
@@ -254,6 +315,28 @@ function applyScannedRows(rows: MedikamenteRow[]): void {
         <button
           class="btn btn-ghost btn-xs shrink-0"
           type="button"
+          :aria-label="`Medikament ${i + 1}: Barcode scannen`"
+          title="Barcode scannen"
+          @click="openPackageScan(i)"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4" aria-hidden="true">
+            <path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2" stroke-linecap="round" />
+            <path d="M7 8v8M10 8v8M13 8v8M16 8v8" stroke-linecap="round" />
+          </svg>
+        </button>
+        <!-- Einzel-Transfer GENAU DIESER EINEN PZN in die Bibliothek (#184/#190);
+             nutzt die Hintergrund-PZN + den aktuell getippten Namen als Bezeichnung. -->
+        <button
+          v-if="rowPzn(i)"
+          class="btn btn-ghost btn-xs shrink-0"
+          type="button"
+          :aria-label="`PZN ${rowPzn(i)} in die Bibliothek übernehmen`"
+          :title="`PZN ${rowPzn(i)} in deine Bibliothek übernehmen`"
+          @click="transferRow(i)"
+        >→</button>
+        <button
+          class="btn btn-ghost btn-xs shrink-0"
+          type="button"
           :aria-label="`Medikament ${i + 1} entfernen`"
           @click="removeMedRow(i)"
         >✕</button>
@@ -276,6 +359,9 @@ function applyScannedRows(rows: MedikamenteRow[]): void {
           @input="updateMedRow(i, 'kommentar', $event)"
         />
       </div>
+      <span v-if="transferState[i]" class="pl-1 text-xs text-success">
+        {{ transferState[i] === 'added' ? 'PZN in Bibliothek übernommen.' : 'PZN war bereits in der Bibliothek.' }}
+      </span>
     </div>
     <p v-if="!medRows().length" class="text-sm italic text-base-content/60">
       keine Medikamente erfasst - erscheint nicht im Protokoll
@@ -283,10 +369,15 @@ function applyScannedRows(rows: MedikamenteRow[]): void {
 
     <div class="flex flex-wrap gap-2">
       <button class="btn btn-sm" type="button" @click="addMedRow">+ Medikament</button>
+      <button class="btn btn-sm" type="button" @click="addAndScanPackage">Packung scannen</button>
       <button class="btn btn-sm" type="button" @click="medScanOpen = !medScanOpen">
         {{ medScanOpen ? 'Scanner schließen' : 'BMP scannen' }}
       </button>
     </div>
+    <p v-if="pkgScanMsg" class="text-xs text-base-content/70">{{ pkgScanMsg }}</p>
     <MedplanScanSection v-if="medScanOpen" structured @apply-rows="applyScannedRows" />
+
+    <!-- Packungs-Scan (#167): EINE Packung in die gewaehlte Zeile; getrennt vom BMP-Scan. -->
+    <PackageScanOverlay v-if="pkgScanRow !== null" @decoded="onPackageDecoded" @cancel="pkgScanRow = null" />
   </div>
 </template>

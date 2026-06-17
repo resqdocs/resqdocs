@@ -69,8 +69,9 @@ export function parseMedplanMedications(ukf: string): MedplanParseResult
 export function dosierungToText(d: MedplanDosierung | undefined): string
 /** Eine Medikationszeile als tippbarer Klartext. */
 export function medicationToText(med: MedplanMedication): string
-/** Eine Medikationszeile strukturiert fuers medikamente-Element (#146). */
-export function medicationToRow(med: MedplanMedication): { name: string; dosierung: string; kommentar: string }
+/** Eine Medikationszeile strukturiert fuers medikamente-Element (#146); fuehrt die
+ *  Roh-PZN „im Hintergrund" mit (#184), falls vorhanden. */
+export function medicationToRow(med: MedplanMedication): { name: string; dosierung: string; kommentar: string; pzn?: string }
 /** Alle Zeilen als Textblock (eine Zeile pro Medikament). */
 export function medplanToText(parsed: MedplanParseResult): string
 /** Aussteller-Zeile fuers Protokoll, Rolle waehlt der Nutzer (#144). */
