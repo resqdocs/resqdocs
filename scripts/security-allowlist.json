@@ -232,6 +232,16 @@
       "file": "apps/pico-pwa/android/app/build.gradle",
       "term": "password",
       "reason": "Property-Namen storePassword/keyPassword im Signing-Config; Werte kommen aus externer key.properties, nie im Repo"
+    },
+    {
+      "file": "CHANGELOG.md",
+      "term": "app_store",
+      "reason": "git-cliff-Changelog spiegelt bereits oeffentliche Commit-Messages (chore: remove/drop ... app store listing doc); neutrale OSS-Bootstrap-Cleanup-Beschreibung, kein Doc-Inhalt/Secret"
+    },
+    {
+      "file": "CHANGELOG.md",
+      "term": "internal",
+      "reason": "git-cliff-Changelog spiegelt die bereits oeffentliche Commit-Message 'remove internal app store listing doc'; neutrale Cleanup-Beschreibung, kein internes Material"
     }
   ]
 }
