@@ -19,8 +19,8 @@ android {
         applicationId "com.example.resqdocs"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "0.1.1"
+        versionCode 5
+        versionName "0.1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -49,6 +49,14 @@ android {
             // scheitert daher nicht.
             if (hasKeystore) {
                 signingConfig signingConfigs.release
+            }
+            // #208: native Debug-Symbole (libzxingcpp_android.so, libsqlcipher.so, Bildverarbeitung)
+            // ins AAB aufnehmen, damit die Play Console native Crashes/ANRs symbolisiert. Die Symbole
+            // liegen in einer SEPARATEN Metadaten-Datei (NICHT an Geraete ausgeliefert, kein
+            // Installations-Groessenzuwachs); Play-Limit 300 MB -> bei Ueberschreitung auf
+            // debugSymbolLevel = "SYMBOL_TABLE" zuruecksetzen. Greift nur bei bundleRelease (AAB).
+            ndk {
+                debugSymbolLevel = "FULL"
             }
         }
     }

@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [0.1.2] - 2026-06-18
+
+### Documentation
+
+- Add git-cliff CHANGELOG
+
+### Features
+
+- Native debug symbols, privacy summary, protocol-core package and version 0.1.2
+
 ## [0.1.1] - 2026-06-18
 
 ### Bug Fixes

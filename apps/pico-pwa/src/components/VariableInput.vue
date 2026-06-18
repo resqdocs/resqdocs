@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProtocolVariable } from '@shared/renderer/render.mjs'
+import type { ProtocolVariable } from '@resqdocs/protocol-core/renderer/render.mjs'
 
 /**
  * Eingabe für eine Protokoll-Variable (select / boolean / text / number).

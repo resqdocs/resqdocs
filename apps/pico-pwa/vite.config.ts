@@ -19,8 +19,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      // shared logic (e.g. the protocol renderer) lives in packages/shared
-      '@shared': fileURLToPath(new URL('../../packages/shared', import.meta.url)),
+      // shared logic (protocol renderer/runtime/creator/medplan/scores) ships as the
+      // @resqdocs/protocol-core package (packages/shared); alias points at the source dir
+      '@resqdocs/protocol-core': fileURLToPath(new URL('../../packages/shared', import.meta.url)),
       // canonical, CI-validated protocol seeds live in protocols/ (single source of truth)
       '@protocols': fileURLToPath(new URL('../../protocols', import.meta.url)),
     },

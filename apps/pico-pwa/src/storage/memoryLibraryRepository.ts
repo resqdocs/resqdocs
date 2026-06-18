@@ -3,7 +3,7 @@
 // Zweck: Tests + Web-Dev-Fallback (nativ → SQLite, #13-F2). Explizit NICHT
 // persistent (lebt im Closure), keine Browser-/Native-APIs. NUR neutrale Inhalte
 // — Protokolle, Bausteine, Snippets. Keine Patientendaten, kein caseState.
-import type { Protocol } from '@shared/creator/creator.mjs'
+import type { Protocol } from '@resqdocs/protocol-core/creator/creator.mjs'
 import type { LibraryBlock, LibrarySnippet, LibraryRepository } from './types'
 import { isValidLibraryBlock, isValidLibrarySnippet } from './libraryValidation.ts'
 

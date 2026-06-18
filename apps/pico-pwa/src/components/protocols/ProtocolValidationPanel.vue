@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ValidationResult } from '@shared/creator/creator.mjs'
+import type { ValidationResult } from '@resqdocs/protocol-core/creator/creator.mjs'
 
 /** Zeigt das Ergebnis von assertValidProtocolDraft (keine eigene Validierungslogik). */
 defineProps<{ validation: ValidationResult | null }>()

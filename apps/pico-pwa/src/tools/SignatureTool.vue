@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { signatureBlock } from '@shared/tools/scores.mjs'
+import { signatureBlock } from '@resqdocs/protocol-core/tools/scores.mjs'
 import ToolModal from './ToolModal.vue'
 
 /**

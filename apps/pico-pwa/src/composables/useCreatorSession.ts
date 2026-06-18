@@ -48,7 +48,7 @@ import {
   type Point,
   type Variable,
   type VariableReference,
-} from '../../../../packages/shared/creator/creator.mjs'
+} from '@resqdocs/protocol-core/creator/creator.mjs'
 
 /** Eingabe des einfachen visibleIf-Editors (eine Bedingung). */
 export interface ConditionInput {

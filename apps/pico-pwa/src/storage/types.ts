@@ -5,7 +5,7 @@
 //
 // Datenschutz (S3 / DR-0004): NUR neutrale Daten. Keine Patientendaten, keine
 // Einsatzdaten, kein caseState im Storage.
-import type { Protocol, Block } from '@shared/creator/creator.mjs'
+import type { Protocol, Block } from '@resqdocs/protocol-core/creator/creator.mjs'
 import type { ScannerMode } from '../medplan/scannerMode.ts'
 
 export type Theme = 'system' | 'light' | 'dark'

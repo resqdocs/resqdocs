@@ -8,6 +8,12 @@
       "reason": "npm-Standardfeld gegen versehentliches Publish"
     },
     {
+      "file": "packages/shared/package.json",
+      "term": "private",
+      "contains": "\"private\": true",
+      "reason": "npm-Standardfeld gegen versehentliches Publish (analog apps/pico-pwa/package.json)"
+    },
+    {
       "file": ".github/workflows/",
       "term": "token",
       "contains": "GITHUB_TOKEN",
