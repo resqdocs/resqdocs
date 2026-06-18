@@ -14,24 +14,24 @@ test('Default-Settings laden, wenn nichts gespeichert ist', async () => {
   assert.deepEqual(await repo.loadSettings(), DEFAULT_SETTINGS)
 })
 
-test('Neuinstallation: Design=ResQDocs, Erscheinung=System, Scanner=Automatisch', async () => {
+test('Neuinstallation: Design=ResQDocs, Erscheinung=System, Scanner=WebView Standard', async () => {
   const repo = createSettingsRepository(createFakeKeyValueAdapter())
   const s = await repo.loadSettings()
   assert.equal(s.themeFamily, 'resqdocs') // App-Design: ResQDocs-Logofarben
   assert.equal(s.theme, 'system') // Erscheinung folgt dem System
-  assert.equal(s.scannerMode, 'auto')
+  assert.equal(s.scannerMode, 'webview_standard')
 })
 
-test('Reset setzt die neuen Defaults (ResQDocs / System / auto)', async () => {
+test('Reset setzt die neuen Defaults (ResQDocs / System / WebView Standard)', async () => {
   const adapter = createFakeKeyValueAdapter()
   const repo = createSettingsRepository(adapter)
-  // vorher bewusst abweichend speichern
-  await repo.saveSettings({ ...DEFAULT_SETTINGS, themeFamily: 'classic', theme: 'dark', scannerMode: 'webview_standard' })
+  // vorher bewusst abweichend speichern (native_zxingcpp != neuer Default webview_standard)
+  await repo.saveSettings({ ...DEFAULT_SETTINGS, themeFamily: 'classic', theme: 'dark', scannerMode: 'native_zxingcpp' })
   await repo.resetSettings()
   const s = await repo.loadSettings()
   assert.equal(s.themeFamily, 'resqdocs')
   assert.equal(s.theme, 'system')
-  assert.equal(s.scannerMode, 'auto')
+  assert.equal(s.scannerMode, 'webview_standard')
 })
 
 test('Bestehende Installation: gueltige Werte (auch classic) bleiben erhalten', async () => {
@@ -50,7 +50,7 @@ test('Update-Szenario: fehlender neuer Key bekommt Default, vorhandene bleiben',
   delete stored.scannerMode
   const adapter = createFakeKeyValueAdapter({ [SETTINGS_KEY]: JSON.stringify(stored) })
   const s = await createSettingsRepository(adapter).loadSettings()
-  assert.equal(s.scannerMode, 'auto', 'fehlender neuer Key -> Default')
+  assert.equal(s.scannerMode, 'webview_standard', 'fehlender neuer Key -> Default')
   assert.equal(s.defaultOs, 'mac_de', 'vorhandener Key bleibt unveraendert')
   assert.equal(s.theme, 'dark')
   assert.equal(s.themeFamily, 'classic')
@@ -92,7 +92,14 @@ test('Ungueltige Werte werden weiterhin sanitizt (-> neue Defaults)', async () =
   const s = await createSettingsRepository(adapter).loadSettings()
   assert.equal(s.themeFamily, 'resqdocs')
   assert.equal(s.theme, 'system')
-  assert.equal(s.scannerMode, 'auto')
+  assert.equal(s.scannerMode, 'webview_standard')
+})
+
+test('Migration: entfernter Wert scannerMode "auto" wird auf den Default webview_standard abgebildet', async () => {
+  const stored: Record<string, unknown> = { ...DEFAULT_SETTINGS, scannerMode: 'auto' }
+  const adapter = createFakeKeyValueAdapter({ [SETTINGS_KEY]: JSON.stringify(stored) })
+  const s = await createSettingsRepository(adapter).loadSettings()
+  assert.equal(s.scannerMode, 'webview_standard', '"auto" existiert nicht mehr -> neuer Default')
 })
 
 test('Settings speichern und laden (Round-Trip)', async () => {

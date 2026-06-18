@@ -53,15 +53,15 @@ async function transferRow(i: number): Promise<void> {
   if (result !== 'invalid') transferState.value = { ...transferState.value, [i]: result }
 }
 
-// Scanner-Weiche (#170): nativer Pfad (Foto + nativer Decoder) ist auf Android UND iOS der DEFAULT
-// (beide geraeteverifiziert) — Android: zxing-cpp (behebt den Adreno-WebView-GPU-Crash), iOS: Apple
-// Vision. 'auto' UND 'native_zxingcpp' -> nativ; 'webview_standard'/'webview_optimized' und Web ->
-// der getUserMedia-Overlay-Pfad (bewusste Fallback-Auswahl).
+// Scanner-Weiche (#170): 'native_zxingcpp' -> nativer Pfad (Foto + nativer Decoder; Android: zxing-cpp,
+// iOS: Apple Vision); 'webview_standard'/'webview_optimized' und Web -> der getUserMedia-Overlay-Pfad.
+// Erststart-Default ist 'webview_standard' (stabiler); der native Pfad (Android-zxing-cpp umgeht zwar
+// den Adreno-WebView-GPU-Crash) bleibt als explizite Alternative waehlbar. 'auto' wurde entfernt.
 const storage = useStorage()
 const useNativeScan = computed(() => {
   if (!nativeDatamatrixScanAvailable()) return false
   const m = storage.settings.scannerMode
-  return m === 'auto' || m === 'native_zxingcpp'
+  return m === 'native_zxingcpp'
 })
 const webScanAvailable = computed(
   () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia,

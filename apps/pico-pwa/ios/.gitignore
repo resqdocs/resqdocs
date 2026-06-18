@@ -13,6 +13,16 @@ timeline.xctimeline
 *.dSYM
 *.dSYM.zip
 
+# Xcode-Export/Organizer-Ausgaben (Ordner "App <timestamp>/") — enthalten
+# Signing/Provisioning/Pfade, reiner Build-Output, NICHT versionieren:
+App */
+DistributionSummary.plist
+Packaging.log
+
+# cap-sync/pod-install-generierte Projektdateien (werden bei `npm run ios` neu erzeugt):
+App/CapApp-SPM
+App/App.xcworkspace
+
 # Swift Package Manager (lokaler Build-Cache)
 .swiftpm/
 .build/
