@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { bmi } from '@shared/tools/scores.mjs'
+import { bmi } from '@resqdocs/protocol-core/tools/scores.mjs'
 import ToolModal from './ToolModal.vue'
 
 /** BMI-Rechner (#55): kg/m², WHO-Klassifikation. */

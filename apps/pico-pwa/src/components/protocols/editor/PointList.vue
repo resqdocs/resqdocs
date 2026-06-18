@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useCreatorSession } from '@/composables/useCreatorSession'
-import { POINT_TYPES } from '@shared/creator/creator.mjs'
+import { POINT_TYPES } from '@resqdocs/protocol-core/creator/creator.mjs'
 
 const { currentBlock, selectedPointId, selectPoint, addPoint, duplicatePoint, removePoint, movePoint } =
   useCreatorSession()

@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import type { ProtocolTemplate } from '@shared/renderer/render.mjs'
+import type { ProtocolTemplate } from '@resqdocs/protocol-core/renderer/render.mjs'
 import {
   initCaseState,
   toggleActiveBlock,

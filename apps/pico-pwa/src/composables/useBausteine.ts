@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { useStorage } from '@/storage/useStorage'
-import { createUniqueId } from '@shared/creator/creator.mjs'
+import { createUniqueId } from '@resqdocs/protocol-core/creator/creator.mjs'
 import type { LibraryBlock, LibrarySnippet } from '@/storage/types'
 
 /**

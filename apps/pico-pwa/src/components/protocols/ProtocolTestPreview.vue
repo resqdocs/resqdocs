@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { render, type ProtocolTemplate } from '@shared/renderer/render.mjs'
+import { render, type ProtocolTemplate } from '@resqdocs/protocol-core/renderer/render.mjs'
 import RenderPreview from '@/components/RenderPreview.vue'
 import { useStorage } from '@/storage/useStorage'
 

@@ -1,7 +1,7 @@
 // render.mjs — reiner Renderer: Protokoll-Vorlage (+ pro-Einsatz-Zustand) → Klartext.
 // Keine Abhängigkeiten. Übernehmbar in die PWA (Composer) und testbar mit node:test.
 //
-//   render(protocol, { variableValues, values, activeBlocks }) -> string
+//   render(protocol, { variableValues, values, activeBlocks }, { heading }) -> string
 //
 //   protocol:       Vorlage nach SCHEMA.md (blocks → points, variables).
 //   variableValues: { [varId]: wert } — überschreibt Variablen-Defaults (z. B. geschlecht).
@@ -10,6 +10,7 @@
 //                     - { value, state }    → explizit
 //                     - ["a","b"]           → list-entries ersetzen
 //   activeBlocks:   string[] — ids der aktivierten optionalen Blöcke.
+//   heading:        { pattern, fill, width } — optionale Header-Formatierung (Default DEFAULT_HEADING).
 //
 // Eigenschaften: deterministisch; die Vorlage wird NICHT mutiert; Bedingungen (`visibleIf`)
 // und Platzhalter sind deklarativ — kein eval, kein JavaScript aus Daten.

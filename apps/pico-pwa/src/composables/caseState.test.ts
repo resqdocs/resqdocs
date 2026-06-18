@@ -9,7 +9,7 @@ import {
   toggleActiveBlock,
   isBlockActive,
 } from './caseState.ts'
-import { render } from '../../../../packages/shared/renderer/render.mjs'
+import { render } from '@resqdocs/protocol-core/renderer/render.mjs'
 
 const seed = JSON.parse(
   readFileSync(new URL('../../../../protocols/standardprotokoll.json', import.meta.url)),

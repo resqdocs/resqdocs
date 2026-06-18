@@ -1,0 +1,8 @@
+{
+  "name": "@resqdocs/protocol-core",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Geteilte, plattformneutrale Protokoll-Logik (Renderer, Runtime, Creator, Medplan-Parser, Scores).",
+  "type": "module",
+  "license": "MIT"
+}

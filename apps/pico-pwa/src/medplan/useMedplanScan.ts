@@ -1,7 +1,7 @@
 // useMedplanScan.ts - Composable fuer den BMP-Scan-Entwurf (#9, #36).
 //
 // Sammelt die Seiten eines (ggf. mehrseitigen) Medikationsplans, parst sie
-// ueber den gekapselten Parser (@shared/medplan) und haelt die Medikations-
+// ueber den gekapselten Parser (@resqdocs/protocol-core/medplan) und haelt die Medikations-
 // zeilen als EDITIERBAREN ENTWURF - ausschliesslich im RAM.
 //
 // Die Kamera liefert der ZXing-Overlay (MedplanScanOverlay.vue, reiner
@@ -16,14 +16,15 @@
 // aber NUR uebernommen, wenn der Nutzer aktiv eine Rolle waehlt
 // (Hausarzt/Facharzt; Default = nicht dokumentieren).
 import { computed, ref } from 'vue'
-import type { MedplanAussteller } from '../../../../packages/shared/medplan/medplan.d.mts'
-import type { MedikamenteRow } from '../../../../packages/shared/renderer/render.mjs'
+import type { MedplanAussteller } from '@resqdocs/protocol-core/medplan/medplan.d.mts'
+import type { MedikamenteRow } from '@resqdocs/protocol-core/renderer/render.mjs'
 
 /** Rollen-Auswahl fuer den Aussteller (#144): '' = nicht dokumentieren (Default). */
 export type AusstellerRolle = '' | 'Hausarzt' | 'Facharzt'
-// Relativer Import (statt @shared-Alias), damit die Datei auch unter
-// `node --test --experimental-strip-types` laeuft (Alias kennt nur Vite/TS).
-import { parseMedplanMedications, medicationToText, medicationToRow, ausstellerToText } from '../../../../packages/shared/medplan/medplan.mjs'
+// Import ueber den Paketnamen @resqdocs/protocol-core (file:-Dependency, in
+// node_modules verlinkt) — aufloesbar sowohl unter `node --test
+// --experimental-strip-types` (ueber node_modules) als auch unter Vite/TS.
+import { parseMedplanMedications, medicationToText, medicationToRow, ausstellerToText } from '@resqdocs/protocol-core/medplan/medplan.mjs'
 
 /**
  * @param resolvePzn optionale PZN→Name-Aufloesung (#11, community-Woerterbuch).

@@ -4,7 +4,7 @@
 // eines Bausteins — keine eigene Block-Struktur-Logik. Frei von Storage/Vue → in
 // node:test prüfbar. Stellt sicher, dass defekte/ungültige Datensätze NICHT still
 // übernommen werden. Keine Patientendaten.
-import { assertValidProtocolDraft, SCHEMA_VERSION } from '../../../../packages/shared/creator/creator.mjs'
+import { assertValidProtocolDraft, SCHEMA_VERSION } from '@resqdocs/protocol-core/creator/creator.mjs'
 import type { LibraryBlock, LibrarySnippet } from './types'
 
 export function isValidLibraryBlock(x: unknown): x is LibraryBlock {

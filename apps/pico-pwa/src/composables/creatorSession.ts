@@ -41,7 +41,7 @@ import {
   type Predicate,
   type VariableReference,
   type ValidationResult,
-} from '../../../../packages/shared/creator/creator.mjs'
+} from '@resqdocs/protocol-core/creator/creator.mjs'
 import type { LibraryRepository, LibraryBlock, LibrarySnippet } from '../storage/types'
 
 export interface CreatorSession {

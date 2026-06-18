@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { lams } from '@shared/tools/scores.mjs'
+import { lams } from '@resqdocs/protocol-core/tools/scores.mjs'
 import ToolModal from './ToolModal.vue'
 
 /** LAMS (#55): Fazialisparese 0-1, Armhalteversuch 0-2, Händedruck 0-2; >= 4 = LVO-Verdacht. */

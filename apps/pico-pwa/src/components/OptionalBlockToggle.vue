@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProtocolBlock } from '@shared/renderer/render.mjs'
+import type { ProtocolBlock } from '@resqdocs/protocol-core/renderer/render.mjs'
 
 /**
  * Aktiviert einen optionalen Block (z. B. „Mitfahrtverweigerung") für den

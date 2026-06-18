@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProtocolTemplate } from '@shared/renderer/render.mjs'
+import type { ProtocolTemplate } from '@resqdocs/protocol-core/renderer/render.mjs'
 
 /** Liste der (neutralen) Protokolle der flüchtigen Creator-Session. */
 defineProps<{ protocols: ProtocolTemplate[]; selectedId: string | null }>()

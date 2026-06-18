@@ -7,7 +7,7 @@
 // Bewusst frei von Vue und vom Renderer: so bleibt die Logik mit `node --test`
 // prüfbar und der Renderer (packages/shared) bleibt die einzige Render-/visibleIf-
 // Quelle (keine Duplizierung).
-import type { ProtocolTemplate, Override } from '@shared/renderer/render.mjs'
+import type { ProtocolTemplate, Override } from '@resqdocs/protocol-core/renderer/render.mjs'
 
 /** Pro Punkt-/Befund-id: Freitext, explizit {value,state} oder Listen-Einträge. */
 export type PointValue = Override
