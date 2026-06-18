@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ekgAxisTable } from '@shared/tools/scores.mjs'
+import { ekgAxisTable } from '@resqdocs/protocol-core/tools/scores.mjs'
 import ToolModal from './ToolModal.vue'
 
 /**

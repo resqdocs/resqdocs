@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, computed, watch } from 'vue'
 import { useCreatorSession, type ConditionInput } from '@/composables/useCreatorSession'
-import { isSimpleVisibleIf } from '@shared/creator/creator.mjs'
+import { isSimpleVisibleIf } from '@resqdocs/protocol-core/creator/creator.mjs'
 
 /**
  * Einfacher visibleIf-Editor (#13-D): genau EINE Bedingung an Block oder Punkt.

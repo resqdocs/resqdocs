@@ -231,7 +231,7 @@ test('#164 E2E: unbekannte PZN erzeugt keinen falschen Treffer', async () => {
 })
 
 test('#164 E2E: Render-Ausgabe ohne fuehrende Striche, ohne leere Zeilen', async () => {
-  const { render } = await import('../../../../packages/shared/renderer/render.mjs')
+  const { render } = await import('@resqdocs/protocol-core/renderer/render.mjs')
   const lookup = await lookupWith(TEST_DICT)
   const s = useMedplanScan((pzn) => lookup.resolve(pzn))
   s.ingest(UKF_164)

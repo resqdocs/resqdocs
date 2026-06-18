@@ -36,7 +36,7 @@ import {
   insertLibrarySnippetIntoSelectedProtocol,
 } from './creatorSession.ts'
 import { createMemoryLibraryRepository } from '../storage/memoryLibraryRepository.ts'
-import { createSimpleVisibleIf, isSimpleVisibleIf, assertValidProtocolDraft } from '../../../../packages/shared/creator/creator.mjs'
+import { createSimpleVisibleIf, isSimpleVisibleIf, assertValidProtocolDraft } from '@resqdocs/protocol-core/creator/creator.mjs'
 
 const seed = JSON.parse(
   readFileSync(new URL('../../../../protocols/standardprotokoll.json', import.meta.url)),

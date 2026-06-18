@@ -6,6 +6,6 @@
 // TypeScript breit (`string` statt Literal) inferiert wird; Struktur garantiert
 // das Schema.
 import seed from '@protocols/standardprotokoll.json'
-import type { ProtocolTemplate } from '@shared/renderer/render.mjs'
+import type { ProtocolTemplate } from '@resqdocs/protocol-core/renderer/render.mjs'
 
 export const standardprotokoll = seed as unknown as ProtocolTemplate

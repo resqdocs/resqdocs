@@ -6,7 +6,7 @@ import { usePznLibrary } from '@/medications/usePznLibrary'
 import MedplanScanOverlay from '@/components/MedplanScanOverlay.vue'
 import { useStorage } from '@/storage/useStorage'
 import { nativeDatamatrixScanAvailable, scanDatamatrixNative } from '@/medplan/nativeDatamatrixScan'
-import type { MedikamenteRow } from '@shared/renderer/render.mjs'
+import type { MedikamenteRow } from '@resqdocs/protocol-core/renderer/render.mjs'
 
 /**
  * Medikationsplan (BMP) scannen (#9, #36): Kamera-Scan (ZXing-Overlay, ueberall

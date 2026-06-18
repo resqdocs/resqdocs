@@ -5,7 +5,8 @@
  * Statischer Inhalt (gilt für alle Nutzer gleich; KEIN nutzer-editierbares Feld) —
  * Änderungen am Impressum/Stand erfolgen hier im Quelltext. Die Datenschutz-
  * Formulierung spiegelt die No-Tracking-Politik der App (kein Analytics, keine
- * Patientendaten, Netzwerk nur lokale Bridge + PZN-HTTPS, Kamera nur BMP-Scan).
+ * Patientendaten, Netzwerk nur lokale Bridge — kein externer PZN-/Medikamenten-
+ * Abruf —, Kamera nur BMP-Scan).
  *
  * Hinweis: kein Ersatz für rechtliche Beratung; ladungsfähige Anschrift + Kontakt
  * sind Pflicht und vom Maintainer zu prüfen.
@@ -38,50 +39,40 @@
 
       <div class="divider my-0"></div>
 
-      <!-- Datenschutzerklärung -->
+      <!-- Datenschutz: Kurzfassung, in-app (offline) erreichbar. Ausführliche Fassung auf der Landing
+           (resqdocs.app/datenschutz) — dort Hosting, Server-Logfiles, Betroffenenrechte, Aufsichtsbehörde. -->
       <div>
-        <h4 class="mb-1 text-sm font-semibold">Datenschutzerklärung</h4>
-        <div class="space-y-3 text-sm leading-relaxed text-base-content/90">
+        <h4 class="mb-1 text-sm font-semibold">Datenschutz – das Wichtigste</h4>
+        <div class="space-y-2 text-sm leading-relaxed text-base-content/90">
           <p>
-            <strong>Verantwortlicher:</strong> [Anbieter], [Name],
-            [Anschrift], [PLZ Ort], support@resqdocs.app (siehe Impressum).
+            <strong>Lokal:</strong> Alle Daten – Protokolle, Vorlagen, Einstellungen – bleiben auf deinem
+            Gerät. Keine Cloud, keine Telemetrie, kein Tracking, keine Werbe-SDKs, keine Crash-Reporter.
           </p>
           <p>
-            <strong>Grundsatz:</strong> ResQDocs ist ein Hilfsmittel zur Einsatzdokumentation. Die App
-            erhebt <strong>keine</strong> personenbezogenen Daten zu Analyse- oder Werbezwecken. Es gibt
-            <strong>kein Tracking, keine Analytik, keine Werbe-SDKs und keine Crash-Reporter</strong>.
+            <strong>Patientendaten flüchtig:</strong> Im Einsatz eingegebene Inhalte werden nur temporär
+            verarbeitet und automatisch gelöscht – keine dauerhafte Speicherung, keine Übertragung an uns.
           </p>
           <p>
-            <strong>Lokale Datenverarbeitung:</strong> Deine Protokolle, Vorlagen und Einstellungen werden
-            ausschließlich <strong>lokal auf deinem Gerät</strong> gespeichert und nicht an uns oder Dritte
-            übertragen.
+            <strong>Keine externe Datenbank:</strong> Die App ruft <strong>keine</strong> externen
+            Medikamenten- oder PZN-Datenbanken ab und überträgt dafür keine Daten. Die einzige
+            Netzwerkverbindung ist die lokale ResQDocs-Bridge (Pico) in deinem WLAN.
           </p>
           <p>
-            <strong>Patientendaten:</strong> In den Einsatz eingegebene Inhalte sind flüchtig und werden
-            nicht dauerhaft gespeichert oder übertragen.
+            <strong>Persönliche PZN-Bibliothek:</strong> Deine PZN-Sammlung pflegst du selbst; sie liegt
+            rein lokal auf dem Gerät, ist individuell und <strong>nicht zum Teilen oder Weitergeben
+            bestimmt</strong>.
           </p>
           <p>
-            <strong>Netzwerkverbindungen:</strong> Die App verbindet sich ausschließlich mit (a) der
-            lokalen ResQDocs-Bridge (Pico) in deinem WLAN, um Text an ein Zielgerät zu übertragen, und
-            (b) der Medikamenten-/PZN-Datenbank über eine verschlüsselte HTTPS-Verbindung zum Abruf von
-            Medikamenteninformationen. Darüber hinaus findet keine Kommunikation mit Servern statt.
+            <strong>Kein Medizinprodukt:</strong> ResQDocs ist ein Hilfsmittel ohne Gewähr – es gilt der
+            Haftungsausschluss (Hinweis beim Start). Verantwortlicher: siehe Impressum oben.
           </p>
-          <p>
-            <strong>Kamera:</strong> Die Kamera wird ausschließlich zum Scannen des Medikationsplan-Codes
-            (BMP) verwendet; es werden keine Fotos gespeichert oder übertragen.
+          <p class="text-xs text-base-content/60">
+            Ausführliche Datenschutzerklärung (Hosting, Server-Logfiles, Betroffenenrechte,
+            Aufsichtsbehörde):
+            <a class="link" href="https://resqdocs.app/datenschutz/" target="_blank" rel="noopener">resqdocs.app/datenschutz</a>.
+            Lokale Daten kannst du jederzeit löschen (Einstellungen → „Datenschutz &amp; lokale Daten")
+            oder durch Deinstallation. Stand: Juni 2026
           </p>
-          <p>
-            <strong>Deine Rechte (DSGVO):</strong> Da keine personenbezogenen Daten erhoben oder gespeichert
-            werden, fallen Auskunfts-, Löschungs- oder Widerspruchsrechte uns gegenüber regelmäßig nicht an.
-            Lokale Daten kannst du jederzeit in der App löschen (Einstellungen → „Datenschutz & lokale Daten")
-            oder durch Deinstallation der App.
-          </p>
-          <p>
-            <strong>App-Stores:</strong> Beim Bezug der App über einen App-Store (Apple App Store, Google
-            Play, Huawei AppGallery) gelten zusätzlich die Datenschutzbestimmungen des jeweiligen Anbieters;
-            auf dessen Datenverarbeitung haben wir keinen Einfluss.
-          </p>
-          <p class="text-xs text-base-content/60">Stand: Juni 2026</p>
         </div>
       </div>
     </div>

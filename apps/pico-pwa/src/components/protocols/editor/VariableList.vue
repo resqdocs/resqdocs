@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useCreatorSession } from '@/composables/useCreatorSession'
-import { VARIABLE_TYPES } from '@shared/creator/creator.mjs'
+import { VARIABLE_TYPES } from '@resqdocs/protocol-core/creator/creator.mjs'
 
 const { selected, selectedVariableId, selectVariable, addVariable } = useCreatorSession()
 

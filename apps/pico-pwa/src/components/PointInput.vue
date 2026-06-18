@@ -8,7 +8,7 @@ import PackageScanOverlay from '@/components/PackageScanOverlay.vue'
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { usePznLibrary } from '@/medications/usePznLibrary'
 import { extractPznFromPackageCode, packageScanName, type PackageBarcodeFormat } from '@/medications/packageScan'
-import type { MedikamenteRow, ProtocolPoint } from '@shared/renderer/render.mjs'
+import type { MedikamenteRow, ProtocolPoint } from '@resqdocs/protocol-core/renderer/render.mjs'
 import type { PointValue } from '@/composables/caseState'
 
 /**

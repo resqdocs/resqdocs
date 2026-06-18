@@ -6,8 +6,8 @@
 // Patientendaten, kein caseState. Mutiert die Protokollobjekte nicht.
 import type { SqlClient } from './sqlClient'
 import type { LibraryRepository, LibraryBlock, LibrarySnippet } from '../types'
-import type { Protocol, Block } from '@shared/creator/creator.mjs'
-import { assertValidProtocolDraft } from '../../../../../packages/shared/creator/creator.mjs'
+import type { Protocol, Block } from '@resqdocs/protocol-core/creator/creator.mjs'
+import { assertValidProtocolDraft } from '@resqdocs/protocol-core/creator/creator.mjs'
 import { isValidLibraryBlock, isValidLibrarySnippet } from '../libraryValidation.ts'
 
 const nowIso = (): string => new Date().toISOString()

@@ -1,11 +1,11 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { render, type ProtocolTemplate, type ProtocolBlock } from '@shared/renderer/render.mjs'
+import { render, type ProtocolTemplate, type ProtocolBlock } from '@resqdocs/protocol-core/renderer/render.mjs'
 import {
   buildContext,
   isBlockVisible,
   getVisiblePoints,
   resolveText as runtimeResolveText,
-} from '@shared/renderer/runtime.mjs'
+} from '@resqdocs/protocol-core/renderer/runtime.mjs'
 import { standardprotokoll } from '@/data/protocols'
 import { useCaseState } from './useCaseState'
 import { useCreatorSession } from './useCreatorSession'

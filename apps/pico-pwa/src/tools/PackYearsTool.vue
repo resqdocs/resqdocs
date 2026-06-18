@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { packYears } from '@shared/tools/scores.mjs'
+import { packYears } from '@resqdocs/protocol-core/tools/scores.mjs'
 import ToolModal from './ToolModal.vue'
 
 /** Pack-Years-Rechner (#55): (Zigaretten/Tag ÷ 20) × Jahre. */
