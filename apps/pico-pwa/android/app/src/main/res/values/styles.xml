@@ -16,7 +16,12 @@
     </style>
 
 
-    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+    <!-- Kein Theme.SplashScreen-Parent (= core-splashscreen-Library) mehr: die Library
+         wurde nie genutzt (kein installSplashScreen()-Aufruf), liefert aber deprecated
+         Edge-to-Edge-APIs (setStatusBarColor/setNavigationBarColor/setDecorFitsSystemWindows)
+         als toten Bytecode im AAB mit -> Play-Console-Warnung "randlose Anzeige". Splash
+         bleibt unveraendert als Fenster-/Hintergrund-Drawable @drawable/splash erhalten. -->
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
         <item name="android:background">@drawable/splash</item>
     </style>
 </resources>

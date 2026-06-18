@@ -19,8 +19,8 @@ android {
         applicationId "com.example.resqdocs"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "0.1.0"
+        versionCode 2
+        versionName "0.1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -54,6 +54,18 @@ android {
     }
 }
 
+// Cordova-Framework 14 (org.apache.cordova:framework, transitiv ueber das generierte Modul
+// capacitor-cordova-android-plugins eingebunden) zieht androidx.core:core-splashscreen mit.
+// Die Library wird hier NICHT genutzt (kein installSplashScreen()-Aufruf; Cordovas
+// SplashScreenPlugin ruft die Setter nicht selbst), liefert aber deprecated Edge-to-Edge-APIs
+// (setStatusBarColor/setNavigationBarColor/setDecorFitsSystemWindows aus ThemeUtils$Api31) als
+// toten Bytecode in die AAB -> Play-Console-Warnung "randlose Anzeige". App-weit ausschliessen.
+// Gehoert bewusst in app/build.gradle (committet, von `cap sync` NICHT regeneriert), nicht ins
+// generierte capacitor-cordova-android-plugins/build.gradle.
+configurations.all {
+    exclude group: 'androidx.core', module: 'core-splashscreen'
+}
+
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
@@ -64,7 +76,6 @@ dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
-    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

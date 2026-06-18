@@ -38,8 +38,9 @@ export interface AppSettings {
   pznAutoCheck: boolean
   /**
    * Scanner-Strategie fuer den BMP-Data-Matrix-Scan (#170). Zentrale Quelle;
-   * der Kamera-Schnellumschalter aendert genau diese Einstellung. Default 'auto'
-   * (faellt aktuell auf den optimierten WebView-Scanner; spaeter bevorzugt nativ).
+   * der Kamera-Schnellumschalter aendert genau diese Einstellung. Default
+   * 'webview_standard' (schlanker ZXing-JS-WebView-Scanner; bewusste Erststart-
+   * Voreinstellung fuer iOS wie Android).
    */
   scannerMode: ScannerMode
   /**
@@ -64,7 +65,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   headingFill: '=',
   headingWidth: 60,
   pznAutoCheck: false,
-  scannerMode: 'auto',
+  scannerMode: 'webview_standard',
   caseDraftTtlHours: 3,
 }
 

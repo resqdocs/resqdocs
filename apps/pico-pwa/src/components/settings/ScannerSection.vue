@@ -9,9 +9,9 @@ import { nativeDatamatrixScanAvailable } from '@/medplan/nativeDatamatrixScan'
  * Datenschutz: rein lokale Auswahl, kein Netz/Telemetrie.
  */
 const storage = useStorage()
-// #170: Der native, kameranative Scanner (Android: ZXing-C++, iOS: Apple Vision) ist in der App der
-// Default ('Automatisch'); Web nutzt den WebView-Scanner. Beide nativen Pfade sind geraeteverifiziert
-// und umgehen die WebView-Kamera.
+// #170: 'Nativ' nutzt in der App den kameranativen Scanner (Android: ZXing-C++, iOS: Apple Vision);
+// Web nutzt den WebView-Scanner. Erststart-Default ist 'WebView Standard' (stabiler); der native
+// Pfad bleibt als explizite Alternative waehlbar. 'Automatisch' wurde entfernt.
 const nativeAvailable = nativeDatamatrixScanAvailable()
 
 function onChange(e: Event): void {
@@ -25,11 +25,10 @@ function onChange(e: Event): void {
     <div class="card-body gap-3 p-4">
       <h3 class="font-medium">Scanner-Modus (BMP-Data-Matrix)</h3>
       <p class="text-sm text-base-content/70">
-        Strategie für den Medikationsplan-Scan. Für Vergleichstests umschaltbar; „Automatisch"
-        ist der Standard.
+        Strategie für den Medikationsplan-Scan. Für Vergleichstests umschaltbar;
+        „WebView Standard" ist die Voreinstellung.
       </p>
       <select class="select select-bordered select-sm w-full max-w-xs" :value="storage.settings.scannerMode" @change="onChange">
-        <option value="auto">{{ SCANNER_MODE_LABELS.auto }}</option>
         <option value="webview_standard">{{ SCANNER_MODE_LABELS.webview_standard }}</option>
         <option value="webview_optimized">{{ SCANNER_MODE_LABELS.webview_optimized }}</option>
         <option value="native_zxingcpp" :disabled="!nativeAvailable">
@@ -37,9 +36,10 @@ function onChange(e: Event): void {
         </option>
       </select>
       <p class="text-xs text-base-content/60">
-        „Automatisch" nutzt in der App jetzt den nativen Decoder (kameranativ, ohne den
-        WebView-Kamera-Crash) — Android wie iOS. „WebView Standard/optimiert" bleiben als
-        Fallback wählbar. Es werden keine Bilddaten gespeichert oder übertragen.
+        „WebView Standard" ist die stabile Voreinstellung (schlanker Scan im WebView).
+        „Nativ" nutzt die geräteeigene Kamera + nativen Decoder (Android: ZXing-C++,
+        iOS: Apple Vision) — als Alternative wählbar, derzeit aber nicht zuverlässiger.
+        Es werden keine Bilddaten gespeichert oder übertragen.
       </p>
     </div>
   </section>
