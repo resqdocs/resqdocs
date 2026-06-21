@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, computed, watch } from 'vue'
-import { useCreatorSession, type ConditionInput } from '@/composables/useCreatorSession'
+import { useCreatorSessionCtx } from '@/composables/creatorSessionContext'
+import type { ConditionInput } from '@/composables/useCreatorSession'
 import { isSimpleVisibleIf } from '@resqdocs/protocol-core/creator/creator.mjs'
 
 /**
@@ -10,7 +11,7 @@ import { isSimpleVisibleIf } from '@resqdocs/protocol-core/creator/creator.mjs'
  * Domainfunktion (createSimpleVisibleIf, via Composable) — keine eigene Logik.
  */
 const props = defineProps<{ target: 'block' | 'point' }>()
-const s = useCreatorSession()
+const s = useCreatorSessionCtx()
 
 const EDITABLE_OPS = ['eq', 'truthy', 'filled', 'state'] as const
 
@@ -65,7 +66,8 @@ watch(
       else form.value = parsed.value == null ? '' : String(parsed.value)
     } else {
       form.enabled = false
-      form.source = 'var'
+      // Ohne Variablen (z. B. Baustein-Editor) gibt es nur Punkt-Bezüge.
+      form.source = variables.value.length ? 'var' : 'point'
       form.id = ''
       form.op = 'eq'
       form.value = ''
@@ -133,7 +135,9 @@ function onSourceChange(): void {
         </p>
         <template v-else>
           <div class="flex flex-wrap gap-2">
-            <select v-model="form.source" class="select select-bordered select-xs" aria-label="Quelle" @change="onSourceChange">
+            <!-- Quelle nur, wenn Variablen existieren; sonst ausschließlich Punkt-Bezüge
+                 (z. B. Baustein-Editor: Bausteine haben keine Variablen). -->
+            <select v-if="variables.length" v-model="form.source" class="select select-bordered select-xs" aria-label="Quelle" @change="onSourceChange">
               <option value="var">Variable</option>
               <option value="point">Punkt</option>
             </select>

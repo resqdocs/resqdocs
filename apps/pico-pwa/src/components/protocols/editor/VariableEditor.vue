@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useCreatorSession } from '@/composables/useCreatorSession'
+import { useCreatorSessionCtx } from '@/composables/creatorSessionContext'
 import VariableList from './VariableList.vue'
 import VariableForm from './VariableForm.vue'
 
 /** Variablen-Bereich (#13-D): Liste + Formular für die ausgewählte Variable. */
-const { currentVariable } = useCreatorSession()
+const { currentVariable } = useCreatorSessionCtx()
 </script>
 
 <template>

@@ -25,6 +25,8 @@ import {
   type PznLibraryBackend,
   type PznPageOpts,
 } from './pznLibraryBackend'
+import { createExportJsonStream } from './pznExport'
+import { streamGzipToCacheFileAndShare } from '@/utils/fileTransfer'
 
 function create() {
   let readyPromise: Promise<PznLibraryBackend> | null = null
@@ -121,10 +123,28 @@ function create() {
     await (await ready()).clear()
   }
 
-  /** Backup-Export als JSON-String (kompakte v2-Form, sortiert). */
+  /** Backup-Export als JSON-String (kompakte v2-Form, sortiert). Klein-Daten/Tests. */
   async function exportJson(): Promise<string> {
     const entries = await (await ready()).allSorted()
-    return JSON.stringify(exportLibrary(fromEntries(entries)), null, 2)
+    return JSON.stringify(exportLibrary(fromEntries(entries)))
+  }
+
+  /**
+   * Gestreamter Backup-Export (#197): seitenweise lesen → kompakt inkrementell in
+   * einen gzip-Stream → chunkweise in eine Cache-Datei + Share. Hält nie die ganze
+   * Bibliothek im Speicher (behebt den Hänger bei großen Datensätzen). onProgress
+   * meldet Einträge gegen die Gesamtzahl. Liest nur (page/count) — keine Schreiblogik.
+   */
+  async function exportToFile(
+    filename = 'pzn-bibliothek.json.gz',
+    onProgress?: (done: number, total: number) => void,
+  ): Promise<void> {
+    // pull-basiert → CompressionStream: Backpressure + Fehler-/Abbruch-Propagation
+    // übernimmt der Stream selbst (kein dual-task Promise.all, kein Hänger bei I/O-Fehler).
+    // Cast umgeht nur die TS-DOM-Reibung der Uint8Array<ArrayBuffer>-Generics (Laufzeit identisch).
+    const gz = createExportJsonStream({ count, page: (o) => page(o) }, onProgress)
+      .pipeThrough(new CompressionStream('gzip') as unknown as ReadableWritablePair<Uint8Array, Uint8Array>)
+    await streamGzipToCacheFileAndShare(filename, gz)
   }
   /**
    * Backup-Import als MERGE (nie Ersetzen der ganzen Bibliothek). `mode` (Nutzerwahl):
@@ -162,6 +182,7 @@ function create() {
     remove,
     clear,
     exportJson,
+    exportToFile,
     importJson,
   }
 }

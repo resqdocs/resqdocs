@@ -5,8 +5,8 @@ import { usePznLibrary } from '@/medications/usePznLibrary'
 import { extractPznFromPackageCode, type PackageBarcodeFormat } from '@/medications/packageScan'
 import { normalizePzn, type ImportMode, type PznEntry } from '@/medications/pznLibrary'
 import { PZN_CATEGORIES } from '@/medications/pznCategories'
-import { shareBinary, readBinaryFile } from '@/utils/fileTransfer'
-import { gzipString, gunzipToString, isGzip } from '@/utils/gzip'
+import { readBinaryFile } from '@/utils/fileTransfer'
+import { decodeMaybeGzip } from '@/utils/gzip'
 import { requestScreenWakeLock } from '@/utils/wakeLock'
 
 /**
@@ -159,12 +159,36 @@ async function onRemove(pzn: string): Promise<void> {
   total.value = Math.max(0, total.value - 1)
 }
 
-// --- Backup (lokal): gezipptes JSON (.json.gz), klein + robust gegen Sonderzeichen ---
+// --- Backup (lokal): gezipptes JSON (.json.gz), gestreamt (#197) ---
+const exporting = ref(false)
+const exportProgress = ref<{ done: number; total: number } | null>(null)
+const exportPercent = computed(() =>
+  exportProgress.value && exportProgress.value.total > 0
+    ? Math.min(100, Math.round((exportProgress.value.done / exportProgress.value.total) * 100))
+    : 0,
+)
 async function onExport(): Promise<void> {
-  status.value = null
-  const bytes = await gzipString(await lib.exportJson())
-  await shareBinary('pzn-bibliothek.json.gz', bytes)
-  status.value = 'Bibliothek exportiert (.json.gz).'
+  status.value = null; error.value = null
+  exporting.value = true
+  exportProgress.value = null
+  const wake = await requestScreenWakeLock()
+  let lastProgressAt = 0
+  try {
+    await lib.exportToFile('pzn-bibliothek.json.gz', (done, total) => {
+      const now = Date.now()
+      if (done >= total || now - lastProgressAt >= 80) {
+        lastProgressAt = now
+        exportProgress.value = { done, total }
+      }
+    })
+    status.value = 'Bibliothek exportiert (.json.gz).'
+  } catch (err) {
+    error.value = `Export fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`
+  } finally {
+    await wake.release()
+    exporting.value = false
+    exportProgress.value = null
+  }
 }
 
 // Import = Merge mit Nutzerwahl VOR der Dateiauswahl.
@@ -172,6 +196,13 @@ const importChoosing = ref(false)
 const importMode = ref<ImportMode>('overwrite')
 const importing = ref(false)
 const importProgress = ref<{ done: number; total: number } | null>(null)
+// Prozent für die animierte Balkenanzeige (#218): die CSS-Transition glättet die
+// (gröberen) Chunk-Schritte rein visuell — keine Verarbeitungs-/Logikänderung.
+const importPercent = computed(() =>
+  importProgress.value && importProgress.value.total > 0
+    ? Math.min(100, Math.round((importProgress.value.done / importProgress.value.total) * 100))
+    : 0,
+)
 const fileInput = ref<HTMLInputElement | null>(null)
 function chooseImport(mode: ImportMode): void {
   importMode.value = mode
@@ -186,11 +217,21 @@ async function onImportFile(e: Event): Promise<void> {
   importProgress.value = null
   // Bildschirm während des (ggf. langen) Imports wachhalten; Hinweis greift zusätzlich.
   const wake = await requestScreenWakeLock()
+  // Fortschritt gedrosselt anzeigen (#218): höchstens ~alle 80 ms aktualisieren, das Ende
+  // (done>=total) immer durchlassen. Die FLÜSSIGE Bewegung macht die CSS-Transition des
+  // Balkens — der Import-/Decode-Pfad bleibt unangetastet.
+  let lastProgressAt = 0
   try {
     const bytes = await readBinaryFile(file)
-    const text = isGzip(bytes) ? await gunzipToString(bytes) : new TextDecoder().decode(bytes)
-    const ok = await lib.importJson(text, importMode.value, (done, total) => {
-      importProgress.value = { done, total }
+    // Robust entpacken: roh/einfach-gzip/doppelt-gzip → JSON-Text; null = ungültige Datei
+    // (korruptes gzip oder zu viele Schichten). Wird wie ok===false behandelt (ein Invalid-Pfad).
+    const text = await decodeMaybeGzip(bytes)
+    const ok = text !== null && await lib.importJson(text, importMode.value, (done, total) => {
+      const now = Date.now()
+      if (done >= total || now - lastProgressAt >= 80) {
+        lastProgressAt = now
+        importProgress.value = { done, total }
+      }
     })
     if (ok) {
       status.value = `Bibliothek importiert (${importMode.value === 'overwrite' ? 'Duplikate überschrieben' : 'nur fehlende ergänzt'}).`
@@ -356,10 +397,22 @@ async function deleteAll(): Promise<void> {
         <div class="flex flex-col gap-2 border-t border-base-200 pt-3">
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-xs text-base-content/60">Backup (nur lokal):</span>
-            <button class="btn btn-outline btn-xs" type="button" :disabled="!total" @click="onExport">Exportieren</button>
+            <button class="btn btn-outline btn-xs" type="button" :disabled="!total || exporting" @click="onExport">
+              {{ exporting ? 'Exportiere…' : 'Exportieren' }}
+            </button>
             <button class="btn btn-outline btn-xs" type="button" :disabled="importing" @click="importChoosing = !importChoosing">
               {{ importing ? 'Importiere…' : 'Importieren' }}
             </button>
+          </div>
+          <!-- Export-Fortschritt (#197): gestreamt, daher Anzeige bis 100 % -->
+          <div v-if="exporting" role="status" class="flex flex-col gap-1 rounded-lg bg-base-200/60 p-2">
+            <span class="text-xs font-medium text-warning">⚠ Bitte das Telefon anlassen und die App geöffnet halten, bis der Export fertig ist.</span>
+            <div class="h-2 w-full overflow-hidden rounded-full bg-base-300" role="progressbar" :aria-valuenow="exportPercent" aria-valuemin="0" aria-valuemax="100">
+              <div class="h-full rounded-full bg-primary transition-[width] duration-200 ease-linear" :style="{ width: exportPercent + '%' }" />
+            </div>
+            <span class="text-xs text-base-content/70">
+              {{ exportProgress ? `${exportProgress.done} von ${exportProgress.total} exportiert…` : 'Export wird vorbereitet…' }}
+            </span>
           </div>
           <!-- Nutzerwahl VOR der Dateiauswahl: wie sollen Duplikate behandelt werden? -->
           <div v-if="importChoosing" role="group" aria-label="Import-Modus" class="flex flex-col gap-2 rounded-lg bg-base-200/60 p-2">
@@ -374,7 +427,10 @@ async function deleteAll(): Promise<void> {
           <!-- Import-Fortschritt + Hinweis (großer Datensatz kann dauern) -->
           <div v-if="importing" role="status" class="flex flex-col gap-1 rounded-lg bg-base-200/60 p-2">
             <span class="text-xs font-medium text-warning">⚠ Bitte das Telefon anlassen und die App geöffnet halten, bis der Import fertig ist.</span>
-            <progress v-if="importProgress" class="progress progress-primary w-full" :value="importProgress.done" :max="importProgress.total" />
+            <!-- Eigene Balkendarstellung mit CSS-Transition (#218): glättet die Chunk-Schritte visuell. -->
+            <div v-if="importProgress" class="h-2 w-full overflow-hidden rounded-full bg-base-300" role="progressbar" :aria-valuenow="importPercent" aria-valuemin="0" aria-valuemax="100">
+              <div class="h-full rounded-full bg-primary transition-[width] duration-200 ease-linear" :style="{ width: importPercent + '%' }" />
+            </div>
             <progress v-else class="progress progress-primary w-full" />
             <span class="text-xs text-base-content/70">
               {{ importProgress ? `${importProgress.done} von ${importProgress.total} importiert…` : 'Datei wird gelesen…' }}

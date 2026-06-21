@@ -504,19 +504,33 @@ function isValidPredicate(pred) {
 export function assertValidProtocolDraft(protocol) {
   const errors = [];
   const warnings = [];
-  const e = (m) => errors.push(m);
-  if (!protocol || typeof protocol !== "object") return { valid: false, errors: ["Protokoll fehlt/ungültig"], warnings };
+  // issues: feldscharfe Parallel-Spur zu errors/warnings (#2b). Trägt zusätzlich
+  // den bekannten Ort (blockId/pointId/findingId/field) mit. Die String-Listen
+  // errors/warnings bleiben UNVERÄNDERT (gleiche Texte, gleiche Reihenfolge) —
+  // additiv, damit kein bestehender Konsument bricht.
+  const issues = [];
+  const pushIssue = (severity, message, loc) => {
+    const it = { message, severity };
+    if (loc) for (const k of ["blockId", "pointId", "findingId", "field"]) if (loc[k] != null) it[k] = loc[k];
+    issues.push(it);
+  };
+  const e = (m, loc) => { errors.push(m); pushIssue("error", m, loc); };
+  const w = (m, loc) => { warnings.push(m); pushIssue("warning", m, loc); };
+  if (!protocol || typeof protocol !== "object") {
+    e("Protokoll fehlt/ungültig"); // über e() → errors + issues bleiben paritätisch
+    return { valid: false, errors, warnings, issues };
+  }
 
-  if (typeof protocol.schemaVersion !== "string" || !/^\d+\.\d+\.\d+$/.test(protocol.schemaVersion)) e("schemaVersion fehlt oder ungültig");
-  if (!String(protocol.id ?? "").trim()) e("Protokoll-id fehlt");
-  if (!String(protocol.title ?? "").trim()) e("Protokoll-Titel darf nicht leer sein");
-  if (!Array.isArray(protocol.blocks)) e("blocks muss ein Array sein");
+  if (typeof protocol.schemaVersion !== "string" || !/^\d+\.\d+\.\d+$/.test(protocol.schemaVersion)) e("schemaVersion fehlt oder ungültig", { field: "schemaVersion" });
+  if (!String(protocol.id ?? "").trim()) e("Protokoll-id fehlt", { field: "id" });
+  if (!String(protocol.title ?? "").trim()) e("Protokoll-Titel darf nicht leer sein", { field: "title" });
+  if (!Array.isArray(protocol.blocks)) e("blocks muss ein Array sein", { field: "blocks" });
 
   // Eindeutigkeit pro Namespace (Blöcke / Punkte+findingGroup-Kinder / Variablen)
   // — Block- und Punkt-ids dürfen sich überschneiden (getrennte Runtime-Namespaces).
-  const uniqIn = (set, id, label) => {
+  const uniqIn = (set, id, label, loc) => {
     if (id == null) return;
-    if (set.has(id)) e(`Doppelte id: '${id}' (${label})`);
+    if (set.has(id)) e(`Doppelte id: '${id}' (${label})`, loc);
     else set.add(id);
   };
   const blockIds = new Set();
@@ -524,35 +538,35 @@ export function assertValidProtocolDraft(protocol) {
   const variableIds = new Set();
 
   for (const v of protocol.variables ?? []) {
-    if (!String(v.id ?? "").trim()) e("Variable ohne id");
-    uniqIn(variableIds, v.id, "variable");
-    if (!VARIABLE_TYPES.includes(v.type)) e(`Ungültiger Variablen-Typ: ${v.type}`);
-    if (v.type === "select" && !Array.isArray(v.options)) e(`select-Variable '${v.id}' ohne options`);
+    if (!String(v.id ?? "").trim()) e("Variable ohne id", { field: "variable" });
+    uniqIn(variableIds, v.id, "variable", { field: "variable" });
+    if (!VARIABLE_TYPES.includes(v.type)) e(`Ungültiger Variablen-Typ: ${v.type}`, { field: "variable" });
+    if (v.type === "select" && !Array.isArray(v.options)) e(`select-Variable '${v.id}' ohne options`, { field: "variable" });
   }
 
   for (const b of protocol.blocks ?? []) {
-    if (!String(b.id ?? "").trim()) e("Block ohne id");
-    uniqIn(blockIds, b.id, "block");
-    if (!String(b.title ?? "").trim()) e(`Block '${b.id}' ohne Titel`);
-    if (b.visibleIf && !isValidPredicate(b.visibleIf)) e(`Block '${b.id}': ungültiges visibleIf`);
-    if (!Array.isArray(b.points)) { e(`Block '${b.id}': points kein Array`); continue; }
+    if (!String(b.id ?? "").trim()) e("Block ohne id", { field: "block" });
+    uniqIn(blockIds, b.id, "block", { blockId: b.id });
+    if (!String(b.title ?? "").trim()) e(`Block '${b.id}' ohne Titel`, { blockId: b.id, field: "title" });
+    if (b.visibleIf && !isValidPredicate(b.visibleIf)) e(`Block '${b.id}': ungültiges visibleIf`, { blockId: b.id, field: "visibleIf" });
+    if (!Array.isArray(b.points)) { e(`Block '${b.id}': points kein Array`, { blockId: b.id, field: "points" }); continue; }
     for (const p of b.points) {
-      if (!POINT_TYPES.includes(p.type)) { e(`Ungültiger Punkt-Typ: ${p.type}`); continue; }
-      if (p.id != null) uniqIn(pointIdsSeen, p.id, "point");
-      if (!String(p.id ?? "").trim() && p.type !== "findingGroup") e(`Punkt (${p.type}) ohne id`);
-      if (p.type === "finding" && typeof p.normal !== "string") e(`finding '${p.id}' ohne normal`);
-      if (p.type === "list" && !Array.isArray(p.entries)) e(`list '${p.id}' ohne entries`);
-      if (p.type === "text" && typeof p.content !== "string") e(`text '${p.id}' ohne content`);
+      if (!POINT_TYPES.includes(p.type)) { e(`Ungültiger Punkt-Typ: ${p.type}`, { blockId: b.id, field: "type" }); continue; }
+      if (p.id != null) uniqIn(pointIdsSeen, p.id, "point", { blockId: b.id, pointId: p.id });
+      if (!String(p.id ?? "").trim() && p.type !== "findingGroup") e(`Punkt (${p.type}) ohne id`, { blockId: b.id, field: "id" });
+      if (p.type === "finding" && typeof p.normal !== "string") e(`finding '${p.id}' ohne normal`, { blockId: b.id, pointId: p.id, field: "normal" });
+      if (p.type === "list" && !Array.isArray(p.entries)) e(`list '${p.id}' ohne entries`, { blockId: b.id, pointId: p.id, field: "entries" });
+      if (p.type === "text" && typeof p.content !== "string") e(`text '${p.id}' ohne content`, { blockId: b.id, pointId: p.id, field: "content" });
       if (p.type === "findingGroup") {
-        if (!String(p.key ?? "").trim()) e(`findingGroup '${p.id}' ohne key`);
-        if (!Array.isArray(p.findings)) e(`findingGroup '${p.id}' ohne findings`);
+        if (!String(p.key ?? "").trim()) e(`findingGroup '${p.id}' ohne key`, { blockId: b.id, pointId: p.id, field: "key" });
+        if (!Array.isArray(p.findings)) e(`findingGroup '${p.id}' ohne findings`, { blockId: b.id, pointId: p.id, field: "findings" });
         for (const f of p.findings ?? []) {
-          if (!String(f.id ?? "").trim()) e("findingGroup-finding ohne id");
-          else uniqIn(pointIdsSeen, f.id, "finding");
-          if (typeof f.normal !== "string") e(`finding '${f.id}' ohne normal`);
+          if (!String(f.id ?? "").trim()) e("findingGroup-finding ohne id", { blockId: b.id, pointId: p.id, field: "finding" });
+          else uniqIn(pointIdsSeen, f.id, "finding", { blockId: b.id, pointId: p.id, findingId: f.id });
+          if (typeof f.normal !== "string") e(`finding '${f.id}' ohne normal`, { blockId: b.id, pointId: p.id, findingId: f.id, field: "normal" });
         }
       }
-      if (p.visibleIf && !isValidPredicate(p.visibleIf)) e(`Punkt '${p.id}': ungültiges visibleIf`);
+      if (p.visibleIf && !isValidPredicate(p.visibleIf)) e(`Punkt '${p.id}': ungültiges visibleIf`, { blockId: b.id, pointId: p.id, field: "visibleIf" });
     }
   }
 
@@ -563,19 +577,19 @@ export function assertValidProtocolDraft(protocol) {
     if (p.id) pointIds.add(p.id);
     if (p.type === "findingGroup") for (const f of p.findings ?? []) if (f.id) pointIds.add(f.id);
   }
-  const checkRefs = (pred, where) => {
+  const checkRefs = (pred, where, loc) => {
     if (!pred || typeof pred !== "object") return;
-    if (pred.var != null && !varIds.has(pred.var)) warnings.push(`${where}: visibleIf referenziert unbekannte Variable '${pred.var}'`);
-    if (pred.point != null && !pointIds.has(pred.point)) warnings.push(`${where}: visibleIf referenziert unbekannten Punkt '${pred.point}'`);
-    for (const k of ["all", "any"]) if (Array.isArray(pred[k])) pred[k].forEach((x) => checkRefs(x, where));
-    if (pred.not) checkRefs(pred.not, where);
+    if (pred.var != null && !varIds.has(pred.var)) w(`${where}: visibleIf referenziert unbekannte Variable '${pred.var}'`, { ...loc, field: "visibleIf" });
+    if (pred.point != null && !pointIds.has(pred.point)) w(`${where}: visibleIf referenziert unbekannten Punkt '${pred.point}'`, { ...loc, field: "visibleIf" });
+    for (const k of ["all", "any"]) if (Array.isArray(pred[k])) pred[k].forEach((x) => checkRefs(x, where, loc));
+    if (pred.not) checkRefs(pred.not, where, loc);
   };
   for (const b of protocol.blocks ?? []) {
-    if (b.visibleIf) checkRefs(b.visibleIf, `block:${b.id}`);
-    for (const p of b.points ?? []) if (p.visibleIf) checkRefs(p.visibleIf, `point:${p.id}`);
+    if (b.visibleIf) checkRefs(b.visibleIf, `block:${b.id}`, { blockId: b.id });
+    for (const p of b.points ?? []) if (p.visibleIf) checkRefs(p.visibleIf, `point:${p.id}`, { blockId: b.id, pointId: p.id });
   }
 
-  return { valid: errors.length === 0, errors, warnings };
+  return { valid: errors.length === 0, errors, warnings, issues };
 }
 
 // --- Export / Import (Vorbereitung) -------------------------------------------

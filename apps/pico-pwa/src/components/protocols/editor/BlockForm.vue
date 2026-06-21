@@ -1,17 +1,27 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useCreatorSession } from '@/composables/useCreatorSession'
+import { useCreatorSessionCtx } from '@/composables/creatorSessionContext'
+import { useBausteine } from '@/composables/useBausteine'
 
-const { currentBlock, updateCurrentBlock, duplicateBlock, removeBlock } = useCreatorSession()
+/** hideBlockActions: blendet Block-Aktionen (Duplizieren/Als Baustein speichern/
+ *  Löschen) aus — genutzt im Baustein-Editor (Variante A), wo diese nicht passen.
+ *  Default false → Protokoll-Editor unverändert. */
+withDefaults(defineProps<{ hideBlockActions?: boolean }>(), { hideBlockActions: false })
+
+const { currentBlock, updateCurrentBlock, duplicateBlock, removeBlock } = useCreatorSessionCtx()
+const { addBlockFromExisting } = useBausteine()
 
 // Lokaler Titel-State: leerer Titel wird NICHT committet (updateBlock lehnt ihn ab).
 const title = ref('')
 const confirmDelete = ref(false)
+const saveStatus = ref<{ ok: boolean; msg: string } | null>(null)
+const saving = ref(false)
 watch(
   () => currentBlock.value?.id,
   () => {
     title.value = currentBlock.value?.title ?? ''
     confirmDelete.value = false
+    saveStatus.value = null
   },
   { immediate: true },
 )
@@ -19,6 +29,18 @@ watch(
 function commitTitle(): void {
   const t = title.value.trim()
   if (t && t !== currentBlock.value?.title) updateCurrentBlock({ title: t })
+}
+async function saveAsBaustein(): Promise<void> {
+  if (!currentBlock.value || saving.value) return
+  saving.value = true
+  try {
+    const r = await addBlockFromExisting(currentBlock.value)
+    saveStatus.value = r.ok
+      ? { ok: true, msg: `Als Baustein „${r.title}" gespeichert.` }
+      : { ok: false, msg: `Speichern abgelehnt: ${r.error}` }
+  } finally {
+    saving.value = false
+  }
 }
 function doDelete(): void {
   if (currentBlock.value) removeBlock(currentBlock.value.id)
@@ -48,11 +70,15 @@ function doDelete(): void {
       />
       <span class="text-sm">optionaler Block (nur on-demand im Einsatz)</span>
     </label>
-    <div class="flex gap-2">
+    <div v-if="!hideBlockActions" class="flex flex-wrap gap-2">
       <button class="btn btn-sm" type="button" @click="duplicateBlock(currentBlock.id)">Block duplizieren</button>
+      <button class="btn btn-sm" type="button" :disabled="saving" @click="saveAsBaustein">Als Baustein speichern</button>
       <button class="btn btn-outline btn-error btn-sm" type="button" @click="confirmDelete = true">Block löschen</button>
     </div>
-    <div v-if="confirmDelete" role="alert" class="alert alert-warning flex-wrap gap-2 text-sm">
+    <p v-if="saveStatus && !hideBlockActions" role="status" aria-live="polite" class="text-xs" :class="saveStatus.ok ? 'text-success' : 'text-error'">
+      {{ saveStatus.msg }}
+    </p>
+    <div v-if="confirmDelete && !hideBlockActions" role="alert" class="alert alert-warning flex-wrap gap-2 text-sm">
       <span>Block „{{ currentBlock.title }}" löschen?</span>
       <span class="flex gap-2">
         <button class="btn btn-error btn-xs" type="button" @click="doDelete">Löschen</button>

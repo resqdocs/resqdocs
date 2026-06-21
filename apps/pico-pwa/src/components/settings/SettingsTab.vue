@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useStorage } from '@/storage/useStorage'
+import { useAppVersion } from '@/composables/useAppVersion'
 import { usePznLibrary } from '@/medications/usePznLibrary'
 import { PZN_DICTIONARY_ENABLED } from '@/medications/featureFlags'
 import AppSettingsSection from './AppSettingsSection.vue'
@@ -27,6 +28,9 @@ import OpenSourceSection from './OpenSourceSection.vue'
  */
 const { loadSettings } = useStorage()
 const lib = usePznLibrary()
+
+// Version + Build-Nummer für die dezente Fußzeile (nativ aus App.getInfo(), Web-Fallback Version).
+const { display: appVersion } = useAppVersion()
 
 // Eintragszahl async (SQLite, ~317k): kein In-Memory-Voll-Spiegel. Beim Start und bei
 // jeder Rückkehr aus der Bibliotheks-Seite frisch laden.
@@ -83,5 +87,8 @@ watch(page, (p) => {
     <InfoHelpSection />
     <LegalSection />
     <OpenSourceSection />
+
+    <!-- Dezente Versions-/Build-Anzeige (nativ „X.Y.Z (Build)", Web nur „X.Y.Z"). -->
+    <p class="mt-1 text-center text-xs text-base-content/40">ResQDocs {{ appVersion }}</p>
   </div>
 </template>

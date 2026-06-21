@@ -1,10 +1,30 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useCreatorSession } from '@/composables/useCreatorSession'
+import { ref, computed } from 'vue'
+import { useCreatorSessionCtx } from '@/composables/creatorSessionContext'
 import { POINT_TYPES } from '@resqdocs/protocol-core/creator/creator.mjs'
+import type { ValidationIssue } from '@resqdocs/protocol-core/creator/creator.mjs'
 
-const { currentBlock, selectedPointId, selectPoint, addPoint, duplicatePoint, removePoint, movePoint } =
-  useCreatorSession()
+const { currentBlock, selectedPointId, selectPoint, addPoint, duplicatePoint, removePoint, movePoint, validation } =
+  useCreatorSessionCtx()
+
+/**
+ * Feldscharfe Zuordnung (#2b): Befunde aus validation.issues dem verursachenden
+ * Punkt zuordnen. Punkt-ids sind protokollweit eindeutig; zusätzlich gegen die
+ * aktuelle Block-id geprüft. Nur Anzeige — keine eigene Validierungslogik.
+ */
+const issuesByPoint = computed(() => {
+  const map = new Map<string, ValidationIssue[]>()
+  for (const it of validation.value?.issues ?? []) {
+    if (!it.pointId || (it.blockId && it.blockId !== currentBlock.value?.id)) continue
+    const list = map.get(it.pointId) ?? []
+    list.push(it)
+    map.set(it.pointId, list)
+  }
+  return map
+})
+function pointIssues(p: { id?: string }): ValidationIssue[] {
+  return (p.id && issuesByPoint.value.get(p.id)) || []
+}
 
 const TYPE_LABELS: Record<string, string> = {
   field: 'Feld',
@@ -52,6 +72,14 @@ function pointLabel(p: { type?: string; title?: string; label?: string; key?: st
           <span class="badge badge-ghost badge-sm mr-2 shrink-0">{{ TYPE_BADGE[p.type as string] ?? p.type }}</span>
           {{ pointLabel(p) }}
         </button>
+        <!-- Feldscharfer Validierungs-Marker (#2b): nur Anzeige, dezent -->
+        <span
+          v-if="pointIssues(p).length"
+          class="badge badge-xs shrink-0"
+          :class="pointIssues(p).some((x) => x.severity === 'error') ? 'badge-error' : 'badge-warning'"
+          :title="pointIssues(p).map((x) => x.message).join('\n')"
+          :aria-label="`${pointIssues(p).length} Validierungs-Hinweis(e): ${pointIssues(p).map((x) => x.message).join('; ')}`"
+        >!</span>
         <!-- Umsortieren (#46) -->
         <button class="btn btn-ghost btn-xs px-1" type="button" :disabled="i === 0" :aria-label="`${pointLabel(p)} nach oben`" @click="movePoint(p.id as string, 'up')">↑</button>
         <button class="btn btn-ghost btn-xs px-1" type="button" :disabled="i === (currentBlock?.points?.length ?? 0) - 1" :aria-label="`${pointLabel(p)} nach unten`" @click="movePoint(p.id as string, 'down')">↓</button>

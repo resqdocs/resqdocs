@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useCreatorSession } from '@/composables/useCreatorSession'
+import { useCreatorSessionCtx } from '@/composables/creatorSessionContext'
 import { VARIABLE_TYPES } from '@resqdocs/protocol-core/creator/creator.mjs'
 
-const { selected, selectedVariableId, selectVariable, addVariable } = useCreatorSession()
+const { selected, selectedVariableId, selectVariable, addVariable } = useCreatorSessionCtx()
 
 const TYPE_LABELS: Record<string, string> = { select: 'Auswahl', boolean: 'Ja/Nein', text: 'Text', number: 'Zahl' }
 const newType = ref<string>('select')

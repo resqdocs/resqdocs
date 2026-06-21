@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useCreatorSession } from '@/composables/useCreatorSession'
+import { useCreatorSessionCtx } from '@/composables/creatorSessionContext'
 
-const { selected, selectedBlockId, selectBlock, addBlock, moveBlock } = useCreatorSession()
+const { selected, selectedBlockId, selectBlock, addBlock, moveBlock } = useCreatorSessionCtx()
 </script>
 
 <template>

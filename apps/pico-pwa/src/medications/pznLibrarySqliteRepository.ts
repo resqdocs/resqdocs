@@ -66,6 +66,20 @@ export interface PznSqliteRepository {
   ): Promise<void>
 }
 
+/**
+ * Gibt dem Renderer einen Frame, damit die Import-Progressbar tatsächlich neu zeichnet
+ * (#218). Im WebView via requestAnimationFrame; sonst (node:test) Fallback setTimeout(0) —
+ * beide nur ein kurzer Macrotask-Yield. Wird in bulkPut NUR ZWISCHEN committeten Chunk-
+ * Transaktionen aufgerufen (nach dem awaiteten client.transaction → Verbindung idle),
+ * nie innerhalb einer offenen Transaktion.
+ */
+function yieldToPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => resolve())
+    else setTimeout(resolve, 0)
+  })
+}
+
 export function createPznLibrarySqliteRepository(client: SqlClient): PznSqliteRepository {
   async function pageQuery(offset: number, limit: number, dir: 'asc' | 'desc' = 'asc'): Promise<PznEntry[]> {
     const ord = dir === 'desc' ? 'DESC' : 'ASC'
@@ -175,10 +189,12 @@ export function createPznLibrarySqliteRepository(client: SqlClient): PznSqliteRe
       await client.run(`DELETE FROM ${TABLE}`)
     },
 
-    async bulkPut(entries, mode, chunkSize = 5000, onProgress) {
+    async bulkPut(entries, mode, chunkSize = 1000, onProgress) {
       // In Blöcken à chunkSize, jeder Block in EINER Transaktion (über client.transaction
       // — kein manuelles BEGIN, das mit der Plugin-Auto-Transaktion kollidieren würde):
       // bei 317k entscheidend, sonst committet SQLite jede Zeile einzeln (fsync pro Zeile).
+      // chunkSize 1000 (statt 5000): feinere Fortschritts-Schritte (#218) ohne Transaktions-
+      // strukturänderung — je Block weiterhin eine eigene, vollständig committete Transaktion.
       // mode: overwrite = Upsert (ON CONFLICT DO UPDATE, FTS-Trigger-konsistent, Import
       // gewinnt) / skip = INSERT OR IGNORE (Duplikate überspringen). KEIN INSERT OR REPLACE
       // (würde ohne recursive_triggers den DELETE-Trigger überspringen → stale FTS).
@@ -204,6 +220,9 @@ export function createPznLibrarySqliteRepository(client: SqlClient): PznSqliteRe
           }
         })
         onProgress?.(Math.min(i + chunkSize, entries.length), entries.length)
+        // Paint-Yield ZWISCHEN den Chunks (#218): nach dem COMMIT, Verbindung idle — lässt die
+        // Progressbar zeichnen, statt erst am Import-Ende. Insert-/Transaktion/FTS unverändert.
+        await yieldToPaint()
       }
     },
   }

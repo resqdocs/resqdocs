@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useCreatorSession } from '@/composables/useCreatorSession'
+import { useCreatorSessionCtx } from '@/composables/creatorSessionContext'
 import PointForm from './PointForm.vue'
 import VisibleIfEditor from './VisibleIfEditor.vue'
 
-const { currentPoint } = useCreatorSession()
+const { currentPoint } = useCreatorSessionCtx()
 </script>
 
 <template>

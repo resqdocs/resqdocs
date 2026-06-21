@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { reactive, computed, ref, watch } from 'vue'
-import { useCreatorSession } from '@/composables/useCreatorSession'
+import { useCreatorSessionCtx } from '@/composables/creatorSessionContext'
 
 /**
  * Variablen-Formular (#13-D). Typ wird nur angezeigt (Typwechsel nach Anlage
  * nicht vorgesehen, #13-A). Löschen ist BLOCKIERT, solange Referenzen bestehen
  * (konservativer Default laut #13-Spec) — betroffene Referenzen werden gezeigt.
  */
-const { currentVariable, updateCurrentVariable, removeVariable, variableReferences } = useCreatorSession()
+const { currentVariable, updateCurrentVariable, removeVariable, variableReferences } = useCreatorSessionCtx()
 
 interface OptionRow { value: string; label: string }
 const form = reactive<{ label: string; default: string; bool: boolean; grammar: boolean; options: OptionRow[] }>(

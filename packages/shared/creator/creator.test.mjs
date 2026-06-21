@@ -283,6 +283,78 @@ test("assertValidProtocolDraft: leerer Titel + doppelte ids + ungültiger Typ", 
   assert.ok(res.errors.some((e) => /Ungültiger Punkt-Typ/.test(e)));
 });
 
+// --- #2b: feldscharfe issues (additiv, errors/warnings unverändert) ---
+
+test("issues: findingGroup ohne key trägt blockId+pointId+field='key'", () => {
+  const p = {
+    schemaVersion: "0.2.0", id: "p", title: "T",
+    blocks: [{ id: "b1", title: "B", points: [{ type: "findingGroup", id: "fg1", key: "", findings: [] }] }],
+  };
+  const res = assertValidProtocolDraft(p);
+  assert.equal(res.valid, false);
+  // errors-String wie bisher (unverändert)
+  assert.ok(res.errors.some((e) => e === "findingGroup 'fg1' ohne key"));
+  // issues: feldscharf
+  const it = (res.issues ?? []).find((x) => x.message === "findingGroup 'fg1' ohne key");
+  assert.ok(it, "issue für fehlenden key vorhanden");
+  assert.equal(it.severity, "error");
+  assert.equal(it.blockId, "b1");
+  assert.equal(it.pointId, "fg1");
+  assert.equal(it.field, "key");
+});
+
+test("issues: dangling visibleIf-Punktreferenz ist Warnung mit pointId-Ort", () => {
+  const p = {
+    schemaVersion: "0.2.0", id: "p", title: "T",
+    blocks: [{
+      id: "b1", title: "B",
+      points: [{ type: "field", id: "a", label: "A", visibleIf: { point: "weg", truthy: true } }],
+    }],
+  };
+  const res = assertValidProtocolDraft(p);
+  // String-Warnung unverändert
+  assert.ok(res.warnings.some((w) => /unbekannten Punkt 'weg'/.test(w)));
+  const it = (res.issues ?? []).find((x) => /unbekannten Punkt 'weg'/.test(x.message));
+  assert.ok(it, "issue für dangling point vorhanden");
+  assert.equal(it.severity, "warning");
+  assert.equal(it.blockId, "b1");
+  assert.equal(it.pointId, "a"); // der Punkt, dessen visibleIf dangelt
+  assert.equal(it.field, "visibleIf");
+});
+
+test("issues: ungültige Eingabe (null) → Parität errors/issues im Early-Return", () => {
+  const res = assertValidProtocolDraft(null);
+  assert.equal(res.valid, false);
+  assert.deepEqual(res.errors, ["Protokoll fehlt/ungültig"]);
+  assert.equal((res.issues ?? []).length, 1);
+  assert.equal(res.issues[0].message, "Protokoll fehlt/ungültig");
+  assert.equal(res.issues[0].severity, "error");
+});
+
+test("issues: gültiges Protokoll → keine issues; valide Felder unverändert", () => {
+  const res = assertValidProtocolDraft(seed);
+  assert.equal(res.valid, true);
+  assert.deepEqual(res.issues, []);
+});
+
+test("issues: errors/warnings bleiben byte-gleich; issues ist additive Parallelspur", () => {
+  const bad = {
+    schemaVersion: "0.2.0", id: "p", title: "",
+    blocks: [{ id: "b", title: "", points: [{ type: "findingGroup", id: "fg", key: "", findings: [] }] }],
+  };
+  const res = assertValidProtocolDraft(bad);
+  // jede issue-Message existiert auch als String in errors bzw. warnings (gleiche Texte)
+  for (const it of res.issues ?? []) {
+    const bucket = it.severity === "error" ? res.errors : res.warnings;
+    assert.ok(bucket.includes(it.message), `Message in ${it.severity}-Liste: ${it.message}`);
+  }
+  // Anzahl error-issues == errors, warning-issues == warnings (1:1 additiv)
+  const errIssues = (res.issues ?? []).filter((x) => x.severity === "error").length;
+  const warnIssues = (res.issues ?? []).filter((x) => x.severity === "warning").length;
+  assert.equal(errIssues, res.errors.length);
+  assert.equal(warnIssues, res.warnings.length);
+});
+
 // --- Export / Import gegen Fixture-Seed ---
 // Die Inhalts-Tests laufen gegen ein STABILES Fixture (__fixtures__/sample-protocol.json),
 // damit Änderungen an der ausgelieferten Beispiel-Vorlage (Funktionsdemo) sie nicht brechen.

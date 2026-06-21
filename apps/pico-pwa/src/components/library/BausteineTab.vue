@@ -5,9 +5,9 @@ import BlockLibrarySection from './BlockLibrarySection.vue'
 import SnippetLibrarySection from './SnippetLibrarySection.vue'
 
 /**
- * Textbausteine-Tab (#13-F3, MVP-Shell; bis #138 "Bausteine"). Verwaltet neutrale, wiederverwendbare
- * Bausteine + Snippets in der lokalen Library. Einfügen in Protokolle ist ein
- * Folge-Slice. Keine Patientendaten, kein caseState.
+ * Textbausteine-Tab (#13-F3; bis #138 "Bausteine"). Verwaltet neutrale, wiederverwendbare
+ * Bausteine + Snippets in der lokalen Library. Eingefügt werden sie im Protokoll-Editor
+ * über "Aus Textbausteinen einfügen" (Copy-on-insert). Keine Patientendaten, kein caseState.
  */
 const { libraryMode, reload } = useBausteine()
 onMounted(reload)
@@ -32,7 +32,7 @@ onMounted(reload)
     <SnippetLibrarySection />
 
     <p class="text-xs text-base-content/50">
-      Einfügen eines Bausteins in ein Protokoll (Copy-on-insert) folgt in einem späteren Slice.
+      Einfügen ins Protokoll: im Protokoll-Editor über „Aus Textbausteinen einfügen" (als Kopie).
     </p>
   </div>
 </template>
