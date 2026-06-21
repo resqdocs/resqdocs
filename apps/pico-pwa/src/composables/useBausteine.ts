@@ -1,7 +1,14 @@
 import { ref } from 'vue'
 import { useStorage } from '@/storage/useStorage'
-import { createUniqueId } from '@resqdocs/protocol-core/creator/creator.mjs'
+import { createUniqueId, assertValidProtocolDraft, SCHEMA_VERSION } from '@resqdocs/protocol-core/creator/creator.mjs'
+import type { Block } from '@resqdocs/protocol-core/creator/creator.mjs'
 import type { LibraryBlock, LibrarySnippet } from '@/storage/types'
+import { buildLibraryBlock, applyBlockEdit } from './bausteineMapping'
+
+/** Ergebnis von addBlockFromExisting — dezenter Status für die UI. */
+export type SaveBausteinOutcome =
+  | { ok: true; title: string }
+  | { ok: false; error: string }
 
 /**
  * Bausteine-/Snippet-Bibliothek (#13-F3). Geteilter Singleton-Zustand, geladen
@@ -36,6 +43,46 @@ function create() {
     const ts = nowIso()
     await repo.saveBlock({ id, title, block: { id: createUniqueId('blk', new Set()), title, points: [] }, createdAt: ts, updatedAt: ts })
     await reload()
+  }
+  /**
+   * Variante B (#13-F4-Authoring): einen GEFÜLLTEN Protokoll-Block (mit Punkten)
+   * als Baustein ablegen. Tiefe Kopie über buildLibraryBlock; repo.saveBlock
+   * validiert (isValidLibraryBlock → wirft bei ungültigem Block, z. B.
+   * findingGroup ohne key) — der Fehler wird als Outcome zurückgegeben, nie still.
+   */
+  async function addBlockFromExisting(block: Block): Promise<SaveBausteinOutcome> {
+    const repo = storage.getLibraryRepository()
+    const entry = buildLibraryBlock(block, blocks.value.map((b) => b.id), nowIso())
+    // Vorab konkret validieren → spezifische Meldung statt nur "Baustein ungültig"
+    // (z. B. "findingGroup 'grp' ohne key"). repo.saveBlock validiert zusätzlich.
+    const check = assertValidProtocolDraft({ schemaVersion: SCHEMA_VERSION, id: '_lib', title: '_lib', blocks: [entry.block] })
+    if (!check.valid) return { ok: false, error: check.errors[0] ?? 'Block ungültig.' }
+    try {
+      await repo.saveBlock(entry)
+      await reload()
+      return { ok: true, title: entry.title }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+  /**
+   * Variante A: einen bestehenden Baustein mit dem im Editor bearbeiteten Block
+   * aktualisieren (id/createdAt bleiben). Vorab konkret validiert (spezifische
+   * Meldung); repo.saveBlock validiert zusätzlich. Fehler als Outcome, nie still.
+   */
+  async function updateBlockContent(id: string, block: Block): Promise<SaveBausteinOutcome> {
+    const cur = blocks.value.find((b) => b.id === id)
+    if (!cur) return { ok: false, error: 'Baustein nicht gefunden.' }
+    const entry = applyBlockEdit(cur, block, nowIso())
+    const check = assertValidProtocolDraft({ schemaVersion: SCHEMA_VERSION, id: '_lib', title: '_lib', blocks: [entry.block] })
+    if (!check.valid) return { ok: false, error: check.errors[0] ?? 'Block ungültig.' }
+    try {
+      await storage.getLibraryRepository().saveBlock(entry)
+      await reload()
+      return { ok: true, title: entry.title }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
   }
   async function renameBlock(id: string, title: string): Promise<void> {
     const cur = blocks.value.find((b) => b.id === id)
@@ -73,6 +120,8 @@ function create() {
     libraryMode: storage.libraryMode,
     reload,
     addBlock,
+    addBlockFromExisting,
+    updateBlockContent,
     renameBlock,
     deleteBlock,
     addSnippet,

@@ -24,10 +24,26 @@ export const POINT_TYPES: PointType[]
 export const VARIABLE_TYPES: VariableType[]
 export const SIMPLE_OPS: SimpleOp[]
 
+/**
+ * Feldscharfer Validierungs-Befund (#2b): trägt zusätzlich zum Text den
+ * bekannten Ort (Block/Punkt/Finding/Feld). Optionale Parallel-Spur zu
+ * errors/warnings — diese Strings bleiben unverändert.
+ */
+export interface ValidationIssue {
+  message: string
+  severity: 'error' | 'warning'
+  blockId?: string
+  pointId?: string
+  findingId?: string
+  field?: string
+}
+
 export interface ValidationResult {
   valid: boolean
   errors: string[]
   warnings: string[]
+  /** Additiv (#2b): feldscharfe Befunde parallel zu errors/warnings. */
+  issues?: ValidationIssue[]
 }
 
 export interface VariableReference {

@@ -44,6 +44,7 @@ import type { LibraryBlock, LibrarySnippet } from '@/storage/types'
 import {
   createSimpleVisibleIf,
   ensureProtocolPointIds,
+  type Protocol,
   type Block,
   type Point,
   type Variable,
@@ -72,8 +73,21 @@ function blockIds(p: { blocks?: Block[] } | null): string[] {
   return (p?.blocks ?? []).map((b) => b.id)
 }
 
-function create() {
-  const session = reactive<CreatorSession>(initCreatorSession([standardprotokoll]))
+/**
+ * Optionen für eine Session-Instanz.
+ * - persist (default true): Auto-Persist-Watch + Restore aus creator.session.
+ *   FALSE = isolierte Scratch-Session (Variante A, Baustein-Editor): KEIN Watch,
+ *   KEIN Restore → der echte creator.session-Stand bleibt unberührt.
+ * - seed (default [standardprotokoll]): initiale Protokolle der Session.
+ */
+interface CreateSessionOptions {
+  persist?: boolean
+  seed?: Protocol[]
+}
+
+function create(opts: CreateSessionOptions = {}) {
+  const persist = opts.persist !== false
+  const session = reactive<CreatorSession>(initCreatorSession(opts.seed ?? [standardprotokoll]))
   // Mutationen/Transformationen bekommen den ROHEN Zustand (toRaw): die pure
   // Schicht klont via structuredClone, und das wirft auf reactive-Proxies
   // DataCloneError (bug-089/#40). Reads (computed) bleiben auf `session`
@@ -297,18 +311,24 @@ function create() {
       restoring = false
     }
   }
-  void restore()
-
-  let saveTimer: ReturnType<typeof setTimeout> | null = null
-  watch(
-    () => session.protocols,
-    () => {
-      if (restoring) return
-      if (saveTimer) clearTimeout(saveTimer)
-      saveTimer = setTimeout(() => { void savePersistedSession(raw()) }, 800)
-    },
-    { deep: true },
-  )
+  // Persistenz/Restore NUR für die echte App-Session. Scratch-Sessions
+  // (persist:false) registrieren KEINEN Watch und restoren NICHT → sie können
+  // den gespeicherten creator.session-Stand nicht verändern.
+  if (persist) {
+    void restore()
+    let saveTimer: ReturnType<typeof setTimeout> | null = null
+    watch(
+      () => session.protocols,
+      () => {
+        if (restoring) return
+        if (saveTimer) clearTimeout(saveTimer)
+        saveTimer = setTimeout(() => { void savePersistedSession(raw()) }, 800)
+      },
+      { deep: true },
+    )
+  } else {
+    restoring = false // ohne Restore sofort "live"; mangels Watch ohne Persist-Wirkung
+  }
 
   resetSelection()
 
@@ -382,7 +402,10 @@ function defaultPointInput(type: string): Partial<Point> & { type: string } {
     case 'finding':
       return { type, label: 'Neuer Befund', normal: '' }
     case 'findingGroup':
-      return { type, key: '', label: 'Neue Gruppe', findings: [{ label: '', normal: '' }] }
+      // key 'Neu' = valide-by-default (analog PC-Editor): beim Anlegen kein
+      // sofortiger "ohne key"-Fehler; leert der Nutzer ihn, markiert der
+      // feldscharfe 2b-Marker den Punkt weiterhin.
+      return { type, key: 'Neu', label: 'Neue Gruppe', findings: [{ label: '', normal: '' }] }
     case 'list':
       return { type, label: 'Neue Liste', entries: [] }
     case 'text':
@@ -404,6 +427,16 @@ function defaultVariableInput(type: string): Partial<Variable> & { type: string 
     default:
       return { type: 'text', label: 'Neue Variable' }
   }
+}
+
+/**
+ * Erzeugt eine EIGENE Session-Instanz (nicht der Singleton). Für die isolierte
+ * Scratch-Session des Baustein-Editors: createCreatorSession({ persist: false,
+ * seed: [wrappedBausteinProtokoll] }). Mit persist:false kein Auto-Persist/Restore
+ * → der echte creator.session-Stand bleibt unberührt.
+ */
+export function createCreatorSession(opts: CreateSessionOptions) {
+  return create(opts)
 }
 
 export function useCreatorSession() {

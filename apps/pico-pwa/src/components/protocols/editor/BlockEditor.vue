@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { useCreatorSession } from '@/composables/useCreatorSession'
+import { useCreatorSessionCtx } from '@/composables/creatorSessionContext'
 import BlockForm from './BlockForm.vue'
 import PointList from './PointList.vue'
 import PointEditor from './PointEditor.vue'
 import VisibleIfEditor from './VisibleIfEditor.vue'
 
-const { currentBlock } = useCreatorSession()
+/** hideBlockActions an BlockForm durchreichen (Baustein-Editor, Variante A). */
+withDefaults(defineProps<{ hideBlockActions?: boolean }>(), { hideBlockActions: false })
+
+const { currentBlock } = useCreatorSessionCtx()
 </script>
 
 <template>
   <section v-if="currentBlock" class="card bg-base-100 shadow">
     <div class="card-body gap-3 p-4">
-      <BlockForm />
+      <BlockForm :hide-block-actions="hideBlockActions" />
       <VisibleIfEditor target="block" />
       <div class="divider my-0" />
       <PointList />

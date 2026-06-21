@@ -5,10 +5,10 @@ import { useCreatorSession } from '@/composables/useCreatorSession'
 import type { LibraryBlock, LibrarySnippet } from '@/storage/types'
 
 /**
- * „Aus Library einfügen" (#13-F4). Fügt gespeicherte neutrale Bausteine/Snippets
- * als KOPIE ins ausgewählte Protokoll ein (kein Live-Link, kein Auto-Save). Liest
- * die Library über useBausteine, fügt über useCreatorSession ein — keine
- * SQLite-Direktnutzung. Keine Patientendaten.
+ * „Aus Textbausteinen einfügen" (#13-F4). Fügt gespeicherte neutrale Bausteine/
+ * Snippets als KOPIE ins ausgewählte Protokoll ein (kein Live-Link, kein
+ * Auto-Save). Liest den Textbausteine-Vorrat über useBausteine, fügt über
+ * useCreatorSession ein — keine SQLite-Direktnutzung. Keine Patientendaten.
  */
 const { blocks, snippets, reload } = useBausteine()
 const { selected, selectedBlockId, insertLibraryBlock, insertLibrarySnippet } = useCreatorSession()
@@ -17,6 +17,8 @@ const status = ref<{ kind: 'ok' | 'err'; msg: string } | null>(null)
 const target = ref<string>('')
 
 const protocolBlocks = computed(() => selected.value?.blocks ?? [])
+// Nichts gespeichert → optionales Werkzeug statt großer leerer Karte.
+const isEmpty = computed(() => !blocks.value.length && !snippets.value.length)
 
 onMounted(reload)
 
@@ -37,9 +39,18 @@ function onInsertSnippet(s: LibrarySnippet): void {
 </script>
 
 <template>
-  <section class="card bg-base-100 shadow">
+  <!-- Leerer Vorrat: dezenter, einklappbarer Hinweis statt großer Karte (optionales Werkzeug) -->
+  <details v-if="isEmpty" class="rounded-lg border border-base-300 bg-base-100 px-3 py-2 text-sm">
+    <summary class="cursor-pointer select-none text-base-content/70">Aus Textbausteinen einfügen</summary>
+    <p class="mt-1 text-xs text-base-content/60">
+      Lege im Tab „Textbausteine" wiederverwendbare Blöcke oder Snippets an, um sie hier per Klick in deine
+      Vorlage einzufügen.
+    </p>
+  </details>
+
+  <section v-else class="card bg-base-100 shadow">
     <div class="card-body gap-3 p-4">
-      <h3 class="font-semibold">Aus Library einfügen</h3>
+      <h3 class="font-semibold">Aus Textbausteinen einfügen</h3>
       <p class="text-xs text-base-content/60">
         Bausteine/Snippets werden als Kopie eingefügt (kein Live-Link). Nur neutrale Vorlagen — keine
         Patientendaten.
@@ -53,7 +64,7 @@ function onInsertSnippet(s: LibrarySnippet): void {
             <span class="flex-1 truncate text-sm">{{ b.title }}</span>
             <button class="btn btn-xs" type="button" @click="onInsertBlock(b)">Einfügen</button>
           </li>
-          <li v-if="!blocks.length" class="px-1 text-sm text-base-content/60">Keine Bausteine in der Library.</li>
+          <li v-if="!blocks.length" class="px-1 text-sm text-base-content/60">Noch keine Blöcke im Tab „Textbausteine".</li>
         </ul>
       </div>
 
@@ -76,7 +87,7 @@ function onInsertSnippet(s: LibrarySnippet): void {
               <span class="flex-1 truncate text-sm">{{ s.title }}</span>
               <button class="btn btn-xs" type="button" @click="onInsertSnippet(s)">Einfügen</button>
             </li>
-            <li v-if="!snippets.length" class="px-1 text-sm text-base-content/60">Keine Snippets in der Library.</li>
+            <li v-if="!snippets.length" class="px-1 text-sm text-base-content/60">Noch keine Snippets im Tab „Textbausteine".</li>
           </ul>
         </template>
       </div>

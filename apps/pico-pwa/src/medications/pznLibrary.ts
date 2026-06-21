@@ -294,24 +294,40 @@ export function addManyDecoupled(lib: PznLibrary, rawPzns: string[]): PznLibrary
   return out
 }
 
-/** Baut eine Bibliothek aus einer Eintragsliste (z. B. allSorted() eines Backends) — sanitisiert. */
+/**
+ * Baut eine Bibliothek aus einer Eintragsliste (z. B. allSorted() eines Backends) — sanitisiert.
+ * Befüllt EIN Ergebnis-Objekt in einem Durchlauf (O(n)). Bewusst NICHT `withEntry` im Loop:
+ * dessen `{...map}`-Kopie pro Eintrag wäre O(n²) (~Minuten-Freeze bei ~65k). Ergebnis identisch
+ * (Last-Wins bei gleich normalisierter PZN wie beim Spread).
+ */
 export function fromEntries(entries: PznEntry[]): PznLibrary {
-  let lib = emptyLibrary()
+  const out: Record<string, PznEntryData> = {}
   for (const e of entries) {
     const pzn = normalizePzn(e.pzn)
     if (!pzn) continue
-    lib = withEntry(lib, pzn, {
+    out[pzn] = {
       wirkstoff: sanitizeWirkstoff(e.wirkstoff),
       label: sanitizeLabel(e.label),
       category: sanitizeCategory(e.category),
       note: sanitizeNote(e.note),
-    })
+    }
   }
-  return lib
+  return { version: 2, entries: out }
 }
 
 /** Export-Wert eines Eintrags: kompakt als String, wenn NUR eine Bezeichnung vorliegt. */
-type ExportedEntry = string | { wirkstoff: string; label: string; category: string; note: string }
+export type ExportedEntry = string | { wirkstoff: string; label: string; category: string; note: string }
+
+/**
+ * Export-Wert eines EINZELNEN Eintrags (kompakt als String, wenn nur Bezeichnung;
+ * sonst Objekt). Gemeinsame Quelle für exportLibrary UND den gestreamten Export
+ * (#197) — beide MÜSSEN identische Werte erzeugen (kein Format-Drift).
+ */
+export function exportValue(e: PznEntry): ExportedEntry {
+  return e.wirkstoff === '' && e.category === '' && e.note === ''
+    ? e.label
+    : { wirkstoff: e.wirkstoff, label: e.label, category: e.category, note: e.note }
+}
 
 /**
  * Export: NUR Version + PZN→Eintrag, sortiert; keine Metadaten/Linkage. Einträge mit
@@ -320,11 +336,7 @@ type ExportedEntry = string | { wirkstoff: string; label: string; category: stri
  */
 export function exportLibrary(lib: PznLibrary): { version: 2; entries: Record<string, ExportedEntry> } {
   const entries: Record<string, ExportedEntry> = {}
-  for (const e of listSorted(lib)) {
-    entries[e.pzn] = e.wirkstoff === '' && e.category === '' && e.note === ''
-      ? e.label
-      : { wirkstoff: e.wirkstoff, label: e.label, category: e.category, note: e.note }
-  }
+  for (const e of listSorted(lib)) entries[e.pzn] = exportValue(e)
   return { version: 2, entries }
 }
 
@@ -336,13 +348,17 @@ export function parseImport(raw: unknown): PznLibrary | null {
   if (!raw || typeof raw !== 'object') return null
   const o = raw as { entries?: unknown }
   if (!o.entries || typeof o.entries !== 'object') return null
-  let lib = emptyLibrary()
+  // EIN Ergebnis-Objekt in einem Durchlauf befüllen (O(n)). NICHT `withEntry` im Loop:
+  // dessen `{...map}`-Kopie pro Eintrag wäre O(n²) (~2,17 Mrd. Kopien bei 65k → Minuten-
+  // Freeze, synchron im Main-Thread vor dem ersten Import-Fortschritt). Ergebnis identisch:
+  // bei gleich normalisierter PZN gewinnt wie beim Spread der spätere Eintrag (Last-Wins).
+  const entries: Record<string, PznEntryData> = {}
   for (const [k, v] of Object.entries(o.entries as Record<string, unknown>)) {
     const pzn = normalizePzn(k)
     if (!pzn) continue
-    lib = withEntry(lib, pzn, toEntryData(v))
+    entries[pzn] = toEntryData(v)
   }
-  return lib
+  return { version: 2, entries }
 }
 
 /** Konflikt-Strategie beim Import (Nutzerwahl VOR der Dateiauswahl). */
@@ -365,10 +381,14 @@ export function importMerge(
   incoming: PznLibrary,
   mode: ImportMode = 'overwrite',
 ): PznLibrary {
-  let out = lib
+  // Bestehende Bibliothek EINMAL kopieren, dann die Import-Einträge hineinschreiben (O(n)).
+  // NICHT `withEntry` im Loop (dessen Vollkopie pro Eintrag wäre O(n²)). Die Skip-Prüfung
+  // gegen das wachsende `entries` ist identisch zur alten gegen `out`: `incoming`-Keys sind
+  // eindeutig, eine PZN steckt also nur dann darin, wenn sie schon in `lib` war.
+  const entries: Record<string, PznEntryData> = { ...lib.entries }
   for (const e of listSorted(incoming)) {
-    if (mode === 'skip' && e.pzn in out.entries) continue // Duplikat überspringen
-    out = withEntry(out, e.pzn, { wirkstoff: e.wirkstoff, label: e.label, category: e.category, note: e.note })
+    if (mode === 'skip' && e.pzn in entries) continue // Duplikat überspringen
+    entries[e.pzn] = { wirkstoff: e.wirkstoff, label: e.label, category: e.category, note: e.note }
   }
-  return out
+  return { version: 2, entries }
 }

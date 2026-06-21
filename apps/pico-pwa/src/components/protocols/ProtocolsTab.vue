@@ -86,7 +86,7 @@ const { session, selected, isExample, validation, json, select, duplicate, renam
         <!-- Geführter Editor (#13-C): Blöcke & Punkte -->
         <ProtocolEditor />
 
-        <!-- Aus Library einfügen (#13-F4): Copy-on-insert -->
+        <!-- Aus Textbausteinen einfügen (#13-F4): Copy-on-insert -->
         <InsertFromLibrary />
       </template>
 

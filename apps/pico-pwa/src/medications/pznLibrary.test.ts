@@ -10,6 +10,7 @@ import {
   emptyLibrary,
   exportLibrary,
   filterEntries,
+  fromEntries,
   getEntry,
   getLabel,
   importMerge,
@@ -163,6 +164,29 @@ test("importMerge mode 'skip': Duplikate überspringen, nur fehlende ergänzen",
   assert.equal(e.category, 'Analgetikum (Nicht-Opioid)')
   assert.equal(getLabel(lib, '00524306'), 'Fehlte') // fehlender Eintrag ergänzt
   assert.equal(count(lib), 2)
+})
+
+// O(n)-Umbau der Massen-Builder (parseImport/fromEntries): Ergebnis identisch zur alten
+// withEntry-Schleife — insbesondere die Last-Wins-Auflösung bei kollidierender PZN, die der
+// Spread `{...map,[pzn]:v}` lieferte. Sichert ab, dass der Performance-Fix nichts am Inhalt ändert.
+test('parseImport: kollidierende normalisierte PZN -> Last-Wins wie beim Spread (O(n)-Umbau)', () => {
+  // '1234' (numerischer Key, iteriert ZUERST) und '00001234' normalisieren beide auf '00001234'.
+  // Iterationsreihenfolge: '1234' -> dann '00001234'. Letzter (= '00001234' -> 'A') gewinnt.
+  const lib = parseImport({ version: 2, entries: { '00001234': 'A', '1234': 'B' } })!
+  assert.equal(count(lib), 1)
+  assert.equal(getLabel(lib, '00001234'), 'A')
+})
+
+test('fromEntries: doppelte normalisierte PZN -> letzter Eintrag gewinnt (O(n)-Umbau, Last-Wins)', () => {
+  // Array-Reihenfolge bleibt erhalten: '1234' zuerst, '00001234' danach -> letzter gewinnt.
+  const lib = fromEntries([
+    { pzn: '1234', wirkstoff: '', label: 'A', category: '', note: '' },
+    { pzn: '00001234', wirkstoff: '', label: 'B', category: '', note: '' },
+  ])
+  assert.equal(count(lib), 1)
+  assert.equal(getLabel(lib, '00001234'), 'B')
+  // Sanitizing/Reihenfolge unberührt: listSorted bleibt nach PZN sortiert.
+  assert.deepEqual(listSorted(lib).map((e) => e.pzn), ['00001234'])
 })
 
 test('upsertEntry/getEntry: Bezeichnung + Kategorie + Bemerkung; gezieltes Überschreiben, Felder bleiben', () => {

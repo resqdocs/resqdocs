@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import { useCreatorSession } from '@/composables/useCreatorSession'
+import { useCreatorSessionCtx } from '@/composables/creatorSessionContext'
 import { TOOL_LABELS } from '@/tools/registry'
 
 /**
@@ -11,7 +11,7 @@ import { TOOL_LABELS } from '@/tools/registry'
  * Typwechsel nach Anlage ist NICHT möglich (durch #13-A abgelehnt) — der Typ
  * wird nur angezeigt.
  */
-const { currentPoint, updateCurrentPoint } = useCreatorSession()
+const { currentPoint, updateCurrentPoint } = useCreatorSessionCtx()
 
 interface FindingRow {
   id?: string

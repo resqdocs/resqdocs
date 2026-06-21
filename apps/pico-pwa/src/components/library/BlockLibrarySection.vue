@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useBausteine } from '@/composables/useBausteine'
+import BausteinEditor from './BausteinEditor.vue'
 
-/** Bausteine (wiederverwendbare neutrale Blöcke). Anlegen/umbenennen/löschen + read-only JSON. */
+/** Bausteine (wiederverwendbare neutrale Blöcke). Anlegen/umbenennen/löschen,
+ *  read-only JSON + voll bearbeiten (Variante A). */
 const { blocks, addBlock, renameBlock, deleteBlock } = useBausteine()
 const openJson = ref<string | null>(null)
+const editingId = ref<string | null>(null)
 
 function toggleJson(id: string): void {
   openJson.value = openJson.value === id ? null : id
+}
+function toggleEdit(id: string): void {
+  editingId.value = editingId.value === id ? null : id
 }
 </script>
 
@@ -27,6 +33,7 @@ function toggleJson(id: string): void {
               aria-label="Baustein-Titel"
               @change="renameBlock(b.id, ($event.target as HTMLInputElement).value)"
             />
+            <button class="btn btn-ghost btn-xs" type="button" @click="toggleEdit(b.id)">{{ editingId === b.id ? 'Schließen' : 'Bearbeiten' }}</button>
             <button class="btn btn-ghost btn-xs" type="button" @click="toggleJson(b.id)">JSON</button>
             <button class="btn btn-ghost btn-xs text-error" type="button" @click="deleteBlock(b.id)">✕</button>
           </div>
@@ -34,6 +41,14 @@ function toggleJson(id: string): void {
             v-if="openJson === b.id"
             class="mt-1 max-h-60 overflow-auto whitespace-pre-wrap break-words rounded bg-base-200 p-2 text-xs"
           >{{ JSON.stringify(b.block, null, 2) }}</pre>
+          <!-- Voll-Editor (Variante A): isolierte Scratch-Session, frisch pro Öffnen (key) -->
+          <BausteinEditor
+            v-if="editingId === b.id"
+            :key="b.id"
+            :library-block="b"
+            class="mt-2"
+            @close="editingId = null"
+          />
         </li>
         <li v-if="!blocks.length" class="px-1 py-1 text-sm text-base-content/60">Noch keine Bausteine.</li>
       </ul>
