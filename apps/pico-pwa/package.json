@@ -1,7 +1,7 @@
 {
   "name": "@resqdocs/pico-pwa",
   "private": true,
-  "version": "0.2.0",
+  "version": "1.0.0",
   "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
@@ -10,8 +10,8 @@
     "preview": "vite preview",
     "ios": "bash scripts/open-ios.sh",
     "android": "bash scripts/open-android.sh",
-    "test:shared": "node --test ../../packages/shared/creator/creator.test.mjs ../../packages/shared/renderer/render.test.mjs ../../packages/shared/renderer/runtime.test.mjs ../../packages/shared/medplan/medplan.test.mjs ../../packages/shared/tools/scores.test.mjs",
-    "test:app": "node --test --experimental-strip-types --experimental-sqlite src/composables/caseState.test.ts src/composables/temporaryCaseDraft.test.ts src/composables/temporaryCaseDraftRepository.test.ts src/composables/temporaryCaseDraftController.test.ts src/composables/creatorSession.test.ts src/composables/creatorSessionStore.test.ts src/composables/bausteineMapping.test.ts src/composables/useDisclaimer.test.ts src/composables/useUsageNotice.test.ts src/storage/storage.test.ts src/storage/sqlite/sqliteLibraryRepository.test.ts src/pico/picoClient.test.ts src/pico/firmwareUpdate.test.ts src/pico/firmwareNotice.test.ts src/pico/firmwareArtifacts.test.ts src/medplan/useMedplanScan.test.ts src/medplan/scannerMode.test.ts src/medications/useMedicationLookup.test.ts src/medications/pznNotice.test.ts src/medications/packageScan.test.ts src/medications/pznLibrary.test.ts src/medications/pznExport.test.ts src/medications/pznLibraryRepository.test.ts src/medications/pznLibrarySqliteRepository.test.ts src/utils/gzip.test.ts",
+    "test:shared": "node --test --experimental-strip-types --experimental-sqlite ../../packages/shared/creator/creator.test.mjs ../../packages/shared/renderer/render.test.mjs ../../packages/shared/renderer/runtime.test.mjs ../../packages/shared/medplan/medplan.test.mjs ../../packages/shared/tools/scores.test.mjs ../../packages/shared/creator.test.ts ../../packages/shared/render.test.ts ../../packages/shared/fill.test.ts ../../packages/shared/ids.test.ts ../../packages/shared/deviations.test.ts ../../packages/shared/library.test.ts ../../packages/shared/templateIO.test.ts ../../packages/shared/caseDraft.test.ts ../../packages/shared/functions/registry.test.ts",
+    "test:app": "node --test --experimental-strip-types --experimental-sqlite src/composables/caseState.test.ts src/composables/temporaryCaseDraft.test.ts src/composables/temporaryCaseDraftRepository.test.ts src/composables/temporaryCaseDraftController.test.ts src/composables/creatorSession.test.ts src/composables/creatorSessionStore.test.ts src/composables/bausteineMapping.test.ts src/composables/useDisclaimer.test.ts src/composables/useUsageNotice.test.ts src/storage/storage.test.ts src/storage/sqlite/sqliteLibraryRepository.test.ts src/pico/picoClient.test.ts src/pico/firmwareUpdate.test.ts src/pico/firmwareNotice.test.ts src/pico/firmwareArtifacts.test.ts src/medplan/useMedplanScan.test.ts src/medplan/scannerMode.test.ts src/medications/useMedicationLookup.test.ts src/medications/pznNotice.test.ts src/medications/packageScan.test.ts src/medications/pznLibrary.test.ts src/medications/pznExport.test.ts src/medications/pznLibraryRepository.test.ts src/medications/pznLibrarySqliteRepository.test.ts src/utils/gzip.test.ts src/utils/displayName.test.ts src/rebuild/protocolRepository.test.ts",
     "test": "npm run test:shared && npm run test:app"
   },
   "dependencies": {

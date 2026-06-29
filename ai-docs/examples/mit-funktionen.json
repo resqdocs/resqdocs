@@ -1,0 +1,30 @@
+{
+  "schema": "resqdocs-protocol",
+  "version": 1,
+  "tree": {
+    "type": "container",
+    "id": "transportprotokoll",
+    "title": "Transportprotokoll",
+    "children": [
+      {
+        "type": "container",
+        "id": "stammdaten",
+        "title": "Stammdaten",
+        "showTitle": true,
+        "children": [
+          { "type": "field", "id": "einsatznummer", "title": "Einsatznummer", "showTitle": true }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "medikation",
+        "title": "Medikation & Ärzte",
+        "showTitle": true,
+        "children": [
+          { "type": "function", "id": "medplan", "title": "Medikamentenplan", "showTitle": true, "functionKind": "medikamentenplan" },
+          { "type": "function", "id": "aerzteliste", "title": "Behandelnde Ärzte", "showTitle": true, "functionKind": "aerzte", "config": { "rowLayout": "block" } }
+        ]
+      }
+    ]
+  }
+}

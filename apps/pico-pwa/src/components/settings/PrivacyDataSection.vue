@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useStorage } from '@/storage/useStorage'
 import { useBausteine } from '@/composables/useBausteine'
 import { useTemporaryCaseDraft } from '@/composables/useTemporaryCaseDraft'
+import { useReworkCaseDraft } from '@/rebuild/useReworkCaseDraft'
 import {
   CASE_DRAFT_TTL_MIN_HOURS,
   CASE_DRAFT_TTL_MAX_HOURS,
@@ -17,6 +18,7 @@ import {
 const storage = useStorage()
 const bausteine = useBausteine()
 const draft = useTemporaryCaseDraft()
+const reworkDraft = useReworkCaseDraft() // Rework-Einsatzentwurf (eigener Key) - muss mit-geloescht werden
 
 const TTL_OPTIONS = Array.from(
   { length: CASE_DRAFT_TTL_MAX_HOURS - CASE_DRAFT_TTL_MIN_HOURS + 1 },
@@ -44,10 +46,12 @@ async function run(action: Pending): Promise<void> {
     if (action === 'settings' || action === 'all') {
       await storage.resetSettings()
     }
-    // Temporären Einsatzentwurf verwerfen (#173): bei „nur Entwurf" und „Alles".
+    // Temporären Einsatzentwurf verwerfen (#173): bei „nur Entwurf" und „Alles". BEIDE Drafts -
+    // der alte dev-Key UND der Rework-Key (rework.case.draft) - sonst bleiben Patientendaten liegen.
     if (action === 'draft' || action === 'all') {
       await draft.discard()
       draft.clearNotice()
+      await reworkDraft.remove()
     }
     status.value = { kind: 'ok', msg: 'Erledigt.' }
   } catch (e) {

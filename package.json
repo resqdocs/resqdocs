@@ -1,0 +1,13 @@
+{
+  "name": "resqdocs-root",
+  "private": true,
+  "scripts": {
+    "gen:ai-docs": "node scripts/ai-docs/gen-ai-docs.mjs",
+    "gen:ai-docs:verify": "node scripts/ai-docs/verify-ai-docs.mjs",
+    "gen:ai-docs:check": "node scripts/ai-docs/gen-ai-docs.mjs && node scripts/ai-docs/verify-ai-docs.mjs && git diff --exit-code ai-docs/generated/schema.json ai-docs/generated/version.json ai-docs/generated/prompt.de.md ai-docs/generated/prompt.en.md ai-docs/generated/doc.de.md ai-docs/generated/doc.en.md"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "ts-json-schema-generator": "^2.9.0"
+  }
+}

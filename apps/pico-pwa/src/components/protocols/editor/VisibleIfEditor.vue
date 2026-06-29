@@ -3,6 +3,7 @@ import { reactive, computed, watch } from 'vue'
 import { useCreatorSessionCtx } from '@/composables/creatorSessionContext'
 import type { ConditionInput } from '@/composables/useCreatorSession'
 import { isSimpleVisibleIf } from '@resqdocs/protocol-core/creator/creator.mjs'
+import { displayName } from '@/utils/displayName'
 
 /**
  * Einfacher visibleIf-Editor (#13-D): genau EINE Bedingung an Block oder Punkt.
@@ -29,7 +30,7 @@ const points = computed(() => {
           out.push({ id: f.id, label: `${(p as { key?: string }).key ?? ''}: ${f.label ?? f.id}` })
         }
       } else if (p.id) {
-        out.push({ id: p.id, label: (p.label as string) || (p.content as string)?.slice(0, 24) || (p.type as string) })
+        out.push({ id: p.id, label: displayName(p) })
       }
     }
   }

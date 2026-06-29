@@ -78,12 +78,14 @@ export function createPicoClient(http: HttpAdapter, baseUrl: string | (() => str
       if (!isOk(res.status)) throw new Error(`Status fehlgeschlagen (HTTP ${res.status})`)
       return parseStatus(res.data)
     },
-    async typeText({ text, os }) {
+    async typeText({ text, os, delayMs }) {
       // Text NUR im Body — nie in der URL. Über der Firmware-Grenze chunkt die
       // App in sequenzielle Requests (Spec S2: Gesamtlänge unbegrenzt).
+      // delayMs nur mitschicken, wenn gesetzt (sonst Firmware-Default 60 → rückwärtskompatibel).
+      const extra = typeof delayMs === 'number' ? { delayMs } : {}
       let typedTotal = 0
       for (const chunk of chunkByCodePoints(text, TYPE_CHUNK_LIMIT)) {
-        const res = await http.post(`${base()}/type`, { text: chunk, os }, { connectTimeout: CONNECT_TIMEOUT, readTimeout: READ_TIMEOUT })
+        const res = await http.post(`${base()}/type`, { text: chunk, os, ...extra }, { connectTimeout: CONNECT_TIMEOUT, readTimeout: READ_TIMEOUT })
         if (!isOk(res.status)) {
           const partial = typedTotal > 0 ? `, ${typedTotal} Zeichen bereits getippt` : ''
           throw new Error(`Senden fehlgeschlagen (HTTP ${res.status}${partial})`)

@@ -1,5 +1,9 @@
 # Einsatz-Composer — Laufzeit-/Einsatzansicht
 
+> ⚠️ **Beschreibt den Pre-Rework-Stand** (altes Modell + alter Renderer `render.mjs`/`runtime.mjs`).
+> App + Package sind seit 2026-06-22 reworked (Git-Tag `alterstand`); aktuelle Wahrheit für
+> App+Package: [`docs/rework/`](rework/README.md).
+>
 > Status: Entwurf (0.x). Bezug: SCHEMA.md (S1), docs/app-ia.md (S4), docs/data-flow.md (S3).
 > Renderer: `packages/shared/renderer/render.mjs` (#12).
 

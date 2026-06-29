@@ -4,21 +4,7 @@
 // So sind sie gegen einen Fake-SQL-Client (node:test) prüfbar, während das echte
 // native SQLite (@capacitor-community/sqlite) in capacitorSqlClient.ts liegt.
 
-export interface SqlRow {
-  [column: string]: unknown
-}
-
-export interface SqlClient {
-  /** DDL/Statement ohne Parameter/Rückgabe (z. B. CREATE TABLE). */
-  execute(statement: string): Promise<void>
-  /** Schreibendes Statement mit Parametern (INSERT/UPDATE/DELETE). */
-  run(statement: string, values?: unknown[]): Promise<void>
-  /** Lesendes Statement → Zeilen. */
-  query(statement: string, values?: unknown[]): Promise<SqlRow[]>
-  /**
-   * Bündelt mehrere Schreibvorgänge in EINER Transaktion (Performance bei
-   * Massen-Inserts, Atomarität: alles-oder-nichts). Die in `work` ausgeführten
-   * run()-Aufrufe gehören zu dieser Transaktion; bei Fehler wird zurückgerollt.
-   */
-  transaction(work: () => Promise<void>): Promise<void>
-}
+// Der Vertrag lebt jetzt im Kern (@resqdocs/protocol-core/adapters) - EINE Quelle der Wahrheit.
+// Hier nur re-exportiert, damit die bestehenden App-Importe (capacitorSqlClient, Migrationen,
+// Repositories) unveraendert bleiben.
+export type { SqlClient, SqlRow } from '@resqdocs/protocol-core/adapters'

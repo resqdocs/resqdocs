@@ -12,6 +12,7 @@ export const LIBRARY_PROTOCOLS_TABLE = 'library_protocols'
 export const LIBRARY_BLOCKS_TABLE = 'library_blocks'
 export const LIBRARY_SNIPPETS_TABLE = 'library_snippets'
 export const PZN_ENTRIES_TABLE = 'pzn_entries'
+export const REWORK_PROTOCOLS_TABLE = 'rework_protocols'
 
 export interface Migration {
   version: number
@@ -94,6 +95,31 @@ export const MIGRATIONS: Migration[] = [
       `CREATE TRIGGER IF NOT EXISTS pzn_fts_ad AFTER DELETE ON pzn_entries BEGIN INSERT INTO pzn_fts(pzn_fts, rowid, wirkstoff, label, category, note) VALUES ('delete', old.rowid, old.wirkstoff, old.label, old.category, old.note); END;`,
       `CREATE TRIGGER IF NOT EXISTS pzn_fts_au AFTER UPDATE ON pzn_entries BEGIN INSERT INTO pzn_fts(pzn_fts, rowid, wirkstoff, label, category, note) VALUES ('delete', old.rowid, old.wirkstoff, old.label, old.category, old.note); INSERT INTO pzn_fts(rowid, wirkstoff, label, category, note) VALUES (new.rowid, new.wirkstoff, new.label, new.category, new.note); END;`,
       `INSERT INTO pzn_fts(pzn_fts) VALUES('rebuild');`,
+    ],
+  },
+  {
+    // Rework: eigene Tabelle fuer die Rework-Protokoll-Bibliothek - Container-Baeume
+    // (rebuild/model.ts) als JSON. BEWUSST getrennt von library_protocols (dev-Protocol-Format);
+    // beide koexistieren in derselben DB, die Formate duerfen sich NICHT vermischen.
+    // Einzelnes CREATE TABLE (kein internes ";\n") -> Android-Splitter-sicher.
+    version: 6,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS rework_protocols (
+         id TEXT PRIMARY KEY,
+         title TEXT NOT NULL,
+         protocol_json TEXT NOT NULL,
+         created_at TEXT NOT NULL,
+         updated_at TEXT NOT NULL
+       );`,
+    ],
+  },
+  {
+    // Reihenfolge der Rework-Vorlagen persistieren (Slice 3): eigene Spalte statt Sortierung ueber
+    // updated_at -> stabile, vom Nutzer kontrollierbare Reihenfolge. ALTER ist via duplicate-column-
+    // Guard (runMigrations) gegen Doppellauf abgesichert; einzelnes Statement -> Android-splitter-sicher.
+    version: 7,
+    statements: [
+      `ALTER TABLE rework_protocols ADD COLUMN order_index INTEGER NOT NULL DEFAULT 0;`,
     ],
   },
 ]

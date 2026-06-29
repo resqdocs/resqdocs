@@ -17,7 +17,8 @@
 // (Hausarzt/Facharzt; Default = nicht dokumentieren).
 import { computed, ref } from 'vue'
 import type { MedplanAussteller } from '@resqdocs/protocol-core/medplan/medplan.d.mts'
-import type { MedikamenteRow } from '@resqdocs/protocol-core/renderer/render.mjs'
+// MedikamenteRow aus dem NEUEN Kern (SSOT); strukturgleich zum alten render.mjs-Typ, den medplan.mjs liefert.
+import type { MedikamenteRow } from '@resqdocs/protocol-core/model'
 
 /** Rollen-Auswahl fuer den Aussteller (#144): '' = nicht dokumentieren (Default). */
 export type AusstellerRolle = '' | 'Hausarzt' | 'Facharzt'
