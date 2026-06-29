@@ -59,7 +59,11 @@ watch(page, (p) => {
     <p class="text-sm text-base-content/60">
       App, Bridge/Gerät, Backup, Hilfe und Rechtliches.
     </p>
+
+    <p class="px-1 text-xs font-semibold uppercase tracking-wide text-base-content/50">App &amp; Darstellung</p>
     <AppSettingsSection />
+
+    <p class="mt-2 px-1 text-xs font-semibold uppercase tracking-wide text-base-content/50">Gerät &amp; Daten</p>
     <DeviceSection />
     <!-- Altes PZN-Wörterbuch (Netz-Download) — deaktiviert (IFA/DSGVO), nur sichtbar wenn Flag an. -->
     <PznSection v-if="PZN_DICTIONARY_ENABLED" />
@@ -84,11 +88,16 @@ watch(page, (p) => {
 
     <ScannerSection />
     <PrivacyDataSection />
+
+    <p class="mt-2 px-1 text-xs font-semibold uppercase tracking-wide text-base-content/50">Info &amp; Rechtliches</p>
     <InfoHelpSection />
     <LegalSection />
     <OpenSourceSection />
 
-    <!-- Dezente Versions-/Build-Anzeige (nativ „X.Y.Z (Build)", Web nur „X.Y.Z"). -->
-    <p class="mt-1 text-center text-xs text-base-content/40">ResQDocs {{ appVersion }}</p>
+    <!-- Dezente Fusszeile: Version/Build (nativ „X.Y.Z (Build)", Web nur „X.Y.Z") + Herausgeber + Entwickler. -->
+    <p class="mt-1 text-center text-xs leading-relaxed text-base-content/40">
+      ResQDocs {{ appVersion }}<br />
+      Herausgeber: [Anbieter] · Entwicklung: [Name]
+    </p>
   </div>
 </template>

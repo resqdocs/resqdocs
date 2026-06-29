@@ -1,0 +1,43 @@
+{
+  "schema": "resqdocs-protocol",
+  "version": 1,
+  "tree": {
+    "type": "container",
+    "id": "einsatzprotokoll",
+    "title": "Einsatzprotokoll",
+    "showTitle": true,
+    "children": [
+      {
+        "type": "container",
+        "id": "vitalwerte",
+        "title": "Vitalwerte",
+        "showTitle": true,
+        "collapsible": true,
+        "children": [
+          { "type": "field", "id": "rr", "title": "RR", "showTitle": true },
+          { "type": "field", "id": "puls", "title": "Puls", "showTitle": true, "inline": true },
+          { "type": "field", "id": "spo2", "title": "SpO2", "showTitle": true, "inline": true }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "anamnese",
+        "title": "Anamnese",
+        "showTitle": true,
+        "excludable": true,
+        "children": [
+          { "type": "field", "id": "schmerz", "title": "Schmerz", "showTitle": true, "options": ["kein", "leicht", "mittel", "stark"], "allowCustom": true },
+          { "type": "field", "id": "vorerkrankungen", "title": "Vorerkrankungen", "showTitle": true, "multiline": true }
+        ]
+      },
+      {
+        "type": "function",
+        "id": "medikamente",
+        "title": "Medikamentenplan",
+        "showTitle": true,
+        "functionKind": "medikamentenplan",
+        "config": { "rowLayout": "inline", "rowSeparator": " · " }
+      }
+    ]
+  }
+}

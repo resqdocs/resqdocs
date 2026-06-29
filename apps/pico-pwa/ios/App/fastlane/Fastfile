@@ -17,9 +17,10 @@ platform :ios do
     )
 
     # Build-Nummer auf TestFlight-Stand + 1 (vermeidet Kollisionen).
+    # initial_build_number: 0 -> bei brandneuer App (noch 0 Builds) startet die erste Abgabe sauber bei 1.
     increment_build_number(
       xcodeproj: "App.xcodeproj",
-      build_number: latest_testflight_build_number(api_key: api_key) + 1
+      build_number: latest_testflight_build_number(api_key: api_key, initial_build_number: 0) + 1
     )
 
     build_app(

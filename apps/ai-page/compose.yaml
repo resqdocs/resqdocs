@@ -1,0 +1,9 @@
+# Deployment der KI-Doku-Seite. Container spricht HTTP auf 8080; ai.resqdocs.app + TLS liefert der
+# Reverse Proxy davor (extern :8085). dist VORHER lokal bauen (npm run build, monorepo).
+services:
+  ai-page:
+    build: .
+    image: resqdocs-ai-page:latest
+    restart: unless-stopped
+    ports:
+      - "8085:8080"

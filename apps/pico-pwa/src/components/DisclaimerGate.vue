@@ -13,12 +13,12 @@ const { ready, needsAck, acknowledge } = useDisclaimer()
   <Teleport to="body">
     <div
       v-if="ready && needsAck"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-base-300/80 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] backdrop-blur-sm"
+      class="overlay-backdrop--strong fixed inset-0 z-50 flex items-center justify-center p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="disclaimer-title"
     >
-      <div class="card max-h-full w-full max-w-lg overflow-y-auto bg-base-100 shadow-xl">
+      <div class="overlay-surface--strong card max-h-full w-full max-w-lg overflow-y-auto">
         <div class="card-body gap-4 p-6">
           <div class="flex items-center gap-3">
             <img src="/brand.svg" alt="ResQDocs" class="brand-logo brand-logo-light h-8 w-auto" />

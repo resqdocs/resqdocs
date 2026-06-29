@@ -1,0 +1,10 @@
+/* Tailwind CSS v4 - CSS-first. KEINE externen Fonts/CDNs (Netzwerk-Policy, wie landing-page). */
+@import "tailwindcss";
+
+:root {
+  --navy: #1b2c56;
+  --coral: #f05349;       /* Marke/Akzent */
+  --coral-text: #c73a28;  /* dunkler fuer kleinen Text (WCAG AA) */
+}
+html { scroll-behavior: smooth; }
+body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }

@@ -1,0 +1,31 @@
+{
+  "schema": "resqdocs-protocol",
+  "version": 1,
+  "tree": {
+    "type": "container",
+    "id": "akutprotokoll",
+    "title": "Akutprotokoll",
+    "children": [
+      {
+        "type": "container",
+        "id": "patient",
+        "title": "Patientenangaben",
+        "showTitle": true,
+        "children": [
+          { "type": "field", "id": "alter", "title": "Alter", "showTitle": true },
+          { "type": "field", "id": "geschlecht", "title": "Geschlecht", "showTitle": true, "options": ["männlich", "weiblich", "divers"] }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "befund",
+        "title": "Befund",
+        "showTitle": true,
+        "children": [
+          { "type": "field", "id": "bewusstsein", "title": "Bewusstsein", "showTitle": true, "default": "wach, orientiert" },
+          { "type": "field", "id": "anamnese", "title": "Anamnese", "showTitle": true, "multiline": true }
+        ]
+      }
+    ]
+  }
+}

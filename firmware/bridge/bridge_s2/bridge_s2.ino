@@ -9,7 +9,7 @@
     GET  /health  -> 200 "ok"                                   (text/plain)
     GET  /status  -> 200 { name, fwVersion, apiVersion, ready, defaultOs,
                            otaSupported }
-    POST /type    { text, os? }  -> 200 { typed } | 400 { error }   (Limit 16384)
+    POST /type    { text, os?, delayMs? } -> 200 { typed } | 400 { error } (Limit 16384)
     POST /config  { ssidId }     -> 200 { ok, restartRequired } | 400 { error }
     POST /ota/begin  { size, sha256, sig } -> 200 { ok, chunkMax } | Fehler
     POST /ota/chunk  { offset, dataB64 }   -> 200 { received } | Fehler
@@ -44,8 +44,8 @@
 
 using namespace rq;
 
-static const char* FW_VERSION  = "0.3.3";  // 0.3.2: AP-IP-Fix #132 (0.3.1 war der lokale Roundtrip-Test)
-static const char* API_VERSION = "0.1.0";
+static const char* FW_VERSION  = "0.3.4";  // 0.3.4: optionales delayMs in POST /type (Tippgeschwindigkeit)
+static const char* API_VERSION = "0.1.1";  // 0.1.1: POST /type akzeptiert optionales delayMs (abwaertskompatibel)
 static const char* AP_PREFIX   = "ResQDocs-";
 static const char* AP_PASS     = "resqdocs2026";  // fix/oeffentlich (S2)
 static const uint32_t TYPE_MAX_CHARS = 16384;     // S2: pro Request; App chunkt
@@ -58,6 +58,7 @@ static bool   ready = false;     // USB-HID initialisiert
 // Web -> Typer Puffer (Koexistenz-Seam): Handler fuellt, loop() tippt.
 static String pendingText;
 static volatile bool hasPending = false;
+static uint16_t pendingDelayMs = 60;  // Tippgeschwindigkeit (ms/Zeichen) des letzten /type-Requests
 static bool restartAp = false;   // /config: AP nach der Antwort neu starten
 static bool otaReboot = false;   // /ota/commit: Reboot nach der Antwort
 static bool otaAvailable = false;  // LittleFS gemountet (Flash-Split vorhanden)
@@ -130,6 +131,14 @@ static void handleType() {
   }
   String os;  // optional; fehlt -> win_de (S2)
   typerSetMode(jsonExtractString(body, "os", os) ? osFromString(os) : OsMode::WIN_DE);
+
+  // delayMs optional (Tippgeschwindigkeit, ms/Zeichen): fehlt -> 60 (abwaertskompatibel),
+  // defensiv auf 20–150 begrenzt (die App validiert ebenfalls).
+  uint32_t delayMs = 60, parsedDelay = 0;
+  if (jsonExtractUInt(body, "delayMs", parsedDelay)) {
+    delayMs = parsedDelay < 20 ? 20 : (parsedDelay > 150 ? 150 : parsedDelay);
+  }
+  pendingDelayMs = (uint16_t)delayMs;
 
   pendingText = text;   // KEIN Logging des Inhalts (kann Patientendaten enthalten)
   hasPending = true;
@@ -327,7 +336,7 @@ void loop() {
 
   if (hasPending) {
     hasPending = false;
-    typeUtf8(pendingText.c_str());
+    typeUtf8(pendingText.c_str(), pendingDelayMs);
     pendingText = "";      // Inhalt nicht vorhalten (transiente Durchleitung)
   }
 }
