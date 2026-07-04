@@ -48,6 +48,20 @@ test('#184: structuredRows trägt die Roh-PZN; Name-Overwrite behält die PZN', 
   assert.equal(s.draftRows.value[0].pzn, '2455874')
 })
 
+test('#262: setRowStaerke setzt die Wirkstärke; Name-Overwrite/Passthrough lässt sie stehen', () => {
+  const s = useMedplanScan()
+  s.ingest(EINSEITIG)
+  assert.equal(s.structuredRows.value[0].staerke, undefined)
+  s.setRowStaerke(0, '100 mg')
+  assert.equal(s.structuredRows.value[0].staerke, '100 mg')
+  s.updateRowName(0, 'ASS') // Name ändern darf die Stärke nicht verlieren
+  assert.equal(s.structuredRows.value[0].staerke, '100 mg')
+  assert.equal(s.structuredRows.value[0].name, 'ASS')
+  // draftRows (fürs Protokoll) tragen die Stärke weiter
+  assert.equal(s.draftRows.value[0].staerke, '100 mg')
+  s.reset()
+})
+
 test('mehrseitig: missingPages führt durch den Scan, Vollständigkeit erkannt', () => {
   const s = useMedplanScan()
   s.ingest(SEITE_1)
@@ -101,7 +115,7 @@ test('Entwurf bearbeiten/entfernen; draftText: eine Zeile je Medikament, Leeres 
 
 const MIT_ARZT =
   '<MP v="025" U="CC" l="de-DE"><P g="E" f="M"/>' +
-  '<A lanr="987654321" n="Praxis Dr. Demo" s="Weg 1" z="55278" c="Musterstadt" p="06733-123" e="x@y.z"/>' +
+  '<A lanr="987654321" n="Praxis Dr. Demo" s="Weg 1" z="96047" c="Bamberg" p="0951-123" e="x@y.z"/>' +
   '<S><M p="230272" m="1" du="1"/></S></MP>'
 
 test('Aussteller wird erkannt, aber NUR bei gewaehlter Rolle uebernommen (Default: nicht)', () => {
@@ -112,7 +126,7 @@ test('Aussteller wird erkannt, aber NUR bei gewaehlter Rolle uebernommen (Defaul
   assert.ok(!s.draftText.value.includes('Demo'), 'ohne Auswahl kein Arzt im Text')
   s.ausstellerRolle.value = 'Hausarzt'
   assert.ok(
-    s.draftText.value.startsWith('Hausarzt: Praxis Dr. Demo, Musterstadt, LANR 987654321, Tel. 06733-123\n'),
+    s.draftText.value.startsWith('Hausarzt: Praxis Dr. Demo, Bamberg, LANR 987654321, Tel. 0951-123\n'),
     s.draftText.value,
   )
   // Nicht gelesene A-Attribute duerfen nirgends auftauchen

@@ -49,6 +49,12 @@ export interface AppSettings {
    * lokal geloescht. Bereich 1–5 h, Default 3 h.
    */
   caseDraftTtlHours: number
+  /**
+   * Tippgeschwindigkeit der Pico-Bridge: Verzoegerung in MILLISEKUNDEN pro Zeichen,
+   * als delayMs an die Bridge geschickt. Kleiner = schneller. Bereich 20–150 ms,
+   * Default 60 (= bisheriger fester Firmware-Wert; ohne Zustimmung wird nichts schneller).
+   */
+  typingDelayMs: number
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -67,6 +73,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pznAutoCheck: false,
   scannerMode: 'webview_standard',
   caseDraftTtlHours: 3,
+  typingDelayMs: 60,
 }
 
 /** Neutraler, wiederverwendbarer Block (z. B. „Mitfahrtverweigerung"). KEINE Patientendaten. */
@@ -94,12 +101,8 @@ export interface LibraryState {
   snippets: LibrarySnippet[]
 }
 
-/** Minimaler Key-Value-Adapter (z. B. über @capacitor/preferences oder Fake). */
-export interface KeyValueAdapter {
-  get(key: string): Promise<string | null>
-  set(key: string, value: string): Promise<void>
-  remove(key: string): Promise<void>
-}
+/** Minimaler Key-Value-Adapter - Vertrag lebt im Kern (@resqdocs/protocol-core/adapters), hier re-exportiert. */
+export type { KeyValueAdapter } from '@resqdocs/protocol-core/adapters'
 
 export interface SettingsRepository {
   loadSettings(): Promise<AppSettings>

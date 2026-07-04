@@ -1,0 +1,84 @@
+{
+  "schema": "resqdocs-protocol",
+  "version": 1,
+  "tree": {
+    "type": "container",
+    "id": "einsatzprotokoll",
+    "title": "Einsatzprotokoll",
+    "showTitle": true,
+    "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+    "children": [
+      {
+        "type": "container",
+        "id": "vitalwerte",
+        "title": "Vitalwerte",
+        "showTitle": true,
+        "collapsible": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "field",
+            "id": "rr",
+            "title": "RR",
+            "showTitle": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "puls",
+            "title": "Puls",
+            "showTitle": true,
+            "inline": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "spo2",
+            "title": "SpO2",
+            "showTitle": true,
+            "inline": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "anamnese",
+        "title": "Anamnese",
+        "showTitle": true,
+        "excludable": true,
+        "blankLineBefore": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "field",
+            "id": "schmerz",
+            "title": "Schmerz",
+            "showTitle": true,
+            "options": ["kein", "leicht", "mittel", "stark"],
+            "allowCustom": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "vorerkrankungen",
+            "title": "Vorerkrankungen",
+            "showTitle": true,
+            "multiline": true,
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
+        ]
+      },
+      {
+        "type": "function",
+        "id": "medikamente",
+        "title": "Medikamentenplan",
+        "showTitle": true,
+        "functionKind": "medikamentenplan",
+        "blankLineBefore": true,
+        "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "config": { "rowLayout": "inline", "rowSeparator": " · " }
+      }
+    ]
+  }
+}

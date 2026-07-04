@@ -19,9 +19,15 @@
     scoring system table*. Chart: <https://www.rcp.ac.uk/media/2acdezkd/news2-chart-2_news-thresholds-and-triggers_0.pdf>
   - **SpO₂-Skala 2 nur** bei ärztlich dokumentierter Ziel-Sättigung 88-92 %
     (z. B. COPD) → RCP-2017, Abschnitt *Scale 2*.
-  - Risiko-/Trigger-Schwellen: aggregiert **0-4 niedrig**, **3 in einem
-    Einzelparameter → niedrig-mittel**, **5-6 mittel**, **≥7 hoch** →
-    RCP-2017, *Clinical response to NEWS triggers*.
+  - Risiko-/Trigger-Schwellen (RCP-2017, *Clinical response to NEWS triggers*):
+    aggregiert **0-4 niedrig**, **5-6 mittel**, **≥7 hoch**. RCP kennt zusätzlich
+    einen „red score": schöpft ein einzelner Vitalwert die vollen 3 Punkte aus
+    (z. B. Atemfrequenz ≤ 8/min), stuft RCP auf **niedrig-mittel** hoch, auch wenn
+    die Summe niedrig ist. **Bewusste App-Entscheidung (2026-07-03):** die
+    NEWS2-Score-Ausgabe stuft NUR nach dem Gesamtscore ein — ein extrem
+    entgleister Einzelwert ist im separat dokumentierten Vitalwert ohnehin
+    sichtbar; die Score-Ausgabe soll nur zeigen, was der Gesamtscore ergibt
+    (Score + Risiko niedrig/mittel/hoch).
 - **Volltext:** <https://www.rcp.ac.uk/media/a4ibkkbf/news2-final-report_0_0.pdf>
 
 ## LAMS (Los Angeles Motor Scale)

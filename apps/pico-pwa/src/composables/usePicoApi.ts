@@ -21,9 +21,10 @@ export function usePicoApi(options: PicoApiOptions = {}) {
   const baseUrl = (): string => options.host ?? storage.settings.picoBaseUrl
   const client = createPicoClient(capacitorHttpAdapter, baseUrl)
 
-  /** Sendet den Text an die Bridge (USB-HID). Text nur transient im Body. */
-  async function typeText(text: string, os: OsMode = 'win_de'): Promise<void> {
-    await client.typeText({ text, os })
+  /** Sendet den Text an die Bridge (USB-HID). Text nur transient im Body.
+   * delayMs = Tippgeschwindigkeit (ms/Zeichen) aus den Einstellungen; fehlt → Firmware-Default. */
+  async function typeText(text: string, os: OsMode = 'win_de', delayMs?: number): Promise<void> {
+    await client.typeText({ text, os, delayMs })
   }
 
   /** Prüft die Erreichbarkeit der Bridge (für die Verbindungsanzeige). */

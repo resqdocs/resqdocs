@@ -95,22 +95,40 @@ function create() {
     await reload()
   }
 
-  async function addSnippet(): Promise<void> {
-    const repo = storage.getLibraryRepository()
+  // Snippet-CRUD OPTIMISTISCH: snippets.value SOFORT (synchron, vor dem await) aktualisieren, dann OHNE
+  // reload() persistieren. reload() haengt nativ an echtem SQLite-Bridge-I/O (Macrotask) - das dazwischen
+  // liegende Fenster mit veralteter Liste verursachte Draft-Datenverlust + ID-Kollisionen (Verify bug-308/
+  // -309). Bei Persistenz-Fehler aus der DB zuruecksynchronisieren (reload).
+  async function addSnippet(): Promise<string> {
     const id = createUniqueId('snippet', new Set(snippets.value.map((s) => s.id)))
     const ts = nowIso()
-    await repo.saveSnippet({ id, title: 'Neues Snippet', text: '', createdAt: ts, updatedAt: ts })
-    await reload()
+    const snippet = { id, title: 'Neues Snippet', text: '', createdAt: ts, updatedAt: ts }
+    snippets.value = [...snippets.value, snippet]
+    try {
+      await storage.getLibraryRepository().saveSnippet(snippet)
+    } catch {
+      await reload()
+    }
+    return id // fuers Mode-in-place: der Aufrufer oeffnet die frisch angelegte Karte
   }
   async function updateSnippet(id: string, patch: { title?: string; text?: string }): Promise<void> {
     const cur = snippets.value.find((s) => s.id === id)
     if (!cur) return
-    await storage.getLibraryRepository().saveSnippet({ ...cur, ...patch })
-    await reload()
+    const updated = { ...cur, ...patch, updatedAt: nowIso() }
+    snippets.value = snippets.value.map((s) => (s.id === id ? updated : s))
+    try {
+      await storage.getLibraryRepository().saveSnippet(updated)
+    } catch {
+      await reload()
+    }
   }
   async function deleteSnippet(id: string): Promise<void> {
-    await storage.getLibraryRepository().deleteSnippet(id)
-    await reload()
+    snippets.value = snippets.value.filter((s) => s.id !== id) // optimistisch (kein reload-Fenster)
+    try {
+      await storage.getLibraryRepository().deleteSnippet(id)
+    } catch {
+      await reload()
+    }
   }
 
   return {

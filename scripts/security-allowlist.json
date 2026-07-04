@@ -248,6 +248,24 @@
       "file": "CHANGELOG.md",
       "term": "internal",
       "reason": "git-cliff-Changelog spiegelt die bereits oeffentliche Commit-Message 'remove internal app store listing doc'; neutrale Cleanup-Beschreibung, kein internes Material"
+    },
+    {
+      "file": "ai-docs/generated/version.json",
+      "term": "token",
+      "contains": "rd-fmt",
+      "reason": "Format-Fingerprint (rd-fmt-Hash) der generierten Doku, kein Secret/Auth-Token"
+    },
+    {
+      "file": "package.json",
+      "term": "private",
+      "contains": "\"private\": true",
+      "reason": "npm-Standardfeld gegen versehentliches Publish (Monorepo-Root + ai-page-Workspace)"
+    },
+    {
+      "file": "package.json",
+      "term": "prompt",
+      "contains": "prompt.de.md",
+      "reason": "Dateinamen der generierten Doku (prompt.de.md/prompt.en.md) im gen:ai-docs-Skript, kein KI-Prompt-Inhalt"
     }
   ]
 }

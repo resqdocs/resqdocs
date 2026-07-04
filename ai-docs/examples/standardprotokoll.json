@@ -1,0 +1,292 @@
+{
+  "schema": "resqdocs-protocol",
+  "version": 1,
+  "tree": {
+    "type": "container",
+    "id": "standardprotokoll",
+    "title": "Standardprotokoll",
+    "separator": ", ",
+    "children": [
+      {
+        "type": "container",
+        "id": "einsatz",
+        "title": "Einsatz",
+        "showTitle": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "field",
+            "id": "einsatzanlass",
+            "title": "Einsatzanlass",
+            "showTitle": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "situation",
+            "title": "Situation vor Ort",
+            "showTitle": true,
+            "multiline": true,
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "anamnese",
+        "title": "Anamnese",
+        "showTitle": true,
+        "collapsible": true,
+        "blankLineBefore": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "field",
+            "id": "beschwerden",
+            "title": "Aktuelle Beschwerden",
+            "showTitle": true,
+            "multiline": true,
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "allergien",
+            "title": "Allergien",
+            "showTitle": true,
+            "default": "keine bekannt",
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "vorerkrankungen",
+            "title": "Vorerkrankungen",
+            "showTitle": true,
+            "multiline": true,
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "medikation",
+        "title": "Medikation und Ärzte",
+        "showTitle": true,
+        "blankLineBefore": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "function",
+            "id": "medplan",
+            "title": "Medikamentenplan",
+            "showTitle": true,
+            "functionKind": "medikamentenplan",
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" },
+            "config": { "rowLayout": "block", "rowPrefix": "- " }
+          },
+          {
+            "type": "function",
+            "id": "aerzte",
+            "title": "Behandelnde Ärzte",
+            "showTitle": true,
+            "functionKind": "aerzte",
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" },
+            "config": { "rowLayout": "block", "rowPrefix": "- " }
+          }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "xabcde",
+        "title": "xABCDE",
+        "showTitle": true,
+        "blankLineBefore": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "field",
+            "id": "x_blutung",
+            "title": "x - Blutung",
+            "showTitle": true,
+            "options": ["keine", "vorhanden - gestillt", "vorhanden - nicht stillbar"],
+            "allowCustom": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "a_atemweg",
+            "title": "A - Atemweg",
+            "showTitle": true,
+            "options": ["frei", "gefährdet", "verlegt"],
+            "allowCustom": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "b_atmung",
+            "title": "B - Atmung",
+            "showTitle": true,
+            "options": ["unauffällig", "beschleunigt", "verlangsamt", "angestrengt"],
+            "allowCustom": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "b_auskultation",
+            "title": "B - Auskultation",
+            "inline": true,
+            "options": ["vesikulär beidseits", "abgeschwächt", "Rasselgeräusche", "Giemen"],
+            "allowCustom": true
+          },
+          {
+            "type": "field",
+            "id": "c_kreislauf",
+            "title": "C - Kreislauf",
+            "showTitle": true,
+            "options": ["stabil", "instabil"],
+            "allowCustom": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "c_haut",
+            "title": "Haut",
+            "showTitle": true,
+            "inline": true,
+            "noSeparatorBefore": true,
+            "default": "warm, rosig, trocken",
+            "heading": { "prefix": ". ", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "d_bewusstsein",
+            "title": "D - Bewusstsein",
+            "showTitle": true,
+            "options": ["wach, orientiert", "somnolent", "soporös", "bewusstlos"],
+            "allowCustom": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "d_pupillen",
+            "title": "Pupillen",
+            "showTitle": true,
+            "inline": true,
+            "noSeparatorBefore": true,
+            "default": "isokor, lichtreagibel",
+            "heading": { "prefix": ". ", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "e_untersuchung",
+            "title": "E - weitere Untersuchung",
+            "showTitle": true,
+            "default": "keine weiteren Auffälligkeiten",
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "messwerte",
+        "title": "Messwerte",
+        "showTitle": true,
+        "excludable": true,
+        "blankLineBefore": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "field",
+            "id": "rr",
+            "title": "RR",
+            "showTitle": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "puls",
+            "title": "Puls",
+            "showTitle": true,
+            "inline": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "spo2",
+            "title": "SpO2",
+            "showTitle": true,
+            "inline": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "bz",
+            "title": "BZ",
+            "showTitle": true,
+            "inline": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "temperatur",
+            "title": "Temperatur",
+            "showTitle": true,
+            "inline": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "massnahmen",
+        "title": "Maßnahmen und Verlauf",
+        "showTitle": true,
+        "blankLineBefore": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "field",
+            "id": "massnahmen_text",
+            "title": "Maßnahmen",
+            "showTitle": true,
+            "multiline": true,
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "uebergabe",
+        "title": "Übergabe",
+        "showTitle": true,
+        "blankLineBefore": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "field",
+            "id": "zielklinik",
+            "title": "Zielklinik",
+            "showTitle": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "uebergabe_an",
+            "title": "Übergabe an",
+            "showTitle": true,
+            "options": ["Notaufnahme", "Arzt/Ärztin", "Pflegepersonal"],
+            "allowCustom": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "bemerkungen",
+            "title": "Bemerkungen",
+            "showTitle": true,
+            "multiline": true,
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
+        ]
+      }
+    ]
+  }
+}

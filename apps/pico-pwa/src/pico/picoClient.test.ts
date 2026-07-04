@@ -72,6 +72,20 @@ test('typeText() sendet Body { text, os } und NICHT in der URL', async () => {
   assert.deepEqual(call.body, { text: 'Max Mustermann', os: 'ios' })
 })
 
+test('typeText() schickt delayMs im Body mit, wenn gesetzt (Tippgeschwindigkeit)', async () => {
+  const adapter = createFakeHttpAdapter(() => ({ status: 200, data: { typed: 3 } }))
+  const client = createPicoClient(adapter, BASE)
+  await client.typeText({ text: 'abc', os: 'win_de', delayMs: 30 })
+  assert.deepEqual(adapter.calls[0].body, { text: 'abc', os: 'win_de', delayMs: 30 })
+})
+
+test('typeText() ohne delayMs schickt KEIN delayMs (abwärtskompatibel → Firmware-Default 60)', async () => {
+  const adapter = createFakeHttpAdapter(() => ({ status: 200, data: { typed: 3 } }))
+  const client = createPicoClient(adapter, BASE)
+  await client.typeText({ text: 'abc', os: 'win_de' })
+  assert.ok(!('delayMs' in (adapter.calls[0].body as object)), 'fehlendes delayMs darf nicht im Body landen')
+})
+
 test('typeText() Fehler ohne Payload (kein Text in der Fehlermeldung)', async () => {
   const client = createPicoClient(createFakeHttpAdapter(() => ({ status: 400, data: { error: 'invalid_body' } })), BASE)
   await assert.rejects(

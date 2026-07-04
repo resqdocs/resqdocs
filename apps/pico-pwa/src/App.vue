@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch, watchEffect, nextTick } from 'vue'
-import ProtocolRuntimeView from '@/components/ProtocolRuntimeView.vue'
-import ProtocolsTab from '@/components/protocols/ProtocolsTab.vue'
 import BausteineTab from '@/components/library/BausteineTab.vue'
 import SettingsTab from '@/components/settings/SettingsTab.vue'
 import DisclaimerGate from '@/components/DisclaimerGate.vue'
@@ -9,10 +7,11 @@ import UsageNoticeModal from '@/components/UsageNoticeModal.vue'
 import FirmwareNoticeBanner from '@/components/FirmwareNoticeBanner.vue'
 import PznNoticeBanner from '@/components/PznNoticeBanner.vue'
 import TabGuide, { TAB_GUIDE_HINT_ID } from '@/components/TabGuide.vue'
-import { usePicoApi, type OsMode } from '@/composables/usePicoApi'
+import EinsatzView from '@/components/rebuild/EinsatzView.vue'
+import EditorView from '@/components/rebuild/EditorView.vue'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
-import { useFirmwareNotice } from '@/pico/useFirmwareNotice'
 import { useStorage } from '@/storage/useStorage'
+import { useProtocolPersistence } from '@/rebuild/protocolPersistence'
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { usePznNotice } from '@/medications/usePznNotice'
 import { PZN_DICTIONARY_ENABLED } from '@/medications/featureFlags'
@@ -21,10 +20,12 @@ import { useUsageNotice } from '@/composables/useUsageNotice'
 
 // App-Einstellungen laden + Storage-Backend wählen (nativ → SQLite, Web → Memory). Einmalig, idempotent.
 const storage = useStorage()
+const protocolPersistence = useProtocolPersistence()
 const pznLookup = useMedicationLookup()
 const pznNotice = usePznNotice()
 onMounted(async () => {
   void storage.initLibrary()
+  void protocolPersistence.init() // Rework-Bibliothek laden (nativ SQLite / Web Memory) + Auto-Save
   // Settings zuerst (await): der optionale Hintergrund-Check liest das Opt-in.
   await storage.loadSettings()
   // PZN-Wörterbuch (Netz-Download) ist deaktiviert (IFA/DSGVO) → nur bei aktivem
@@ -40,15 +41,6 @@ const usageNotice = useUsageNotice()
 watchEffect(() => {
   if (usageNotice.ready.value) usageNotice.checkFirstStart()
 })
-
-// Dauerhaft ausblendbarer Hinweis (#72-Mechanik): id landet in settings.dismissedHints
-// und ist über Einstellungen → „Alle Hinweise erneut anzeigen" wieder einblendbar.
-function dismissHint(id: string): void {
-  if (!storage.settings.dismissedHints.includes(id)) {
-    storage.settings.dismissedHints = [...storage.settings.dismissedHints, id]
-    void storage.saveSettings()
-  }
-}
 
 // ?-Symbol im Header (#138): blendet die Tab-Erklaerung (TabGuide) wieder ein.
 function reshowGuide(): void {
@@ -77,7 +69,7 @@ watchEffect(() => {
   }
 })
 
-// S4-Navigation: 4 Tabs. Gerät/Pico + Info/Hilfe liegen später unter Einstellungen.
+// S4-Navigation: 4 Tabs. Gerät/Pico + Info/Hilfe liegen unter Einstellungen.
 type Tab = 'einsatz' | 'protokolle' | 'bausteine' | 'einstellungen'
 const activeTab = ref<Tab>('einsatz')
 
@@ -98,19 +90,10 @@ function selectTab(tab: Tab): void {
   void nextTick(() => window.scrollTo({ top: scrollPositions[tab] })) // Ziel-Tab wiederherstellen
 }
 
-// Einsatz: fertige Klartext-Ausgabe + getrennte Bridge-/Verbindungs-Schicht.
-const output = ref('')
-const osMode = ref<OsMode>('win_de')
-const { typeText } = usePicoApi()
-const firmwareNotice = useFirmwareNotice()
-const sending = ref(false)
-const status = ref<string | null>(null)
-const statusIsError = ref(false)
-
-// Geteilter Verbindungszustand (#157): EINE Quelle für Header + Einsatz. Automatisch
-// geprüft beim App-Start und beim Öffnen des Einsatz-Tabs (sparsam, kein Polling).
-const { reachable, checking, check } = useBridgeConnection()
-onMounted(() => void check())
+// Geteilter Verbindungszustand (#157): EINE Quelle für den Header-Indikator. Beim
+// App-Start und beim Öffnen des Einsatz-Tabs sparsam geprüft (kein Polling).
+const { reachable, checking, check, startPolling, stopPolling } = useBridgeConnection()
+onMounted(() => { void check(); startPolling() })
 watch(activeTab, (t) => {
   if (t === 'einsatz') void check()
 })
@@ -118,10 +101,9 @@ watch(activeTab, (t) => {
 // Temporärer Einsatzentwurf (#173): Ablaufprüfung beim App-Resume und sparsam
 // periodisch, solange die App offen ist. `visibilitychange` deckt iOS/Android-
 // WebView (Vorder-/Hintergrund) UND Web ab — ohne zusätzliche Capacitor-Plugins.
-// Der App-Start wird vom Einsatz-Runtime (restore) selbst geprüft.
 const draft = useTemporaryCaseDraft()
 function onVisible(): void {
-  if (document.visibilityState === 'visible') void draft.checkExpiry()
+  if (document.visibilityState === 'visible') { void draft.checkExpiry(); void check() } // beim Zurückkehren Bridge gleich neu prüfen
 }
 const draftExpiryTimer = window.setInterval(() => {
   if (document.visibilityState === 'visible') void draft.checkExpiry()
@@ -130,45 +112,8 @@ onMounted(() => document.addEventListener('visibilitychange', onVisible))
 onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', onVisible)
   window.clearInterval(draftExpiryTimer)
+  stopPolling()
 })
-
-// Verantwortungs-Hinweis vor dem Übertragen: EINMAL pro Sitzung (flüchtiges Flag,
-// nicht persistiert → erscheint nach jedem App-Start beim ersten Senden erneut).
-const transferConfirmed = ref(false)
-const showTransferModal = ref(false)
-
-function sendToBridge(): void {
-  if (!transferConfirmed.value) {
-    showTransferModal.value = true
-    return
-  }
-  void doSend()
-}
-function confirmTransfer(): void {
-  transferConfirmed.value = true
-  showTransferModal.value = false
-  void doSend()
-}
-async function doSend(): Promise<void> {
-  sending.value = true
-  status.value = null
-  statusIsError.value = false
-  try {
-    await typeText(output.value, osMode.value)
-    status.value = 'An Bridge gesendet.'
-    reachable.value = true // erfolgreicher Kontakt → Indikator aktualisieren
-    void firmwareNotice.checkAfterContact() // erfolgreicher Kontakt (#134)
-  } catch (e) {
-    // Ursache klären: kein Funk-Kontakt vs. Bridge erreichbar, aber Fehler (#157).
-    const ok = await check(true)
-    statusIsError.value = true
-    status.value = ok
-      ? `Bridge erreichbar, aber Senden fehlgeschlagen: ${(e as Error).message}`
-      : 'Keine Bridge gefunden. Mit dem WLAN „ResQDocs-…" (Passwort resqdocs2026) verbunden? IP in den Einstellungen prüfen.'
-  } finally {
-    sending.value = false
-  }
-}
 </script>
 
 <template>
@@ -180,52 +125,29 @@ async function doSend(): Promise<void> {
        (liegt unter dessen z-50); ueber das ?-Symbol im Header wieder abrufbar. -->
   <TabGuide />
 
-  <!-- Verantwortungs-Hinweis vor dem Übertragen, einmal pro Sitzung -->
-  <Teleport to="body">
-    <div
-      v-if="showTransferModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-base-300/70 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="transfer-modal-title"
-    >
-      <div class="card w-full max-w-sm bg-base-100 shadow-xl">
-        <div class="card-body gap-3 p-5">
-          <h2 id="transfer-modal-title" class="card-title text-base">Vor dem Übertragen</h2>
-          <p class="text-sm text-base-content/80">
-            Hilfsmittel, kein Ersatz: Du bleibst für Vorgehen, Bewertung und Dokumentation selbst
-            verantwortlich.
-          </p>
-          <div class="card-actions justify-end">
-            <button class="btn btn-ghost btn-sm" type="button" @click="showTransferModal = false">
-              Abbrechen
-            </button>
-            <button class="btn btn-primary btn-sm" type="button" @click="confirmTransfer">
-              Übertragen
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </Teleport>
-
   <div class="min-h-full bg-base-200 pb-24">
     <!-- Safe-Area oben: Header weicht der iOS-Statusleiste aus (#27). max(4px, …)
          gibt mind. 4px Abstand, damit das Logo auf Android (env()=0) nicht oben
          klebt; auf iOS bleibt der größere Notch-Inset erhalten. Web: 4px. -->
     <header class="navbar sticky top-0 z-10 bg-base-100 pt-[max(4px,env(safe-area-inset-top))] shadow-sm">
-      <div class="flex-1 px-2">
+      <div class="flex-1 px-3 py-2">
         <!-- Wort-Bild-Marke; helle Variante auf dunklen Themes (Regeln in style.css) -->
-        <img src="/brand.svg" alt="ResQDocs" class="brand-logo brand-logo-light h-14 w-auto" />
-        <img src="/brand-dark.svg" alt="ResQDocs" class="brand-logo brand-logo-dark h-14 w-auto" />
+        <img src="/brand.svg" alt="ResQDocs" class="brand-logo brand-logo-light h-[45px] w-auto" />
+        <img src="/brand-dark.svg" alt="ResQDocs" class="brand-logo brand-logo-dark h-[45px] w-auto" />
       </div>
       <div class="flex-none items-center gap-1 px-2">
-        <span
-          class="badge"
+        <button
+          type="button"
+          class="badge gap-1 border-0 transition cursor-pointer disabled:cursor-default"
           :class="checking ? 'badge-ghost' : reachable === true ? 'badge-success' : reachable === false ? 'badge-error' : 'badge-ghost'"
+          :disabled="checking"
+          :aria-label="checking ? 'Verbindung wird geprüft' : 'Bridge-Verbindung jetzt prüfen'"
+          :title="checking ? 'Prüfung läuft …' : 'Tippen, um die Verbindung zu prüfen'"
+          @click="check(true)"
         >
+          <span v-if="checking" class="loading loading-spinner loading-xs" aria-hidden="true"></span>
           {{ checking ? 'Prüfe …' : reachable === true ? 'Bridge verbunden' : reachable === false ? 'keine Bridge' : 'Bridge ?' }}
-        </span>
+        </button>
         <button
           type="button"
           class="btn btn-ghost btn-xs btn-circle"
@@ -245,73 +167,19 @@ async function doSend(): Promise<void> {
 
     <!-- Mobile-first; auf Tablet/Desktop waechst der Container mit (statt 576-px-Spalte, #23) -->
     <main class="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 md:max-w-3xl md:p-6 xl:max-w-5xl">
-      <!-- Einsatz (Composer) — caseState bleibt beim Tabwechsel erhalten (v-show) -->
+      <!-- Einsatz — Neuaufbau. Die fruehere Einsatz-Ansicht (ProtocolRuntimeView) wurde entfernt;
+           bei Bedarf im Git-Tag alterstand nachschlagbar. -->
       <div v-show="activeTab === 'einsatz'" class="flex flex-col gap-4">
-        <p class="text-sm text-base-content/60">Dokumentieren und ans Zielgerät übertragen.</p>
-        <div
-          v-if="!storage.settings.dismissedHints.includes('einsatz-haftung')"
-          role="note"
-          class="flex items-start gap-2 rounded-lg bg-info/15 px-4 py-3 text-sm"
-        >
-          <span class="flex-1">
-            Hilfsmittel, kein Ersatz: Du bleibst für Vorgehen, Bewertung und Dokumentation selbst
-            verantwortlich.
-          </span>
-          <button
-            type="button"
-            class="btn btn-ghost btn-xs btn-circle shrink-0"
-            aria-label="Hinweis dauerhaft ausblenden"
-            @click="dismissHint('einsatz-haftung')"
-          >✕</button>
-        </div>
-        <ProtocolRuntimeView v-model:output="output" />
-        <section class="card bg-base-100 shadow">
-          <div class="card-body gap-2 p-4">
-            <h2 class="card-title text-base">An Zielgerät senden</h2>
-            <!-- Klare „keine Bridge"-Meldung (#157): erscheint, sobald eine Prüfung
-                 die Bridge nicht erreicht — mit Handlungshinweis statt nur Badge. -->
-            <div
-              v-if="reachable === false"
-              role="alert"
-              class="alert alert-error items-start gap-2 text-sm"
-            >
-              <span class="flex-1">
-                Keine Bridge gefunden. Mit dem WLAN „ResQDocs-…" (Passwort resqdocs2026) verbunden?
-                IP in den Einstellungen prüfen.
-              </span>
-              <button class="btn btn-ghost btn-xs shrink-0" type="button" :disabled="checking" @click="check(true)">
-                Erneut prüfen
-              </button>
-            </div>
-            <div class="flex items-center gap-2">
-              <select v-model="osMode" class="select select-bordered select-sm w-32" aria-label="Ziel-OS">
-                <option value="win_de">NIDA (win_de)</option>
-                <option value="mac_de">macOS</option>
-                <option value="ios">iPad (ios)</option>
-              </select>
-              <button class="btn btn-ghost btn-sm" type="button" :disabled="checking" @click="check(true)">
-                {{ checking ? 'Prüfe …' : 'Prüfen' }}
-              </button>
-              <button
-                class="btn btn-primary btn-sm flex-1"
-                type="button"
-                :disabled="sending"
-                @click="sendToBridge"
-              >
-                {{ sending ? 'Sende …' : 'In Zielgerät tippen' }}
-              </button>
-            </div>
-            <p v-if="status" class="text-sm" :class="statusIsError ? 'text-error' : 'text-success'">{{ status }}</p>
-          </div>
-        </section>
+        <EinsatzView />
       </div>
 
-      <!-- Vorlagen (Kreator-Shell #13-B; Tab hiess bis #138 "Protokolle") -->
+      <!-- Vorlagen-Editor — Neuaufbau. Der fruehere Editor (ProtocolsTab / protocols/editor/*) wurde
+           entfernt; bei Bedarf im Git-Tag alterstand nachschlagbar. -->
       <div v-show="activeTab === 'protokolle'">
-        <ProtocolsTab />
+        <EditorView />
       </div>
 
-      <!-- Textbausteine (#13-F3; Tab hiess bis #138 "Bausteine") -->
+      <!-- Bausteine (#13-F3): Snippets (Textbausteine); wiederverwendbare Bloecke folgen in Slice 2 -->
       <div v-show="activeTab === 'bausteine'">
         <BausteineTab />
       </div>
@@ -347,7 +215,7 @@ async function doSend(): Promise<void> {
           <rect x="4" y="13" width="7" height="7" rx="1.5" />
           <rect x="13" y="13" width="7" height="7" rx="1.5" />
         </svg>
-        <span class="dock-label">Textbausteine</span>
+        <span class="dock-label">Bausteine</span>
       </button>
       <button type="button" :class="{ 'dock-active text-primary': activeTab === 'einstellungen' }" @click="selectTab('einstellungen')">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

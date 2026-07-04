@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Beim Build aus ai-docs/ kopierte Artefakte (Quelle: ai-docs/generated + ai-docs/examples)
+/public/prompt.de.md
+/public/prompt.en.md
+/public/doc.de.md
+/public/doc.en.md
+/public/schema.json
+/public/version.json
+/public/examples/

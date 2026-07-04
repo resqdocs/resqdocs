@@ -1,0 +1,54 @@
+{
+  "schema": "resqdocs-protocol",
+  "version": 1,
+  "tree": {
+    "type": "container",
+    "id": "transportprotokoll",
+    "title": "Transportprotokoll",
+    "children": [
+      {
+        "type": "container",
+        "id": "stammdaten",
+        "title": "Stammdaten",
+        "showTitle": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "field",
+            "id": "einsatznummer",
+            "title": "Einsatznummer",
+            "showTitle": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "medikation",
+        "title": "Medikation & Ärzte",
+        "showTitle": true,
+        "blankLineBefore": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "function",
+            "id": "medplan",
+            "title": "Medikamentenplan",
+            "showTitle": true,
+            "functionKind": "medikamentenplan",
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "function",
+            "id": "aerzteliste",
+            "title": "Behandelnde Ärzte",
+            "showTitle": true,
+            "functionKind": "aerzte",
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" },
+            "config": { "rowLayout": "block" }
+          }
+        ]
+      }
+    ]
+  }
+}

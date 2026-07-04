@@ -22,6 +22,7 @@ import {
   parseImport,
   removePzn,
   setLabel,
+  setStaerke,
   setWirkstoff,
   upsertEntry,
 } from './pznLibrary.ts'
@@ -249,7 +250,27 @@ test('exportLibrary: kompakt (String) nur bei reiner Bezeichnung, sonst Objekt (
   const ex = exportLibrary(lib)
   assert.equal(ex.version, 2)
   assert.equal(ex.entries['12345678'], 'NurName') // nur Bezeichnung → kompakt
-  assert.deepEqual(ex.entries['00524306'], { wirkstoff: 'Naloxon', label: 'Narcanti', category: 'Antidot', note: 'Opioid-Antagonist' })
+  assert.deepEqual(ex.entries['00524306'], { wirkstoff: 'Naloxon', staerke: '', label: 'Narcanti', category: 'Antidot', note: 'Opioid-Antagonist' })
+})
+
+test('Wirkstärke (#262): upsert/setStaerke/getEntry, addPzn-Konflikt, Export-Roundtrip', () => {
+  let lib = upsertEntry(emptyLibrary(), '12345678', { staerke: '400 mg', label: 'Ibuflam' })
+  assert.equal(getEntry(lib, '12345678')!.staerke, '400 mg')
+  lib = setStaerke(lib, '12345678', '600 mg')
+  assert.equal(getEntry(lib, '12345678')!.staerke, '600 mg')
+  // Konfliktregel wie beim Label: vorhandene nicht-leere Stärke gewinnt gegen den Transfer-Vorschlag
+  lib = addPzn(lib, '12345678', 'Ibuflam', '800 mg')
+  assert.equal(getEntry(lib, '12345678')!.staerke, '600 mg')
+  // leere Stärke darf durch den Vorschlag gefüllt werden
+  lib = upsertEntry(lib, '00524306', { label: 'Narcanti' })
+  lib = addPzn(lib, '00524306', undefined, '0,4 mg')
+  assert.equal(getEntry(lib, '00524306')!.staerke, '0,4 mg')
+  // Export: Stärke hält die Objektform am Leben (kein Kompakt-String -> kein Roundtrip-Verlust)
+  const ex = exportLibrary(lib)
+  assert.deepEqual(ex.entries['00524306'], { wirkstoff: '', staerke: '0,4 mg', label: 'Narcanti', category: '', note: '' })
+  const back = parseImport(ex)!
+  assert.equal(getEntry(back, '00524306')!.staerke, '0,4 mg')
+  assert.equal(getEntry(back, '12345678')!.staerke, '600 mg')
 })
 
 test('Wirkstoff: setWirkstoff/getEntry, Suche und Sortierung; Export/Import-Roundtrip', () => {

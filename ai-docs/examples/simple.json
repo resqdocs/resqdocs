@@ -1,0 +1,61 @@
+{
+  "schema": "resqdocs-protocol",
+  "version": 1,
+  "tree": {
+    "type": "container",
+    "id": "akutprotokoll",
+    "title": "Akutprotokoll",
+    "children": [
+      {
+        "type": "container",
+        "id": "patient",
+        "title": "Patientenangaben",
+        "showTitle": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "field",
+            "id": "alter",
+            "title": "Alter",
+            "showTitle": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "geschlecht",
+            "title": "Geschlecht",
+            "showTitle": true,
+            "options": ["männlich", "weiblich", "divers"],
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
+        ]
+      },
+      {
+        "type": "container",
+        "id": "befund",
+        "title": "Befund",
+        "showTitle": true,
+        "blankLineBefore": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+        "children": [
+          {
+            "type": "field",
+            "id": "bewusstsein",
+            "title": "Bewusstsein",
+            "showTitle": true,
+            "default": "wach, orientiert",
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "field",
+            "id": "anamnese",
+            "title": "Anamnese",
+            "showTitle": true,
+            "multiline": true,
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
+        ]
+      }
+    ]
+  }
+}

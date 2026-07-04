@@ -2,8 +2,12 @@
 
 export function packYears(input: { cigarettesPerDay: number | string; years: number | string }): {
   value: number
+  raw: number
   text: string
 }
+
+/** Rework-Kurzform: kaufmaennisch gerundete GANZE Packungsjahre, „≈" wenn gerundet (#55). */
+export function packYearsShort(raw: number): string
 
 export function bmi(input: { weightKg: number | string; heightCm: number | string }): {
   value: number
@@ -33,7 +37,10 @@ export function news2(input: News2Input): {
   items: Record<string, number>
   risk: string
   anySingle3: boolean
+  /** „NEWS2 <Score> (Risiko …) - Kernwerte" (mit Praefix + Vitalwerten; Alt-Tool). */
   text: string
+  /** „<Score> (Risiko …)" - NUR Score + Risiko (Rework: Vitalwerte stehen separat im Protokoll). */
+  body: string
 }
 
 export type EkgDeflection = 'pos' | 'neg'

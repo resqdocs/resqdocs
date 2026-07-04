@@ -73,6 +73,40 @@
   --noise: 0;
 }
 
+/* === Overlay-Abhebung: Modals + Aktionsmenues heben sich klar vom Hintergrund ab, Light UND Dark.
+   Im Dunklen traegt nicht der (unsichtbare) Schatten, sondern ein theme-aware Ring/Rahmen aus
+   base-content (im Dark hell, im Light dunkel -> kontrastiert immer gegen die base-100-Oberflaeche)
+   + ein geblurrter Backdrop. WCAG 1.4.11 (nicht-Text-Kontrast >= 3:1). Unlayered -> gewinnt gegen daisyUI. */
+.overlay-backdrop,
+.modal-backdrop {
+  background-color: rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.overlay-surface {
+  background-color: var(--color-base-100);
+}
+.overlay-surface,
+.modal-box {
+  border: 1px solid color-mix(in oklab, var(--color-base-content) 14%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-base-content) 10%, transparent),
+    0 10px 25px -8px rgb(0 0 0 / 0.18);
+}
+/* Staerkere Variante fuer zentrale Gates (Disclaimer/Nutzungshinweis). */
+.overlay-backdrop--strong {
+  background-color: rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.overlay-surface--strong {
+  background-color: var(--color-base-100);
+  border: 1px solid color-mix(in oklab, var(--color-base-content) 16%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-base-content) 12%, transparent),
+    0 20px 45px -12px rgb(0 0 0 / 0.28);
+}
+
 /* Mobile-first base: full-height app, comfortable touch defaults. */
 html,
 body,
@@ -113,6 +147,12 @@ textarea,
     min-height: 2.75rem;
     padding-inline: 1rem;
     font-size: 0.875rem;
+  }
+  /* Klickbarer Status-Indikator (Badge-Button) auf Touch gross genug (44 pt). */
+  button.badge {
+    height: 2.75rem;
+    min-height: 2.75rem;
+    padding-inline: 0.75rem;
   }
   .select-xs,
   .select-sm {

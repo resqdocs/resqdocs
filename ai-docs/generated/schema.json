@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai.resqdocs.app/schema.json",
+  "title": "ResQDocs Protokoll (Format v1)",
+  "description": "Format fuer KI-erzeugte Protokoll-Vorlagen. GENERIERT aus packages/shared/model.ts - nicht von Hand editieren.",
+  "type": "object",
+  "required": [
+    "schema",
+    "version",
+    "tree"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "resqdocs-protocol"
+    },
+    "version": {
+      "const": 1
+    },
+    "tree": {
+      "$ref": "#/definitions/Container"
+    }
+  },
+  "definitions": {
+    "Container": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "container"
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "showTitle": {
+          "type": "boolean",
+          "description": "Titel in der AUSGABE zeigen? (Im Editor immer sichtbar.)"
+        },
+        "titleInline": {
+          "type": "boolean",
+          "description": "Titel inline vor dem Inhalt (kein Fuellzeichen/Breite) statt eigener Zeile. Bei showTitle."
+        },
+        "heading": {
+          "$ref": "#/definitions/Heading"
+        },
+        "collapsible": {
+          "type": "boolean",
+          "description": "Option: im Einsatz einklappbar."
+        },
+        "excludable": {
+          "type": "boolean",
+          "description": "Option: im Einsatz als „nicht erhoben\" (excluded) markierbar -> 2-stufiger Status (✓ / −). Bei − entfaellt der ganze Container (inkl. Kinder) in der Ausgabe."
+        },
+        "inline": {
+          "type": "boolean",
+          "description": "Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen)."
+        },
+        "noSeparatorBefore": {
+          "type": "boolean",
+          "description": "Kein Feld-Trenner VOR diesem Element (klebt ans vorherige inline-Element)."
+        },
+        "blankLineBefore": {
+          "type": "boolean",
+          "description": "Optische Leerzeile (Absatz) VOR diesem Element - nur wirksam, wenn darueber etwas ausgegeben wird UND das Element eine eigene Titel-/Banner-Zeile hat (Banner-Knoten; sonst still ohne Wirkung). Gedacht fuer Banner/Trenner, um Abschnitte sichtbar zu trennen."
+        },
+        "separator": {
+          "type": "string",
+          "description": "Feld-Trenner zwischen inline-Geschwistern: zentral an der Wurzel; vererbt sich nach unten, ein Container kann ihn fuer seinen Teilbaum ueberschreiben. Fehlt -> DEFAULT_SEPARATOR."
+        },
+        "emptyText": {
+          "type": "string",
+          "description": "Optionaler Ersatztext in der AUSGABE, wenn der Container ANGEZEIGT wird, seine Kinder aber nichts ausgeben (alle leer/nicht erhoben). Fehlt -> kein Ersatz (leer bleibt leer)."
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "children"
+      ],
+      "additionalProperties": false
+    },
+    "Heading": {
+      "type": "object",
+      "properties": {
+        "prefix": {
+          "type": "string"
+        },
+        "suffix": {
+          "type": "string"
+        },
+        "fill": {
+          "type": "string"
+        },
+        "width": {
+          "type": "number"
+        },
+        "fillMode": {
+          "$ref": "#/definitions/FillMode"
+        }
+      },
+      "required": [
+        "prefix",
+        "suffix",
+        "fill",
+        "width",
+        "fillMode"
+      ],
+      "additionalProperties": false,
+      "description": "Ueberschriften-/Titel-Format: prefix/suffix unabhaengig, Fuellzeichen + Breite (nur Container- Banner), Bezug inklusive/exklusive. Beim FELD wirken nur prefix/suffix (kein Banner)."
+    },
+    "FillMode": {
+      "type": "string",
+      "enum": [
+        "inclusive",
+        "exclusive"
+      ]
+    },
+    "Node": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Container"
+        },
+        {
+          "$ref": "#/definitions/Field"
+        },
+        {
+          "$ref": "#/definitions/FunctionNode"
+        }
+      ]
+    },
+    "Field": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "field"
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "showTitle": {
+          "type": "boolean",
+          "description": "Titel in der AUSGABE zeigen? (Default aus.) Bei an: prefix+title+suffix vor dem Wert."
+        },
+        "heading": {
+          "$ref": "#/definitions/Heading",
+          "description": "Titel-Format. Bei „Titel auf eigener Zeile\" (titleInline===false, oder mehrzeilig per Default) wirkt der VOLLE Banner (Fuellzeichen/Breite/Bezug) wie beim Container; sonst nur prefix/suffix."
+        },
+        "titleInline": {
+          "type": "boolean",
+          "description": "„Trenner-Funktion\": Titel als eigene (Banner-)Zeile, der Wert rutscht in die naechste Zeile. titleInline===false = Banner an; true = inline (Titel+Wert auf einer Zeile). Fehlt -> inline, AUSSER das Feld ist mehrzeilig (dann per Default eigene Zeile)."
+        },
+        "default": {
+          "type": "string",
+          "description": "Standardwert."
+        },
+        "inline": {
+          "type": "boolean",
+          "description": "Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen)."
+        },
+        "noSeparatorBefore": {
+          "type": "boolean",
+          "description": "Kein Feld-Trenner VOR diesem Feld (klebt ans vorherige inline-Element, z. B. Wert+Einheit)."
+        },
+        "blankLineBefore": {
+          "type": "boolean",
+          "description": "Optische Leerzeile (Absatz) VOR diesem Feld - nur wirksam, wenn darueber etwas ausgegeben wird UND das Feld eine eigene Titel-/Banner-Zeile hat (multiline oder titleInline=false)."
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Vordefinierte Auswahl-Optionen. Gesetzt -> das Feld ist ein SELECT (Wert = Ausgabetext). Tri-State unveraendert: ✓ = default (sonst options[0]), ✎ = Option waehlen/Freitext, − = entfaellt."
+        },
+        "allowCustom": {
+          "type": "boolean",
+          "description": "Bei einem Select zusaetzlich „individuell\" -> Freitext anbieten (Default aus)."
+        },
+        "multiline": {
+          "type": "boolean",
+          "description": "Freitext mehrzeilig erfassen: im ✎-Modus ein grosses Textfeld (Sheet) statt einzeiligem <input>\n- fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert."
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "FunctionNode": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "function"
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "showTitle": {
+          "type": "boolean",
+          "description": "Titel in der AUSGABE zeigen? Fehlt/false -> kein Titel (wie bei allen Knoten). Der Editor setzt es beim Anlegen einer Funktion standardmaessig auf true (createFunction)."
+        },
+        "titleInline": {
+          "type": "boolean",
+          "description": "Titel inline vor dem Inhalt (kein Banner) statt eigener Zeile - analog Container."
+        },
+        "heading": {
+          "$ref": "#/definitions/Heading",
+          "description": "Titel-Format (prefix/suffix + Banner Fuellzeichen/Breite wie beim Container)."
+        },
+        "inline": {
+          "type": "boolean",
+          "description": "Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen). Wirkt wie beim Feld (Maintainer 2026-07-03): auch mehrzeilige Listen-Funktionen (Medikamentenplan/ Aerzte) koennen inline an die laufende Zeile - nur ein Titel-Banner (Titel auf eigener Zeile) bleibt Block."
+        },
+        "noSeparatorBefore": {
+          "type": "boolean",
+          "description": "Kein Feld-Trenner VOR dieser Funktion (klebt ans vorherige inline-Element)."
+        },
+        "blankLineBefore": {
+          "type": "boolean",
+          "description": "Optische Leerzeile (Absatz) VOR der Funktion - nur bei Titel-Banner der Funktion und wenn darueber etwas ausgegeben wird (Basis-Regel oben; ohne Banner still ohne Wirkung, wie beim Feld)."
+        },
+        "functionKind": {
+          "$ref": "#/definitions/FunctionKind"
+        },
+        "config": {
+          "$ref": "#/definitions/FunctionConfig",
+          "description": "Ausgabe-Formatierung der Funktions-Zeilen (Layout/Trenner/Praefix/Suffix)."
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "functionKind"
+      ],
+      "additionalProperties": false
+    },
+    "FunctionKind": {
+      "type": "string",
+      "enum": [
+        "medikamentenplan",
+        "aerzte",
+        "packYears",
+        "news2"
+      ],
+      "description": "Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan). functionKind = innerer Diskriminator (waechst), aufgeloest ueber die Funktions-Registry. Immer Block."
+    },
+    "FunctionConfig": {
+      "type": "object",
+      "properties": {
+        "rowLayout": {
+          "type": "string",
+          "enum": [
+            "block",
+            "inline"
+          ],
+          "description": "untereinander (block, je Zeile eigene Zeile) vs hintereinander (inline, mit Separator). Default 'block'."
+        },
+        "rowSeparator": {
+          "type": "string",
+          "description": "Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> \" · \" (Mittelpunkt: hebt die Zeilengrenze vom Komma im Zeilenformat \"Name Staerke, Schema\" ab, #262)."
+        },
+        "rowPrefix": {
+          "type": "string",
+          "description": "Praefix je Zeile bei rowLayout='block'."
+        },
+        "rowSuffix": {
+          "type": "string",
+          "description": "Suffix je Zeile bei rowLayout='block'."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Zeilen-Layout-Konfiguration einer Funktion (pro functionKind in der Registry interpretiert). Alle Felder optional + primitiv -> JSON-Roundtrip trivial; fehlt -> heutiges Verhalten (block, ohne pre/suf)."
+    }
+  }
+}

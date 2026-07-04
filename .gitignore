@@ -13,9 +13,17 @@
 *.jks
 *.keystore
 keystore.properties
+*.p8
+*.mobileprovision
+
+# App Store Connect export (Metadaten/Screenshots, kann Demo-Account-Passwoerter/Tester-Mails enthalten)
+/asc-export/
 *.mobileprovision
 *.cer
 *.p8
+
+# KI-Doku: Manifest traegt Commit/Zeitstempel (bei jedem Build neu) -> nicht committen (sonst CI-Gate-Churn)
+/ai-docs/generated/manifest.json
 
 # Private / local working files
 secrets/

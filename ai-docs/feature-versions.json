@@ -1,0 +1,30 @@
+{
+  "_comment": "Hand-gepflegt, committet. Ab welcher ResQDocs-APP-Version (nicht Format-Version) ein functionKind verfuegbar ist - Funktionen kommen per App-Update dazu. Der Generator (scripts/ai-docs/gen-ai-docs.mjs) rendert daraus die Tabelle {{FEATURE_VERSIONS}} in der KI-Doku UND ERZWINGT, dass jeder functionKind aus dem Schema hier steht (sonst Build-Abbruch -> kein ungegatetes Feature geht live). 'baseline' = Mindest-App-Version fuer den v1-Vorlagen-Import ueberhaupt (Container+Feld). Beim Release eines Features hier die reale Mindestversion eintragen.",
+  "baseline": "1.0.0",
+  "functions": [
+    {
+      "kind": "medikamentenplan",
+      "de": "Medikamentenplan",
+      "en": "Medication list",
+      "minVersion": "1.0.0"
+    },
+    {
+      "kind": "aerzte",
+      "de": "Ärzte",
+      "en": "Doctors",
+      "minVersion": "1.0.0"
+    },
+    {
+      "kind": "packYears",
+      "de": "Pack-Years",
+      "en": "Pack-years",
+      "minVersion": "1.1.0"
+    },
+    {
+      "kind": "news2",
+      "de": "NEWS2",
+      "en": "NEWS2",
+      "minVersion": "1.1.0"
+    }
+  ]
+}

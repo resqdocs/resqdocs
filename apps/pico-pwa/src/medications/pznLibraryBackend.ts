@@ -20,9 +20,15 @@ import {
   normalizePzn,
   parseImport,
   removePzn,
+  sanitizeCategory,
+  sanitizeLabel,
+  sanitizeNote,
+  sanitizeStaerke,
+  sanitizeWirkstoff,
   setCategory as setCategoryPure,
   setLabel as setLabelPure,
   setNote as setNotePure,
+  setStaerke as setStaerkePure,
   setWirkstoff as setWirkstoffPure,
   sortEntries,
   upsertEntry,
@@ -36,18 +42,22 @@ export interface PznPageOpts {
   offset: number
   limit: number
   dir?: 'asc' | 'desc'
+  /** Nur Eintraege OHNE Wirkstaerke (Nachpflege-Arbeitsvorrat, #264). */
+  missingStaerke?: boolean
 }
 
 /** Async Persistenz der PZN-Bibliothek. Liste/Suche/Count laufen seitenweise. */
 export interface PznLibraryBackend {
   ensureReady(): Promise<void>
   count(): Promise<number>
+  countMissingStaerke(): Promise<number>
   getEntry(pzn: string): Promise<PznEntry | null>
   page(opts: PznPageOpts): Promise<PznEntry[]>
-  search(query: string, opts: { offset: number; limit: number }): Promise<PznEntry[]>
+  search(query: string, opts: { offset: number; limit: number; missingStaerke?: boolean }): Promise<PznEntry[]>
   allSorted(): Promise<PznEntry[]>
   setEntry(pzn: string, data: PznEntryData): Promise<void>
   setWirkstoff(pzn: string, wirkstoff: string): Promise<void>
+  setStaerke(pzn: string, staerke: string): Promise<void>
   setLabel(pzn: string, label: string): Promise<void>
   setCategory(pzn: string, category: string): Promise<void>
   setNote(pzn: string, note: string): Promise<void>
@@ -88,24 +98,35 @@ export function createPreferencesPznBackend(adapter: KeyValueAdapter): PznLibrar
     async count() {
       return countPure(lib)
     },
+    async countMissingStaerke() {
+      return listSorted(lib).filter((e) => e.staerke === '').length
+    },
     async getEntry(pzn) {
       return getEntryPure(lib, pzn)
     },
-    async page({ offset, limit, dir = 'asc' }) {
-      return sortEntries(listSorted(lib), 'pzn', dir).slice(offset, offset + limit)
+    async page({ offset, limit, dir = 'asc', missingStaerke }) {
+      const base = sortEntries(listSorted(lib), 'pzn', dir)
+      const rows = missingStaerke ? base.filter((e) => e.staerke === '') : base
+      return rows.slice(offset, offset + limit)
     },
-    async search(query, { offset, limit }) {
-      return filterEntries(listSorted(lib), query).slice(offset, offset + limit)
+    async search(query, { offset, limit, missingStaerke }) {
+      const base = filterEntries(listSorted(lib), query)
+      const rows = missingStaerke ? base.filter((e) => e.staerke === '') : base
+      return rows.slice(offset, offset + limit)
     },
     async allSorted() {
       return listSorted(lib)
     },
     async setEntry(pzn, data) {
-      lib = upsertEntry(lib, pzn, { wirkstoff: data.wirkstoff, label: data.label, category: data.category, note: data.note })
+      lib = upsertEntry(lib, pzn, { wirkstoff: data.wirkstoff, staerke: data.staerke, label: data.label, category: data.category, note: data.note })
       await persist()
     },
     async setWirkstoff(pzn, wirkstoff) {
       lib = setWirkstoffPure(lib, pzn, wirkstoff)
+      await persist()
+    },
+    async setStaerke(pzn, staerke) {
+      lib = setStaerkePure(lib, pzn, staerke)
       await persist()
     },
     async setLabel(pzn, label) {
@@ -129,15 +150,25 @@ export function createPreferencesPznBackend(adapter: KeyValueAdapter): PznLibrar
       await persist()
     },
     async bulkPut(entries, mode, _chunkSize, onProgress) {
+      // EIN Ziel-Objekt in einem Durchlauf (O(n)) - upsertEntry pro Zeile waere die
+      // O(n^2)-Vollkopie, vor der pznLibrary.ts selbst warnt (bei 8k+ schon spuerbar).
+      const next = { ...lib.entries }
       let i = 0
       for (const e of entries) {
         const norm = normalizePzn(e.pzn)
         i++
-        if (norm && !(mode === 'skip' && norm in lib.entries)) {
-          lib = upsertEntry(lib, norm, { wirkstoff: e.wirkstoff, label: e.label, category: e.category, note: e.note })
+        if (norm && !(mode === 'skip' && norm in next)) {
+          next[norm] = {
+            wirkstoff: sanitizeWirkstoff(e.wirkstoff),
+            staerke: sanitizeStaerke(e.staerke),
+            label: sanitizeLabel(e.label),
+            category: sanitizeCategory(e.category),
+            note: sanitizeNote(e.note),
+          }
         }
         if (i % 500 === 0) onProgress?.(i, entries.length)
       }
+      lib = { version: 2, entries: next }
       await persist()
       onProgress?.(entries.length, entries.length)
     },

@@ -24,16 +24,23 @@
         <p class="text-xs text-base-content/60">Angaben gemäß § 5 DDG</p>
         <div class="mt-2 space-y-0.5 text-sm leading-relaxed">
           <p>[Anbieter]</p>
-          <p>[Name]</p>
           <p>[Anschrift]</p>
           <p>[PLZ Ort]</p>
           <p>Deutschland</p>
         </div>
         <div class="mt-2 space-y-0.5 text-sm leading-relaxed">
+          <p><span class="text-base-content/60">Vertreten durch:</span> [Name]</p>
           <p><span class="text-base-content/60">E-Mail:</span> support@resqdocs.app</p>
         </div>
+        <div class="mt-2 space-y-0.5 text-sm leading-relaxed">
+          <p><span class="text-base-content/60">Registergericht:</span> [Registergericht]</p>
+          <p><span class="text-base-content/60">USt-IdNr.:</span> [USt-IdNr]</p>
+        </div>
         <p class="mt-2 text-sm">
-          <span class="text-base-content/60">Verantwortlich für den Inhalt:</span> [Name]
+          <span class="text-base-content/60">Verantwortlich für den Inhalt:</span> [Anbieter]
+        </p>
+        <p class="mt-1 text-sm">
+          <span class="text-base-content/60">Entwicklung:</span> [Name]
         </p>
       </div>
 

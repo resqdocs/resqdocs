@@ -161,7 +161,7 @@ test("visibleIf var/truthy: boolean steuert Sichtbarkeit", () => {
 
 test("visibleIf var/filled: text-Variable nicht leer", () => {
   assert.ok(!render(demo).includes("- Ziel:"));
-  assert.ok(render(demo, { variableValues: { klinik: "UKE" } }).includes("- Ziel:"));
+  assert.ok(render(demo, { variableValues: { klinik: "Helios" } }).includes("- Ziel:"));
 });
 
 test("visibleIf var/in: number-Variable in Menge", () => {
@@ -332,13 +332,13 @@ test("medikamente (#146): Label-Zeile mit Bullet, je Medikament eine Zeile ohne 
   // Keine Zeilen -> Punkt entfaellt komplett (nicht erhoben = weglassen)
   assert.ok(!render(t).includes("Medikation"));
   const out = render(t, { values: { meds: [
-    { name: "Hausarzt: Praxis Dr. Demo, Musterstadt" },
+    { name: "Hausarzt: Praxis Dr. Demo, Bamberg" },
     { name: "Ramipril 5 mg", dosierung: "1-0-0-0" },
     { name: "ASS 100", dosierung: "0-1-0-0", kommentar: "laut Patient erhöht" },
   ] } });
   const lines = out.split("\n");
   assert.ok(lines.includes("- Medikation:"), out);
-  assert.ok(lines.includes("Hausarzt: Praxis Dr. Demo, Musterstadt"));
+  assert.ok(lines.includes("Hausarzt: Praxis Dr. Demo, Bamberg"));
   assert.ok(lines.includes("Ramipril 5 mg: 1-0-0-0"));
   assert.ok(lines.includes("ASS 100: 0-1-0-0 - laut Patient erhöht"));
   assert.ok(!out.includes("- Ramipril"), "Medikamentenzeilen ohne fuehrenden Strich");

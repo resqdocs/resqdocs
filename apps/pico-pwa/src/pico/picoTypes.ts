@@ -42,8 +42,9 @@ export interface PicoClient {
   health(): Promise<boolean>
   /** GET /status → geparster Status (wirft bei ungültiger Antwort). */
   status(): Promise<PicoStatus>
-  /** POST /type { text, os } → Anzahl getippter Zeichen. Text NUR im Body. */
-  typeText(input: { text: string; os: string }): Promise<{ typed: number }>
+  /** POST /type { text, os, delayMs? } → Anzahl getippter Zeichen. Text NUR im Body.
+   * delayMs optional (Tippgeschwindigkeit, ms/Zeichen); fehlt → Firmware-Default 60. */
+  typeText(input: { text: string; os: string; delayMs?: number }): Promise<{ typed: number }>
   /** POST /config { ssidId } → { ok, restartRequired }. Wirft bei ungültiger ID OHNE Request. */
   setConfig(input: { ssidId: string }): Promise<PicoConfigResult>
   /** POST /ota/begin { size, sha256, sig } → { ok, chunkMax } (#130). */
