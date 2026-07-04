@@ -11,8 +11,15 @@
         "id": "stammdaten",
         "title": "Stammdaten",
         "showTitle": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
         "children": [
-          { "type": "field", "id": "einsatznummer", "title": "Einsatznummer", "showTitle": true }
+          {
+            "type": "field",
+            "id": "einsatznummer",
+            "title": "Einsatznummer",
+            "showTitle": true,
+            "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+          }
         ]
       },
       {
@@ -20,9 +27,26 @@
         "id": "medikation",
         "title": "Medikation & Ärzte",
         "showTitle": true,
+        "blankLineBefore": true,
+        "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
         "children": [
-          { "type": "function", "id": "medplan", "title": "Medikamentenplan", "showTitle": true, "functionKind": "medikamentenplan" },
-          { "type": "function", "id": "aerzteliste", "title": "Behandelnde Ärzte", "showTitle": true, "functionKind": "aerzte", "config": { "rowLayout": "block" } }
+          {
+            "type": "function",
+            "id": "medplan",
+            "title": "Medikamentenplan",
+            "showTitle": true,
+            "functionKind": "medikamentenplan",
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" }
+          },
+          {
+            "type": "function",
+            "id": "aerzteliste",
+            "title": "Behandelnde Ärzte",
+            "showTitle": true,
+            "functionKind": "aerzte",
+            "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" },
+            "config": { "rowLayout": "block" }
+          }
         ]
       }
     ]

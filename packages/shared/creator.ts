@@ -3,7 +3,7 @@
 // (YAGNI, siehe docs/rework/container-impl.md). Ops matchen per id ueber ALLE Node-Typen, damit
 // auch Felder (Blaetter) gefunden/gepatcht/entfernt/verschoben werden.
 
-import type { Container, Field, FunctionNode, FunctionKind, Node } from './model.ts'
+import type { Container, Field, FunctionNode, FunctionKind, Node, FieldFill } from './model.ts'
 import { FUNCTION_REGISTRY } from './functions/registry.ts'
 
 export function createContainer(id: string): Container {
@@ -52,6 +52,24 @@ export function collectFunctionNodes(root: Container, kind: FunctionKind): Funct
   }
   walk(root)
   return acc
+}
+
+/** Beispiel-Werte NUR fuer die Editor-Vorschau: fuer jeden Funktions-Knoten mit `sampleFill` ein festes
+ *  Demo-Fill (Scores wie Pack-Years, aber auch Medikamentenplan/Aerzte mit Muster-Zeilen), damit die
+ *  Vorschau die Funktion MIT Werten zeigt - der Nutzer gibt im Editor nichts ein. Felder loesen ihre
+ *  Defaults im Renderer auf. NICHT im Einsatz / der echten Ausgabe verwenden (dort zaehlen die echten Werte). */
+export function previewValues(root: Container): Record<string, FieldFill> {
+  const out: Record<string, FieldFill> = {}
+  const walk = (n: Node): void => {
+    if (n.type === 'function') {
+      const fill = FUNCTION_REGISTRY[n.functionKind]?.sampleFill?.()
+      if (fill) out[n.id] = fill
+    } else if (n.type === 'container') {
+      for (const c of n.children) walk(c)
+    }
+  }
+  walk(root)
+  return out
 }
 
 /** Erste freie id-Variante (base, base-2, base-3, …) im Baum - fuer konstruktive Kollisions-Hinweise. */

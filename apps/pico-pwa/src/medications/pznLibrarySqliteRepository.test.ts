@@ -163,3 +163,39 @@ test('allSorted: vollständige Liste nach pzn (für Export)', async () => {
   for (const p of ['00000002', '00000001']) await repo.setEntry(p, { label: '', category: '', note: '' })
   assert.deepEqual((await repo.allSorted()).map((e) => e.pzn), ['00000001', '00000002'])
 })
+
+test('Wirkstärke (#262, Migration v8): setEntry/getEntry/setStaerke/search/bulkPut-Roundtrip', async () => {
+  const repo = await freshRepo()
+  await repo.setEntry('12345678', { wirkstoff: 'Ibuprofen', staerke: '400 mg', label: 'Ibuflam', category: '', note: '' })
+  assert.equal((await repo.getEntry('12345678'))!.staerke, '400 mg')
+  await repo.setStaerke('12345678', '600 mg')
+  assert.equal((await repo.getEntry('12345678'))!.staerke, '600 mg')
+  await repo.setStaerke('99999999', '1 mg') // fehlende PZN -> No-op, kein Insert
+  assert.equal(await repo.getEntry('99999999'), null)
+  const hit = await repo.search('Ibuprofen', { offset: 0, limit: 10 })
+  assert.equal(hit[0]?.staerke, '600 mg', 'search liefert die Staerke-Spalte mit')
+  await repo.bulkPut([{ pzn: '12345678', wirkstoff: 'Ibuprofen', staerke: '800 mg', label: 'Ibuflam', category: '', note: '' }], 'skip')
+  assert.equal((await repo.getEntry('12345678'))!.staerke, '600 mg', 'skip laesst Bestand stehen')
+  await repo.bulkPut([{ pzn: '12345678', wirkstoff: 'Ibuprofen', staerke: '800 mg', label: 'Ibuflam', category: '', note: '' }], 'overwrite')
+  assert.equal((await repo.getEntry('12345678'))!.staerke, '800 mg', 'overwrite uebernimmt den Import')
+})
+
+test('Nachpflege-Filter (#264): page/search mit missingStaerke + countMissingStaerke', async () => {
+  const repo = await freshRepo()
+  await repo.setEntry('00000001', { wirkstoff: 'Ibuprofen', staerke: '400 mg', label: 'Ibuflam', category: '', note: '' })
+  await repo.setEntry('00000002', { wirkstoff: 'Ibuprofen', staerke: '', label: 'Ibu akut', category: '', note: '' })
+  await repo.setEntry('00000003', { wirkstoff: 'Ramipril', staerke: '', label: 'Rami', category: '', note: '' })
+  assert.equal(await repo.countMissingStaerke(), 2)
+  const page = await repo.page({ offset: 0, limit: 10, missingStaerke: true })
+  assert.deepEqual(page.map((e) => e.pzn), ['00000002', '00000003'])
+  // Suche kombiniert mit Filter: FTS-Zweig (Wort) und LIKE-Zweig (PZN-Fragment)
+  const fts = await repo.search('ibu', { offset: 0, limit: 10, missingStaerke: true })
+  assert.deepEqual(fts.map((e) => e.pzn), ['00000002'])
+  const like = await repo.search('0000000', { offset: 0, limit: 10, missingStaerke: true })
+  assert.deepEqual(like.map((e) => e.pzn), ['00000002', '00000003'])
+  // Ohne Filter unveraendert
+  assert.equal((await repo.page({ offset: 0, limit: 10 })).length, 3)
+  // Nachpflegen senkt den Zaehler
+  await repo.setStaerke('00000002', '600 mg')
+  assert.equal(await repo.countMissingStaerke(), 1)
+})

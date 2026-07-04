@@ -47,7 +47,7 @@ function create() {
   /** Mini-Bibliothek mit genau diesem Eintrag (oder leer) — Träger für die reine Logik. */
   function miniLib(pzn: string, cur: PznEntry | null): PznLibrary {
     return cur
-      ? { version: 2, entries: { [pzn]: { wirkstoff: cur.wirkstoff, label: cur.label, category: cur.category, note: cur.note } } }
+      ? { version: 2, entries: { [pzn]: { wirkstoff: cur.wirkstoff, staerke: cur.staerke, label: cur.label, category: cur.category, note: cur.note } } }
       : emptyLibrary()
   }
 
@@ -58,31 +58,28 @@ function create() {
   async function count(): Promise<number> {
     return (await ready()).count()
   }
+  async function countMissingStaerke(): Promise<number> {
+    return (await ready()).countMissingStaerke()
+  }
   async function page(opts: PznPageOpts): Promise<PznEntry[]> {
     return (await ready()).page(opts)
   }
-  async function search(query: string, opts: { offset: number; limit: number }): Promise<PznEntry[]> {
+  async function search(query: string, opts: { offset: number; limit: number; missingStaerke?: boolean }): Promise<PznEntry[]> {
     return (await ready()).search(query, opts)
   }
   async function entry(pzn: string): Promise<PznEntry | null> {
     return (await ready()).getEntry(pzn)
   }
-  /** Eigene Bezeichnung zu einer PZN (Scan-Match); null wenn unbekannt. */
-  async function ownLabel(pzn: string): Promise<string | null> {
-    const e = await (await ready()).getEntry(pzn)
-    return e ? e.label : null
-  }
-
   /**
    * Einzel-Transfer aus dem Protokoll (genau EINE PZN): Konfliktregel „vorhandenes
    * nicht-leeres Label gewinnt" über die reine addOne-Logik. 'invalid'/'added'/'exists'.
    */
-  async function addOne(raw: string, label?: string): Promise<'invalid' | 'added' | 'exists'> {
+  async function addOne(raw: string, label?: string, staerke?: string): Promise<'invalid' | 'added' | 'exists'> {
     const norm = normalizePzn(raw)
     if (!norm) return 'invalid'
     const b = await ready()
     const cur = await b.getEntry(norm)
-    const next = addOnePure(miniLib(norm, cur), norm, label)
+    const next = addOnePure(miniLib(norm, cur), norm, label, staerke)
     await b.setEntry(norm, next.entries[norm])
     return cur ? 'exists' : 'added'
   }
@@ -93,7 +90,7 @@ function create() {
    */
   async function upsert(
     raw: string,
-    fields: { wirkstoff?: string; label?: string; category?: string; note?: string },
+    fields: { wirkstoff?: string; staerke?: string; label?: string; category?: string; note?: string },
   ): Promise<'invalid' | 'added' | 'updated'> {
     const norm = normalizePzn(raw)
     if (!norm) return 'invalid'
@@ -106,6 +103,9 @@ function create() {
 
   async function setWirkstoff(pzn: string, wirkstoff: string): Promise<void> {
     await (await ready()).setWirkstoff(pzn, wirkstoff)
+  }
+  async function setStaerke(pzn: string, staerke: string): Promise<void> {
+    await (await ready()).setStaerke(pzn, staerke)
   }
   async function setLabel(pzn: string, label: string): Promise<void> {
     await (await ready()).setLabel(pzn, label)
@@ -123,7 +123,9 @@ function create() {
     await (await ready()).clear()
   }
 
-  /** Backup-Export als JSON-String (kompakte v2-Form, sortiert). Klein-Daten/Tests. */
+  /** Backup-Export als JSON-String (kompakte v2-Form, sortiert). NUR Klein-Daten/Tests -
+   *  materialisiert die GANZE Bibliothek im Speicher (bei 200k ~33 MB): nie in der UI verdrahten,
+   *  der Geraete-Export laeuft gestreamt ueber exportToFile. */
   async function exportJson(): Promise<string> {
     const entries = await (await ready()).allSorted()
     return JSON.stringify(exportLibrary(fromEntries(entries)))
@@ -169,13 +171,14 @@ function create() {
   return {
     ensureReady,
     count,
+    countMissingStaerke,
     page,
     search,
     entry,
-    ownLabel,
     addOne,
     upsert,
     setWirkstoff,
+    setStaerke,
     setLabel,
     setCategory,
     setNote,

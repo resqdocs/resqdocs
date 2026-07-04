@@ -86,11 +86,15 @@ test('news2: SpO2-Skala 2 (Hyperkapnie) inkl. O2-Sonderfälle', () => {
   assert.equal(news2({ ...base, spo2: 97, onOxygen: false }).items.spo2, 0) // Raumluft >= 93 -> 0
 })
 
-test('news2: Risiko-Einstufung (0-4 niedrig, Einzel-3, 5-6 mittel, >=7 hoch)', () => {
+test('news2: Risiko-Einstufung rein nach Aggregat-Score (0-4 niedrig, 5-6 mittel, >=7 hoch)', () => {
   const base = { rr: 16, spo2: 98, scale2: false, onOxygen: false, systolic: 120, pulse: 70, temp: 36.8, consciousness: 'A' }
   assert.equal(news2({ ...base, pulse: 100 }).risk, 'niedrig') // 1 Punkt
-  assert.match(news2({ ...base, systolic: 90 }).risk, /Einzelwert 3/) // 3 Punkte, ein Parameter
-  assert.equal(news2({ ...base, rr: 22, spo2: 93, pulse: 100 }).risk, 'mittel') // 2+2+1 = 5
+  // Ein Einzelparameter mit 3 Punkten eskaliert die Einstufung NICHT mehr (Maintainer 2026-07-03):
+  // Aggregat 3 -> 'niedrig'; anySingle3 bleibt aber informativ true.
+  assert.equal(news2({ ...base, systolic: 90 }).risk, 'niedrig')
+  assert.equal(news2({ ...base, systolic: 90 }).anySingle3, true)
+  assert.equal(news2({ ...base, rr: 22, spo2: 93 }).risk, 'niedrig') // 2+2 = 4 (Grenze niedrig)
+  assert.equal(news2({ ...base, rr: 22, spo2: 93, pulse: 100 }).risk, 'mittel') // 2+2+1 = 5 (Grenze mittel)
   const hoch = news2({ ...base, rr: 25, systolic: 88, consciousness: 'U' }) // 3+3+3
   assert.equal(hoch.score, 9)
   assert.equal(hoch.risk, 'hoch')

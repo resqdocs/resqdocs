@@ -15,6 +15,9 @@ export interface MoveTarget {
   current: boolean
 }
 
+/** Ergebnis von saveContainerAsBaustein — dezenter Status fuer die UI. */
+export type SaveBausteinOutcome = { ok: true; title: string } | { ok: false; error: string }
+
 export interface TreeEditorApi {
   selectedId: Ref<string | null>
   /** Aktive Editor-Vorlage (Wurzel) - read-only, fuer Sitemap-/Struktur-Ansichten (Verschieben-nach). */
@@ -25,6 +28,13 @@ export interface TreeEditorApi {
   selectProtocol(id: string): void
   update(id: string, patch: Record<string, unknown>): void
   addChild(parentId: string, kind: 'container' | 'field' | 'function', functionKind?: FunctionKind): void
+  /** Snippet als Feld-Vorgabe (Field mit default=text, showTitle=false; mehrzeilig -> multiline) an parentId anhaengen. */
+  insertSnippet(parentId: string, text: string): void
+  /** Einen Bibliotheks-Block (Container-Teilbaum) kollisionsfrei re-IDt als Kind an parentId einfuegen (Kopie). */
+  insertBlock(parentId: string, block: Container): void
+  /** Den Container mit dieser id (nicht die Wurzel) als benannten Baustein in der Bibliothek ablegen
+   *  (tiefe Kopie; spaetere Editor-Aenderungen wirken nicht zurueck). */
+  saveContainerAsBaustein(id: string): Promise<SaveBausteinOutcome>
   remove(id: string): void
   move(childId: string, delta: number): void
   /** Fliessendes „Hoch": Swap mit Vorgaenger, am oberen Container-Rand automatisch davor ausruecken. */

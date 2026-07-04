@@ -16,6 +16,7 @@ import { countDeviations } from '@resqdocs/protocol-core/deviations'
 import EinsatzField from './EinsatzField.vue'
 import MedplanFunction from './MedplanFunction.vue'
 import AerzteFunction from './AerzteFunction.vue'
+import ScoreFunction from './ScoreFunction.vue'
 import ContainerFillToggle from './ContainerFillToggle.vue'
 
 const props = defineProps<{ node: Container; depth: number; insideCollapse: boolean }>()
@@ -73,6 +74,7 @@ const headingClass = computed(() => {
           <EinsatzSection v-if="child.type === 'container'" :node="child" :depth="depth + 1" :inside-collapse="childInside" />
           <MedplanFunction v-else-if="child.type === 'function' && child.functionKind === 'medikamentenplan'" :node="child" />
           <AerzteFunction v-else-if="child.type === 'function' && child.functionKind === 'aerzte'" :node="child" />
+          <ScoreFunction v-else-if="child.type === 'function'" :node="child" />
           <EinsatzField v-else-if="child.type === 'field'" :node="child" />
         </template>
         <p v-if="!node.children.length" class="text-xs italic text-base-content/40">(noch keine Elemente)</p>
@@ -91,7 +93,9 @@ const headingClass = computed(() => {
     <template v-if="node.children.length">
       <template v-for="child in node.children" :key="child.id">
         <EinsatzSection v-if="child.type === 'container'" :node="child" :depth="depth + 1" :inside-collapse="childInside" />
-        <MedplanFunction v-else-if="child.type === 'function'" :node="child" />
+        <MedplanFunction v-else-if="child.type === 'function' && child.functionKind === 'medikamentenplan'" :node="child" />
+        <AerzteFunction v-else-if="child.type === 'function' && child.functionKind === 'aerzte'" :node="child" />
+        <ScoreFunction v-else-if="child.type === 'function'" :node="child" />
         <EinsatzField v-else :node="child" />
       </template>
     </template>

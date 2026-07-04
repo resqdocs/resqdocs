@@ -64,7 +64,7 @@
         },
         "blankLineBefore": {
           "type": "boolean",
-          "description": "Optische Leerzeile (Absatz) VOR diesem Element - nur wirksam, wenn darueber etwas ausgegeben wird. Gedacht fuer Banner/Trenner, um Abschnitte sichtbar zu trennen."
+          "description": "Optische Leerzeile (Absatz) VOR diesem Element - nur wirksam, wenn darueber etwas ausgegeben wird UND das Element eine eigene Titel-/Banner-Zeile hat (Banner-Knoten; sonst still ohne Wirkung). Gedacht fuer Banner/Trenner, um Abschnitte sichtbar zu trennen."
         },
         "separator": {
           "type": "string",
@@ -176,7 +176,7 @@
         },
         "blankLineBefore": {
           "type": "boolean",
-          "description": "Optische Leerzeile (Absatz) VOR diesem Feld - nur wirksam, wenn darueber etwas ausgegeben wird."
+          "description": "Optische Leerzeile (Absatz) VOR diesem Feld - nur wirksam, wenn darueber etwas ausgegeben wird UND das Feld eine eigene Titel-/Banner-Zeile hat (multiline oder titleInline=false)."
         },
         "options": {
           "type": "array",
@@ -215,7 +215,7 @@
         },
         "showTitle": {
           "type": "boolean",
-          "description": "Titel in der AUSGABE zeigen? (Default an.)"
+          "description": "Titel in der AUSGABE zeigen? Fehlt/false -> kein Titel (wie bei allen Knoten). Der Editor setzt es beim Anlegen einer Funktion standardmaessig auf true (createFunction)."
         },
         "titleInline": {
           "type": "boolean",
@@ -225,9 +225,17 @@
           "$ref": "#/definitions/Heading",
           "description": "Titel-Format (prefix/suffix + Banner Fuellzeichen/Breite wie beim Container)."
         },
+        "inline": {
+          "type": "boolean",
+          "description": "Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen). Wirkt wie beim Feld (Maintainer 2026-07-03): auch mehrzeilige Listen-Funktionen (Medikamentenplan/ Aerzte) koennen inline an die laufende Zeile - nur ein Titel-Banner (Titel auf eigener Zeile) bleibt Block."
+        },
+        "noSeparatorBefore": {
+          "type": "boolean",
+          "description": "Kein Feld-Trenner VOR dieser Funktion (klebt ans vorherige inline-Element)."
+        },
         "blankLineBefore": {
           "type": "boolean",
-          "description": "Optische Leerzeile (Absatz) VOR der Funktion - nur wenn darueber etwas ausgegeben wird."
+          "description": "Optische Leerzeile (Absatz) VOR der Funktion - nur bei Titel-Banner der Funktion und wenn darueber etwas ausgegeben wird (Basis-Regel oben; ohne Banner still ohne Wirkung, wie beim Feld)."
         },
         "functionKind": {
           "$ref": "#/definitions/FunctionKind"
@@ -248,7 +256,9 @@
       "type": "string",
       "enum": [
         "medikamentenplan",
-        "aerzte"
+        "aerzte",
+        "packYears",
+        "news2"
       ],
       "description": "Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan). functionKind = innerer Diskriminator (waechst), aufgeloest ueber die Funktions-Registry. Immer Block."
     },
@@ -265,7 +275,7 @@
         },
         "rowSeparator": {
           "type": "string",
-          "description": "Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> DEFAULT_SEPARATOR."
+          "description": "Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> \" · \" (Mittelpunkt: hebt die Zeilengrenze vom Komma im Zeilenformat \"Name Staerke, Schema\" ab, #262)."
         },
         "rowPrefix": {
           "type": "string",

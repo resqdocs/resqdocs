@@ -6,15 +6,22 @@ import { ref, computed } from 'vue'
 import type { Node, FunctionKind } from '@resqdocs/protocol-core/model'
 import { useTreeEditor } from '@/rebuild/treeEditor'
 import MoveToPicker from './MoveToPicker.vue'
+import SnippetPicker from './SnippetPicker.vue'
+import BlockPicker from './BlockPicker.vue'
+import type { Container } from '@resqdocs/protocol-core/model'
 
 const props = defineProps<{ node: Node; depth: number }>()
 const tree = useTreeEditor()
 const addOpen = ref(false)
 const pickerOpen = ref(false)
+const snippetPickerOpen = ref(false)
+const blockPickerOpen = ref(false)
 // Loeschen ist irreversibel (kein Undo) + nimmt bei einem Container ALLE Kinder mit -> bewusste Bestaetigung.
 const confirmOpen = ref(false)
 // Aufklapprichtung des ＋-Menues: nach OBEN, wenn unter dem Button zu wenig Platz ist (weniger scrollen).
 const addUp = ref(false)
+// Zwei-Stufen-＋-Menü: die vier Funktionen sind unter „Funktion" gebündelt, damit die Liste kurz bleibt.
+const addView = ref<'root' | 'functions'>('root')
 
 function label(n: Node): string {
   return (n.title && n.title.trim()) || n.id
@@ -25,13 +32,38 @@ function shouldOpenUp(el: HTMLElement, estHeight: number): boolean {
   const below = window.innerHeight - rect.bottom
   return below < estHeight && rect.top > below
 }
+function closeAdd(): void {
+  addOpen.value = false
+  addView.value = 'root' // nächstes Öffnen startet wieder auf der Hauptebene
+}
 function toggleAdd(e: MouseEvent): void {
-  if (!addOpen.value) addUp.value = shouldOpenUp(e.currentTarget as HTMLElement, 190) // 4 Eintraege
+  if (!addOpen.value) {
+    addUp.value = shouldOpenUp(e.currentTarget as HTMLElement, 200) // 5 Eintraege (Funktionen gebündelt)
+    addView.value = 'root'
+  }
   addOpen.value = !addOpen.value
 }
 function add(kind: 'container' | 'field' | 'function', functionKind?: FunctionKind): void {
   tree.addChild(props.node.id, kind, functionKind)
-  addOpen.value = false
+  closeAdd()
+}
+function openSnippetPicker(): void {
+  closeAdd()
+  snippetPickerOpen.value = true
+}
+// Snippet als Feld-Vorgabe an diesen Container haengen (default=Text, ohne Titel; editier-/ausschliessbar).
+function onInsertSnippet(text: string): void {
+  tree.insertSnippet(props.node.id, text)
+  snippetPickerOpen.value = false
+}
+function openBlockPicker(): void {
+  closeAdd()
+  blockPickerOpen.value = true
+}
+// Bibliotheks-Block als Kind an diesen Container einfuegen (kollisionsfrei re-IDt; Kopie, keine Referenz).
+function onInsertBlock(block: Container): void {
+  tree.insertBlock(props.node.id, block)
+  blockPickerOpen.value = false
 }
 
 // Alle Nachfahren (rekursiv) mit Label + Typ - fuers Loesch-Confirm: zeigt, was MIT entfernt wird.
@@ -72,12 +104,24 @@ function confirmDelete(): void {
       <div v-if="node.type === 'container'" class="relative">
         <button type="button" class="btn btn-ghost btn-xs px-1.5" aria-label="Element hinzufügen" title="Element hinzufügen" @click="toggleAdd">＋</button>
         <template v-if="addOpen">
-          <button type="button" class="fixed inset-0 z-10 cursor-default" aria-label="Menü schließen" @click="addOpen = false"></button>
+          <button type="button" class="fixed inset-0 z-10 cursor-default" aria-label="Menü schließen" @click="closeAdd"></button>
           <div class="overlay-surface absolute right-0 z-20 flex w-44 flex-col rounded-box p-1" :class="addUp ? 'bottom-full mb-1' : 'mt-1'">
-            <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('container')">Container</button>
-            <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('field')">Feld</button>
-            <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'medikamentenplan')">Medikamentenplan</button>
-            <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'aerzte')">Ärzte</button>
+            <!-- Hauptebene: die vier Funktionen sind unter „Funktion" gebündelt, damit die Liste kurz bleibt -->
+            <template v-if="addView === 'root'">
+              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('container')">Container</button>
+              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('field')">Feld</button>
+              <button type="button" class="btn btn-ghost btn-xs justify-between" @click="addView = 'functions'">Funktion<span class="text-base-content/40" aria-hidden="true">›</span></button>
+              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="openSnippetPicker">Snippet einfügen</button>
+              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="openBlockPicker">Block einfügen</button>
+            </template>
+            <!-- Funktions-Auswahl: kurze Abfrage, welche Funktion eingefügt werden soll -->
+            <template v-else>
+              <button type="button" class="btn btn-ghost btn-xs justify-start gap-1 text-base-content/60" @click="addView = 'root'"><span aria-hidden="true">‹</span> zurück</button>
+              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'medikamentenplan')">Medikamentenplan</button>
+              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'aerzte')">Ärzte</button>
+              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'packYears')">Pack-Years</button>
+              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'news2')">NEWS2</button>
+            </template>
           </div>
         </template>
       </div>
@@ -93,6 +137,8 @@ function confirmDelete(): void {
     </div>
 
     <MoveToPicker v-if="pickerOpen" :node-id="node.id" :node-label="label(node)" @close="pickerOpen = false" />
+    <SnippetPicker v-if="snippetPickerOpen" title="Snippet als Feld einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
+    <BlockPicker v-if="blockPickerOpen" title="Block als Container einfügen" @select="onInsertBlock" @close="blockPickerOpen = false" />
 
     <!-- Loesch-Bestaetigung: irreversibel; bei einem Container werden alle Nachfahren mit-geloescht (Liste). -->
     <Teleport to="body">

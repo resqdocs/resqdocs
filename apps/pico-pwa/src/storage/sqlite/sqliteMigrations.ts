@@ -13,6 +13,7 @@ export const LIBRARY_BLOCKS_TABLE = 'library_blocks'
 export const LIBRARY_SNIPPETS_TABLE = 'library_snippets'
 export const PZN_ENTRIES_TABLE = 'pzn_entries'
 export const REWORK_PROTOCOLS_TABLE = 'rework_protocols'
+export const REWORK_BLOCKS_TABLE = 'rework_blocks'
 
 export interface Migration {
   version: number
@@ -120,6 +121,33 @@ export const MIGRATIONS: Migration[] = [
     version: 7,
     statements: [
       `ALTER TABLE rework_protocols ADD COLUMN order_index INTEGER NOT NULL DEFAULT 0;`,
+    ],
+  },
+  {
+    // #262: PZN-Bibliothek um die Wirkstärke erweitern (eigenes nutzergepflegtes Sachfeld
+    // statt im Namen/Label vermischt). Additiv via ALTER wie v4 (wirkstoff); bestehende
+    // Zeilen bekommen den Default ''. BEWUSST OHNE FTS-Anpassung: FTS5 kennt kein
+    // ALTER ADD COLUMN, ein Drop+Rebuild lohnt für ein kurzes Zahlenfeld nicht —
+    // die Suche matcht die Stärke nicht (Name/Wirkstoff/Kategorie/Bemerkung reichen).
+    version: 8,
+    statements: [
+      `ALTER TABLE pzn_entries ADD COLUMN staerke TEXT NOT NULL DEFAULT '';`,
+    ],
+  },
+  {
+    // Rework Slice 2: eigene Tabelle fuer wiederverwendbare Bausteine (Bloecke) - v1-Container-Baeume
+    // (rebuild/model.ts) als JSON, GLEICHES Format wie rework_protocols, nur bewusst getrennt gehalten.
+    // BEWUSST ohne order_index (stabile Sortierung ueber created_at). Einzelnes CREATE TABLE (kein
+    // internes ";\n") -> Android-Splitter-sicher (vgl. v6).
+    version: 9,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS rework_blocks (
+         id TEXT PRIMARY KEY,
+         title TEXT NOT NULL,
+         block_json TEXT NOT NULL,
+         created_at TEXT NOT NULL,
+         updated_at TEXT NOT NULL
+       );`,
     ],
   },
 ]

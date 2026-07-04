@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.1.0] - 2026-07-04
+
+### Features
+
+- Reusable building blocks: create text snippets and whole blocks, insert them into templates and cases, and share them as a file
+- Score helpers NEWS2 and Pack-Years as native functions in the editor and case view (based on published tables, not a diagnosis)
+- Two-step add menu in the template editor with grouped functions and inline editing; preview with example values
+- Delete protection in the case view: confirmation before removing entries plus a reset-all action
+- Medication library with dose strength as a dedicated field and card-based maintenance
+- AI-assisted template hint in the editor and on import; adaptive bridge polling with a tappable connection indicator
+- Self-contained AI documentation with version gating; generated protocols import directly into the app
+
+### Bug Fixes
+
+- File export now opens the native system share sheet
+- Pack-Years rounds to a whole number
+- Multi-line snippets insert without loss; empty snippets can no longer be selected
+- A cleared inventory row is no longer removed without confirmation
+
+## [1.0.0] - 2026-06-27
+
+### Features
+
+- First stable release: consolidated v1 protocol model, native iOS and Android apps, and the template-editor and case workflow
+
 ## [0.2.0] - 2026-06-21
 
 ### Features

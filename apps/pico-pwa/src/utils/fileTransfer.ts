@@ -13,7 +13,7 @@ import { bytesToBase64 } from './gzip'
  * sichern", AirDrop, …), Temp-Datei danach aufräumen. Im Web (kein nativer
  * Layer) Fallback auf den Blob-Download.
  */
-export async function shareJson(filename: string, json: string): Promise<void> {
+export async function shareJson(filename: string, json: string, dialogTitle = 'Exportieren'): Promise<void> {
   if (!Capacitor.isNativePlatform()) {
     downloadJson(filename, json)
     return
@@ -24,7 +24,7 @@ export async function shareJson(filename: string, json: string): Promise<void> {
   const { uri } = await Filesystem.getUri({ path: filename, directory: Directory.Cache })
   try {
     // file:// teilen MUSS ueber `files` laufen (nicht `url` - das ist fuer Web-Links).
-    await Share.share({ title: filename, files: [uri], dialogTitle: 'Protokoll exportieren' })
+    await Share.share({ title: filename, files: [uri], dialogTitle })
   } finally {
     // verzoegert aufraeumen: iOS liest die Datei ggf. noch beim Teilen.
     setTimeout(() => { void Filesystem.deleteFile({ path: filename, directory: Directory.Cache }).catch(() => {}) }, 10000)

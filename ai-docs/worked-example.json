@@ -1,0 +1,46 @@
+{
+  "schema": "resqdocs-protocol",
+  "version": 1,
+  "tree": {
+    "type": "container",
+    "id": "beispiel",
+    "title": "Beispiel",
+    "showTitle": true,
+    "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+    "children": [
+      {
+        "type": "field",
+        "id": "puls",
+        "title": "Puls",
+        "showTitle": true,
+        "default": "80",
+        "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+      },
+      {
+        "type": "field",
+        "id": "puls-einheit",
+        "inline": true,
+        "noSeparatorBefore": true,
+        "default": "/min"
+      },
+      {
+        "type": "field",
+        "id": "rr",
+        "title": "RR",
+        "showTitle": true,
+        "inline": true,
+        "default": "120/80",
+        "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+      },
+      {
+        "type": "field",
+        "id": "verlauf",
+        "title": "Verlauf",
+        "showTitle": true,
+        "multiline": true,
+        "default": "Patient stabil übergeben.",
+        "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" }
+      }
+    ]
+  }
+}

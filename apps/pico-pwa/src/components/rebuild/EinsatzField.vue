@@ -15,9 +15,11 @@ import type { Field } from '@resqdocs/protocol-core/model'
 import { useCaseValues } from '@/rebuild/useCaseValues'
 import TriStateToggle from '@/components/TriStateToggle.vue'
 import LongTextField from './LongTextField.vue'
+import SnippetPicker from './SnippetPicker.vue'
 
 const props = defineProps<{ node: Field }>()
 const caseValues = useCaseValues()
+const snippetPickerOpen = ref(false)
 
 const fill = computed(() => caseValues.get(props.node.id))
 // Funktions-Wert gehoert nie an ein Feld; typseitig auf den Tri-State abbilden (defensiv -> confirmed).
@@ -35,6 +37,10 @@ const def = computed(() => {
 const label = computed(() => (props.node.title && props.node.title.trim()) || props.node.id)
 const customValue = computed(() => (fill.value.state === 'custom' ? fill.value.value : def.value))
 const excluded = computed(() => fill.value.state === 'excluded')
+// Mehrzeilig darstellen/editieren, wenn das Feld als multiline definiert IST oder der aktuelle Wert
+// Zeilenumbrueche enthaelt (z. B. ein via Snippet gesetzter mehrzeiliger custom-Wert). Sonst verschluckt ein
+// einzeiliges <input> die \n und der erste Edit verwirft sie still (Verify).
+const useLongText = computed(() => !!props.node.multiline || customValue.value.includes('\n'))
 
 // „individuell"/Freitext: sticky ref (vom Nutzer gesetzt -> kein Modus-Flip beim Tippen eines
 // Options-Texts) PLUS Ableitung „Wert nicht in options". Der computed gatet auf state==='custom',
@@ -62,6 +68,12 @@ function onState(next: 'confirmed' | 'custom' | 'excluded'): void {
 }
 function onInput(e: Event): void {
   caseValues.setCustom(props.node.id, (e.target as HTMLInputElement).value)
+}
+// Snippet als Feldwert einsetzen (custom): kippt das Feld auf 'custom', der Wert bleibt normal editierbar
+// (kein eingefrorener Text). Ueberschreibt einen evtl. schon getippten Wert bewusst (schnelles Einsetzen).
+function onInsertSnippet(text: string): void {
+  caseValues.setCustom(props.node.id, text)
+  snippetPickerOpen.value = false
 }
 
 // --- Select: die Auswahl traegt den Status ---
@@ -128,14 +140,24 @@ function onSelectChange(e: Event): void {
       <div class="flex items-center gap-2">
         <TriStateToggle :model-value="triState" :label="label" @update:model-value="onState" />
         <span class="text-sm font-medium">{{ label }}</span>
+        <!-- Icon-only (Bausteine-4-Quadrate-Icon aus dem Dock -> Wiedererkennung); Bedeutung via aria-label/Tooltip -->
+        <button type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 shrink-0 px-1.5" aria-label="Snippet einfügen" title="Snippet einfügen" @click="snippetPickerOpen = true">
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4" y="4" width="7" height="7" rx="1.5" />
+            <rect x="13" y="4" width="7" height="7" rx="1.5" />
+            <rect x="4" y="13" width="7" height="7" rx="1.5" />
+            <rect x="13" y="13" width="7" height="7" rx="1.5" />
+          </svg>
+        </button>
       </div>
-      <p v-if="fill.state === 'confirmed'" class="pl-9 text-sm text-base-content/70" :class="node.multiline ? 'whitespace-pre-wrap' : ''">{{ def || '(kein Standardwert)' }}</p>
+      <p v-if="fill.state === 'confirmed'" class="pl-9 text-sm text-base-content/70" :class="useLongText ? 'whitespace-pre-wrap' : ''">{{ def || '(kein Standardwert)' }}</p>
       <div v-else-if="fill.state === 'custom'" class="pl-9">
-        <!-- mehrzeilig -> grosses Textfeld (Sheet, live); sonst die einzeilige Zeile wie bisher -->
-        <LongTextField v-if="node.multiline" :model-value="customValue" :title="label" @update:model-value="caseValues.setCustom(node.id, $event)" />
+        <!-- mehrzeilig (Feld-Def ODER Wert mit Umbruechen) -> grosses Textfeld; sonst die einzeilige Zeile -->
+        <LongTextField v-if="useLongText" :model-value="customValue" :title="label" @update:model-value="caseValues.setCustom(node.id, $event)" />
         <input v-else class="input input-sm w-full" :value="customValue" :aria-label="`${label}: eigener Wert`" @input="onInput" />
       </div>
       <p v-else class="pl-9 text-sm italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
+      <SnippetPicker v-if="snippetPickerOpen" title="Snippet als Wert einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
     </template>
   </div>
 </template>

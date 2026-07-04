@@ -4,11 +4,14 @@
 import { computed } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { render } from '@resqdocs/protocol-core/render'
+import { previewValues } from '@resqdocs/protocol-core/creator'
 import ContainerPreviewNode from './ContainerPreviewNode.vue'
 import OutputText from './OutputText.vue'
 
 const props = defineProps<{ root: Container }>()
-const text = computed(() => render(props.root))
+// Editor-Vorschau: Scores mit festen Beispielwerten (previewValues) fuellen, damit die Funktion sichtbar
+// wird - im Editor gibt der Nutzer nichts ein. Der Einsatz rendert mit den echten Werten (nicht hier).
+const text = computed(() => render(props.root, previewValues(props.root)))
 </script>
 
 <template>

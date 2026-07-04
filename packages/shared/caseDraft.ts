@@ -64,28 +64,38 @@ function sanitizeValues(v: unknown): Record<string, FieldFill> {
   return out
 }
 
-/** Funktions-Zeilen strikt auf bekannte Felder reduzieren (namelose raus). Deckt BEIDE Zeilen-Typen ab:
- *  Medikament {name, dosierung?, kommentar?, pzn?} UND Arzt {name, rolle?, ort?, telefon?, arztnummer?}.
- *  DSGVO: striktes Allowlisting - NUR diese Felder gelangen in den Entwurf, keine Scan-Rohdaten. Da der
- *  Entwurf den functionKind je Zeile nicht kennt, behalten wir die Union aller bekannten Felder (harmlos:
- *  jede Registry liest nur ihre eigenen). */
+/** Funktions-Zeilen strikt auf bekannte Felder reduzieren (leere raus). Deckt ALLE Zeilen-Typen ab:
+ *  Medikament {name, staerke?, dosierung?, kommentar?, pzn?}, Arzt {name, rolle?, ort?, telefon?,
+ *  arztnummer?} UND Score-Zeilen (z. B. Pack-Years {cigarettesPerDay?, years?} - reine Zahlen, KEIN
+ *  Namen-Feld). DSGVO: striktes Allowlisting - NUR diese Felder gelangen in den Entwurf, keine
+ *  Scan-Rohdaten. Da der Entwurf den functionKind je Zeile nicht kennt, behalten wir die Union aller
+ *  bekannten Felder (harmlos: jede Registry liest nur ihre eigenen). Behalten wird jede Zeile mit
+ *  IRGENDEINER Eingabe (hasData-Semantik, #260/bug-300: auch namenlos mit Daten = Nutzerarbeit) -
+ *  nur komplett leere Zeilen entfallen. */
+const STRING_FIELDS = ['name', 'staerke', 'dosierung', 'kommentar', 'pzn', 'ort', 'telefon', 'arztnummer'] as const
+const NUMBER_FIELDS = ['cigarettesPerDay', 'years', 'rr', 'spo2', 'systolic', 'pulse', 'temp'] as const
+const BOOL_FIELDS = ['onOxygen', 'scale2'] as const
 function sanitizeRows(v: unknown): FunctionRow[] {
   if (!Array.isArray(v)) return []
   const out: FunctionRow[] = []
   for (const raw of v) {
     const r = raw as Record<string, unknown>
-    if (!r || typeof r.name !== 'string' || !r.name.trim()) continue
-    const row: Record<string, string> = { name: r.name }
-    // Medikamentenplan-Felder
-    if (typeof r.dosierung === 'string') row.dosierung = r.dosierung
-    if (typeof r.kommentar === 'string') row.kommentar = r.kommentar
-    if (typeof r.pzn === 'string') row.pzn = r.pzn
-    // Aerzte-Felder
+    if (!r || typeof r !== 'object') continue
+    const row: Record<string, unknown> = {}
+    // String-Felder (Medikament + Arzt)
+    for (const k of STRING_FIELDS) if (typeof r[k] === 'string') row[k] = r[k]
     if (r.rolle === 'Hausarzt' || r.rolle === 'Facharzt') row.rolle = r.rolle
-    if (typeof r.ort === 'string') row.ort = r.ort
-    if (typeof r.telefon === 'string') row.telefon = r.telefon
-    if (typeof r.arztnummer === 'string') row.arztnummer = r.arztnummer
-    // row enthaelt ausschliesslich erlaubte String-Felder (Allowlist oben) -> sichere Verengung auf die Union.
+    // ACVPU-Enum (NEWS2-Bewusstsein)
+    if (typeof r.consciousness === 'string' && ['A', 'C', 'V', 'P', 'U'].includes(r.consciousness)) row.consciousness = r.consciousness
+    // Numerische Score-Felder (Pack-Years + NEWS2-Vitalwerte; endliche Zahlen)
+    for (const k of NUMBER_FIELDS) if (typeof r[k] === 'number' && Number.isFinite(r[k])) row[k] = r[k]
+    // Boolean-Score-Felder (NEWS2: O2-Gabe, SpO2-Skala 2)
+    for (const k of BOOL_FIELDS) if (typeof r[k] === 'boolean') row[k] = r[k]
+    // Leer? (keine nicht-leeren Strings UND keine Zahlen) -> keine Nutzerarbeit, raus. Ein alleiniger
+    // Boolean (Toggle ohne Vitalwerte) zaehlt bewusst NICHT als Erfassung.
+    const hatWert = Object.values(row).some((x) => (typeof x === 'string' ? x.trim() !== '' : typeof x === 'number'))
+    if (!hatWert) continue
+    // row enthaelt ausschliesslich erlaubte Felder (Allowlist oben) -> sichere Verengung auf die Union.
     out.push(row as unknown as FunctionRow)
   }
   return out

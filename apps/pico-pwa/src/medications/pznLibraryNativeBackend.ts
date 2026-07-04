@@ -56,6 +56,9 @@ export function createNativePznBackend(adapter: KeyValueAdapter): PznLibraryBack
     async count() {
       return (await repo()).count()
     },
+    async countMissingStaerke() {
+      return (await repo()).countMissingStaerke()
+    },
     async getEntry(pzn) {
       return (await repo()).getEntry(pzn)
     },
@@ -73,6 +76,9 @@ export function createNativePznBackend(adapter: KeyValueAdapter): PznLibraryBack
     },
     async setWirkstoff(pzn, wirkstoff) {
       return (await repo()).setWirkstoff(pzn, wirkstoff)
+    },
+    async setStaerke(pzn, staerke) {
+      return (await repo()).setStaerke(pzn, staerke)
     },
     async setLabel(pzn, label) {
       return (await repo()).setLabel(pzn, label)

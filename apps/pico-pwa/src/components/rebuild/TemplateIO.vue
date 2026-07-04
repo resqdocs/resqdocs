@@ -9,15 +9,21 @@ import type { Container } from '@resqdocs/protocol-core/model'
 import { useProtocolTree } from '@/rebuild/useProtocolTree'
 import { useTreeEditor } from '@/rebuild/treeEditor'
 import { exportTemplate, parseTemplate } from '@resqdocs/protocol-core/templateIO'
+import { shareJson } from '@/utils/fileTransfer'
+import { useAppVersion } from '@/composables/useAppVersion'
 
 const tree = useProtocolTree()
 const { root } = tree
 const editor = useTreeEditor()
+// ?v=<echte App-Version> mitgeben -> die KI-Seite stempelt sie in den Prompt (Versions-Check ohne Rueckfrage).
+const { version: appVersion } = useAppVersion()
+const aiUrl = computed(() => `https://ai.resqdocs.app?v=${encodeURIComponent(appVersion.value)}`)
 
 const mode = ref<'closed' | 'export' | 'import'>('closed')
 const importText = ref('')
 const msg = ref<{ kind: 'ok' | 'err'; text: string } | null>(null)
 const copied = ref(false)
+const sharing = ref(false) // Re-Entrancy-Guard: kein zweites Share, solange das System-Sheet offen ist (bug-316)
 
 const exportJson = computed(() => exportTemplate(root.value))
 
@@ -36,15 +42,20 @@ async function copyExport(): Promise<void> {
   window.setTimeout(() => (copied.value = false), 2000)
 }
 
-function downloadExport(): void {
+async function downloadExport(): Promise<void> {
+  if (sharing.value) return // Doppeltipp: der 2. Share rejectet sonst mit „in progress" -> falscher Fehler (bug-316)
+  sharing.value = true
   const name = (root.value.title || root.value.id || 'vorlage').replace(/[^a-z0-9_-]+/gi, '-')
-  const blob = new Blob([exportJson.value], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `protokoll-${name}.json`
-  a.click()
-  URL.revokeObjectURL(url)
+  try {
+    // shareJson: nativ Cache-Datei + System-Share-Sheet, Web -> Blob-Download. Der rohe <a download>-Blob
+    // funktioniert in der nativen WebView NICHT (bug-315).
+    await shareJson(`protokoll-${name}.json`, exportJson.value, 'Protokoll exportieren')
+  } catch (err) {
+    const m = err instanceof Error ? err.message : String(err)
+    if (!/cancel|abbruch/i.test(m)) msg.value = { kind: 'err', text: 'Export fehlgeschlagen: ' + m }
+  } finally {
+    sharing.value = false
+  }
 }
 
 const pendingImport = ref<Container | null>(null)
@@ -101,7 +112,7 @@ function onFile(e: Event): void {
         <span class="text-xs font-semibold text-base-content/60">Aktuelle Vorlage als JSON</span>
         <div class="flex gap-1">
           <button class="btn btn-ghost btn-xs" type="button" @click="copyExport">{{ copied ? 'Kopiert' : 'Kopieren' }}</button>
-          <button class="btn btn-ghost btn-xs" type="button" @click="downloadExport">Datei</button>
+          <button class="btn btn-ghost btn-xs" type="button" :disabled="sharing" @click="downloadExport">Teilen</button>
         </div>
       </div>
       <pre class="max-h-60 overflow-auto rounded bg-base-200 p-2 text-xs"><code>{{ exportJson }}</code></pre>
@@ -115,6 +126,12 @@ function onFile(e: Event): void {
         <input type="file" accept="application/json,.json" class="file-input file-input-sm" @change="onFile" />
       </div>
       <p class="text-xs text-base-content/50">Wird als neue Vorlage importiert — bei gleicher Kennung wird gefragt.</p>
+      <!-- Erfolgskette rueckwaerts (#261): Vorlagen entstehen auch per eigenem LLM auf ai.resqdocs.app. -->
+      <p class="text-xs text-base-content/50">
+        Tipp: Auf
+        <a :href="aiUrl" target="_blank" rel="noopener" class="link link-primary">ai.resqdocs.app</a>
+        erstellst du Vorlagen mit deinem eigenen KI-Assistenten.
+      </p>
     </div>
 
     <p v-if="msg" class="text-xs" :class="msg.kind === 'ok' ? 'text-success' : 'text-error'">{{ msg.text }}</p>
