@@ -5,6 +5,7 @@
 import { computed, ref, watch } from 'vue'
 import type { Container, Node, Heading, FunctionConfig } from '@resqdocs/protocol-core/model'
 import { DEFAULT_HEADING, DEFAULT_SEPARATOR } from '@resqdocs/protocol-core/model'
+import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 import { findNode, findPath, suggestFreeId } from '@resqdocs/protocol-core/creator'
 import { sanitizeId } from '@resqdocs/protocol-core/ids'
 import { useTreeEditor } from '@/rebuild/treeEditor'
@@ -15,6 +16,15 @@ const tree = useTreeEditor()
 const node = computed<Node | null>(() => (tree.selectedId.value ? findNode(props.root, tree.selectedId.value) : null))
 const heading = computed<Heading>(() => ({ ...DEFAULT_HEADING, ...(node.value?.heading ?? {}) }))
 const isRoot = computed(() => !!node.value && node.value.id === props.root.id)
+// Listen-Funktion (Medikamentenplan/Aerzte) = mehrzeilige Zeilen-Liste -> bekommt das Zeilen-Format.
+// Quelle: Registry-Marker singleLine (Score wie Pack-Years/NEWS2 = einzeilig -> keine Liste; unbekannt ->
+// keine Liste). Titel/inline/Banner sind bei ALLEN Knoten identisch (Wiedererkennung, Maintainer 2026-07-03):
+// inline verhaelt sich wie beim Feld - Default Block, explizit waehlbar (auch fuer Listen, 2026-07-03).
+const isListFunction = computed(() => {
+  const n = node.value
+  const def = n?.type === 'function' ? FUNCTION_REGISTRY[n.functionKind] : undefined
+  return !!def && !def.singleLine
+})
 
 // Feld-Trenner ist VERERBBAR: ein Container ohne eigenen separator erbt vom naechsten Vorfahren
 // (sonst DEFAULT_SEPARATOR). Pro Container aktiv ueberschreiben = Wert eintragen; leer = erben.
@@ -54,7 +64,10 @@ function setTitleOwnLine(on: boolean): void {
   const n = node.value
   if (!n) return
   if (n.type === 'container' || n.type === 'function') {
-    set({ titleInline: !on })
+    // Banner an = Titel auf eigener Zeile = strukturell Block -> inline-Flags raeumen (wie beim Feld,
+    // sonst reaktiviert sich ein stale inline still beim spaeteren Banner-Aus, Verify #55).
+    if (on) set({ titleInline: false, inline: false, noSeparatorBefore: false })
+    else set({ titleInline: true })
     return
   }
   // Feld: Banner ist strukturell ein BLOCK -> beim Einschalten die inline-Optionen mit raeumen.
@@ -118,11 +131,14 @@ const effectiveFieldDefault = computed<string | undefined>(() => {
 // Eigener Entwurf + Commit on blur, damit Tippen nicht staendig saniert wird.
 const idDraft = ref('')
 const idError = ref<string | null>(null)
+// „Als Baustein speichern": dezenter Erfolg/Fehler-Status; beim Knotenwechsel zurueckgesetzt (node-watch).
+const saveOutcome = ref<{ ok: boolean; msg: string } | null>(null)
 watch(
   node,
   (n) => {
     idDraft.value = n?.id ?? ''
     idError.value = null
+    saveOutcome.value = null
   },
   { immediate: true },
 )
@@ -141,6 +157,15 @@ function commitId(): void {
   idError.value = null
   idDraft.value = id
   if (id !== node.value.id) set({ id })
+}
+async function saveAsBaustein(): Promise<void> {
+  if (!node.value || node.value.type !== 'container') return
+  const targetId = node.value.id // beim Aufruf festhalten
+  const r = await tree.saveContainerAsBaustein(targetId)
+  // Hat der Nutzer waehrend des (nativen, async) Speicherns den Knoten gewechselt, das Outcome NICHT
+  // unter dem neuen Knoten anzeigen (der node-watch hat saveOutcome laengst zurueckgesetzt) - Verify.
+  if (!node.value || node.value.id !== targetId) return
+  saveOutcome.value = r.ok ? { ok: true, msg: `Als Baustein „${r.title}" gespeichert.` } : { ok: false, msg: r.error }
 }
 </script>
 
@@ -203,6 +228,12 @@ function commitId(): void {
         <span class="text-sm">Als „nicht erhoben" markierbar <span class="whitespace-nowrap">(✓ / −)</span></span>
       </label>
 
+      <!-- CONTAINER (nicht Wurzel): den Teilbaum als wiederverwendbaren Baustein in der Bibliothek ablegen -->
+      <div v-if="node.type === 'container' && !isRoot" class="flex flex-col gap-1">
+        <button type="button" class="btn btn-outline btn-sm self-start" @click="saveAsBaustein">Als Baustein speichern</button>
+        <p v-if="saveOutcome" class="text-xs" :class="saveOutcome.ok ? 'text-success' : 'text-error'">{{ saveOutcome.msg }}</p>
+      </div>
+
       <!-- ERWEITERT (Progressive Disclosure): selten Gebrauchtes eingeklappt - interne id, Titel-Format,
            Layout/Trenner, Ausgabe-Optionen. Default zu; Kopf zeigt die id als Vorschau. -->
       <details class="collapse-arrow collapse rounded-lg bg-base-200/50">
@@ -263,8 +294,9 @@ function commitId(): void {
             </template>
           </div>
 
-          <!-- FELD: block/inline + Trenner-Opt-out. Entfaellt bei aktivem Banner (das ist ein Block). -->
-          <template v-if="node.type === 'field' && !titleOwnLine">
+          <!-- FELD oder FUNKTION (Score ODER Liste): block/inline + Trenner-Opt-out. Wie beim Feld: Default
+               Block, inline explizit waehlbar. Entfaellt bei aktivem Banner (Titel auf eigener Zeile = Block). -->
+          <template v-if="(node.type === 'field' || node.type === 'function') && !titleOwnLine">
             <label class="flex w-full cursor-pointer items-center gap-2 py-0">
               <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.inline === true" @change="set(($event.target as HTMLInputElement).checked ? { inline: true } : { inline: false, noSeparatorBefore: false })" />
               <span class="text-sm">Inline (an vorheriges Element anhängen statt neue Zeile)</span>
@@ -290,8 +322,9 @@ function commitId(): void {
             </fieldset>
           </template>
 
-          <!-- FUNKTION: Zeilen-Format (untereinander mit Praefix/Suffix vs hintereinander mit Trenner) -->
-          <template v-if="node.type === 'function'">
+          <!-- FUNKTION mit Zeilen-Liste (Medikamentenplan/Ärzte): Zeilen-Format. Score-Funktionen
+               (Pack-Years) haben keine Zeilen-Liste -> kein Zeilen-Format, nur die Titel-Optionen oben. -->
+          <template v-if="node.type === 'function' && isListFunction">
             <span class="text-xs font-semibold text-base-content/60">Zeilen-Format</span>
             <label class="flex w-full cursor-pointer items-center gap-2 py-0">
               <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.config?.rowLayout === 'inline'" @change="setConfig(($event.target as HTMLInputElement).checked ? { rowLayout: 'inline', rowPrefix: undefined, rowSuffix: undefined } : { rowLayout: 'block', rowSeparator: undefined })" />

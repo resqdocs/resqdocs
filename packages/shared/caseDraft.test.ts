@@ -55,18 +55,34 @@ test('parseDraft: roundtrip gueltig; nur bekannte Zustaende; ungueltig -> null',
   assert.equal(parseDraft(null), null)
 })
 
-test('sanitizeValues (via parseDraft): function-Variante - nur {name,dosierung,kommentar,pzn}, namelos raus', () => {
+test('sanitizeValues (via parseDraft): function-Variante - Allowlist {name,staerke,dosierung,kommentar,pzn}; leere Zeilen raus, namenlose MIT Daten bleiben (#260/#262)', () => {
   const raw = {
     protocolId: 'p',
     createdAt: T0,
     lastTouchedAt: T0,
     expiresAt: T0 + HOUR,
     ttlHours: 3,
-    values: { mp: { state: 'function', rows: [{ name: 'ASS', dosierung: '1-0-0', pzn: '123', aussteller: 'Dr. X' }, { name: '', dosierung: 'x' }, { foo: 'bar' }] } },
+    values: {
+      mp: {
+        state: 'function',
+        rows: [
+          { name: 'ASS', staerke: '100 mg', dosierung: '1-0-0', pzn: '123', aussteller: 'Dr. X' },
+          { name: '', dosierung: 'x' }, // namenlos, aber Daten -> bleibt (Nutzerarbeit, bug-300)
+          { name: '   ', kommentar: ' ' }, // komplett leer (nur Whitespace) -> raus
+          { foo: 'bar' }, // kein name-String -> raus
+        ],
+      },
+    },
   }
   const d = parseDraft(raw)!
-  // 'aussteller' verworfen, namelose Zeilen raus -> nur die erlaubten Felder
-  assert.deepEqual(d.values.mp, { state: 'function', rows: [{ name: 'ASS', dosierung: '1-0-0', pzn: '123' }] })
+  // 'aussteller' verworfen; staerke ueberlebt den Roundtrip; nur wirklich leere Zeilen entfallen
+  assert.deepEqual(d.values.mp, {
+    state: 'function',
+    rows: [
+      { name: 'ASS', staerke: '100 mg', dosierung: '1-0-0', pzn: '123' },
+      { name: '', dosierung: 'x' },
+    ],
+  })
 })
 
 test('sanitizeValues (via parseDraft): function-Variante Aerzte - {name,rolle,ort,telefon,arztnummer}, invalide Rolle raus', () => {
@@ -80,7 +96,7 @@ test('sanitizeValues (via parseDraft): function-Variante Aerzte - {name,rolle,or
       ae: {
         state: 'function',
         rows: [
-          { name: 'Dr. A', rolle: 'Hausarzt', ort: 'Worms', telefon: '06247', arztnummer: '123', extra: 'x' },
+          { name: 'Dr. A', rolle: 'Hausarzt', ort: 'Kiel', telefon: '0431', arztnummer: '123', extra: 'x' },
           { name: 'Dr. B', rolle: 'Quatsch' },
           { name: '' },
         ],
@@ -91,7 +107,7 @@ test('sanitizeValues (via parseDraft): function-Variante Aerzte - {name,rolle,or
   // Arzt-Felder behalten, 'extra' + invalide Rolle verworfen, namelose Zeile raus
   assert.deepEqual(d.values.ae, {
     state: 'function',
-    rows: [{ name: 'Dr. A', rolle: 'Hausarzt', ort: 'Worms', telefon: '06247', arztnummer: '123' }, { name: 'Dr. B' }],
+    rows: [{ name: 'Dr. A', rolle: 'Hausarzt', ort: 'Kiel', telefon: '0431', arztnummer: '123' }, { name: 'Dr. B' }],
   })
 })
 
@@ -124,4 +140,22 @@ test('Repository: unlesbar -> aufgeraeumt; remove loescht', async () => {
   await repo.save(touchDraft(null, { x: { state: 'confirmed' } }, 'p', 3, T0))
   await repo.remove()
   assert.equal(a.store.has(REWORK_CASE_DRAFT_KEY), false)
+})
+
+test('sanitizeValues (via parseDraft): Score-Zeile (#55) - Pack-Years {cigarettesPerDay, years} überlebt, Fremdfeld raus', () => {
+  const raw = {
+    protocolId: 'p',
+    createdAt: T0,
+    lastTouchedAt: T0,
+    expiresAt: T0 + HOUR,
+    ttlHours: 3,
+    values: {
+      py: { state: 'function', rows: [{ cigarettesPerDay: 30, years: 15, geheim: 'x' }] },
+      leer: { state: 'function', rows: [{ cigarettesPerDay: NaN }, {}] },
+    },
+  }
+  const d = parseDraft(raw)!
+  assert.deepEqual(d.values.py, { state: 'function', rows: [{ cigarettesPerDay: 30, years: 15 }] })
+  // NaN + leeres Objekt = keine Nutzerarbeit -> beide Zeilen raus
+  assert.deepEqual(d.values.leer, { state: 'function', rows: [] })
 })

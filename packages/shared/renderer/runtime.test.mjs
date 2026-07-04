@@ -155,13 +155,13 @@ const textDemo = {
   variables: [
     { id: "geschlecht", type: "select", grammar: "de-gender", default: "w",
       options: [{ value: "w", label: "weiblich" }, { value: "m", label: "männlich" }, { value: "d", label: "divers" }] },
-    { id: "klinik", type: "text", default: "UKE" },
+    { id: "klinik", type: "text", default: "Helios" },
   ],
   blocks: [{ id: "b", title: "B", points: [] }],
 };
 
 test("{{var:id}} löst Textvariable auf", () => {
-  assert.equal(resolveText("Ziel: {{var:klinik}}", buildContext(textDemo, {})), "Ziel: UKE");
+  assert.equal(resolveText("Ziel: {{var:klinik}}", buildContext(textDemo, {})), "Ziel: Helios");
 });
 
 test("{{var:id}} löst Select-Variable als Label auf (nicht als Wert)", () => {
@@ -170,13 +170,13 @@ test("{{var:id}} löst Select-Variable als Label auf (nicht als Wert)", () => {
 });
 
 test("Default-Werte von Variablen werden berücksichtigt", () => {
-  assert.equal(resolveText("{{var:klinik}}", buildContext(textDemo, {})), "UKE");
+  assert.equal(resolveText("{{var:klinik}}", buildContext(textDemo, {})), "Helios");
   assert.equal(resolveText("{{var:geschlecht}}", buildContext(textDemo, {})), "weiblich");
 });
 
 test("Case-Overrides werden berücksichtigt", () => {
-  const c = buildContext(textDemo, { variableValues: { klinik: "AKH" } });
-  assert.equal(resolveText("{{var:klinik}}", c), "AKH");
+  const c = buildContext(textDemo, { variableValues: { klinik: "Asklepios" } });
+  assert.equal(resolveText("{{var:klinik}}", c), "Asklepios");
 });
 
 test("{{patient}} wird für w/m/d korrekt aufgelöst", () => {
@@ -203,7 +203,7 @@ test("resolveMaybeText lässt Nicht-Strings unverändert, löst Strings auf", ()
   const c = buildContext(textDemo, {});
   assert.equal(resolveMaybeText(undefined, c), undefined);
   assert.equal(resolveMaybeText(42, c), 42);
-  assert.equal(resolveMaybeText("{{var:klinik}}", c), "UKE");
+  assert.equal(resolveMaybeText("{{var:klinik}}", c), "Helios");
 });
 
 test("Renderer und resolveText liefern konsistente Ergebnisse", () => {

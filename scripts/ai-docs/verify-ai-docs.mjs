@@ -13,10 +13,17 @@ const validate = ajv.compile(schema)
 
 let ok = true
 const dir = join(ROOT, 'ai-docs/examples')
-for (const f of readdirSync(dir).filter((x) => x.endsWith('.json'))) {
-  const data = JSON.parse(readFileSync(join(dir, f), 'utf8'))
+const files = [
+  ...readdirSync(dir)
+    .filter((x) => x.endsWith('.json'))
+    .map((f) => join(dir, f)),
+  // Worked Example steht als "exakt nachzuahmendes Muster" in §5 der Doku -> genauso schema-gaten.
+  join(ROOT, 'ai-docs/worked-example.json'),
+]
+for (const path of files) {
+  const data = JSON.parse(readFileSync(path, 'utf8'))
   const valid = validate(data)
-  console.log(`${valid ? 'OK  ' : 'FAIL'} ${f}`)
+  console.log(`${valid ? 'OK  ' : 'FAIL'} ${path.slice(path.indexOf('ai-docs'))}`)
   if (!valid) {
     ok = false
     console.log(JSON.stringify(validate.errors, null, 2))

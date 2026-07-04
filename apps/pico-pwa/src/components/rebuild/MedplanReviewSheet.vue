@@ -15,13 +15,15 @@ import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { usePznLibrary } from '@/medications/usePznLibrary'
 import { useProtocolTree } from '@/rebuild/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
+import { formatMedikament, medikamentRowHasData, staerkeOhneDuplikat } from '@resqdocs/protocol-core/functions/registry'
 import MedplanScanOverlay from '@/components/MedplanScanOverlay.vue'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 const emit = defineEmits<{ apply: [rows: MedikamenteRow[], doctor?: ArztRow]; close: [] }>()
 
 const lookup = useMedicationLookup()
 void lookup.ensureLoaded()
-const { error, structuredRows, totalPages, aussteller, ausstellerRolle, missingPages, draftRows, ingest, updateRowName, removeRow, reset } =
+const { error, structuredRows, totalPages, aussteller, ausstellerRolle, missingPages, draftRows, ingest, updateRowName, setRowStaerke, removeRow, reset } =
   useMedplanScan((pzn) => lookup.resolve(pzn))
 
 const pznLibrary = usePznLibrary()
@@ -44,6 +46,38 @@ function onRemoveRow(i: number): void {
   }
   transferState.value = next
 }
+// Lösch-Schutz auch im Scan-Review (#260, Maintainer-Nachforderung): geprüfte Zeilen sind Arbeit —
+// Einzel-✕ und Verwerfen/Schließen fragen nach, solange erfasste Zeilen da sind. Index-basiert ist
+// hier sicher: hinter dem Modal wird nie eingefügt/entfernt (resolveFromLibrary ändert nur FELDER
+// bestehender Zeilen: Name/Stärke); beim Bestätigen wird die Zeile defensiv gegengeprüft.
+const pendingRemove = ref<number | 'discard' | null>(null)
+function requestRemoveRow(i: number): void {
+  // IMMER nachfragen: hier gibt es keine "leer geborenen" Zeilen - jede stammt aus einem Parse
+  // (auch mit leergeraeumtem Namen bleibt sie gescannte Arbeit, #260-Nachbefund).
+  if (structuredRows.value[i]) pendingRemove.value = i
+}
+function requestDiscard(): void {
+  // Gleiches Daten-Gate wie das Zeilen-✕ (hasData statt nur Name) -> kein Schlupfloch bei namenlosen Zeilen.
+  if (structuredRows.value.some(medikamentRowHasData)) pendingRemove.value = 'discard'
+  else discardAndClose()
+}
+const confirmTitle = computed(() => {
+  const p = pendingRemove.value
+  if (p === 'discard') return 'Gescannte Liste verwerfen?'
+  const r = typeof p === 'number' ? structuredRows.value[p] : undefined
+  return `„${(r && formatMedikament(r)) || 'Medikament'}“ entfernen?`
+})
+const confirmMessage = computed(() =>
+  pendingRemove.value === 'discard'
+    ? `${medCount.value === 1 ? 'Der gescannte Eintrag wird' : `Alle ${medCount.value} gescannten Einträge werden`} verworfen und nicht übernommen.`
+    : 'Der Eintrag wird aus der Scan-Liste entfernt und nicht übernommen.',
+)
+function confirmPending(): void {
+  const p = pendingRemove.value
+  pendingRemove.value = null
+  if (p === 'discard') discardAndClose()
+  else if (typeof p === 'number' && structuredRows.value[p]) onRemoveRow(p)
+}
 
 const scanOpen = ref(false)
 const manualOpen = ref(false)
@@ -60,8 +94,12 @@ function rowLabel(i: number): string {
 async function transferRow(i: number): Promise<void> {
   const pzn = rowPzn(i)
   if (!pzn) return
-  const result = await pznLibrary.addOne(pzn, rowLabel(i)) // genau EINE PZN
-  if (result !== 'invalid') transferState.value = { ...transferState.value, [i]: result }
+  // Stärke als eigener Vorschlag mit (Bibliothek hat seit #262 ein eigenes Feld; Konfliktregel:
+  // vorhandene nicht-leere Stärke gewinnt) — NICHT mehr ins Label mischen.
+  const result = await pznLibrary.addOne(pzn, rowLabel(i), structuredRows.value[i]?.staerke) // genau EINE PZN
+  // Gegenprobe wie in resolveFromLibrary: waehrend des awaits kann eine Zeile davor entfernt worden
+  // sein (Loesch-Rueckfrage vergroessert das Fenster) -> Feedback nie an die nachgerueckte Zeile heften.
+  if (result !== 'invalid' && structuredRows.value[i]?.pzn === pzn) transferState.value = { ...transferState.value, [i]: result }
 }
 /** Nach dem Parse: „PZN <nr>"-Platzhalter aus DER EIGENEN Bibliothek nachziehen (Wirkstoff > Label). */
 async function resolveFromLibrary(): Promise<void> {
@@ -72,7 +110,13 @@ async function resolveFromLibrary(): Promise<void> {
     if (!pzn || !/^PZN \d/.test(name)) continue
     const e = await pznLibrary.entry(pzn)
     const resolved = e ? e.wirkstoff || e.label : ''
-    if (resolved && structuredRows.value[i]?.pzn === pzn) updateRowName(i, resolved)
+    if (resolved && structuredRows.value[i]?.pzn === pzn) {
+      updateRowName(i, resolved)
+      // Wirkstärke aus der EIGENEN Bibliothek mitziehen (#262) — nur leere Zeilen-Stärke füllen,
+      // und nie doppelt dokumentieren, wenn der aufgelöste Name sie schon trägt.
+      const st = staerkeOhneDuplikat(resolved, e?.staerke)
+      if (st && !structuredRows.value[i]?.staerke) setRowStaerke(i, st)
+    }
   }
 }
 async function onDecoded(raw: string): Promise<void> {
@@ -136,7 +180,7 @@ onMounted(() => {
             <span v-if="totalPages > 0" class="badge badge-sm" :class="missingPages.length ? 'badge-warning' : 'badge-success'">
               {{ missingPages.length ? `Seite ${missingPages.join(', ')} fehlt` : `${totalPages} Seite(n)` }}
             </span>
-            <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11" aria-label="Schließen" @click="discardAndClose">✕</button>
+            <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11" aria-label="Schließen" @click="requestDiscard">✕</button>
           </div>
         </div>
 
@@ -170,8 +214,9 @@ onMounted(() => {
           <li v-for="(row, i) in structuredRows" :key="i" class="flex flex-col gap-0.5">
             <div class="flex items-center gap-1">
               <input :value="row.name" class="input input-sm flex-1" :aria-label="`Medikament ${i + 1} Name`" @input="updateRowName(i, ($event.target as HTMLInputElement).value)" />
+              <span v-if="row.staerke" class="badge badge-ghost badge-sm shrink-0" :aria-label="`Wirkstärke ${row.staerke}`">{{ row.staerke }}</span>
               <button v-if="rowPzn(i)" type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11" :aria-label="`PZN ${rowPzn(i)} in die Bibliothek übernehmen`" :title="`PZN ${rowPzn(i)} in deine Bibliothek übernehmen`" @click="transferRow(i)">→</button>
-              <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 text-error" :aria-label="`Medikament ${i + 1} entfernen`" @click="onRemoveRow(i)">✕</button>
+              <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 text-error" :aria-label="`Medikament ${i + 1} entfernen`" @click="requestRemoveRow(i)">✕</button>
             </div>
             <span v-if="transferState[i]" class="pl-1 text-xs text-success">{{ transferState[i] === 'added' ? 'PZN in Bibliothek übernommen.' : 'PZN war bereits in der Bibliothek.' }}</span>
           </li>
@@ -180,7 +225,7 @@ onMounted(() => {
 
         <!-- Aktionen -->
         <div class="mt-auto flex justify-between gap-2 pt-2">
-          <button type="button" class="btn btn-ghost btn-sm min-h-11" @click="discardAndClose">Verwerfen</button>
+          <button type="button" class="btn btn-ghost btn-sm min-h-11" @click="requestDiscard">Verwerfen</button>
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!medCount" @click="applyAndClose">{{ medCount }} Medikament{{ medCount === 1 ? '' : 'e' }} übernehmen</button>
         </div>
 
@@ -188,4 +233,14 @@ onMounted(() => {
       </div>
     </div>
   </Teleport>
+
+  <!-- Lösch-Rückfrage (#260): Einzelzeile oder ganze Scan-Liste; daisyUI-Modal (z-999) liegt über dem Sheet (z-40) -->
+  <ConfirmDialog
+    v-if="pendingRemove !== null"
+    :title="confirmTitle"
+    :message="confirmMessage"
+    :confirm-label="pendingRemove === 'discard' ? 'Verwerfen' : 'Entfernen'"
+    @confirm="confirmPending"
+    @cancel="pendingRemove = null"
+  />
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { staerkeOhneDuplikat } from '@resqdocs/protocol-core/functions/registry'
 import { useMedplanScan } from '@/medplan/useMedplanScan'
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { usePznLibrary } from '@/medications/usePznLibrary'
@@ -85,7 +86,10 @@ async function resolveFromLibrary(): Promise<void> {
     const name = (structuredRows.value[i]?.name ?? '').trim()
     if (!pzn || !/^PZN \d/.test(name)) continue
     const e = await pznLibrary.entry(pzn)
-    const resolved = e ? (e.wirkstoff || e.label) : ''
+    // Text-Pfad (Altsystem, kein eigenes Staerke-Feld): Staerke in den Namen einweben,
+    // ausser der Name traegt sie schon (staerkeOhneDuplikat, #262).
+    const base = e ? (e.wirkstoff || e.label) : ''
+    const resolved = [base, e ? staerkeOhneDuplikat(base, e.staerke) : undefined].filter(Boolean).join(' ')
     if (resolved) updateRowName(i, resolved)
   }
 }

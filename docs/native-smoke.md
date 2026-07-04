@@ -12,7 +12,7 @@
 
 - Node-Toolchain + `npm install` im `apps/pico-pwa`.
 - Capacitor-CLI ist vorhanden (`@capacitor/cli`, devDependency). App-Config: `capacitor.config.ts`
-  (`appId: org.resqdocs.app`, `webDir: dist`).
+  (`appId: app.resqdocs`, `webDir: dist`).
 - **iOS:** macOS + Xcode (CocoaPods erforderlich: `brew install cocoapods` (ML-Kit-Plugin hat kein SPM, #31)).
 - **Android:** Android Studio + SDK.
 

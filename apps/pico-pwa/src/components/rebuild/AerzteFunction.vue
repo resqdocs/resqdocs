@@ -13,8 +13,9 @@ import type { FunctionNode, ArztRow, MedikamenteRow } from '@resqdocs/protocol-c
 import { useCaseValues } from '@/rebuild/useCaseValues'
 import { useProtocolTree } from '@/rebuild/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
-import { formatArzt } from '@resqdocs/protocol-core/functions/registry'
+import { formatArzt, arztRowHasData, medikamentRowHasData } from '@resqdocs/protocol-core/functions/registry'
 import AerzteReviewSheet from './AerzteReviewSheet.vue'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
@@ -26,6 +27,10 @@ const filledCount = computed(() => rows.value.filter((r) => r.name.trim()).lengt
 const label = computed(() => (props.node.title && props.node.title.trim()) || 'Ärzte')
 
 const editingIndex = ref<number | null>(null)
+// Zustand beim OEFFNEN der Karte (#260-Nachbefund, wie Medikamentenplan): eine leergeraeumte
+// Bestandszeile bleibt rueckfragepflichtig; still loeschen nur die leer geborene ＋-Zeile.
+const editingHadData = ref(false)
+const editingLabel = ref('')
 let focusNext = false
 function setEditName(el: unknown): void {
   if (el && focusNext) {
@@ -50,27 +55,72 @@ function removeRow(i: number): void {
   if (editingIndex.value === i) editingIndex.value = null
   else if (editingIndex.value !== null && i < editingIndex.value) editingIndex.value--
 }
+// Lösch-Schutz (#260): identisches Muster wie im Medikamentenplan — Rückfrage vor Datenverlust,
+// still nur die leer geborene Zeile; gemerkt wird das ZEILEN-OBJEKT (indexOf beim Bestätigen, fail-safe).
+const pendingRemove = ref<ArztRow | 'all' | null>(null)
+function requestRemove(i: number): void {
+  const r = rows.value[i]
+  if (!r) return
+  const freshEmpty = editingIndex.value === i && !editingHadData.value && !arztRowHasData(r)
+  if (freshEmpty) removeRow(i)
+  else pendingRemove.value = r
+}
+function clearAll(): void {
+  caseValues.setRows(props.node.id, [])
+  editingIndex.value = null
+}
+function requestRemoveAll(): void {
+  // Nur Leerzeilen? Nichts zu verlieren -> ohne Rückfrage leeren (konsistent zum Einzel-✕).
+  if (rows.value.some(arztRowHasData)) pendingRemove.value = 'all'
+  else clearAll()
+}
+const confirmTitle = computed(() => {
+  const p = pendingRemove.value
+  if (p === 'all') return 'Alle Ärzte zurücksetzen?'
+  const current = p ? formatArzt(p) : ''
+  return `„${current || editingLabel.value || 'Arzt'}“ entfernen?`
+})
+const confirmMessage = computed(() => {
+  if (pendingRemove.value !== 'all') return 'Das lässt sich nicht rückgängig machen.'
+  const n = rows.value.filter(arztRowHasData).length
+  return `${n === 1 ? 'Der erfasste Eintrag wird' : `Alle ${n} erfassten Einträge werden`} entfernt. Das lässt sich nicht rückgängig machen.`
+})
+function confirmPendingRemove(): void {
+  const p = pendingRemove.value
+  pendingRemove.value = null
+  if (p === 'all') clearAll()
+  else if (p) {
+    const i = rows.value.indexOf(p)
+    if (i >= 0) removeRow(i)
+  }
+}
 function openEdit(i: number): void {
   editingIndex.value = i
+  const r = rows.value[i]
+  editingHadData.value = r ? arztRowHasData(r) : false
+  editingLabel.value = r ? formatArzt(r) : ''
 }
 function closeEdit(): void {
   editingIndex.value = null
 }
 function onFocusOut(e: FocusEvent): void {
+  if (pendingRemove.value !== null) return // Rückfrage offen: Fokuswechsel ins Modal schließt die Karte nicht
   const card = e.currentTarget as HTMLElement
   if (!card.contains(e.relatedTarget as Node | null)) closeEdit()
 }
 function addRow(): void {
-  const cleaned = rows.value.filter((r) => r.name.trim())
+  const cleaned = rows.value.filter(arztRowHasData) // nur WIRKLICH leere Zeilen aufraeumen (#260)
   focusNext = true
   caseValues.setRows(props.node.id, [...cleaned, { name: '' }])
   editingIndex.value = cleaned.length
+  editingHadData.value = false // leer geboren -> ✕ darf ohne Rueckfrage aufraeumen
+  editingLabel.value = ''
 }
 
 // --- BMP-Scan: zieht den ausstellenden Arzt (+ optional die Medikamente in einen vorhandenen Plan) ---
 const bmpOpen = ref(false)
 function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
-  const cleaned = rows.value.filter((r) => r.name.trim())
+  const cleaned = rows.value.filter(arztRowHasData)
   caseValues.setRows(props.node.id, [...cleaned, doctor])
   // Cross-Uebernahme: gewaehlte Medikamente an die erste Medikamentenplan-Funktion anhaengen (falls vorhanden).
   if (meds && meds.length) {
@@ -79,7 +129,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
       const id = medNodes[0].id
       // id ist eine medikamentenplan-Funktion -> ihre rows sind MedikamenteRow (nur MedplanFunction schreibt sie).
       const existing = caseValues.getRows(id) as MedikamenteRow[]
-      caseValues.setRows(id, [...existing.filter((m) => m.name.trim()), ...meds])
+      caseValues.setRows(id, [...existing.filter(medikamentRowHasData), ...meds])
     }
   }
   editingIndex.value = null
@@ -92,6 +142,8 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
     <div class="flex items-center gap-2">
       <span class="text-sm font-semibold">{{ label }}</span>
       <span v-if="filledCount" class="badge badge-neutral badge-sm">{{ filledCount }}</span>
+      <!-- „Alle zurücksetzen" oben+unten (Maintainer-Vorgabe #260), sekundär-destruktiv + Rückfrage. -->
+      <button v-if="rows.length" type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
     </div>
 
     <template v-for="(r, i) in rows" :key="i">
@@ -124,7 +176,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
             :aria-label="`Arzt ${i + 1} Name`"
             @input="setRow(i, { name: ($event.target as HTMLInputElement).value })"
           />
-          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Arzt ' + (i + 1)} entfernen`" @click="removeRow(i)">✕</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Arzt ' + (i + 1)} entfernen`" @click="requestRemove(i)">✕</button>
         </div>
         <div class="flex gap-2">
           <select class="select select-sm w-32 shrink-0" :value="r.rolle ?? ''" aria-label="Rolle" @change="setRow(i, { rolle: (($event.target as HTMLSelectElement).value || undefined) as ArztRow['rolle'] })">
@@ -142,6 +194,8 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
       </div>
     </template>
 
+    <!-- Unterer Zurücksetzen-Button; mb-1 setzt ihn von der Aktionsleiste ab (Proximity, Apple ≥12pt). -->
+    <button v-if="rows.length" type="button" class="btn btn-ghost btn-sm mb-1 min-h-11 self-end text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
     <p v-if="!rows.length" class="text-xs italic text-base-content/50">Noch keine Ärzte erfasst.</p>
 
     <!-- Aktionsleiste: manuell anlegen + Plan scannen (zieht den ausstellenden Arzt aus dem BMP). -->
@@ -155,5 +209,15 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
 
     <!-- BMP-Scan + Review (teleportet sich selbst) -->
     <AerzteReviewSheet v-if="bmpOpen" @apply="onScanApply" @close="bmpOpen = false" />
+
+    <!-- Lösch-Rückfrage (#260): Einzelzeile mit Daten oder „alle zurücksetzen" (teleportet sich selbst) -->
+    <ConfirmDialog
+      v-if="pendingRemove !== null"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="pendingRemove === 'all' ? 'Alle zurücksetzen' : 'Entfernen'"
+      @confirm="confirmPendingRemove"
+      @cancel="pendingRemove = null"
+    />
   </div>
 </template>

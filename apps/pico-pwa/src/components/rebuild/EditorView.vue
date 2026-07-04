@@ -6,18 +6,22 @@
  * Small-screen-first: drei Segmente (Aufbau / Eigenschaften / Vorschau) einzeln am Handy,
  * ab lg drei Spalten. Zentrale Tree-API per provide/inject an die rekursiven Knoten.
  */
-import { ref, provide } from 'vue'
+import { ref, provide, toRaw } from 'vue'
 import { useProtocolTree } from '@/rebuild/useProtocolTree'
 import { useCaseValues } from '@/rebuild/useCaseValues'
 import { findNode, collectIds, canMoveUp as canMoveUpOp, canMoveDown as canMoveDownOp, canIndent as canIndentOp, canOutdent as canOutdentOp, moveTargets as moveTargetsOp } from '@resqdocs/protocol-core/creator'
 import { TREE_EDITOR, type TreeEditorApi } from '@/rebuild/treeEditor'
+import { useBlockLibrary } from '@/rebuild/useBlockLibrary'
+import type { Container } from '@resqdocs/protocol-core/model'
 import ContainerTreeNode from './ContainerTreeNode.vue'
 import ContainerProperties from './ContainerProperties.vue'
 import ContainerPreview from './ContainerPreview.vue'
 import LibraryBar from './LibraryBar.vue'
+import AiToolNotice from './AiToolNotice.vue'
 
 const tree = useProtocolTree()
 const caseValues = useCaseValues()
+const blocks = useBlockLibrary()
 const root = tree.root
 const selectedId = ref<string | null>(root.value.id)
 const view = ref<'aufbau' | 'eigenschaften' | 'vorschau'>('aufbau')
@@ -48,6 +52,26 @@ const api: TreeEditorApi = {
     const child = tree.addChild(parentId, kind, functionKind)
     selectedId.value = child.id
     view.value = 'eigenschaften'
+  },
+  insertSnippet(parentId, text) {
+    const child = tree.insertSnippet(parentId, text)
+    selectedId.value = child.id
+    view.value = 'eigenschaften'
+  },
+  insertBlock(parentId, block) {
+    const child = tree.insertBlock(parentId, block)
+    selectedId.value = child.id
+    view.value = 'eigenschaften'
+  },
+  async saveContainerAsBaustein(id) {
+    const live = findNode(root.value, id)
+    if (!live || live.type !== 'container' || id === root.value.id) {
+      return { ok: false, error: 'Nur ein Container (nicht die Wurzel) kann als Baustein gespeichert werden.' }
+    }
+    // toRaw + JSON-Klon: entproxyt den reaktiven Baum (structuredClone wuerfe DataCloneError) und
+    // entkoppelt den Baustein von der Vorlage - spaetere Editor-Aenderungen wirken nicht zurueck.
+    const copy = JSON.parse(JSON.stringify(toRaw(live))) as Container
+    return blocks.addBausteinFromContainer(copy, live.title ?? 'Baustein')
   },
   remove(id) {
     if (id === root.value.id) return
@@ -97,6 +121,9 @@ provide(TREE_EDITOR, api)
   <div class="flex flex-col gap-3">
     <!-- Vorlagen-Bibliothek: auswaehlen/anlegen/umbenennen/duplizieren/loeschen + Save-Status -->
     <LibraryBar />
+
+    <!-- KI-Empfehlung fuer die erste Vorlage (#261, einmalig wegklickbar) -->
+    <AiToolNotice />
 
     <p class="text-sm text-base-content/60">
       Container anlegen, verschachteln und konfigurieren. Die Vorschau zeigt Text-Ausgabe und Einklappen.

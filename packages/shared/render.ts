@@ -55,11 +55,14 @@ function isBannerField(node: Node): boolean {
   )
 }
 
-/** Banner-Element (Feld ODER Container mit Titel auf eigener Zeile) - fuer die Block-/Absatz-Logik. */
+/** Banner-Element (Titel auf eigener Zeile) - fuer die Block-/Absatz-Logik. Funktion UND Container:
+ *  Banner = Titel + showTitle + nicht titleInline (der Titel steht ueber dem Inhalt) -> strukturell Block.
+ *  Feld hat seine eigene Default-Logik (isBannerField). Kein Banner -> mit `inline` an die laufende Zeile.
+ *  Eine (mehrzeilige) Listen-Funktion darf so ebenfalls inline gejoint werden (Maintainer 2026-07-03:
+ *  inline verhaelt sich wie beim Feld - Default Block, inline explizit; auch wenn es selten Sinn ergibt). */
 function isBannerNode(node: Node): boolean {
   if (node.type === 'field') return isBannerField(node)
-  if (node.type === 'function') return true // Funktion = immer Block (mehrzeilige Daten, nie inline)
-  return !!node.title && !!node.showTitle && !node.titleInline
+  return !!node.title && !!node.showTitle && node.titleInline !== true
 }
 
 /** Geschwister zu Text fuegen.
@@ -87,7 +90,10 @@ function joinNodes(children: Node[], values: Values, sep: string, head?: string)
       out += isBannerField(child) ? `\n${text}` : text
     } else if (child.blankLineBefore && isBannerNode(child)) {
       out += `\n\n${text}` // Absatz: Leerzeile davor (Banner-Element, etwas darueber); erzwingt eigene Zeile
-    } else if (child.type !== 'function' && child.inline && !isBannerField(child)) {
+    } else if (child.inline && (child.type === 'field' ? !isBannerField(child) : !isBannerNode(child))) {
+      // inline: an die laufende Zeile (mit Trenner). Feld = eigene Banner-Default-Logik (isBannerField);
+      // Container UND Funktion = isBannerNode -> ein Titel-Banner (\n-haltig) bleibt Block, sonst inline.
+      // Der Nutzer waehlt inline explizit, Default bleibt Block.
       out += (child.noSeparatorBefore ? '' : sep) + text
     } else {
       out += `\n${text}`
@@ -115,7 +121,8 @@ export function renderContainer(container: Container, values: Values = {}, inher
 }
 
 /** Funktions-Knoten zu Text: Body aus der Registry (Klartext der Daten) + optional Titel/Banner darueber.
- *  Leere Funktion (keine Daten) -> null (entfaellt, wie excluded). Immer ein Block. */
+ *  Leere Funktion (keine Daten) -> null (entfaellt, wie excluded). Das Geschwister-Layout (Block/inline)
+ *  macht der Eltern-Join: eine Funktion mit `inline` wird - wie ein Feld - an die laufende Zeile geklebt. */
 function renderFunction(node: FunctionNode, values: Values): string | null {
   const def = FUNCTION_REGISTRY[node.functionKind]
   if (!def) return null // unbekannte Funktion (z. B. aus Fremd-Import) -> entfaellt, kein Crash

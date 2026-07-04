@@ -14,13 +14,14 @@ import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { usePznLibrary } from '@/medications/usePznLibrary'
 import { useProtocolTree } from '@/rebuild/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
+import { staerkeOhneDuplikat } from '@resqdocs/protocol-core/functions/registry'
 import MedplanScanOverlay from '@/components/MedplanScanOverlay.vue'
 
 const emit = defineEmits<{ apply: [doctor: ArztRow, meds?: MedikamenteRow[]]; close: [] }>()
 
 const lookup = useMedicationLookup()
 void lookup.ensureLoaded()
-const { error, structuredRows, aussteller, ausstellerRolle, ingest, updateRowName, reset } = useMedplanScan((pzn) => lookup.resolve(pzn))
+const { error, structuredRows, aussteller, ausstellerRolle, ingest, updateRowName, setRowStaerke, reset } = useMedplanScan((pzn) => lookup.resolve(pzn))
 const pznLibrary = usePznLibrary()
 void pznLibrary.ensureReady()
 
@@ -40,7 +41,13 @@ async function resolveFromLibrary(): Promise<void> {
     if (!pzn || !/^PZN \d/.test(name)) continue
     const e = await pznLibrary.entry(pzn)
     const resolved = e ? e.wirkstoff || e.label : ''
-    if (resolved && structuredRows.value[i]?.pzn === pzn) updateRowName(i, resolved)
+    if (resolved && structuredRows.value[i]?.pzn === pzn) {
+      updateRowName(i, resolved)
+      // Wirkstärke aus der EIGENEN Bibliothek mitziehen (#262) — nur leere Zeilen-Stärke füllen,
+      // und nie doppelt dokumentieren, wenn der aufgelöste Name sie schon trägt.
+      const st = staerkeOhneDuplikat(resolved, e?.staerke)
+      if (st && !structuredRows.value[i]?.staerke) setRowStaerke(i, st)
+    }
   }
 }
 async function onDecoded(raw: string): Promise<void> {

@@ -91,6 +91,14 @@ export function useMedplanScan(resolvePzn?: (pzn: string) => string | null) {
     )
   }
 
+  /** Wirkstärke einer Zeile setzen (#262) — z. B. aus der eigenen Bibliothek aufgelöst.
+   *  Gating (nur leere Stärke füllen, nie überschreiben) liegt beim Aufrufer. */
+  function setRowStaerke(index: number, staerke: string): void {
+    structuredRows.value = structuredRows.value.map((r, i) =>
+      i === index ? { ...r, staerke } : r,
+    )
+  }
+
   function removeRow(index: number): void {
     rows.value = rows.value.filter((_, i) => i !== index)
     structuredRows.value = structuredRows.value.filter((_, i) => i !== index)
@@ -144,6 +152,6 @@ export function useMedplanScan(resolvePzn?: (pzn: string) => string | null) {
     error, rows, structuredRows, totalPages, scannedPages,
     aussteller, ausstellerRolle,
     missingPages, draftText, draftRows,
-    ingest, updateRow, updateRowName, removeRow, reset,
+    ingest, updateRow, updateRowName, setRowStaerke, removeRow, reset,
   }
 }

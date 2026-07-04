@@ -179,7 +179,7 @@ onBeforeUnmount(() => {
         <EditorView />
       </div>
 
-      <!-- Textbausteine (#13-F3; Tab hiess bis #138 "Bausteine") -->
+      <!-- Bausteine (#13-F3): Snippets (Textbausteine); wiederverwendbare Bloecke folgen in Slice 2 -->
       <div v-show="activeTab === 'bausteine'">
         <BausteineTab />
       </div>
@@ -215,7 +215,7 @@ onBeforeUnmount(() => {
           <rect x="4" y="13" width="7" height="7" rx="1.5" />
           <rect x="13" y="13" width="7" height="7" rx="1.5" />
         </svg>
-        <span class="dock-label">Textbausteine</span>
+        <span class="dock-label">Bausteine</span>
       </button>
       <button type="button" :class="{ 'dock-active text-primary': activeTab === 'einstellungen' }" @click="selectTab('einstellungen')">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

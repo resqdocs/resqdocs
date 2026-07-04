@@ -13,19 +13,21 @@ import type { FunctionNode, MedikamenteRow, ArztRow } from '@resqdocs/protocol-c
 import { useCaseValues } from '@/rebuild/useCaseValues'
 import { useProtocolTree } from '@/rebuild/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
-import { formatMedikament } from '@resqdocs/protocol-core/functions/registry'
+import { formatMedikament, medikamentRowHasData, arztRowHasData, staerkeOhneDuplikat } from '@resqdocs/protocol-core/functions/registry'
 import { usePznLibrary } from '@/medications/usePznLibrary'
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { extractPznFromPackageCode, packageScanName, type PackageBarcodeFormat } from '@/medications/packageScan'
 import PackageScanOverlay from '@/components/PackageScanOverlay.vue'
 import MedplanReviewSheet from './MedplanReviewSheet.vue'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
 // Wurzel der aktiven Einsatz-Vorlage (Singleton) -> Cross-Funktion-Suche (Arzt an eine Aerzte-Funktion).
 const { einsatzRoot } = useProtocolTree()
-// dev-Scan-/Lookup-Logik 1:1 wiederverwendet (erprobt). PZN-Lookup: eigene Bibliothek (ownLabel) zuerst,
-// sonst Community-Woerterbuch (resolve, per Default aus -> Platzhalter „PZN <nr>").
+// dev-Scan-/Lookup-Logik 1:1 wiederverwendet (erprobt). PZN-Lookup: eigene Bibliothek zuerst
+// (entry(): Wirkstoff vor Bezeichnung + Wirkstärke), sonst Community-Woerterbuch (resolve, per
+// Default aus -> Platzhalter „PZN <nr>").
 const pznLibrary = usePznLibrary()
 const lookup = useMedicationLookup()
 
@@ -34,6 +36,12 @@ const filledCount = computed(() => rows.value.filter((r) => r.name.trim()).lengt
 const label = computed(() => (props.node.title && props.node.title.trim()) || 'Medikamentenplan')
 
 const editingIndex = ref<number | null>(null)
+// Zustand der Zeile beim OEFFNEN der Karte (#260-Nachbefund): Wer eine BEFUELLTE Zeile beim
+// Bearbeiten leert (iOS-Backspace loescht gern das ganze markierte Wort), darf sie nicht ploetzlich
+// als "leere Zeile" rueckfragefrei loeschen koennen. Still loeschen nur, wenn die Zeile leer
+// GEOEFFNET wurde und leer ist (frische ＋-Zeile). editingLabel = Dialog-Text, falls leergeraeumt.
+const editingHadData = ref(false)
+const editingLabel = ref('')
 // Autofokus robust ohne nextTick-Race: Flag setzen, der Funktions-Ref fokussiert das Name-Input der
 // frisch gemounteten Edit-Karte (egal in welcher Reihenfolge alte/neue Karte mounten/unmounten).
 let focusNext = false
@@ -60,21 +68,73 @@ function removeRow(i: number): void {
   if (editingIndex.value === i) editingIndex.value = null
   else if (editingIndex.value !== null && i < editingIndex.value) editingIndex.value--
 }
+// Lösch-Schutz (#260): Rückfrage vor Datenverlust — Einzelzeile ODER „alle zurücksetzen" (Buttons
+// oben+unten an der Liste). Ohne Rückfrage nur die frisch angelegte, nie befüllte Zeile (siehe
+// editingHadData; Rückfragen nur bei destruktiven Aktionen, sonst stumpfen sie ab — NN/g
+// confirmation-dialog). Gemerkt wird das ZEILEN-OBJEKT, nicht der Index: async Pfade (Packung-Scan)
+// können rows während der offenen Rückfrage neu schreiben — beim Bestätigen löst indexOf die
+// aktuelle Position auf; weg = No-op (fail-safe).
+const pendingRemove = ref<MedikamenteRow | 'all' | null>(null)
+function requestRemove(i: number): void {
+  const r = rows.value[i]
+  if (!r) return
+  // Still loeschen NUR bei einer Zeile, die leer geoeffnet wurde UND leer ist (frisch angelegt,
+  // nichts erfasst). Alles andere - auch eine gerade leergeraeumte Bestandszeile - fragt nach.
+  const freshEmpty = editingIndex.value === i && !editingHadData.value && !medikamentRowHasData(r)
+  if (freshEmpty) removeRow(i)
+  else pendingRemove.value = r
+}
+function clearAll(): void {
+  caseValues.setRows(props.node.id, [])
+  editingIndex.value = null
+}
+function requestRemoveAll(): void {
+  // Nur Leerzeilen? Nichts zu verlieren -> ohne Rückfrage leeren (konsistent zum Einzel-✕).
+  if (rows.value.some(medikamentRowHasData)) pendingRemove.value = 'all'
+  else clearAll()
+}
+const confirmTitle = computed(() => {
+  const p = pendingRemove.value
+  if (p === 'all') return 'Alle Medikamente zurücksetzen?'
+  // Gerade leergeraeumte Bestandszeile: den Stand beim Oeffnen der Karte zeigen.
+  const current = p ? formatMedikament(p) : ''
+  return `„${current || editingLabel.value || 'Medikament'}“ entfernen?`
+})
+const confirmMessage = computed(() => {
+  if (pendingRemove.value !== 'all') return 'Das lässt sich nicht rückgängig machen.'
+  const n = rows.value.filter(medikamentRowHasData).length
+  return `${n === 1 ? 'Der erfasste Eintrag wird' : `Alle ${n} erfassten Einträge werden`} entfernt. Das lässt sich nicht rückgängig machen.`
+})
+function confirmPendingRemove(): void {
+  const p = pendingRemove.value
+  pendingRemove.value = null
+  if (p === 'all') clearAll()
+  else if (p) {
+    const i = rows.value.indexOf(p)
+    if (i >= 0) removeRow(i)
+  }
+}
 function openEdit(i: number): void {
   editingIndex.value = i
+  const r = rows.value[i]
+  editingHadData.value = r ? medikamentRowHasData(r) : false
+  editingLabel.value = r ? formatMedikament(r) : ''
 }
 function closeEdit(): void {
   editingIndex.value = null
 }
 function onFocusOut(e: FocusEvent): void {
+  if (pendingRemove.value !== null) return // Rückfrage offen: Fokuswechsel ins Modal schließt die Karte nicht
   const card = e.currentTarget as HTMLElement
   if (!card.contains(e.relatedTarget as Node | null)) closeEdit() // Fokus ganz aus der Karte raus
 }
 function addRow(): void {
-  const cleaned = rows.value.filter((r) => r.name.trim()) // abgebrochene Leerzeilen aufraeumen
+  const cleaned = rows.value.filter(medikamentRowHasData) // nur WIRKLICH leere Zeilen aufraeumen (#260: Eingaben nie stumm verwerfen)
   focusNext = true // der Funktions-Ref der neuen Karte fokussiert beim Mount
   caseValues.setRows(props.node.id, [...cleaned, { name: '' }])
   editingIndex.value = cleaned.length
+  editingHadData.value = false // frisch angelegt = leer geboren -> ✕ darf ohne Rueckfrage aufraeumen
+  editingLabel.value = ''
 }
 
 // --- Packung-Scan: EINE Zeile, direkt anhaengen (Maintainer-Entscheid: kompakt, kein Auto-Open) ---
@@ -91,15 +151,20 @@ async function onPackageDecoded(p: { text: string; format: PackageBarcodeFormat 
     pkgScanMsg.value = 'Keine PZN auf der Packung erkannt — näher heranführen oder manuell eintippen.'
     return
   }
-  const name = (await pznLibrary.ownLabel(pzn)) ?? packageScanName(pzn, lookup.resolve(pzn))
-  const cleaned = rows.value.filter((r) => r.name.trim())
-  caseValues.setRows(props.node.id, [...cleaned, { name, pzn }]) // anhaengen, kompakt (kein Edit-Open)
+  // Strukturiert aus der EIGENEN Bibliothek (#262): Wirkstoff (wichtiger als Bezeichnung,
+  // konsistent zu resolveFromLibrary der Review-Sheets) + Wirkstärke als eigenes Feld —
+  // ausser der Name (z. B. Label "Ibuflam 400 mg") trägt sie schon (keine Doppel-Doku).
+  const e = await pznLibrary.entry(pzn)
+  const name = (e && (e.wirkstoff || e.label)) || packageScanName(pzn, lookup.resolve(pzn))
+  const staerke = staerkeOhneDuplikat(name, e?.staerke)
+  const cleaned = rows.value.filter(medikamentRowHasData)
+  caseValues.setRows(props.node.id, [...cleaned, { name, staerke, pzn }]) // anhaengen, kompakt (kein Edit-Open)
 }
 
 // --- BMP-Plan-Scan: Review-Sheet (mehrere Zeilen) -> nach Pruefung anhaengen ---
 const bmpOpen = ref(false)
 function onBmpApply(scanned: MedikamenteRow[], doctor?: ArztRow): void {
-  const cleaned = rows.value.filter((r) => r.name.trim())
+  const cleaned = rows.value.filter(medikamentRowHasData)
   caseValues.setRows(props.node.id, [...cleaned, ...scanned]) // gepruefte Zeilen anhaengen
   // Cross-Uebernahme: gewaehlten Aussteller an die erste Aerzte-Funktion anhaengen (falls vorhanden).
   if (doctor) {
@@ -108,7 +173,7 @@ function onBmpApply(scanned: MedikamenteRow[], doctor?: ArztRow): void {
       const id = aerzteNodes[0].id
       // id ist eine aerzte-Funktion -> ihre rows sind ArztRow (Invariante: nur AerzteFunction schreibt sie).
       const existing = caseValues.getRows(id) as ArztRow[]
-      caseValues.setRows(id, [...existing.filter((a) => a.name.trim()), doctor])
+      caseValues.setRows(id, [...existing.filter(arztRowHasData), doctor])
     }
   }
   editingIndex.value = null // BMP -> alles kompakt, Liste bleibt lesbar
@@ -129,6 +194,10 @@ function pickScan(kind: 'package' | 'plan'): void {
     <div class="flex items-center gap-2">
       <span class="text-sm font-semibold">{{ label }}</span>
       <span v-if="filledCount" class="badge badge-neutral badge-sm">{{ filledCount }}</span>
+      <!-- „Alle zurücksetzen" oben+unten (Maintainer-Vorgabe #260). Sekundär-destruktiv (ghost+error,
+           nie Primary) + Rückfrage, nach NN/g reset-and-cancel; Hinweis duplicate-links (oben erst ab
+           langer Liste) liegt beim Maintainer zur Entscheidung. -->
+      <button v-if="rows.length" type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
     </div>
 
     <template v-for="(r, i) in rows" :key="i">
@@ -161,16 +230,21 @@ function pickScan(kind: 'package' | 'plan'): void {
             :aria-label="`Medikament ${i + 1}`"
             @input="setRow(i, { name: ($event.target as HTMLInputElement).value })"
           />
-          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Medikament ' + (i + 1)} entfernen`" @click="removeRow(i)">✕</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Medikament ' + (i + 1)} entfernen`" @click="requestRemove(i)">✕</button>
         </div>
         <div class="flex gap-2">
+          <input class="input input-sm min-w-0 flex-1" :value="r.staerke ?? ''" placeholder="Stärke (z. B. 400 mg)" aria-label="Wirkstärke" @input="setRow(i, { staerke: ($event.target as HTMLInputElement).value })" />
           <input class="input input-sm w-28 shrink-0 text-center font-mono" :value="r.dosierung ?? ''" placeholder="1-0-1-0" aria-label="Dosierung" @input="setRow(i, { dosierung: ($event.target as HTMLInputElement).value })" />
-          <input class="input input-sm min-w-0 flex-1" :value="r.kommentar ?? ''" placeholder="Hinweis (z. B. nüchtern)" aria-label="Hinweis" @input="setRow(i, { kommentar: ($event.target as HTMLInputElement).value })" />
         </div>
+        <input class="input input-sm w-full" :value="r.kommentar ?? ''" placeholder="Hinweis (z. B. nüchtern)" aria-label="Hinweis" @input="setRow(i, { kommentar: ($event.target as HTMLInputElement).value })" />
         <button type="button" class="btn btn-primary btn-sm min-h-11 self-end" @click="closeEdit">Fertig</button>
       </div>
     </template>
 
+    <!-- Unterer Zurücksetzen-Button (Scan-Fluss/Daumenzone); mb-1 setzt den destruktiven Button von der
+         Aktionsleiste ab (Proximity, Apple ≥12pt). Rückfrage macht ihn NN/g-konform (Reset-Ausnahme:
+         Formular wird je Einsatz neu gefüllt). -->
+    <button v-if="rows.length" type="button" class="btn btn-ghost btn-sm mb-1 min-h-11 self-end text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
     <p v-if="!rows.length" class="text-xs italic text-base-content/50">Noch keine Medikamente erfasst.</p>
 
     <!-- Aktionsleiste: 1 Primaer (manuell) + 1 Sekundaer (Scannen, Kamera-Symbol) -> Auswahl-Sheet. -->
@@ -218,5 +292,15 @@ function pickScan(kind: 'package' | 'plan'): void {
 
     <!-- BMP-Plan-Scan + Review (teleportet sich selbst) -->
     <MedplanReviewSheet v-if="bmpOpen" @apply="onBmpApply" @close="bmpOpen = false" />
+
+    <!-- Lösch-Rückfrage (#260): Einzelzeile mit Daten oder „alle zurücksetzen" (teleportet sich selbst) -->
+    <ConfirmDialog
+      v-if="pendingRemove !== null"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="pendingRemove === 'all' ? 'Alle zurücksetzen' : 'Entfernen'"
+      @confirm="confirmPendingRemove"
+      @cancel="pendingRemove = null"
+    />
   </div>
 </template>

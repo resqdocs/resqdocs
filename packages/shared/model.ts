@@ -31,7 +31,8 @@ export interface Container {
   inline?: boolean
   /** Kein Feld-Trenner VOR diesem Element (klebt ans vorherige inline-Element). */
   noSeparatorBefore?: boolean
-  /** Optische Leerzeile (Absatz) VOR diesem Element - nur wirksam, wenn darueber etwas ausgegeben wird.
+  /** Optische Leerzeile (Absatz) VOR diesem Element - nur wirksam, wenn darueber etwas ausgegeben wird
+   *  UND das Element eine eigene Titel-/Banner-Zeile hat (Banner-Knoten; sonst still ohne Wirkung).
    *  Gedacht fuer Banner/Trenner, um Abschnitte sichtbar zu trennen. */
   blankLineBefore?: boolean
   /** Feld-Trenner zwischen inline-Geschwistern: zentral an der Wurzel; vererbt sich nach unten,
@@ -62,7 +63,8 @@ export interface Field {
   inline?: boolean
   /** Kein Feld-Trenner VOR diesem Feld (klebt ans vorherige inline-Element, z. B. Wert+Einheit). */
   noSeparatorBefore?: boolean
-  /** Optische Leerzeile (Absatz) VOR diesem Feld - nur wirksam, wenn darueber etwas ausgegeben wird. */
+  /** Optische Leerzeile (Absatz) VOR diesem Feld - nur wirksam, wenn darueber etwas ausgegeben wird
+   *  UND das Feld eine eigene Titel-/Banner-Zeile hat (multiline oder titleInline=false). */
   blankLineBefore?: boolean
   /** Vordefinierte Auswahl-Optionen. Gesetzt -> das Feld ist ein SELECT (Wert = Ausgabetext).
    *  Tri-State unveraendert: ✓ = default (sonst options[0]), ✎ = Option waehlen/Freitext, − = entfaellt. */
@@ -77,14 +79,15 @@ export interface Field {
 
 /** Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan).
  *  functionKind = innerer Diskriminator (waechst), aufgeloest ueber die Funktions-Registry. Immer Block. */
-export type FunctionKind = 'medikamentenplan' | 'aerzte'
+export type FunctionKind = 'medikamentenplan' | 'aerzte' | 'packYears' | 'news2'
 
 /** Zeilen-Layout-Konfiguration einer Funktion (pro functionKind in der Registry interpretiert). Alle
  *  Felder optional + primitiv -> JSON-Roundtrip trivial; fehlt -> heutiges Verhalten (block, ohne pre/suf). */
 export interface FunctionConfig {
   /** untereinander (block, je Zeile eigene Zeile) vs hintereinander (inline, mit Separator). Default 'block'. */
   rowLayout?: 'block' | 'inline'
-  /** Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> DEFAULT_SEPARATOR. */
+  /** Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> " · " (Mittelpunkt:
+   *  hebt die Zeilengrenze vom Komma im Zeilenformat "Name Staerke, Schema" ab, #262). */
   rowSeparator?: string
   /** Praefix je Zeile bei rowLayout='block'. */
   rowPrefix?: string
@@ -96,13 +99,21 @@ export interface FunctionNode {
   type: 'function'
   id: string
   title?: string
-  /** Titel in der AUSGABE zeigen? (Default an.) */
+  /** Titel in der AUSGABE zeigen? Fehlt/false -> kein Titel (wie bei allen Knoten). Der Editor setzt
+   *  es beim Anlegen einer Funktion standardmaessig auf true (createFunction). */
   showTitle?: boolean
   /** Titel inline vor dem Inhalt (kein Banner) statt eigener Zeile - analog Container. */
   titleInline?: boolean
   /** Titel-Format (prefix/suffix + Banner Fuellzeichen/Breite wie beim Container). */
   heading?: Heading
-  /** Optische Leerzeile (Absatz) VOR der Funktion - nur wenn darueber etwas ausgegeben wird. */
+  /** Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen).
+   *  Wirkt wie beim Feld (Maintainer 2026-07-03): auch mehrzeilige Listen-Funktionen (Medikamentenplan/
+   *  Aerzte) koennen inline an die laufende Zeile - nur ein Titel-Banner (Titel auf eigener Zeile) bleibt Block. */
+  inline?: boolean
+  /** Kein Feld-Trenner VOR dieser Funktion (klebt ans vorherige inline-Element). */
+  noSeparatorBefore?: boolean
+  /** Optische Leerzeile (Absatz) VOR der Funktion - nur bei Titel-Banner der Funktion und wenn darueber
+   *  etwas ausgegeben wird (Basis-Regel oben; ohne Banner still ohne Wirkung, wie beim Feld). */
   blankLineBefore?: boolean
   functionKind: FunctionKind
   /** Ausgabe-Formatierung der Funktions-Zeilen (Layout/Trenner/Praefix/Suffix). */
@@ -114,6 +125,9 @@ export type Node = Container | Field | FunctionNode
 /** Eine Medikamenten-Zeile (Funktion Medikamentenplan). Bewusst NUR patientenrelevante Felder. */
 export interface MedikamenteRow {
   name: string
+  /** Wirkstaerke des Praeparats (z. B. "400 mg") - eigenes Feld statt im Namen (#262).
+   *  Quelle der Wahrheit: eigene Pflege (PZN-Bibliothek/manuell), NICHT der BMP-Scan. */
+  staerke?: string
   dosierung?: string
   kommentar?: string
   /** Pharmazentralnummer (optional, aus Scan/Lookup) - fuer den Bibliotheks-Transfer. */
@@ -131,9 +145,33 @@ export interface ArztRow {
   arztnummer?: string
 }
 
+/** Eingabe der Funktion „Pack-Years" (#55-Rework): genau EINE Zeile pro Score-Knoten, reine Zahlen.
+ *  Das ERGEBNIS (Packungsjahre) wird abgeleitet (Registry ruft scores.packYears), nie gespeichert -
+ *  wie ein berechnetes/read-only Feld (vgl. FHIR calculatedExpression, SurveyJS calculatedValue). */
+export interface PackYearsRow {
+  cigarettesPerDay?: number
+  years?: number
+}
+
+/** Eingabe der Funktion „NEWS2" (#55-Rework): genau EINE Zeile pro Score-Knoten. Die RCP-Parameter
+ *  Atemfrequenz (rr), SpO2, RR systolisch, Herzfrequenz (pulse), Temperatur, Bewusstsein (ACVPU) + O2-Gabe
+ *  (onOxygen). scale2 schaltet die SpO2-Skala 2 (aerztlich dokumentierte Ziel-Saettigung 88-92 %, z. B.
+ *  COPD). Score/Risiko werden abgeleitet (Registry ruft scores.news2), nie gespeichert - read-only-Feld. */
+export interface NEWS2Row {
+  rr?: number
+  spo2?: number
+  systolic?: number
+  pulse?: number
+  temp?: number
+  consciousness?: 'A' | 'C' | 'V' | 'P' | 'U'
+  onOxygen?: boolean
+  scale2?: boolean
+}
+
 /** Zeilen-Typ einer Funktion - je functionKind verschieden, als Union (rueckwaerts-kompatibel:
- *  MedikamenteRow bleibt der erste Fall). Registry/Komponente kastellieren je Kind zur Laufzeit. */
-export type FunctionRow = MedikamenteRow | ArztRow
+ *  MedikamenteRow bleibt der erste Fall). Registry/Komponente kastellieren je Kind zur Laufzeit.
+ *  Score-Funktionen (packYears) halten genau EINE Zeile mit ihren Eingaben (kein Namen-Feld). */
+export type FunctionRow = MedikamenteRow | ArztRow | PackYearsRow | NEWS2Row
 
 /** Ausfuell-Zustand eines BLATTS im Einsatz. Feld = Tri-State; Funktion = eigene Daten (rows).
  *  Fehlt -> 'confirmed' (Standardwert). */

@@ -143,7 +143,7 @@ function onTouchEnd(e: TouchEvent): void {
           </div>
         </div>
 
-        <!-- Seite 4: Vorlagen & Textbausteine -->
+        <!-- Seite 4: Vorlagen & Bausteine -->
         <div v-else-if="step === 3" class="flex flex-1 flex-col justify-center gap-5">
           <h1 class="text-center text-xl font-bold">Du bestimmst dein Protokoll</h1>
           <div class="flex flex-col gap-3">
@@ -157,8 +157,8 @@ function onTouchEnd(e: TouchEvent): void {
                   </svg>
                 </span>
                 <p class="text-sm">
-                  Im Tab <strong>Vorlagen</strong> baust du eigene Protokoll-Vorlagen aus Blöcken, Befunden
-                  und Feldern - mit Variablen und Bedingungen. Die mitgelieferte
+                  Im Tab <strong>Vorlagen</strong> baust du eigene Protokoll-Vorlagen aus Containern,
+                  Feldern und Funktionen. Die mitgelieferte
                   <em>Funktionsdemo</em> zeigt alles zum Abschauen.
                 </p>
               </div>
@@ -174,8 +174,8 @@ function onTouchEnd(e: TouchEvent): void {
                   </svg>
                 </span>
                 <p class="text-sm">
-                  <strong>Textbausteine</strong> sind wiederverwendbare Blöcke und Snippets, die du in
-                  beliebige Vorlagen einsetzt.
+                  <strong>Bausteine</strong> sind wiederverwendbare Snippets, die du als Feld-Vorgabe in
+                  deine Vorlagen oder direkt im Einsatz einfügst.
                 </p>
               </div>
             </div>

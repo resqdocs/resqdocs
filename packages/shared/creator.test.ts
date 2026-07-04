@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createContainer, createField, createFunction, addChild, updateNode, removeNode, moveChild, moveUp, moveDown, findNode, findPath, suggestFreeId, collectIds, parentOf, isDescendant, reparent, indentChild, outdentChild, canMoveUp, canMoveDown, canIndent, canOutdent, moveTargets } from './creator.ts'
+import { createContainer, createField, createFunction, addChild, updateNode, removeNode, moveChild, moveUp, moveDown, findNode, findPath, suggestFreeId, collectIds, parentOf, isDescendant, reparent, indentChild, outdentChild, canMoveUp, canMoveDown, canIndent, canOutdent, moveTargets, previewValues } from './creator.ts'
+import { render } from './render.ts'
 import type { Container } from './model.ts'
 
 test('createContainer / createField', () => {
@@ -148,6 +149,25 @@ test('indentChild: wird letztes Kind des Container-Vorgaengers; sonst No-Op', ()
   r2 = addChild(r2, 'r', createField('p'))
   r2 = addChild(r2, 'r', createField('x'))
   assert.equal(indentChild(r2, 'x'), r2) // Vorgaenger ist ein Feld -> No-Op
+})
+
+test('previewValues (#55): feste Beispielwerte fuer JEDE Funktion mit sampleFill (Editor-Vorschau)', () => {
+  // Baum: reines Feld (kein sampleFill) + Score + Listen-Funktion.
+  let root = createContainer('root')
+  root = addChild(root, 'root', createField('feld'))
+  root = addChild(root, 'root', createFunction('py', 'packYears'))
+  root = addChild(root, 'root', createFunction('med', 'medikamentenplan'))
+  const vals = previewValues(root)
+  // Beide Funktionen bekommen ein Demo-Fill, das reine Feld nicht.
+  assert.deepEqual(Object.keys(vals).sort(), ['med', 'py'])
+  assert.deepEqual(vals.py, { state: 'function', rows: [{ cigarettesPerDay: 30, years: 15 }] })
+  // End-to-end: mit diesen Werten werden Score UND Medikamente in der Vorschau-Ausgabe sichtbar.
+  const out = render(root, vals)
+  assert.ok(out.includes('≈23 py (30/Tag, 15 J.)'))
+  assert.ok(out.includes('Beispiel-Wirkstoff A 500 mg, 1-0-1'))
+  // Ohne previewValues (leere Werte = Einsatz-Start) bleiben die Funktions-Bodies leer (nur der Titel).
+  assert.ok(!render(root).includes('py ('))
+  assert.ok(!render(root).includes('Beispiel-Wirkstoff'))
 })
 
 test('outdentChild: wird Geschwister hinter dem Eltern-Container; Wurzel-Ebene -> No-Op', () => {

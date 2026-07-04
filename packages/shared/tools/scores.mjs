@@ -22,7 +22,17 @@ export function packYears({ cigarettesPerDay, years }) {
   }
   const value = (c / 20) * y;
   const rounded = Math.round(value * 10) / 10;
-  return { value: rounded, text: `Nikotinabusus ${fmt(rounded)} py (${c} Zig./Tag, ${y} J.)` };
+  // `text`/`value` bleiben unveraendert (Altsystem-Kompat); `raw` = exakter Wert fuer die
+  // kaufmaennische Ganzzahl-Rundung des Rework-Formats (packYearsShort).
+  return { value: rounded, raw: value, text: `Nikotinabusus ${fmt(rounded)} py (${c} Zig./Tag, ${y} J.)` };
+}
+
+// Rework-Kurzform der Packungsjahre (#55): kaufmaennisch auf eine GANZE Zahl gerundet (round half up;
+// Pack-Years sind stets >= 0); ein „≈" davor, WENN gerundet wurde (exakte glatte Werte ohne Zeichen).
+export function packYearsShort(raw) {
+  const r = Number(raw);
+  const rounded = Math.round(r);
+  return `${Math.abs(r - rounded) > 1e-9 ? '≈' : ''}${rounded} py`;
 }
 
 // --- BMI ------------------------------------------------------------------------
@@ -149,17 +159,28 @@ export function news2(v) {
   };
   const score = Object.values(items).reduce((a, b) => a + b, 0);
   const anySingle3 = Object.values(items).some((s) => s === 3);
+  // Risiko-Einstufung rein nach dem AGGREGAT-Score (Maintainer 2026-07-03): 0-4 niedrig, 5-6 mittel, >=7 hoch.
+  // Bewusst OHNE die RCP-Einzelparameter-Eskalation (ein einzelner Wert = 3 -> niedrig-mittel): die einzelnen
+  // Vitalwerte stehen im Protokoll ohnehin separat, entscheidend ist, was der Gesamtscore ergibt.
+  // anySingle3 bleibt informativ im Rueckgabewert, fliesst aber nicht mehr in risk ein.
   const risk =
     score >= 7 ? 'hoch' :
     score >= 5 ? 'mittel' :
-    anySingle3 ? 'niedrig-mittel (Einzelwert 3)' : 'niedrig';
+    'niedrig';
 
-  const text =
-    `NEWS2 ${score} (Risiko ${risk}${v.scale2 ? ', SpO2-Skala 2' : ''}) - ` +
+  // Rework-Ausgabe (body): NUR Score + Risiko (Maintainer 2026-07-03) - die Vitalwerte stehen im Protokoll
+  // ohnehin separat, daher hier keine Wiederholung. Alt-Tool (text): voll, mit „NEWS2"-Praefix + Kernwerten.
+  const risikoTeil = `Risiko ${risk}${v.scale2 ? ', SpO2-Skala 2' : ''}`;
+  const kernwerte =
     `AF ${v.rr}/min, SpO2 ${v.spo2}%${v.onOxygen ? ' unter O2' : ''}, ` +
     `RR ${v.systolic} mmHg syst., HF ${v.pulse}/min, Temp ${fmt(v.temp)} °C, ${acvpu} (ACVPU)`;
+  // body (Rework): Score + ausgeschriebene Risikostufe (Maintainer 2026-07-03: im Protokoll deutlich
+  // lesbar, da reiner Text keine Farbe tragen kann). text (Alt-Tool): unveraendert, mit Kernwerten.
+  const risikoLang = { niedrig: 'niedriges Risiko', mittel: 'mittleres Risiko', hoch: 'hohes Risiko' }[risk] ?? `Risiko ${risk}`;
+  const body = `${score} — ${risikoLang}${v.scale2 ? ' (SpO2-Skala 2)' : ''}`;
+  const text = `NEWS2 ${score} (${risikoTeil}) - ${kernwerte}`;
 
-  return { score, items, risk, anySingle3, text };
+  return { score, items, risk, anySingle3, text, body };
 }
 
 // --- EKG-Lagetyp (Tabelle nach Hauptausschlag I/II/III + R-Zacken-Vergleich) ----

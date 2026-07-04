@@ -23,6 +23,8 @@ import { isPznCategory } from './pznCategories.ts'
 export interface PznEntryData {
   /** Wirkstoff (z. B. „Ibuprofen") — wichtiger als die Bezeichnung; "" wenn keiner. */
   wirkstoff: string
+  /** Wirkstärke des Präparats (z. B. „400 mg") — eigenes Sachfeld, nutzergepflegt (#262); "" wenn keine. */
+  staerke: string
   /** Selbst vergebene Bezeichnung/Handelsname ("" wenn keine). */
   label: string
   /** Selbst vergebene Kategorie/Gruppe (z. B. „Analgetikum"); "" wenn keine. */
@@ -41,6 +43,7 @@ export interface PznLibrary {
 export interface PznEntry {
   pzn: string
   wirkstoff: string
+  staerke: string
   label: string
   category: string
   note: string
@@ -70,6 +73,10 @@ function sanitizeText(v: unknown, max: number): string {
 export function sanitizeWirkstoff(wirkstoff: unknown): string {
   return sanitizeText(wirkstoff, 120)
 }
+/** Wirkstärke säubern (≤60 — kurze Angabe wie „400 mg", „500/125 mg", „1,5 mg/ml"). */
+export function sanitizeStaerke(staerke: unknown): string {
+  return sanitizeText(staerke, 60)
+}
 /** Bezeichnung säubern (≤120). Exportiert: auch der SQLite-Repo sanitisiert vor jedem Write. */
 export function sanitizeLabel(label: unknown): string {
   return sanitizeText(label, 120)
@@ -89,17 +96,18 @@ export function sanitizeNote(note: unknown): string {
  * String ist die alte „nur Bezeichnung"-Form (v1) und wird zu { label, '', '' }.
  */
 function toEntryData(v: unknown): PznEntryData {
-  if (typeof v === 'string') return { wirkstoff: '', label: sanitizeLabel(v), category: '', note: '' }
+  if (typeof v === 'string') return { wirkstoff: '', staerke: '', label: sanitizeLabel(v), category: '', note: '' }
   if (v && typeof v === 'object') {
     const o = v as Record<string, unknown>
     return {
       wirkstoff: sanitizeWirkstoff(o.wirkstoff),
+      staerke: sanitizeStaerke(o.staerke),
       label: sanitizeLabel(o.label),
       category: sanitizeCategory(o.category),
       note: sanitizeNote(o.note),
     }
   }
-  return { wirkstoff: '', label: '', category: '', note: '' }
+  return { wirkstoff: '', staerke: '', label: '', category: '', note: '' }
 }
 
 function withEntry(lib: PznLibrary, pzn: string, data: PznEntryData): PznLibrary {
@@ -116,16 +124,21 @@ function withEntry(lib: PznLibrary, pzn: string, data: PznEntryData): PznLibrary
  * Nutzer-Eingabe in der Verwaltung). So überschreibt weder ein entkoppelter
  * Plan-Transfer noch ein Backup-Import eine Eigen-Bezeichnung.
  */
-export function addPzn(lib: PznLibrary, raw: string, label?: string): PznLibrary {
+export function addPzn(lib: PznLibrary, raw: string, label?: string, staerke?: string): PznLibrary {
   const pzn = normalizePzn(raw)
   if (!pzn) return lib
   const next = sanitizeLabel(label)
+  const nextStaerke = sanitizeStaerke(staerke)
   const existing = lib.entries[pzn]
   if (existing) {
-    // Vorhandenes nicht-leeres Label gewinnt; leeres wird mit `next` gefüllt.
-    return withEntry(lib, pzn, { ...existing, label: existing.label !== '' ? existing.label : next })
+    // Vorhandenes nicht-leeres Label/Stärke gewinnt; Leeres wird mit dem Vorschlag gefüllt.
+    return withEntry(lib, pzn, {
+      ...existing,
+      label: existing.label !== '' ? existing.label : next,
+      staerke: existing.staerke !== '' ? existing.staerke : nextStaerke,
+    })
   }
-  return withEntry(lib, pzn, { wirkstoff: '', label: next, category: '', note: '' })
+  return withEntry(lib, pzn, { wirkstoff: '', staerke: nextStaerke, label: next, category: '', note: '' })
 }
 
 /**
@@ -134,8 +147,8 @@ export function addPzn(lib: PznLibrary, raw: string, label?: string): PznLibrary
  * Pfad im Code unverwechselbar „eine PZN" ist. Es wird KEINE Gruppierung/Reihenfolge/
  * Zeit/Fall-Verknüpfung übertragen — nur die PZN (+ optionaler Label-Vorschlag).
  */
-export function addOne(lib: PznLibrary, raw: string, label?: string): PznLibrary {
-  return addPzn(lib, raw, label)
+export function addOne(lib: PznLibrary, raw: string, label?: string, staerke?: string): PznLibrary {
+  return addPzn(lib, raw, label, staerke)
 }
 
 /**
@@ -147,13 +160,14 @@ export function addOne(lib: PznLibrary, raw: string, label?: string): PznLibrary
 export function upsertEntry(
   lib: PznLibrary,
   raw: string,
-  fields: { wirkstoff?: string; label?: string; category?: string; note?: string },
+  fields: { wirkstoff?: string; staerke?: string; label?: string; category?: string; note?: string },
 ): PznLibrary {
   const pzn = normalizePzn(raw)
   if (!pzn) return lib
-  const base = lib.entries[pzn] ?? { wirkstoff: '', label: '', category: '', note: '' }
+  const base = lib.entries[pzn] ?? { wirkstoff: '', staerke: '', label: '', category: '', note: '' }
   return withEntry(lib, pzn, {
     wirkstoff: fields.wirkstoff !== undefined ? sanitizeWirkstoff(fields.wirkstoff) : base.wirkstoff,
+    staerke: fields.staerke !== undefined ? sanitizeStaerke(fields.staerke) : base.staerke,
     label: fields.label !== undefined ? sanitizeLabel(fields.label) : base.label,
     category: fields.category !== undefined ? sanitizeCategory(fields.category) : base.category,
     note: fields.note !== undefined ? sanitizeNote(fields.note) : base.note,
@@ -165,6 +179,13 @@ export function setWirkstoff(lib: PznLibrary, raw: string, wirkstoff: string): P
   const pzn = normalizePzn(raw)
   if (!pzn || !(pzn in lib.entries)) return lib
   return withEntry(lib, pzn, { ...lib.entries[pzn], wirkstoff: sanitizeWirkstoff(wirkstoff) })
+}
+
+/** Wirkstärke einer vorhandenen PZN setzen/ändern (nur Nutzer-Eingabe). */
+export function setStaerke(lib: PznLibrary, raw: string, staerke: string): PznLibrary {
+  const pzn = normalizePzn(raw)
+  if (!pzn || !(pzn in lib.entries)) return lib
+  return withEntry(lib, pzn, { ...lib.entries[pzn], staerke: sanitizeStaerke(staerke) })
 }
 
 /** Bezeichnung einer vorhandenen PZN setzen/ändern (nur Nutzer-Eingabe). */
@@ -208,7 +229,7 @@ export function getEntry(lib: PznLibrary, raw: string): PznEntry | null {
   const pzn = normalizePzn(raw)
   if (!pzn || !(pzn in lib.entries)) return null
   const d = lib.entries[pzn]
-  return { pzn, wirkstoff: d.wirkstoff, label: d.label, category: d.category, note: d.note }
+  return { pzn, wirkstoff: d.wirkstoff, staerke: d.staerke, label: d.label, category: d.category, note: d.note }
 }
 
 export function hasPzn(lib: PznLibrary, raw: string): boolean {
@@ -307,6 +328,7 @@ export function fromEntries(entries: PznEntry[]): PznLibrary {
     if (!pzn) continue
     out[pzn] = {
       wirkstoff: sanitizeWirkstoff(e.wirkstoff),
+      staerke: sanitizeStaerke(e.staerke),
       label: sanitizeLabel(e.label),
       category: sanitizeCategory(e.category),
       note: sanitizeNote(e.note),
@@ -316,7 +338,7 @@ export function fromEntries(entries: PznEntry[]): PznLibrary {
 }
 
 /** Export-Wert eines Eintrags: kompakt als String, wenn NUR eine Bezeichnung vorliegt. */
-export type ExportedEntry = string | { wirkstoff: string; label: string; category: string; note: string }
+export type ExportedEntry = string | { wirkstoff: string; staerke: string; label: string; category: string; note: string }
 
 /**
  * Export-Wert eines EINZELNEN Eintrags (kompakt als String, wenn nur Bezeichnung;
@@ -324,9 +346,11 @@ export type ExportedEntry = string | { wirkstoff: string; label: string; categor
  * (#197) — beide MÜSSEN identische Werte erzeugen (kein Format-Drift).
  */
 export function exportValue(e: PznEntry): ExportedEntry {
-  return e.wirkstoff === '' && e.category === '' && e.note === ''
+  // WICHTIG: JEDES Sachfeld haelt die Objektform am Leben - sonst verliert der
+  // Backup-Roundtrip das Feld (Kompaktform ist NUR fuer "nur Bezeichnung").
+  return e.wirkstoff === '' && e.staerke === '' && e.category === '' && e.note === ''
     ? e.label
-    : { wirkstoff: e.wirkstoff, label: e.label, category: e.category, note: e.note }
+    : { wirkstoff: e.wirkstoff, staerke: e.staerke, label: e.label, category: e.category, note: e.note }
 }
 
 /**
@@ -388,7 +412,7 @@ export function importMerge(
   const entries: Record<string, PznEntryData> = { ...lib.entries }
   for (const e of listSorted(incoming)) {
     if (mode === 'skip' && e.pzn in entries) continue // Duplikat überspringen
-    entries[e.pzn] = { wirkstoff: e.wirkstoff, label: e.label, category: e.category, note: e.note }
+    entries[e.pzn] = { wirkstoff: e.wirkstoff, staerke: e.staerke, label: e.label, category: e.category, note: e.note }
   }
   return { version: 2, entries }
 }

@@ -14,6 +14,7 @@ import { createContainer, createField, createFunction, addChild as addChildOp, u
 import type { FunctionKind } from '@resqdocs/protocol-core/model'
 import {
   collidesId,
+  reId,
   duplicateProtocol,
   renameProtocol as renameOp,
   removeProtocol as removeOp,
@@ -64,6 +65,23 @@ export function useProtocolTree() {
       const child = kind === 'function' ? createFunction(nextId(), functionKind) : kind === 'field' ? createField(nextId()) : createContainer(nextId())
       mutateEditor((t) => addChildOp(t, parentId, child))
       return child
+    },
+    /** Snippet aus der Bibliothek als Feld-Vorgabe einfuegen: ein normales Field mit default=Snippet-Text,
+     *  ohne Titel (showTitle:false), mehrzeiliger Text -> multiline (grosses Textfeld). Bewusst KEIN
+     *  eingefrorener Text: das Feld bleibt im Einsatz editier-/ausschliessbar (Tri-State) wie jedes andere. */
+    insertSnippet(parentId: string, text: string): Node {
+      const field: Node = { ...createField(nextId()), default: text, showTitle: false, ...(text.includes('\n') ? { multiline: true } : {}) }
+      mutateEditor((t) => addChildOp(t, parentId, field))
+      return field
+    },
+    /** Einen Bibliotheks-Block (v1-Container-Teilbaum) als Kind an parentId einfuegen. Der Block wird tief
+     *  entkoppelt (JSON -> plain object, kein reaktiver Proxy) und ueber den GANZEN Teilbaum frisch re-IDt
+     *  -> kollisionsfrei im Ziel-Baum (reId teilt sonst heading/options/config mit der Quelle). Eine KOPIE,
+     *  keine Referenz: spaetere Aenderungen am Block wirken nicht auf die eingefuegte Instanz. */
+    insertBlock(parentId: string, block: Container): Node {
+      const fresh = reId(JSON.parse(JSON.stringify(block)) as Container, nextId) as Container
+      mutateEditor((t) => addChildOp(t, parentId, fresh))
+      return fresh
     },
     remove(id: string): void {
       if (id !== editorRoot.value.id) mutateEditor((t) => removeNode(t, id))
