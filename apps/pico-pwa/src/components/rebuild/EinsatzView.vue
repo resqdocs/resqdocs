@@ -205,7 +205,9 @@ onUnmounted(clearDraftTimer)
       </div>
     </div>
 
-    <div class="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+    <!-- Wide-Screens: asymmetrischer Split — Ausfuell-Formular bleibt lesbar (~34rem), die Vorschau
+         fuellt die restliche Breite (nutzt grosse Schirme, ohne das Formular unlesbar breit zu machen). -->
+    <div class="lg:grid lg:grid-cols-[minmax(0,34rem)_minmax(0,1fr)] lg:items-start lg:gap-6">
       <!-- Ausfüllen: Struktur -->
       <div class="lg:block" :class="{ hidden: view !== 'ausfuellen' }">
         <div class="flex flex-col gap-5">

@@ -1,19 +1,21 @@
 <script setup lang="ts">
 /**
- * Vorlage exportieren/importieren (versioniertes JSON). „Fuer den Moment" nur die aktuelle
- * Vorlage (Mehrfach-Verwaltung folgt). Serialisierung/Validierung liegt rein + node-getestet in
- * rebuild/templateIO.ts. Import ersetzt den geteilten Baum -> sofort in Editor UND Einsatz.
+ * Vorlage exportieren/importieren (versioniertes JSON). Export mit Auswahl (Select, Default = aktive
+ * Vorlage, folgt ihr bis zur manuellen Umstellung); der Pro-Vorlage-Export im Bibliotheks-Kebab teilt
+ * sich die Share-Logik via useTemplateExport. Serialisierung/Validierung liegt rein + node-getestet in
+ * rebuild/templateIO.ts. Import ergaenzt/ersetzt im geteilten Baum -> sofort in Editor UND Einsatz.
  */
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { useProtocolTree } from '@/rebuild/useProtocolTree'
 import { useTreeEditor } from '@/rebuild/treeEditor'
 import { exportTemplate, parseTemplate } from '@resqdocs/protocol-core/templateIO'
-import { shareJson } from '@/utils/fileTransfer'
+import { useTemplateExport } from '@/composables/useTemplateExport'
 import { useAppVersion } from '@/composables/useAppVersion'
 
 const tree = useProtocolTree()
 const { root } = tree
+const protocols = tree.protocols
 const editor = useTreeEditor()
 // ?v=<echte App-Version> mitgeben -> die KI-Seite stempelt sie in den Prompt (Versions-Check ohne Rueckfrage).
 const { version: appVersion } = useAppVersion()
@@ -23,9 +25,13 @@ const mode = ref<'closed' | 'export' | 'import'>('closed')
 const importText = ref('')
 const msg = ref<{ kind: 'ok' | 'err'; text: string } | null>(null)
 const copied = ref(false)
-const sharing = ref(false) // Re-Entrancy-Guard: kein zweites Share, solange das System-Sheet offen ist (bug-316)
+const { sharing, shareTemplate } = useTemplateExport()
 
-const exportJson = computed(() => exportTemplate(root.value))
+// Export-Auswahl (B): welche Vorlage? Default = die aktive und folgt ihr, bis manuell umgestellt.
+const selectedId = ref(root.value.id)
+watch(() => root.value.id, (id) => { selectedId.value = id })
+const selectedTemplate = computed<Container>(() => protocols.value.find((p) => p.id === selectedId.value) ?? root.value)
+const exportJson = computed(() => exportTemplate(selectedTemplate.value))
 
 function toggle(m: 'export' | 'import'): void {
   mode.value = mode.value === m ? 'closed' : m
@@ -43,19 +49,8 @@ async function copyExport(): Promise<void> {
 }
 
 async function downloadExport(): Promise<void> {
-  if (sharing.value) return // Doppeltipp: der 2. Share rejectet sonst mit „in progress" -> falscher Fehler (bug-316)
-  sharing.value = true
-  const name = (root.value.title || root.value.id || 'vorlage').replace(/[^a-z0-9_-]+/gi, '-')
-  try {
-    // shareJson: nativ Cache-Datei + System-Share-Sheet, Web -> Blob-Download. Der rohe <a download>-Blob
-    // funktioniert in der nativen WebView NICHT (bug-315).
-    await shareJson(`protokoll-${name}.json`, exportJson.value, 'Protokoll exportieren')
-  } catch (err) {
-    const m = err instanceof Error ? err.message : String(err)
-    if (!/cancel|abbruch/i.test(m)) msg.value = { kind: 'err', text: 'Export fehlgeschlagen: ' + m }
-  } finally {
-    sharing.value = false
-  }
+  const res = await shareTemplate(selectedTemplate.value)
+  if (!res.ok && res.error) msg.value = { kind: 'err', text: 'Export fehlgeschlagen: ' + res.error }
 }
 
 const pendingImport = ref<Container | null>(null)
@@ -108,8 +103,14 @@ function onFile(e: Event): void {
     </div>
 
     <div v-if="mode === 'export'" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
+      <label class="flex flex-col gap-1">
+        <span class="text-xs font-semibold text-base-content/60">Welche Vorlage exportieren?</span>
+        <select v-model="selectedId" class="select select-sm w-full" aria-label="Vorlage zum Exportieren wählen">
+          <option v-for="p in protocols" :key="p.id" :value="p.id">{{ (p.title && p.title.trim()) || p.id }}</option>
+        </select>
+      </label>
       <div class="flex items-center justify-between gap-2">
-        <span class="text-xs font-semibold text-base-content/60">Aktuelle Vorlage als JSON</span>
+        <span class="text-xs font-semibold text-base-content/60">Als JSON</span>
         <div class="flex gap-1">
           <button class="btn btn-ghost btn-xs" type="button" @click="copyExport">{{ copied ? 'Kopiert' : 'Kopieren' }}</button>
           <button class="btn btn-ghost btn-xs" type="button" :disabled="sharing" @click="downloadExport">Teilen</button>

@@ -16,6 +16,7 @@ import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
 import { formatArzt, arztRowHasData, medikamentRowHasData } from '@resqdocs/protocol-core/functions/registry'
 import AerzteReviewSheet from './AerzteReviewSheet.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
+import FunctionFillToggle from './FunctionFillToggle.vue'
 
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
@@ -25,6 +26,13 @@ const { einsatzRoot } = useProtocolTree()
 const rows = computed<ArztRow[]>(() => caseValues.getRows(props.node.id) as ArztRow[])
 const filledCount = computed(() => rows.value.filter((r) => r.name.trim()).length)
 const label = computed(() => (props.node.title && props.node.title.trim()) || 'Ärzte')
+const excluded = computed(() => caseValues.getFunctionStatus(props.node.id) === 'excluded') // Tri-State (Slice 2): nicht erhoben
+// Tri-State (Slice 3): ✎ Freitext - ein eigener Text ersetzt in der Ausgabe die Zeilen (Zeilen bleiben erhalten).
+const custom = computed(() => caseValues.getFunctionStatus(props.node.id) === 'custom')
+const customText = computed(() => caseValues.getFunctionText(props.node.id))
+function setCustomText(v: string): void {
+  caseValues.setFunctionText(props.node.id, v)
+}
 
 const editingIndex = ref<number | null>(null)
 // Zustand beim OEFFNEN der Karte (#260-Nachbefund, wie Medikamentenplan): eine leergeraeumte
@@ -130,6 +138,9 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
       // id ist eine medikamentenplan-Funktion -> ihre rows sind MedikamenteRow (nur MedplanFunction schreibt sie).
       const existing = caseValues.getRows(id) as MedikamenteRow[]
       caseValues.setRows(id, [...existing.filter(medikamentRowHasData), ...meds])
+      // Cross-Scan bringt echte Daten -> NUR „nicht erhoben" aufheben. Einen ✎-Freitext NICHT antasten:
+      // setFunctionStatus('confirmed') wuerde dessen text stumm verwerfen (Slice 3). rows sind via setRows schon erhalten.
+      if (caseValues.getFunctionStatus(id) === 'excluded') caseValues.setFunctionStatus(id, 'confirmed')
     }
   }
   editingIndex.value = null
@@ -140,12 +151,30 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
 <template>
   <div class="flex flex-col gap-2">
     <div class="flex items-center gap-2">
+      <!-- Tri-State (Slice 2): ✓ erhoben / − nicht erhoben; bei − entfaellt die Funktion in der Ausgabe. -->
+      <FunctionFillToggle :node="node" />
       <span class="text-sm font-semibold">{{ label }}</span>
-      <span v-if="filledCount" class="badge badge-neutral badge-sm">{{ filledCount }}</span>
-      <!-- „Alle zurücksetzen" oben+unten (Maintainer-Vorgabe #260), sekundär-destruktiv + Rückfrage. -->
-      <button v-if="rows.length" type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
+      <span v-if="!excluded && !custom && filledCount" class="badge badge-neutral badge-sm">{{ filledCount }}</span>
+      <button v-if="!excluded && !custom && rows.length" type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
     </div>
 
+    <!-- nicht erhoben: Zeilen-Verwaltung aus, nur Hinweis. Daten bleiben erhalten und kommen beim Zurueckschalten wieder. -->
+    <p v-if="excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
+
+    <div v-else-if="custom" class="flex flex-col gap-1">
+      <!-- Freitext ersetzt in der Ausgabe die Zeilen; vorbelegt mit dem Standardtext, Zeilen bleiben erhalten. -->
+      <textarea
+        class="textarea textarea-bordered textarea-sm w-full"
+        rows="3"
+        :value="customText"
+        :aria-label="`${label}: Freitext`"
+        :placeholder="node.default || 'z. B. Arzt bekannt, Kontakt siehe Akte'"
+        @input="setCustomText(($event.target as HTMLTextAreaElement).value)"
+      ></textarea>
+      <p class="text-xs italic text-base-content/50">Freitext — ersetzt in der Ausgabe die Einträge. Erfasste Einträge bleiben erhalten.</p>
+    </div>
+
+    <template v-else>
     <template v-for="(r, i) in rows" :key="i">
       <!-- READ: kompakte Summary-Zeile (Antippen -> bearbeiten) -->
       <button
@@ -206,6 +235,8 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
         Arzt aus Plan scannen
       </button>
     </div>
+
+    </template>
 
     <!-- BMP-Scan + Review (teleportet sich selbst) -->
     <AerzteReviewSheet v-if="bmpOpen" @apply="onScanApply" @close="bmpOpen = false" />

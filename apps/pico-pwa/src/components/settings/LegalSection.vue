@@ -14,8 +14,7 @@
 </script>
 
 <template>
-  <section class="card bg-base-100 shadow">
-    <div class="card-body gap-4 p-4">
+  <div class="flex flex-col gap-4">
       <h3 class="font-medium">Rechtliches</h3>
 
       <!-- Impressum -->
@@ -82,6 +81,5 @@
           </p>
         </div>
       </div>
-    </div>
-  </section>
+  </div>
 </template>

@@ -16,6 +16,10 @@ const tree = useTreeEditor()
 const node = computed<Node | null>(() => (tree.selectedId.value ? findNode(props.root, tree.selectedId.value) : null))
 const heading = computed<Heading>(() => ({ ...DEFAULT_HEADING, ...(node.value?.heading ?? {}) }))
 const isRoot = computed(() => !!node.value && node.value.id === props.root.id)
+// Grundvoraussetzung fuer ALLE Titel-Format-Optionen (#1): ein nicht-leerer Titel. Ohne Titel gibt es keine
+// Ueberschrift zu gestalten -> die Optionen werden AUSGEBLENDET (v-if), NICHT geleert. Die gesetzten Werte
+// bleiben im Modell und sind wieder editierbar, sobald ein Titel da ist. Nur-Whitespace zaehlt als leer.
+const hasTitle = computed(() => !!node.value?.title?.trim())
 // Listen-Funktion (Medikamentenplan/Aerzte) = mehrzeilige Zeilen-Liste -> bekommt das Zeilen-Format.
 // Quelle: Registry-Marker singleLine (Score wie Pack-Years/NEWS2 = einzeilig -> keine Liste; unbekannt ->
 // keine Liste). Titel/inline/Banner sind bei ALLEN Knoten identisch (Wiedererkennung, Maintainer 2026-07-03):
@@ -196,10 +200,10 @@ async function saveAsBaustein(): Promise<void> {
 
       <!-- FELD: Auswahl-Optionen (Select). Gesetzt -> das Feld ist ein Select. „als Standard" = Radio.
            Bei „mehrzeilig" ausgeblendet: Select (Optionen) und Textarea schliessen sich aus. -->
-      <div v-if="node.type === 'field' && !node.multiline" class="flex flex-col gap-2 rounded-lg bg-base-200/50 p-3">
+      <div v-if="node.type === 'field' && !node.multiline" class="space-y-2 rounded-lg bg-base-200/50 p-3">
         <span class="text-xs font-semibold text-base-content/60">Auswahl-Optionen <span class="font-normal text-base-content/40">(leer = einfaches Feld)</span></span>
         <div v-for="(opt, i) in (node.options ?? [])" :key="i" class="flex items-center gap-1">
-          <input type="radio" class="radio radio-xs shrink-0" :name="`default-${node.id}`" :checked="effectiveFieldDefault === opt" :aria-label="`als Standard: ${opt}`" title="als Standard" @change="set({ default: opt })" />
+          <input v-if="new Set((node.options ?? []).filter((o) => o !== '')).size > 1" type="radio" class="radio radio-xs shrink-0" :name="`default-${node.id}`" :checked="effectiveFieldDefault === opt" :aria-label="`als Standard: ${opt}`" title="als Standard" @change="set({ default: opt })" />
           <input class="input input-sm min-w-0 flex-1" :value="opt" placeholder="Option" @input="setOption(i, ($event.target as HTMLInputElement).value)" />
           <button type="button" class="btn btn-ghost btn-xs px-1" :disabled="i === 0" aria-label="nach oben" @click="moveOption(i, -1)">↑</button>
           <button type="button" class="btn btn-ghost btn-xs px-1" :disabled="i === (node.options?.length ?? 0) - 1" aria-label="nach unten" @click="moveOption(i, 1)">↓</button>
@@ -212,36 +216,53 @@ async function saveAsBaustein(): Promise<void> {
         </label>
       </div>
 
-      <!-- BASIS: Ueberschrift/Titel in der Ausgabe (showTitle). Beim Feld = „Abschnitt mit Ueberschrift". -->
-      <label class="flex w-full cursor-pointer items-center gap-2 py-0">
+      <!-- FUNKTION (Listen-Funktion): Standardtext, wenn im Einsatz keine Eintraege da sind -> Fallback-Body
+           in der Ausgabe (node.default). Vorhandene Zeilen haben Vorrang. -->
+      <fieldset v-if="node.type === 'function' && isListFunction" class="fieldset">
+        <legend class="fieldset-legend">Standardtext (wenn keine Einträge)</legend>
+        <input class="input w-full" :value="node.default ?? ''" placeholder="z. B. keine Dauermedikation bekannt" @input="set({ default: ($event.target as HTMLInputElement).value || undefined })" />
+        <p class="text-xs text-base-content/50">Wird in der Ausgabe gezeigt, wenn die Funktion leer ist. Vorhandene Einträge haben Vorrang.</p>
+      </fieldset>
+
+      <!-- BASIS: Ueberschrift/Titel in der Ausgabe (showTitle). Beim Feld = „Abschnitt mit Ueberschrift".
+           Nur bei vorhandenem Titel (#1): ohne Titel gibt es nichts zu zeigen -> Option ausgeblendet. -->
+      <label v-if="hasTitle" class="flex w-full cursor-pointer items-center gap-2 py-0">
         <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.showTitle === true" @change="set({ showTitle: ($event.target as HTMLInputElement).checked })" />
         <span class="text-sm">{{ node.type === 'field' ? 'Als Abschnitt mit Überschrift ausgeben' : 'Titel in der Ausgabe zeigen' }}</span>
       </label>
 
-      <!-- CONTAINER: einklappbar + als „nicht erhoben" markierbar (Basis) -->
-      <label v-if="node.type === 'container'" class="flex w-full cursor-pointer items-center gap-2 py-0">
+      <!-- CONTAINER: einklappbar + als „nicht erhoben" markierbar (Basis).
+           NICHT am Wurzel-Container (#2): die Wurzel wird im Einsatz nie als Sektion gerendert (EinsatzView zeigt nur
+           die Kinder), also greift weder Einklappen (EinsatzSection) noch „nicht erhoben" (Zustand nur pro Sektion
+           setzbar) — beide waeren an der ersten Ebene wirkungslos. -->
+      <label v-if="node.type === 'container' && !isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
         <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.collapsible === true" @change="set({ collapsible: ($event.target as HTMLInputElement).checked })" />
         <span class="text-sm">einklappbar</span>
       </label>
-      <label v-if="node.type === 'container'" class="flex w-full cursor-pointer items-center gap-2 py-0">
+      <label v-if="node.type === 'container' && !isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
         <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.excludable === true" @change="set({ excludable: ($event.target as HTMLInputElement).checked })" />
         <span class="text-sm">Als „nicht erhoben" markierbar <span class="whitespace-nowrap">(✓ / −)</span></span>
       </label>
 
       <!-- CONTAINER (nicht Wurzel): den Teilbaum als wiederverwendbaren Baustein in der Bibliothek ablegen -->
-      <div v-if="node.type === 'container' && !isRoot" class="flex flex-col gap-1">
+      <div v-if="node.type === 'container' && !isRoot" class="space-y-1">
         <button type="button" class="btn btn-outline btn-sm self-start" @click="saveAsBaustein">Als Baustein speichern</button>
         <p v-if="saveOutcome" class="text-xs" :class="saveOutcome.ok ? 'text-success' : 'text-error'">{{ saveOutcome.msg }}</p>
       </div>
 
       <!-- ERWEITERT (Progressive Disclosure): selten Gebrauchtes eingeklappt - interne id, Titel-Format,
            Layout/Trenner, Ausgabe-Optionen. Default zu; Kopf zeigt die id als Vorschau. -->
-      <details class="collapse-arrow collapse rounded-lg bg-base-200/50">
-        <summary class="collapse-title flex min-h-0 items-center justify-between gap-2 py-2 pr-10 text-sm font-medium">
+      <!-- BEWUSST kein daisyUI-.collapse: dessen animiertes Auf-/Zuklappen nutzt content-visibility:hidden->visible
+           (+ interpolate-size min-height/height 0->auto). Der Inhalt ist geschlossen NICHT gelayoutet und wird beim
+           Oeffnen erstmalig vermessen; auf iOS/Android-WebView sitzt der Erst-Layout erst nach einem Reflow (Tap)
+           korrekt -> die Felder ruecken sichtbar nach. Natives <details> layoutet in EINEM Pass, kein Nachruecken. -->
+      <details class="group rounded-lg bg-base-200/50">
+        <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <span class="shrink-0">Erweitert</span>
-          <code class="truncate font-mono text-xs text-base-content/50">id: {{ node.id }}</code>
+          <code class="min-w-0 flex-1 truncate font-mono text-xs text-base-content/50">id: {{ node.id }}</code>
+          <span class="shrink-0 text-base-content/50 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
         </summary>
-        <div class="collapse-content space-y-3">
+        <div class="space-y-3 px-4 pb-4">
           <!-- Identifier (id): interner Schluessel, auto-vergeben, selten noetig. Sichtbare Inline-Validierung.
                NICHT fuer die Wurzel: deren id IST die Vorlagen-Kennung (Bibliothek) - ein Rename hier wuerde
                editorActiveId desynchronisieren (Editor spraenge bei mehreren Vorlagen still auf eine andere). -->
@@ -254,7 +275,10 @@ async function saveAsBaustein(): Promise<void> {
           <p v-else class="text-xs text-base-content/50">Wurzel des Protokolls · die Kennung „{{ node.id }}" wird über die Bibliothek verwaltet (Titel umbenennen).</p>
 
           <!-- Titel-Format (nur wenn Ueberschrift/Titel in der Ausgabe): prefix/suffix; Container zusaetzlich inline-Titel + Banner -->
-          <div v-if="node.showTitle" class="flex flex-col gap-3">
+          <!-- Block+Margin statt Flex-gap: WKWebView/WebKit rendert Flex-/Grid-gap-Abstaende beim Erst-Layout
+               zu gross und korrigiert erst nach einem Reflow (Tap) — margin-basierter Abstand umgeht den Bug.
+               Quellen: Apple DevForums 737214, daisyUI #2410, Tailwind #3394, philipwalton/flexbugs. -->
+          <div v-if="node.showTitle && hasTitle" class="space-y-3">
             <span class="text-xs font-semibold text-base-content/60">Titel-Format</span>
             <fieldset class="fieldset">
               <legend class="fieldset-legend">Präfix</legend>
@@ -275,19 +299,20 @@ async function saveAsBaustein(): Promise<void> {
                 <legend class="fieldset-legend">Füllzeichen (leer = keins)</legend>
                 <input class="input w-full font-mono" maxlength="1" :value="heading.fill" placeholder="=" @input="setHeading({ fill: ($event.target as HTMLInputElement).value })" />
               </fieldset>
-              <fieldset class="fieldset">
+              <fieldset v-if="!!heading.fill" class="fieldset">
                 <legend class="fieldset-legend">Breite</legend>
                 <input type="number" class="input w-full" min="0" max="200" :value="heading.width" @input="setHeading({ width: Number(($event.target as HTMLInputElement).value) })" />
               </fieldset>
-              <fieldset class="fieldset">
+              <fieldset v-if="!!heading.fill && heading.width > 0" class="fieldset">
                 <legend class="fieldset-legend">Füllzeichen-Bezug</legend>
                 <select class="select w-full" :value="heading.fillMode" @change="setHeading({ fillMode: (($event.target as HTMLSelectElement).value as 'inclusive' | 'exclusive') })">
                   <option value="inclusive">inklusive (konstante Gesamtbreite)</option>
                   <option value="exclusive">exklusive (feste Füllzeichen-Zahl)</option>
                 </select>
               </fieldset>
-              <!-- Absatz davor: optische Leerzeile vor dem Banner, wirkt nur wenn etwas darueber steht -->
-              <label class="flex w-full cursor-pointer items-center gap-2 py-0">
+              <!-- Absatz davor: optische Leerzeile vor dem Banner, wirkt nur wenn etwas darueber steht.
+                   NICHT am Wurzel-Container (#2): dort steht nie etwas darueber -> Grundvoraussetzung unerfuellbar. -->
+              <label v-if="!isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
                 <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.blankLineBefore === true" @change="set({ blankLineBefore: ($event.target as HTMLInputElement).checked })" />
                 <span class="text-sm">Absatz davor (Leerzeile, wenn etwas darüber steht)</span>
               </label>
@@ -309,13 +334,16 @@ async function saveAsBaustein(): Promise<void> {
 
           <!-- CONTAINER: Ausgabe-Optionen (Feld-Trenner + Text wenn leer) -->
           <template v-if="node.type === 'container'">
-            <fieldset class="fieldset">
+            <fieldset v-if="node.children.length > 0" class="fieldset">
               <legend class="fieldset-legend">Feld-Trenner (zwischen inline-Elementen)</legend>
               <input class="input w-full font-mono" :value="node.separator ?? ''" :placeholder="separatorPlaceholder" @input="setSeparator(($event.target as HTMLInputElement).value)" />
               <p v-if="isRoot" class="text-xs text-base-content/50">Standard fürs ganze Protokoll · leer = „, "</p>
               <p v-else class="text-xs text-base-content/50">leer = erbt · aktuell wirksam: „{{ effectiveSeparator }}"</p>
             </fieldset>
-            <fieldset class="fieldset">
+            <!-- „Text wenn leer" NICHT am Wurzel-Container (#2): greift nur, wenn das GANZE Protokoll leer
+                 rendert (render.ts:137-139) — ein komplett leeres Protokoll braucht ohnehin keine Ausgabe.
+                 Am Root also sinnlos; Feld-Trenner (Protokoll-Standard) bleibt dagegen. -->
+            <fieldset v-if="!isRoot" class="fieldset">
               <legend class="fieldset-legend">Text wenn leer</legend>
               <input class="input w-full" :value="node.emptyText ?? ''" placeholder="z. B. unauffällig" @input="set({ emptyText: ($event.target as HTMLInputElement).value || undefined })" />
               <p class="text-xs text-base-content/50">Wird in der Ausgabe genutzt, wenn der Container angezeigt wird, seine Felder aber nichts ausgeben.</p>

@@ -135,18 +135,26 @@ onBeforeUnmount(() => {
         <img src="/brand.svg" alt="ResQDocs" class="brand-logo brand-logo-light h-[45px] w-auto" />
         <img src="/brand-dark.svg" alt="ResQDocs" class="brand-logo brand-logo-dark h-[45px] w-auto" />
       </div>
-      <div class="flex-none items-center gap-1 px-2">
+      <div class="flex flex-none items-center gap-1 px-2">
+        <!-- Bridge-Indikator als WLAN-Icon (Maintainer): Farbe NUR nach Verbindungszustand (gruen verbunden /
+             rot nicht) -> kein Grau-Flackern beim Poll; feste Groesse -> springt nicht. Icon: verbunden = WLAN,
+             keine Bridge = WLAN durchgestrichen, waehrend der Pruefung = Spinner. -->
         <button
           type="button"
-          class="badge gap-1 border-0 transition cursor-pointer disabled:cursor-default"
-          :class="checking ? 'badge-ghost' : reachable === true ? 'badge-success' : reachable === false ? 'badge-error' : 'badge-ghost'"
-          :disabled="checking"
-          :aria-label="checking ? 'Verbindung wird geprüft' : 'Bridge-Verbindung jetzt prüfen'"
-          :title="checking ? 'Prüfung läuft …' : 'Tippen, um die Verbindung zu prüfen'"
+          class="grid size-8 shrink-0 place-items-center rounded-full text-white transition-colors cursor-pointer"
+          :class="reachable === true ? 'bg-success' : 'bg-error'"
+          :aria-label="checking ? 'Bridge-Verbindung wird geprüft' : reachable === true ? 'Bridge verbunden — tippen zum Prüfen' : 'keine Bridge — tippen zum Prüfen'"
+          :title="checking ? 'Prüfung läuft …' : reachable === true ? 'Bridge verbunden' : 'keine Bridge'"
           @click="check(true)"
         >
-          <span v-if="checking" class="loading loading-spinner loading-xs" aria-hidden="true"></span>
-          {{ checking ? 'Prüfe …' : reachable === true ? 'Bridge verbunden' : reachable === false ? 'keine Bridge' : 'Bridge ?' }}
+          <span v-if="checking" class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+          <svg v-else-if="reachable === true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z" />
+          </svg>
+          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z" />
+            <path stroke-linecap="round" d="M4 4 20 20" />
+          </svg>
         </button>
         <button
           type="button"
@@ -165,27 +173,31 @@ onBeforeUnmount(() => {
     <!-- Globaler PZN-Aktualitaets-Hinweis — deaktiviert (IFA/DSGVO), nur bei aktivem Flag. -->
     <PznNoticeBanner v-if="PZN_DICTIONARY_ENABLED" />
 
-    <!-- Mobile-first; auf Tablet/Desktop waechst der Container mit (statt 576-px-Spalte, #23) -->
-    <main class="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 md:max-w-3xl md:p-6 xl:max-w-5xl">
+    <!-- Mobile-first. Haupt-Container voll breit + Padding; die MAX-BREITE liegt PRO ANSICHT (unten), damit der
+         Vorlagen-Editor (Werkzeug, 3 Spalten) auf grossen Screens Breite bekommt, Lese-/Formular-Ansichten aber
+         komfortabel schmal bleiben. (frueher: eine geteilte max-w-5xl-Deckelung, #23) -->
+    <main class="flex w-full flex-col gap-4 p-4 md:p-6">
       <!-- Einsatz — Neuaufbau. Die fruehere Einsatz-Ansicht (ProtocolRuntimeView) wurde entfernt;
            bei Bedarf im Git-Tag alterstand nachschlagbar. -->
-      <div v-show="activeTab === 'einsatz'" class="flex flex-col gap-4">
+      <div v-show="activeTab === 'einsatz'" class="mx-auto flex w-full max-w-xl flex-col gap-4 md:max-w-3xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[110rem]">
         <EinsatzView />
       </div>
 
       <!-- Vorlagen-Editor — Neuaufbau. Der fruehere Editor (ProtocolsTab / protocols/editor/*) wurde
            entfernt; bei Bedarf im Git-Tag alterstand nachschlagbar. -->
-      <div v-show="activeTab === 'protokolle'">
+      <!-- Editor = Werkzeug: waechst mit dem Screen. Breite aligned mit dem 3-Spalten-Grid (lg) + weiter auf xl/2xl. -->
+      <div v-show="activeTab === 'protokolle'" class="mx-auto w-full max-w-xl md:max-w-3xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[110rem]">
         <EditorView />
       </div>
 
-      <!-- Bausteine (#13-F3): Snippets (Textbausteine); wiederverwendbare Bloecke folgen in Slice 2 -->
-      <div v-show="activeTab === 'bausteine'">
+      <!-- Bausteine: Karten-Listen (Snippets/Bloecke). Nutzt die Breite bis 110rem; die Sektionen zeigen
+           ihre Zeilen als Dichte-Grid (2->3->4 Spalten), die offene Edit-Karte spannt volle Breite. -->
+      <div v-show="activeTab === 'bausteine'" class="mx-auto w-full max-w-xl md:max-w-3xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[110rem]">
         <BausteineTab />
       </div>
 
       <!-- Einstellungen -->
-      <div v-show="activeTab === 'einstellungen'">
+      <div v-show="activeTab === 'einstellungen'" class="mx-auto w-full max-w-xl md:max-w-3xl xl:max-w-5xl">
         <SettingsTab />
       </div>
     </main>

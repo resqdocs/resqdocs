@@ -14,12 +14,14 @@ import { useTreeEditor } from '@/rebuild/treeEditor'
 import { useStorage } from '@/storage/useStorage'
 import SaveStatusBadge from './SaveStatusBadge.vue'
 import TemplateIO from './TemplateIO.vue'
+import { useTemplateExport } from '@/composables/useTemplateExport'
 
 const tree = useProtocolTree()
 const editor = useTreeEditor()
 const storage = useStorage()
 const protocols = tree.protocols
 const editorActiveId = tree.editorActiveId
+const { shareTemplate } = useTemplateExport()
 
 const active = computed(() => protocols.value.find((p) => p.id === editorActiveId.value) ?? protocols.value[0])
 const activeTitle = computed(() => (active.value?.title && active.value.title.trim()) || active.value?.id || '')
@@ -94,6 +96,11 @@ function sheetDuplicate(): void {
   sheetOpen.value = false
   onDuplicate()
 }
+async function sheetExport(): Promise<void> {
+  const t = active.value // active = die getippte Vorlage (openSheet hat sie aktiv gesetzt)
+  sheetOpen.value = false
+  if (t) await shareTemplate(t)
+}
 function sheetMove(delta: number): void {
   sheetOpen.value = false
   tree.moveProtocol(editorActiveId.value, delta)
@@ -161,6 +168,7 @@ const collapsed = ref(false)
         <ul class="menu w-full px-0">
           <li><button type="button" class="min-h-12" @click="sheetRename">Umbenennen</button></li>
           <li><button type="button" class="min-h-12" @click="sheetDuplicate">Duplizieren</button></li>
+          <li><button type="button" class="min-h-12" @click="sheetExport">Exportieren</button></li>
           <li><button type="button" class="min-h-12" :disabled="isFirst" @click="sheetMove(-1)">Nach oben</button></li>
           <li><button type="button" class="min-h-12" :disabled="isLast" @click="sheetMove(1)">Nach unten</button></li>
           <li><button type="button" class="min-h-12 text-error" :disabled="protocols.length <= 1" @click="sheetDelete">Löschen</button></li>
@@ -174,7 +182,7 @@ const collapsed = ref(false)
     <div class="modal modal-bottom" :class="{ 'modal-open': dataOpen }" role="dialog" aria-modal="true">
       <div class="modal-box">
         <h3 class="text-sm font-semibold">Daten</h3>
-        <p class="pb-2 text-xs text-base-content/60">Aktuelle Vorlage exportieren oder eine Vorlage importieren.</p>
+        <p class="pb-2 text-xs text-base-content/60">Vorlage exportieren (mit Auswahl) oder eine Vorlage importieren.</p>
         <TemplateIO />
         <button type="button" class="btn btn-ghost btn-block mt-2" @click="dataOpen = false">Schließen</button>
       </div>

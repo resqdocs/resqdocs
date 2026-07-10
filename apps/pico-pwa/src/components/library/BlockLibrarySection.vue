@@ -154,12 +154,14 @@ async function exportDownload(b: Container): Promise<void> {
       </div>
       <p v-if="ioMsg" class="text-xs" :class="ioMsg.kind === 'ok' ? 'text-success' : 'text-error'">{{ ioMsg.text }}</p>
 
+      <!-- Wide-Screens: Zeilen als Dichte-Grid (2->3->4 Spalten); die offene Edit-Karte spannt col-span-full. -->
+      <div class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       <template v-for="b in blocks" :key="b.id">
         <!-- READ: kompakte Summary-Zeile (Antippen -> umbenennen) -->
         <button
           v-if="editingId !== b.id"
           type="button"
-          class="flex min-h-11 w-full items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-left shadow-sm active:bg-base-200"
+          class="flex min-h-11 w-full min-w-0 items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-left shadow-sm active:bg-base-200"
           :aria-label="`Block ${summaryTitle(b)} — umbenennen`"
           @click="openEdit(b)"
         >
@@ -173,7 +175,7 @@ async function exportDownload(b: Container): Promise<void> {
         <!-- EDIT: Karte (Ring + Titel + read-only Struktur-Info + Fertig) -->
         <div
           v-else
-          class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
+          class="col-span-full flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
           @focusout="onFocusOut"
           @keydown.esc="closeEdit"
         >
@@ -195,6 +197,7 @@ async function exportDownload(b: Container): Promise<void> {
           </div>
         </div>
       </template>
+      </div>
       <p v-if="!blocks.length" class="px-1 py-1 text-sm text-base-content/60">
         Noch keine Blöcke. Im Vorlagen-Editor einen Container über „Als Baustein speichern" ablegen.
       </p>

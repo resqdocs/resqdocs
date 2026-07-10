@@ -12,7 +12,9 @@ export function countDeviations(node: Node, values: Record<string, FieldFill>): 
   // Funktion (Blatt, kein children): „hat erfasste Daten" = EINE Quelle (Registry hasData, filtert
   // namelose Zeilen) -> deckt sich mit der Ausgabe (renderBody), kein Badge/Render-Widerspruch.
   if (node.type === 'function') {
-    return FUNCTION_REGISTRY[node.functionKind]?.hasData(values[node.id]) ? 1 : 0
+    const f = values[node.id]
+    if (f?.state === 'function' && (f.status === 'excluded' || f.status === 'custom')) return 1 // nicht erhoben ODER Freitext = bewusste Abweichung
+    return FUNCTION_REGISTRY[node.functionKind]?.hasData(f) ? 1 : 0
   }
   // Container: als "nicht erhoben" markiert = 1 Abweichung (Kinder entfallen ohnehin); sonst summieren.
   if (node.excludable && values[node.id]?.state === 'excluded') return 1

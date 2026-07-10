@@ -440,6 +440,54 @@ test('renderFunction: Medikamentenliste als Block unter dem Titel; leer + namelo
   assert.equal(render(noTitle, { mp: { state: 'function', rows: [] } }), '')
 })
 
+test('Funktion: nicht erhoben (status excluded) -> entfaellt komplett (inkl. Titel + Standardtext)', () => {
+  const tree: Container = {
+    type: 'container',
+    id: 'root',
+    children: [
+      { type: 'field', id: 'v', default: 'A' },
+      { type: 'function', id: 'mp', functionKind: 'medikamentenplan', title: 'Medikamente', showTitle: true, heading: H({ prefix: '## ' }), default: 'keine bekannt' },
+    ],
+  }
+  // excluded -> Funktion (mit Zeilen UND Standardtext + Titel) faellt weg; nur das Feld bleibt
+  assert.equal(render(tree, { mp: { state: 'function', rows: [{ name: 'ASS' }], status: 'excluded' } }), 'A')
+  // kein status (rueckwaerts-kompatibel = confirmed) -> normal gerendert
+  assert.equal(render(tree, { mp: { state: 'function', rows: [{ name: 'ASS' }] } }), 'A\n## Medikamente\nASS')
+})
+
+test('Funktion: Standardtext (node.default) als Fallback bei leer; Zeilen haben Vorrang', () => {
+  const withDefault: Container = {
+    type: 'container',
+    id: 'root',
+    children: [{ type: 'function', id: 'mp', functionKind: 'medikamentenplan', title: 'Medikamente', showTitle: true, heading: H({ prefix: '## ' }), default: 'keine Dauermedikation bekannt' }],
+  }
+  // leer + Standardtext -> Standardtext als Body
+  assert.equal(render(withDefault, { mp: { state: 'function', rows: [] } }), '## Medikamente\nkeine Dauermedikation bekannt')
+  // Zeilen vorhanden -> schlagen den Standardtext
+  assert.equal(render(withDefault, { mp: { state: 'function', rows: [{ name: 'ASS' }] } }), '## Medikamente\nASS')
+  // ohne Titel + leer + Standardtext -> nur der Standardtext
+  const noTitle: Container = { type: 'container', id: 'root', children: [{ type: 'function', id: 'mp', functionKind: 'medikamentenplan', default: 'keine bekannt' }] }
+  assert.equal(render(noTitle, { mp: { state: 'function', rows: [] } }), 'keine bekannt')
+  // OHNE Standardtext bleibt das Alt-Verhalten (Regressionsschutz): leer + Titel -> nur Ueberschrift
+  const noDefault: Container = { type: 'container', id: 'root', children: [{ type: 'function', id: 'mp', functionKind: 'medikamentenplan', title: 'Medikamente', showTitle: true, heading: H({ prefix: '## ' }) }] }
+  assert.equal(render(noDefault, { mp: { state: 'function', rows: [] } }), '## Medikamente')
+})
+
+test('Funktion: Freitext (status custom) -> text ueberschreibt Zeilen UND Standardtext', () => {
+  const tree: Container = {
+    type: 'container',
+    id: 'root',
+    children: [{ type: 'function', id: 'mp', functionKind: 'medikamentenplan', title: 'Medikamente', showTitle: true, heading: H({ prefix: '## ' }), default: 'keine bekannt' }],
+  }
+  // custom -> Freitext ist der Body, egal ob Zeilen/Standardtext vorhanden
+  assert.equal(render(tree, { mp: { state: 'function', rows: [{ name: 'ASS' }], status: 'custom', text: 'siehe Patientenakte' } }), '## Medikamente\nsiehe Patientenakte')
+  // custom + leerer Text -> nur der Titel (Freitext ueberschreibt auch den Standardtext-Fallback)
+  assert.equal(render(tree, { mp: { state: 'function', rows: [], status: 'custom', text: '' } }), '## Medikamente')
+  // custom mehrzeilig, ohne Titel -> nur der Freitext
+  const noTitle: Container = { type: 'container', id: 'root', children: [{ type: 'function', id: 'mp', functionKind: 'medikamentenplan', default: 'X' }] }
+  assert.equal(render(noTitle, { mp: { state: 'function', rows: [{ name: 'ASS' }], status: 'custom', text: 'Zeile 1\nZeile 2' } }), 'Zeile 1\nZeile 2')
+})
+
 test('Funktion mit Titel-Banner: Block + Absatz davor (kein Inline-Klebe-Bug)', () => {
   const tree: Container = {
     type: 'container',
@@ -563,4 +611,41 @@ test('#55: Funktion inline wie ein Feld (Score UND Liste); nur Titel-Banner blei
   // ... mit rowLayout='inline' (Zeilen einzeilig) landet alles auf einer Zeile
   const inlineOneLine: Container = { type: 'container', id: 'r', separator: ', ', children: [feld, mpInline({ config: { rowLayout: 'inline' } })] }
   assert.equal(render(inlineOneLine, rows), 'A: x, Medikamente: ASS · Ramipril')
+})
+
+test('blankLineBefore #3 Form b: Banner-Erstkind unter BETITELTEM Container -> Absatz zwischen Titel und erstem Kind', () => {
+  const tree: Container = {
+    type: 'container', id: 'root', children: [
+      { type: 'field', id: 'v', default: 'A' },
+      { type: 'container', id: 'g', title: 'Gruppe', showTitle: true, heading: H({ prefix: '## ' }), blankLineBefore: true, children: [
+        { type: 'field', id: 'x', title: 'X', showTitle: true, titleInline: false, heading: H({ prefix: '> ', suffix: ':' }), blankLineBefore: true, default: 'wert' },
+        { type: 'field', id: 'y', title: 'Y', showTitle: true, titleInline: false, heading: H({ prefix: '> ', suffix: ':' }), default: 'w2' },
+      ] },
+    ],
+  }
+  // aeussere Leerzeile vor der Gruppe (blankLineBefore am Banner-Container) UND innere zwischen Titel + erstem Kind
+  assert.equal(render(tree), 'A\n\n## Gruppe\n\n> X:\nwert\n> Y:\nw2')
+})
+
+test('blankLineBefore #3 Form a: Banner-Erstkind unter TRANSPARENTEM Wrapper -> Absatz an der echten Naht', () => {
+  const grp: Container = { type: 'container', id: 'g', showTitle: false, excludable: true, children: [
+    { type: 'field', id: 'x', title: 'X', showTitle: true, titleInline: false, heading: H({ prefix: '> ', suffix: ':' }), blankLineBefore: true, default: 'wert' },
+  ] }
+  const tree: Container = { type: 'container', id: 'root', children: [{ type: 'field', id: 'v', default: 'A' }, grp] }
+  assert.equal(render(tree), 'A\n\n> X:\nwert')
+  // erstes Kind der Wurzel (nichts darueber) -> KEIN fuehrender Absatz
+  assert.equal(render({ type: 'container', id: 'r2', children: [grp] }), '> X:\nwert')
+  // excludable bleibt intakt: „nicht erhoben" unterdrueckt die Gruppe komplett (kein Absatz-Rest)
+  assert.equal(render(tree, { g: { state: 'excluded' } }), 'A')
+})
+
+test('blankLineBefore #3: doppelte transparente Verschachtelung -> genau EINE Leerzeile (kein doppelter Absatz)', () => {
+  const banner = { type: 'field' as const, id: 'x', title: 'X', showTitle: true, titleInline: false, heading: H({ prefix: '> ', suffix: ':' }), blankLineBefore: true, default: 'w' }
+  const tree: Container = {
+    type: 'container', id: 'root', children: [
+      { type: 'field', id: 'v', default: 'A' },
+      { type: 'container', id: 'w1', showTitle: false, children: [{ type: 'container', id: 'w2', showTitle: false, children: [banner] }] },
+    ],
+  }
+  assert.equal(render(tree), 'A\n\n> X:\nw')
 })
