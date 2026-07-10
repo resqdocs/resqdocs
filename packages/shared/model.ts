@@ -118,6 +118,9 @@ export interface FunctionNode {
   functionKind: FunctionKind
   /** Ausgabe-Formatierung der Funktions-Zeilen (Layout/Trenner/Praefix/Suffix). */
   config?: FunctionConfig
+  /** Standardtext: Fallback-Body, wenn die Funktion im Einsatz KEINE Eintraege hat (analog Field.default /
+   *  Container.emptyText). Vorhandene Zeilen haben Vorrang. Nur bei Listen-Funktionen (Medikamentenplan/Aerzte). */
+  default?: string
 }
 
 export type Node = Container | Field | FunctionNode
@@ -179,7 +182,7 @@ export type FieldFill =
   | { state: 'confirmed' } // Standardwert wird verwendet
   | { state: 'custom'; value: string } // bearbeiteter Wert
   | { state: 'excluded' } // nicht erhoben -> entfaellt in der Ausgabe
-  | { state: 'function'; rows: FunctionRow[] } // Funktions-Wert (Medikamenten- ODER Aerzte-Zeilen)
+  | { state: 'function'; rows: FunctionRow[]; status?: 'confirmed' | 'custom' | 'excluded'; text?: string } // Funktions-Zeilen + Tri-State-Status + Freitext (custom) NEBEN den Zeilen; status fehlt -> confirmed (rueckwaerts-kompatibel)
 
 /** Default-Heading (Vorschlag Markdown), eingefroren (geteilter Fallback). */
 export const DEFAULT_HEADING: Heading = Object.freeze({

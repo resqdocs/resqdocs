@@ -21,12 +21,11 @@ async function onSync(): Promise<void> {
 </script>
 
 <template>
-  <section class="card bg-base-100 shadow">
-    <div class="card-body gap-3 p-4">
+  <div class="flex flex-col gap-3">
       <h3 class="font-medium">PZN-Wörterbuch (Medikamentennamen)</h3>
       <p class="text-sm text-base-content/70">{{ lookup.status.value }}</p>
       <div class="flex items-center gap-2">
-        <button class="btn btn-sm" type="button" :disabled="lookup.state.busy" @click="onSync">
+        <button class="btn btn-sm min-h-11" type="button" :disabled="lookup.state.busy" @click="onSync">
           Jetzt aktualisieren
         </button>
         <span v-if="lookup.state.busy" class="loading loading-spinner loading-sm" aria-label="lädt" />
@@ -54,6 +53,5 @@ async function onSync(): Promise<void> {
         Aktualisierung nur auf Knopfdruck. Namen sind <strong>ungeprüfte Community-Angaben</strong> und
         werden im Scan entsprechend markiert. Es werden nie Patientendaten übertragen.
       </p>
-    </div>
-  </section>
+  </div>
 </template>

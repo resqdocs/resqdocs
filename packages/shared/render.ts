@@ -12,6 +12,15 @@ import { FUNCTION_REGISTRY } from './functions/registry.ts'
 
 type Values = Record<string, FieldFill>
 
+/** Ergebnis eines Knoten-Renders: der Text UND ob seine Ausgabe einen Absatz DAVOR verlangt
+ *  („Absatz davor" auf einem Banner - direkt, ODER von einem titel-losen Wrapper aus dem ersten Kind
+ *  hochgereicht). So faellt die Absatz-Entscheidung EINPASSIG (jeder Knoten wird genau einmal gerendert,
+ *  kein Neu-Rendern) und trotzdem ueber Container-Grenzen hinweg korrekt. */
+interface Rendered {
+  text: string
+  leadsPara: boolean
+}
+
 /** Eine Ueberschrift bauen: prefix + Titel + suffix, dann Fuellzeichen je Bezug.
  *  - inclusive: width = Gesamtbreite inkl. Titel -> Zeile konstant breit.
  *  - exclusive: width = feste Anzahl Fuellzeichen nach dem Titel -> Gesamtbreite variiert. */
@@ -21,27 +30,6 @@ export function renderHeading(title: string, heading: Heading = DEFAULT_HEADING)
   if (!fill || heading.width <= 0) return head
   if (heading.fillMode === 'exclusive') return head + fill.repeat(heading.width)
   return head + fill.repeat(Math.max(0, heading.width - head.length))
-}
-
-/** Ein Feld zu Text: Wert je Fuellzustand, optional Titel davor.
- *  - „Trenner-Funktion" (titleInline===false, oder mehrzeilig per Default): VOLLER Banner
- *    (renderHeading mit Fuellzeichen/Breite) auf eigener Zeile, Wert in der naechsten Zeile.
- *  - sonst inline: prefix+title+suffix+value.
- *  null = excluded ODER leer -> der Eltern-Join laesst es weg. */
-function renderField(field: Field, values: Values): string | null {
-  const value = fillValue(field, values[field.id])
-  if (value === null) return null // excluded
-  if (field.title && field.showTitle) {
-    const h = field.heading ?? DEFAULT_HEADING
-    // Titel auf eigener Zeile: explizit (titleInline===false) ODER mehrzeilig ohne explizites Inline.
-    const ownLine = field.titleInline === false || (field.titleInline === undefined && !!field.multiline)
-    if (ownLine) {
-      const head = renderHeading(field.title, h)
-      return value ? `${head}\n${value}` : head
-    }
-    return `${h.prefix}${field.title}${h.suffix}${value}`
-  }
-  return value === '' ? null : value
 }
 
 /** Banner-/Trenner-Feld: Titel auf eigener Zeile (head\nvalue) -> strukturell ein BLOCK; darf NIE
@@ -57,91 +45,141 @@ function isBannerField(node: Node): boolean {
 
 /** Banner-Element (Titel auf eigener Zeile) - fuer die Block-/Absatz-Logik. Funktion UND Container:
  *  Banner = Titel + showTitle + nicht titleInline (der Titel steht ueber dem Inhalt) -> strukturell Block.
- *  Feld hat seine eigene Default-Logik (isBannerField). Kein Banner -> mit `inline` an die laufende Zeile.
- *  Eine (mehrzeilige) Listen-Funktion darf so ebenfalls inline gejoint werden (Maintainer 2026-07-03:
- *  inline verhaelt sich wie beim Feld - Default Block, inline explizit; auch wenn es selten Sinn ergibt). */
+ *  Feld hat seine eigene Default-Logik (isBannerField). Kein Banner -> mit `inline` an die laufende Zeile. */
 function isBannerNode(node: Node): boolean {
   if (node.type === 'field') return isBannerField(node)
   return !!node.title && !!node.showTitle && node.titleInline !== true
 }
 
-/** Geschwister zu Text fuegen.
- *  - block (Default) = neue Zeile.
- *  - inline = an die laufende Zeile; davor kommt der `sep`-Trenner, AUSSER es ist das erste Kind
- *    nach einem Inline-Titel (`head`, Glue ans Suffix) oder das Element setzt noSeparatorBefore.
- *  Leere/excluded Kinder werden uebersprungen (und zaehlen nicht als „vorheriges Element"). */
-function joinNodes(children: Node[], values: Values, sep: string, head?: string): string {
-  let out = head ?? ''
-  let started = head !== undefined
-  let emittedChild = false
-  for (const child of children) {
-    const text = renderNode(child, values, sep)
-    if (text === null || text === '') continue
-    if (!started) {
-      out = text
-      started = true
-      emittedChild = true
-      continue
-    }
-    if (!emittedChild) {
-      // erstes Kind nach einem Inline-Titel (head): an den Suffix gluen - egal ob block/inline,
-      // damit der Inline-Titel + Inhalt auf EINER Zeile bleibt (kein dangling Suffix + Umbruch).
-      // AUSSER Banner-Feld: das ist ein Block und kommt auf eine eigene Zeile.
-      out += isBannerField(child) ? `\n${text}` : text
-    } else if (child.blankLineBefore && isBannerNode(child)) {
-      out += `\n\n${text}` // Absatz: Leerzeile davor (Banner-Element, etwas darueber); erzwingt eigene Zeile
-    } else if (child.inline && (child.type === 'field' ? !isBannerField(child) : !isBannerNode(child))) {
-      // inline: an die laufende Zeile (mit Trenner). Feld = eigene Banner-Default-Logik (isBannerField);
-      // Container UND Funktion = isBannerNode -> ein Titel-Banner (\n-haltig) bleibt Block, sonst inline.
-      // Der Nutzer waehlt inline explizit, Default bleibt Block.
-      out += (child.noSeparatorBefore ? '' : sep) + text
+/** Ein Feld zu Text (+ leadsPara). Wert je Fuellzustand, optional Titel davor.
+ *  - „Trenner-Funktion" (titleInline===false, oder mehrzeilig per Default): VOLLER Banner auf eigener
+ *    Zeile, Wert in der naechsten Zeile.  - sonst inline: prefix+title+suffix+value.
+ *  null = excluded ODER leer -> der Eltern-Join laesst es weg. */
+function renderFieldR(field: Field, values: Values): Rendered | null {
+  const value = fillValue(field, values[field.id])
+  if (value === null) return null // excluded
+  let text: string
+  if (field.title && field.showTitle) {
+    const h = field.heading ?? DEFAULT_HEADING
+    // Titel auf eigener Zeile: explizit (titleInline===false) ODER mehrzeilig ohne explizites Inline.
+    const ownLine = field.titleInline === false || (field.titleInline === undefined && !!field.multiline)
+    if (ownLine) {
+      const head = renderHeading(field.title, h)
+      text = value ? `${head}\n${value}` : head
     } else {
-      out += `\n${text}`
+      text = `${h.prefix}${field.title}${h.suffix}${value}`
     }
-    emittedChild = true
+  } else if (value === '') {
+    return null
+  } else {
+    text = value
   }
-  return out
+  if (text === '') return null
+  return { text, leadsPara: field.blankLineBefore === true && isBannerField(field) }
 }
 
-export function renderContainer(container: Container, values: Values = {}, inheritedSep: string = DEFAULT_SEPARATOR): string {
-  // 2-stufiger Container-Status: „nicht erhoben" -> ganzer Container (inkl. Kinder) entfaellt.
-  if (container.excludable && values[container.id]?.state === 'excluded') return ''
-  const sep = container.separator ?? inheritedSep // zentral an der Wurzel, pro Container ueberschreibbar
-  // Inhalt der Kinder; ist er leer UND emptyText gesetzt -> Ersatztext (Container bleibt sichtbar).
-  // (head + body ist aequivalent zu joinNodes(kinder, …, head), daher Body einmal vorab bilden.)
-  let body = joinNodes(container.children, values, sep)
-  if (body === '' && container.emptyText) body = container.emptyText
-  if (container.title && container.showTitle) {
-    const h = container.heading ?? DEFAULT_HEADING
-    if (container.titleInline) return `${h.prefix}${container.title}${h.suffix}${body}`
-    const head = renderHeading(container.title, h)
-    return body ? `${head}\n${body}` : head
-  }
-  return body
-}
-
-/** Funktions-Knoten zu Text: Body aus der Registry (Klartext der Daten) + optional Titel/Banner darueber.
- *  Leere Funktion (keine Daten) -> null (entfaellt, wie excluded). Das Geschwister-Layout (Block/inline)
- *  macht der Eltern-Join: eine Funktion mit `inline` wird - wie ein Feld - an die laufende Zeile geklebt. */
-function renderFunction(node: FunctionNode, values: Values): string | null {
+/** Funktions-Knoten zu Text (+ leadsPara): Body aus der Registry + optional Titel/Banner darueber.
+ *  Leere Funktion ohne Titel -> null (entfaellt, wie excluded). Das Geschwister-Layout macht der Eltern-Join. */
+function renderFunctionR(node: FunctionNode, values: Values): Rendered | null {
   const def = FUNCTION_REGISTRY[node.functionKind]
   if (!def) return null // unbekannte Funktion (z. B. aus Fremd-Import) -> entfaellt, kein Crash
-  const body = def.renderBody(values[node.id], node.config) // config steuert das Zeilen-Layout
-  // Wie der Container: mit Titel zeigt sich die Ueberschrift auch ohne Daten (Editor-Vorschau rendert
-  // ohne Werte); titleInline = Titel inline vor den Zeilen; ohne Titel + leer -> entfaellt.
+  const fill = values[node.id]
+  // Nicht erhoben (grau −): Funktion inkl. Titel entfaellt komplett (analog Container excluded).
+  if (fill?.state === 'function' && fill.status === 'excluded') return null
+  // Freitext (✎ custom): der editierte Text ist der Body (ueberschreibt Zeilen/Standardtext);
+  // sonst die Zeilen aus der Registry, sonst der Standardtext-Fallback (node.default).
+  const custom = fill?.state === 'function' && fill.status === 'custom'
+  const body = custom ? (fill.text ?? '') : def.renderBody(fill, node.config) // config steuert das Zeilen-Layout
+  const effectiveBody = custom ? body : (body || (node.default ?? ''))
+  let text: string | null
   if (node.title && node.showTitle) {
+    // Mit Titel zeigt sich die Ueberschrift auch ohne Daten (Editor-Vorschau); titleInline = Titel inline.
     const h = node.heading ?? DEFAULT_HEADING
-    if (node.titleInline) return `${h.prefix}${node.title}${h.suffix}${body}`
-    const head = renderHeading(node.title, h)
-    return body ? `${head}\n${body}` : head
+    if (node.titleInline) text = `${h.prefix}${node.title}${h.suffix}${effectiveBody}`
+    else {
+      const head = renderHeading(node.title, h)
+      text = effectiveBody ? `${head}\n${effectiveBody}` : head
+    }
+  } else {
+    text = effectiveBody || null
   }
-  return body || null
+  if (text === null || text === '') return null
+  return { text, leadsPara: node.blankLineBefore === true && isBannerNode(node) }
+}
+
+/** Geschwister zu Text fuegen (+ ob das ERSTE ausgegebene Kind einen Absatz davor verlangt - der
+ *  Eltern-Container braucht das fuer die Naht Titel|erstes-Kind bzw. fuer eine transparente Gruppierung).
+ *  - block (Default) = neue Zeile.  - leadsPara = Leerzeile davor.  - inline = an die laufende Zeile.
+ *  Das ERSTE ausgegebene Kind bekommt hier nie einen fuehrenden Absatz (im selben Join steht nichts
+ *  darueber); ob davor - eine Ebene hoeher - doch etwas steht, entscheidet der Eltern-Join via leadsPara. */
+function joinNodesR(children: Node[], values: Values, sep: string): { text: string; firstLeadsPara: boolean } {
+  let out = ''
+  let started = false
+  let firstLeadsPara = false
+  for (const child of children) {
+    const r = renderNodeR(child, values, sep)
+    if (r === null || r.text === '') continue // leere/excluded Kinder zaehlen nicht als „vorheriges Element"
+    if (!started) {
+      out = r.text
+      firstLeadsPara = r.leadsPara
+      started = true
+      continue
+    }
+    if (r.leadsPara) {
+      out += `\n\n${r.text}` // Absatz: Leerzeile davor (Banner mit blankLineBefore - direkt oder hochgereicht)
+    } else if (child.inline && (child.type === 'field' ? !isBannerField(child) : !isBannerNode(child))) {
+      out += (child.noSeparatorBefore ? '' : sep) + r.text // inline an die laufende Zeile (Banner bleibt Block)
+    } else {
+      out += `\n${r.text}`
+    }
+  }
+  return { text: out, firstLeadsPara }
+}
+
+function renderContainerR(container: Container, values: Values, inheritedSep: string): Rendered | null {
+  // 2-stufiger Container-Status: „nicht erhoben" -> ganzer Container (inkl. Kinder) entfaellt.
+  if (container.excludable && values[container.id]?.state === 'excluded') return null
+  const sep = container.separator ?? inheritedSep // zentral an der Wurzel, pro Container ueberschreibbar
+  const joined = joinNodesR(container.children, values, sep)
+  const hasBody = joined.text !== ''
+  // Kinder leer UND emptyText gesetzt -> Ersatztext (Container bleibt sichtbar).
+  const body = hasBody ? joined.text : (container.emptyText ?? '')
+  if (container.title && container.showTitle) {
+    const h = container.heading ?? DEFAULT_HEADING
+    let text: string
+    if (container.titleInline) {
+      text = `${h.prefix}${container.title}${h.suffix}${body}`
+    } else {
+      const head = renderHeading(container.title, h)
+      // Absatz zwischen Titel-Banner und erstem echten Kind, wenn dieses „Absatz davor" verlangt.
+      text = body ? `${head}${hasBody && joined.firstLeadsPara ? '\n\n' : '\n'}${body}` : head
+    }
+    // leadsPara des Containers selbst = sein eigenes blankLineBefore-Flag (nur bei Banner-Container).
+    return { text, leadsPara: container.blankLineBefore === true && isBannerNode(container) }
+  }
+  // Transparenter Wrapper (kein eigener Titel in der Ausgabe): reicht den Absatz-Wunsch des ersten
+  // ausgegebenen Kindes nach oben durch, damit „Absatz davor" nicht an der Gruppierungsgrenze verloren geht.
+  // AUSNAHME: ein explizit als `inline` markierter Wrapper wird - wie bisher - inline an die laufende Zeile
+  // gejoint und reicht KEINEN Absatz hoch (widerspruechliche, nur per JSON erreichbare Konfiguration). So
+  // bleibt das Alt-Verhalten exakt erhalten und es aendern sich ausschliesslich die #3-Absatz-Faelle.
+  if (body === '') return null
+  return { text: body, leadsPara: container.inline ? false : joined.firstLeadsPara }
+}
+
+function renderNodeR(node: Node, values: Values, sep: string): Rendered | null {
+  if (node.type === 'container') return renderContainerR(node, values, sep)
+  if (node.type === 'function') return renderFunctionR(node, values)
+  return renderFieldR(node, values)
+}
+
+// --- Oeffentliche String-API (unveraendert fuer App + Tests) ---
+
+export function renderContainer(container: Container, values: Values = {}, inheritedSep: string = DEFAULT_SEPARATOR): string {
+  return renderContainerR(container, values, inheritedSep)?.text ?? ''
 }
 
 export function renderNode(node: Node, values: Values = {}, sep: string = DEFAULT_SEPARATOR): string | null {
-  if (node.type === 'container') return renderContainer(node, values, sep)
-  if (node.type === 'function') return renderFunction(node, values)
-  return renderField(node, values)
+  return renderNodeR(node, values, sep)?.text ?? null
 }
 
 /** Wurzel-Container + Einsatz-Werte -> Klartext. */

@@ -23,22 +23,22 @@ function typingSpeedLabel(ms: number): string {
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Standard-Zielgerät (OS)</legend>
-        <select v-model="settings.defaultOs" class="select select-sm w-full" @change="saveSettings()">
-          <option value="win_de">NIDA (win_de)</option>
+        <select v-model="settings.defaultOs" class="select select-sm w-full min-h-11" @change="saveSettings()">
+          <option value="win_de">Windows DE (z. B. NIDA)</option>
           <option value="mac_de">macOS</option>
           <option value="ios">iPad (ios)</option>
         </select>
       </fieldset>
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Design</legend>
-        <select v-model="settings.themeFamily" class="select select-sm w-full" @change="saveSettings()">
+        <select v-model="settings.themeFamily" class="select select-sm w-full min-h-11" @change="saveSettings()">
           <option value="classic">Klassisch</option>
           <option value="resqdocs">ResQDocs</option>
         </select>
       </fieldset>
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Erscheinung</legend>
-        <select v-model="settings.theme" class="select select-sm w-full" @change="saveSettings()">
+        <select v-model="settings.theme" class="select select-sm w-full min-h-11" @change="saveSettings()">
           <option value="system">System</option>
           <option value="light">Hell</option>
           <option value="dark">Dunkel</option>
@@ -53,7 +53,7 @@ function typingSpeedLabel(ms: number): string {
           v-model.number="settings.typingDelayMs"
           type="range"
           min="20"
-          max="150"
+          max="70"
           step="10"
           class="range range-sm w-full"
           aria-label="Tippgeschwindigkeit der Bridge in Millisekunden pro Zeichen"

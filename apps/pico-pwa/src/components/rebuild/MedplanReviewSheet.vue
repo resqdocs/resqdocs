@@ -23,7 +23,7 @@ const emit = defineEmits<{ apply: [rows: MedikamenteRow[], doctor?: ArztRow]; cl
 
 const lookup = useMedicationLookup()
 void lookup.ensureLoaded()
-const { error, structuredRows, totalPages, aussteller, ausstellerRolle, missingPages, draftRows, ingest, updateRowName, setRowStaerke, removeRow, reset } =
+const { error, structuredRows, totalPages, aussteller, ausstellerRolle, missingPages, ingest, updateRowName, setRowStaerke, removeRow, reset } =
   useMedplanScan((pzn) => lookup.resolve(pzn))
 
 const pznLibrary = usePznLibrary()
@@ -32,7 +32,7 @@ void pznLibrary.ensureReady()
 const { einsatzRoot } = useProtocolTree()
 const hasAerzte = computed(() => collectFunctionNodes(einsatzRoot.value, 'aerzte').length > 0)
 const transferState = ref<Record<number, 'added' | 'exists'>>({})
-/** Anzahl echter Medikamentenzeilen (ohne die optionale Aussteller-Zeile in draftRows). */
+/** Anzahl echter Medikamentenzeilen (mit Namen). */
 const medCount = computed(() => structuredRows.value.filter((r) => r.name.trim()).length)
 
 /** Entfernen + den Index-gekeyten transferState mit-reindizieren (sonst klebt das Feedback falsch). */
@@ -133,24 +133,21 @@ async function onManualAdd(): Promise<void> {
 }
 function applyAndClose(): void {
   if (!medCount.value) return
-  // Existiert eine Aerzte-Funktion: Medikamente PUR uebernehmen + den (optional rollierten) Arzt SEPARAT
-  // an die Aerzte-Liste reichen. Sonst Alt-Verhalten: Aussteller (falls Rolle gewaehlt) als Zeile im Plan.
-  if (hasAerzte.value) {
-    const meds = structuredRows.value.filter((r) => r.name.trim())
-    const doctor: ArztRow | undefined =
-      ausstellerRolle.value && aussteller.value
-        ? {
-            name: aussteller.value.name,
-            rolle: ausstellerRolle.value || undefined,
-            ort: aussteller.value.ort,
-            telefon: aussteller.value.telefon,
-            arztnummer: aussteller.value.nummer?.wert,
-          }
-        : undefined
-    emit('apply', meds, doctor)
-  } else {
-    emit('apply', draftRows.value) // inkl. Aussteller-Zeile, falls Rolle gewaehlt (kein Aerzte-Ziel)
-  }
+  const meds = structuredRows.value.filter((r) => r.name.trim())
+  // Der Aussteller/Arzt wird NUR uebernommen, wenn das Protokoll eine Aerzte-Funktion hat (dann geht er
+  // SEPARAT an die Aerzte-Liste). Ohne Aerzte-Funktion wird er gar nicht angeboten (s. Template) und
+  // auch nie als Plan-Zeile eingeschleust - der Medikamentenplan bekommt ausschliesslich Medikamente.
+  const doctor: ArztRow | undefined =
+    hasAerzte.value && ausstellerRolle.value && aussteller.value
+      ? {
+          name: aussteller.value.name,
+          rolle: ausstellerRolle.value || undefined,
+          ort: aussteller.value.ort,
+          telefon: aussteller.value.telefon,
+          arztnummer: aussteller.value.nummer?.wert,
+        }
+      : undefined
+  emit('apply', meds, doctor)
   reset()
   emit('close')
 }
@@ -197,8 +194,9 @@ onMounted(() => {
 
         <p v-if="error" class="text-sm text-error" role="alert">{{ error }}</p>
 
-        <!-- Aussteller (Opt-in; Default „nicht dokumentieren") -->
-        <div v-if="aussteller && structuredRows.length" class="flex flex-col gap-1 rounded-lg bg-base-200 p-2">
+        <!-- Aussteller (Opt-in; Default „nicht dokumentieren") - NUR wenn das Protokoll eine Aerzte-Funktion hat;
+             ohne Aerzte-Funktion wird der Arzt aus dem Plan gar nicht gezeigt (und nie uebernommen). -->
+        <div v-if="hasAerzte && aussteller && structuredRows.length" class="flex flex-col gap-1 rounded-lg bg-base-200 p-2">
           <span class="text-xs text-base-content/60">Ausstellende Praxis aus dem Plan:</span>
           <span class="text-sm">{{ aussteller.name }}<template v-if="aussteller.ort">, {{ aussteller.ort }}</template><template v-if="aussteller.nummer">, {{ aussteller.nummer.typ }} {{ aussteller.nummer.wert }}</template><template v-if="aussteller.telefon">, Tel. {{ aussteller.telefon }}</template></span>
           <div class="flex flex-wrap items-center gap-3 text-sm" role="radiogroup" aria-label="Aussteller dokumentieren">
@@ -206,7 +204,7 @@ onMounted(() => {
             <label class="flex items-center gap-1"><input v-model="ausstellerRolle" type="radio" value="Hausarzt" class="radio radio-xs" /> als Hausarzt</label>
             <label class="flex items-center gap-1"><input v-model="ausstellerRolle" type="radio" value="Facharzt" class="radio radio-xs" /> als Facharzt</label>
           </div>
-          <p v-if="hasAerzte && ausstellerRolle" class="text-xs text-success">→ wird in die Ärzte-Liste übernommen (statt als Zeile in den Plan)</p>
+          <p v-if="ausstellerRolle" class="text-xs text-success">→ wird in die Ärzte-Liste übernommen</p>
         </div>
 
         <!-- Review-Liste: Name editierbar, PZN im Hintergrund (Transfer), entfernen -->

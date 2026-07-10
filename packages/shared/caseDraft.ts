@@ -56,10 +56,15 @@ function sanitizeValues(v: unknown): Record<string, FieldFill> {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return {}
   const out: Record<string, FieldFill> = {}
   for (const [k, raw] of Object.entries(v as Record<string, unknown>)) {
-    const f = raw as { state?: unknown; value?: unknown; rows?: unknown }
+    const f = raw as { state?: unknown; value?: unknown; rows?: unknown; status?: unknown; text?: unknown }
     if (f?.state === 'confirmed' || f?.state === 'excluded') out[k] = { state: f.state }
     else if (f?.state === 'custom' && typeof f.value === 'string') out[k] = { state: 'custom', value: f.value }
-    else if (f?.state === 'function') out[k] = { state: 'function', rows: sanitizeRows(f.rows) }
+    // Funktions-Status + Freitext (custom) mit durchreichen; confirmed = kein status-Feld (Default).
+    else if (f?.state === 'function') {
+      if (f.status === 'excluded') out[k] = { state: 'function', rows: sanitizeRows(f.rows), status: 'excluded' }
+      else if (f.status === 'custom') out[k] = { state: 'function', rows: sanitizeRows(f.rows), status: 'custom', text: typeof f.text === 'string' ? f.text : '' }
+      else out[k] = { state: 'function', rows: sanitizeRows(f.rows) }
+    }
   }
   return out
 }

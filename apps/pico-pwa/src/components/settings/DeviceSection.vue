@@ -109,7 +109,7 @@ async function onSetSsid(): Promise<void> {
         </dl>
         <button
           v-if="platform === 'android'"
-          class="btn btn-outline btn-sm mt-2"
+          class="btn btn-outline btn-sm mt-2 min-h-11"
           type="button"
           @click="openWifiSettings"
         >WLAN-Einstellungen öffnen</button>
@@ -123,7 +123,7 @@ async function onSetSsid(): Promise<void> {
         <span class="label-text mb-1">Base-URL der Bridge</span>
         <input
           v-model="draftUrl"
-          class="input input-bordered input-sm w-full max-w-xs"
+          class="input input-bordered input-sm w-full max-w-xs min-h-11"
           placeholder="http://10.10.10.1"
           aria-label="Base-URL der Pico-Bridge"
           @change="commitUrl"
@@ -131,8 +131,8 @@ async function onSetSsid(): Promise<void> {
       </label>
 
       <div class="flex flex-wrap gap-2">
-        <button class="btn btn-sm" type="button" :disabled="busy" @click="checkHealth">Verbindung prüfen</button>
-        <button class="btn btn-sm" type="button" :disabled="busy" @click="fetchStatus">Status abrufen</button>
+        <button class="btn btn-sm min-h-11" type="button" :disabled="busy" @click="checkHealth">Verbindung prüfen</button>
+        <button class="btn btn-sm min-h-11" type="button" :disabled="busy" @click="fetchStatus">Status abrufen</button>
       </div>
 
       <div v-if="status" class="rounded bg-base-200 p-2 text-sm">
@@ -176,7 +176,7 @@ async function onSetSsid(): Promise<void> {
             Während des Updates USB- und Stromverbindung der Bridge nicht trennen.
           </p>
           <button
-            class="btn btn-primary btn-sm mt-1"
+            class="btn btn-primary btn-sm mt-1 min-h-11"
             type="button"
             :disabled="busy || fw.running.value"
             @click="onFirmwareUpdate"
@@ -208,12 +208,12 @@ async function onSetSsid(): Promise<void> {
         />
       </label>
       <div class="flex items-center gap-2">
-        <select v-model="os" class="select select-bordered select-sm w-32" aria-label="Ziel-OS">
-          <option value="win_de">NIDA (win_de)</option>
+        <select v-model="os" class="select select-bordered select-sm w-32 min-h-11" aria-label="Ziel-OS">
+          <option value="win_de">Windows DE (z. B. NIDA)</option>
           <option value="mac_de">macOS</option>
           <option value="ios">iPad (ios)</option>
         </select>
-        <button class="btn btn-primary btn-sm" type="button" :disabled="busy || !testText" @click="onSend">
+        <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="busy || !testText" @click="onSend">
           Testtext senden
         </button>
       </div>
@@ -226,7 +226,7 @@ async function onSetSsid(): Promise<void> {
         <span class="label-text mb-1">Geräte-ID (WLAN heißt "ResQDocs-&lt;ID&gt;")</span>
         <input
           v-model="ssidDraft"
-          class="input input-bordered input-sm w-full max-w-xs"
+          class="input input-bordered input-sm w-full max-w-xs min-h-11"
           placeholder="z. B. RTW-1"
           maxlength="23"
           aria-label="Neue Geräte-ID"
@@ -234,7 +234,7 @@ async function onSetSsid(): Promise<void> {
       </label>
       <div class="flex items-center gap-2">
         <button
-          class="btn btn-sm"
+          class="btn btn-sm min-h-11"
           type="button"
           :disabled="busy || !isValidSsidId(ssidDraft.trim())"
           @click="onSetSsid"

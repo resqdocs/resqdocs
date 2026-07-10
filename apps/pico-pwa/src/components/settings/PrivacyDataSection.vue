@@ -64,8 +64,7 @@ async function run(action: Pending): Promise<void> {
 </script>
 
 <template>
-  <section class="card bg-base-100 shadow">
-    <div class="card-body gap-3 p-4">
+  <div class="flex flex-col gap-3">
       <h3 class="font-medium">Datenschutz & lokale Daten</h3>
 
       <ul class="list-disc pl-5 text-xs text-base-content/70">
@@ -80,7 +79,7 @@ async function run(action: Pending): Promise<void> {
         <label class="flex flex-wrap items-center justify-between gap-2">
           <span class="text-sm font-medium">Temporären Einsatzentwurf löschen nach</span>
           <select
-            class="select select-bordered select-sm"
+            class="select select-bordered select-sm min-h-11"
             :value="storage.settings.caseDraftTtlHours"
             aria-label="Ablaufzeit des temporären Einsatzentwurfs in Stunden"
             @change="onTtlChange"
@@ -91,15 +90,15 @@ async function run(action: Pending): Promise<void> {
         <p class="mt-1 text-xs text-base-content/60">
           Laufende Entwürfe werden nur lokal gespeichert und nach Inaktivität automatisch gelöscht.
         </p>
-        <button class="btn btn-outline btn-xs mt-2" type="button" :disabled="busy" @click="pending = 'draft'">
+        <button class="btn btn-outline btn-xs mt-2 min-h-11" type="button" :disabled="busy" @click="pending = 'draft'">
           Temporären Entwurf verwerfen
         </button>
       </div>
 
       <div class="flex flex-wrap gap-2">
-        <button class="btn btn-outline btn-sm" type="button" :disabled="busy" @click="pending = 'library'">Library löschen</button>
-        <button class="btn btn-outline btn-sm" type="button" :disabled="busy" @click="pending = 'settings'">App-Einstellungen zurücksetzen</button>
-        <button class="btn btn-outline btn-error btn-sm" type="button" :disabled="busy" @click="pending = 'all'">Alles lokal zurücksetzen</button>
+        <button class="btn btn-outline btn-sm min-h-11" type="button" :disabled="busy" @click="pending = 'library'">Library löschen</button>
+        <button class="btn btn-outline btn-sm min-h-11" type="button" :disabled="busy" @click="pending = 'settings'">App-Einstellungen zurücksetzen</button>
+        <button class="btn btn-outline btn-error btn-sm min-h-11" type="button" :disabled="busy" @click="pending = 'all'">Alles lokal zurücksetzen</button>
       </div>
 
       <div v-if="pending" role="alert" class="alert alert-warning flex-col items-start gap-2 text-sm">
@@ -108,12 +107,11 @@ async function run(action: Pending): Promise<void> {
         <span v-else-if="pending === 'draft'">„Temporären Entwurf verwerfen" löscht <strong>nur den laufenden temporären Einsatzentwurf</strong> — Einstellungen und Bibliothek bleiben.</span>
         <span v-else>„Alles lokal zurücksetzen" löscht die <strong>gesamte Bibliothek</strong>, setzt die <strong>App-Einstellungen</strong> zurück und verwirft den <strong>temporären Einsatzentwurf</strong>. (Der flüchtige Einsatz-Zustand im Einsatz-Tab ist davon nicht betroffen.)</span>
         <div class="flex gap-2">
-          <button class="btn btn-error btn-xs" type="button" :disabled="busy" @click="run(pending)">Bestätigen</button>
-          <button class="btn btn-ghost btn-xs" type="button" :disabled="busy" @click="pending = null">Abbrechen</button>
+          <button class="btn btn-error btn-xs min-h-11" type="button" :disabled="busy" @click="run(pending)">Bestätigen</button>
+          <button class="btn btn-ghost btn-xs min-h-11" type="button" :disabled="busy" @click="pending = null">Abbrechen</button>
         </div>
       </div>
 
       <p v-if="status" class="text-sm" :class="status.kind === 'ok' ? 'text-success' : 'text-error'">{{ status.msg }}</p>
-    </div>
-  </section>
+  </div>
 </template>

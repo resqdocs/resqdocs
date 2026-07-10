@@ -20,6 +20,7 @@ import { extractPznFromPackageCode, packageScanName, type PackageBarcodeFormat }
 import PackageScanOverlay from '@/components/PackageScanOverlay.vue'
 import MedplanReviewSheet from './MedplanReviewSheet.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
+import FunctionFillToggle from './FunctionFillToggle.vue'
 
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
@@ -34,6 +35,13 @@ const lookup = useMedicationLookup()
 const rows = computed<MedikamenteRow[]>(() => caseValues.getRows(props.node.id) as MedikamenteRow[])
 const filledCount = computed(() => rows.value.filter((r) => r.name.trim()).length) // leere Zeile zaehlt nicht
 const label = computed(() => (props.node.title && props.node.title.trim()) || 'Medikamentenplan')
+const excluded = computed(() => caseValues.getFunctionStatus(props.node.id) === 'excluded') // Tri-State (Slice 2): nicht erhoben
+// Tri-State (Slice 3): ✎ Freitext - ein eigener Text ersetzt in der Ausgabe die Zeilen (Zeilen bleiben erhalten).
+const custom = computed(() => caseValues.getFunctionStatus(props.node.id) === 'custom')
+const customText = computed(() => caseValues.getFunctionText(props.node.id))
+function setCustomText(v: string): void {
+  caseValues.setFunctionText(props.node.id, v)
+}
 
 const editingIndex = ref<number | null>(null)
 // Zustand der Zeile beim OEFFNEN der Karte (#260-Nachbefund): Wer eine BEFUELLTE Zeile beim
@@ -174,6 +182,9 @@ function onBmpApply(scanned: MedikamenteRow[], doctor?: ArztRow): void {
       // id ist eine aerzte-Funktion -> ihre rows sind ArztRow (Invariante: nur AerzteFunction schreibt sie).
       const existing = caseValues.getRows(id) as ArztRow[]
       caseValues.setRows(id, [...existing.filter(arztRowHasData), doctor])
+      // Cross-Scan bringt echte Daten -> NUR „nicht erhoben" aufheben. Einen ✎-Freitext NICHT antasten:
+      // setFunctionStatus('confirmed') wuerde dessen text stumm verwerfen (Slice 3). rows sind via setRows schon erhalten.
+      if (caseValues.getFunctionStatus(id) === 'excluded') caseValues.setFunctionStatus(id, 'confirmed')
     }
   }
   editingIndex.value = null // BMP -> alles kompakt, Liste bleibt lesbar
@@ -192,14 +203,31 @@ function pickScan(kind: 'package' | 'plan'): void {
 <template>
   <div class="flex flex-col gap-2">
     <div class="flex items-center gap-2">
+      <!-- Tri-State (Slice 2): ✓ erhoben / − nicht erhoben; bei − entfaellt die Funktion in der Ausgabe. -->
+      <FunctionFillToggle :node="node" />
       <span class="text-sm font-semibold">{{ label }}</span>
-      <span v-if="filledCount" class="badge badge-neutral badge-sm">{{ filledCount }}</span>
-      <!-- „Alle zurücksetzen" oben+unten (Maintainer-Vorgabe #260). Sekundär-destruktiv (ghost+error,
-           nie Primary) + Rückfrage, nach NN/g reset-and-cancel; Hinweis duplicate-links (oben erst ab
-           langer Liste) liegt beim Maintainer zur Entscheidung. -->
-      <button v-if="rows.length" type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
+      <span v-if="!excluded && !custom && filledCount" class="badge badge-neutral badge-sm">{{ filledCount }}</span>
+      <!-- „Alle zurücksetzen" oben+unten (Maintainer-Vorgabe #260). Sekundär-destruktiv (ghost+error, nie Primary) + Rückfrage. -->
+      <button v-if="!excluded && !custom && rows.length" type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
     </div>
 
+    <!-- nicht erhoben: Zeilen-Verwaltung aus, nur Hinweis. Daten bleiben erhalten und kommen beim Zurueckschalten wieder. -->
+    <p v-if="excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
+
+    <div v-else-if="custom" class="flex flex-col gap-1">
+      <!-- Freitext ersetzt in der Ausgabe die Zeilen; vorbelegt mit dem Standardtext, Zeilen bleiben erhalten. -->
+      <textarea
+        class="textarea textarea-bordered textarea-sm w-full"
+        rows="3"
+        :value="customText"
+        :aria-label="`${label}: Freitext`"
+        :placeholder="node.default || 'z. B. Medikation siehe beiliegender Plan'"
+        @input="setCustomText(($event.target as HTMLTextAreaElement).value)"
+      ></textarea>
+      <p class="text-xs italic text-base-content/50">Freitext — ersetzt in der Ausgabe die Einträge. Erfasste Einträge bleiben erhalten.</p>
+    </div>
+
+    <template v-else>
     <template v-for="(r, i) in rows" :key="i">
       <!-- READ: kompakte Summary-Zeile (Antippen -> bearbeiten) -->
       <button
@@ -256,6 +284,7 @@ function pickScan(kind: 'package' | 'plan'): void {
       </button>
     </div>
     <p v-if="pkgScanMsg" class="text-xs text-warning" role="status">{{ pkgScanMsg }}</p>
+    </template>
 
     <!-- Scan-Art waehlen: komfortable Tiles (Maintainer-Wahl, sourced scan-sheet-beauty). daisyUI .modal
          modal-bottom wie MoveToPicker; 56px-Zeilen mit gefasstem Icon-Chip (Theme-Akzent). Teleport, weil ein

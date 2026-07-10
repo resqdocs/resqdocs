@@ -28,7 +28,7 @@ function onChange(e: Event): void {
         Strategie für den Medikationsplan-Scan. Für Vergleichstests umschaltbar;
         „WebView Standard" ist die Voreinstellung.
       </p>
-      <select class="select select-bordered select-sm w-full max-w-xs" :value="storage.settings.scannerMode" @change="onChange">
+      <select class="select select-bordered select-sm w-full max-w-xs min-h-11" :value="storage.settings.scannerMode" @change="onChange">
         <option value="webview_standard">{{ SCANNER_MODE_LABELS.webview_standard }}</option>
         <option value="webview_optimized">{{ SCANNER_MODE_LABELS.webview_optimized }}</option>
         <option value="native_zxingcpp" :disabled="!nativeAvailable">
