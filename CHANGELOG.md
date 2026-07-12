@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.1.1] - 2026-07-10
+
+### Features
+
+- Tri-state entry for medications and doctors in the case view: confirm the standard text, type your own free text, or mark an entry as not recorded — with a configurable standard text as the fallback
+- Wide-screen layouts: the editor, case view and building blocks now make better use of the available width on larger notebook and desktop screens
+- Export a single template directly from its menu with a selection dialog
+- Reorganized settings: an overview with sub-pages (device, medication library) and collapsible sections for rarely used options
+- The editor preview can be switched between example values and an empty state
+
+### Bug Fixes
+
+- "Paragraph before" now takes effect on the first child of a banner section
+- Several editor layout fixes: property fields no longer shift on first render, and the sticky preview switcher no longer causes a scroll jump
+- The editor now hides options that cannot take effect (for example title format without a title, width without a fill character, or a field separator without children)
+- A long unbroken snippet or block no longer breaks the layout on narrow screens
+- Larger touch targets throughout the settings tab
+- The connection indicator is now a Wi-Fi icon with a calmer, steadier state
+
+### Performance
+
+- Heavy full-tree preview segments are kept off the toggle path on mobile
+
 ## [1.1.0] - 2026-07-04
 
 ### Features

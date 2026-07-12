@@ -54,9 +54,41 @@ export function useCaseValues() {
       const f = values.value[id]
       return f?.state === 'function' ? f.rows : []
     },
-    /** Funktions-Daten setzen (eigener Zustand neben dem Tri-State, im selben Werte-Record). */
+    /** Funktions-Daten setzen; ein gesetzter Funktions-Status (custom/excluded) + Freitext bleiben ERHALTEN
+     *  (sonst wuerde jeder Zeilen-Edit/Scan sie still auf confirmed zuruecksetzen). */
     setRows(id: string, rows: FunctionRow[]): void {
-      values.value = { ...values.value, [id]: { state: 'function', rows } }
+      const p = values.value[id]
+      let fill: FieldFill
+      if (p?.state === 'function' && p.status === 'custom') fill = { state: 'function', rows, status: 'custom', text: p.text ?? '' }
+      else if (p?.state === 'function' && p.status === 'excluded') fill = { state: 'function', rows, status: 'excluded' }
+      else fill = { state: 'function', rows }
+      values.value = { ...values.value, [id]: fill }
+    },
+    /** Funktions-Status lesen (confirmed/custom/excluded); Nicht-Funktions-Fill -> confirmed. */
+    getFunctionStatus(id: string): 'confirmed' | 'custom' | 'excluded' {
+      const f = values.value[id]
+      return f?.state === 'function' ? (f.status ?? 'confirmed') : 'confirmed'
+    },
+    /** Freitext (nur bei status='custom') lesen; sonst ''. */
+    getFunctionText(id: string): string {
+      const f = values.value[id]
+      return f?.state === 'function' && f.status === 'custom' ? (f.text ?? '') : ''
+    },
+    /** Funktions-Status setzen, ROWS erhaltend. confirmed = kein status-Feld; custom behaelt den Freitext. */
+    setFunctionStatus(id: string, status: 'confirmed' | 'custom' | 'excluded'): void {
+      const f = values.value[id]
+      const rows = f?.state === 'function' ? f.rows : []
+      let fill: FieldFill
+      if (status === 'confirmed') fill = { state: 'function', rows }
+      else if (status === 'excluded') fill = { state: 'function', rows, status: 'excluded' }
+      else fill = { state: 'function', rows, status: 'custom', text: f?.state === 'function' ? (f.text ?? '') : '' }
+      values.value = { ...values.value, [id]: fill }
+    },
+    /** Freitext setzen -> status=custom, ROWS erhaltend. */
+    setFunctionText(id: string, text: string): void {
+      const f = values.value[id]
+      const rows = f?.state === 'function' ? f.rows : []
+      values.value = { ...values.value, [id]: { state: 'function', rows, status: 'custom', text } }
     },
     /** Werte mehrerer ids entfernen (Knoten/Teilbaum aus der Vorlage geloescht -> verwaiste Werte raus). */
     drop(ids: string[]): void {

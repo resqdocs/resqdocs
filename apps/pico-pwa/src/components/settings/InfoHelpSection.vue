@@ -13,8 +13,7 @@ function resetHints(): void {
 </script>
 
 <template>
-  <section class="card bg-base-100 shadow">
-    <div class="card-body gap-2 p-4">
+  <div class="flex flex-col gap-2">
       <h3 class="font-medium">Info & Hilfe</h3>
       <p class="text-sm">
         <strong>ResQDocs</strong> hilft, Einsatz-Dokumentation aus eigenen Vorlagen zusammenzustellen und
@@ -38,10 +37,9 @@ function resetHints(): void {
         ResQDocs ist ein <strong>Open-Source-Projekt</strong> — Mitwirken (Issues, Beiträge) ist willkommen.
       </p>
       <div class="flex flex-wrap items-center gap-2">
-        <button class="btn btn-sm" type="button" @click="usageNotice.show()">Hinweis zur Nutzung</button>
-        <button class="btn btn-sm" type="button" @click="resetHints">Alle Hinweise erneut anzeigen</button>
+        <button class="btn btn-sm min-h-11" type="button" @click="usageNotice.show()">Hinweis zur Nutzung</button>
+        <button class="btn btn-sm min-h-11" type="button" @click="resetHints">Alle Hinweise erneut anzeigen</button>
         <span v-if="!settings.dismissedHints.length" class="text-xs text-base-content/50">keine ausgeblendet</span>
       </div>
-    </div>
-  </section>
+  </div>
 </template>

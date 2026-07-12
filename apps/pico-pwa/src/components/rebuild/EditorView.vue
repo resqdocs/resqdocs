@@ -6,7 +6,7 @@
  * Small-screen-first: drei Segmente (Aufbau / Eigenschaften / Vorschau) einzeln am Handy,
  * ab lg drei Spalten. Zentrale Tree-API per provide/inject an die rekursiven Knoten.
  */
-import { ref, provide, toRaw } from 'vue'
+import { ref, provide, toRaw, onMounted, onUnmounted } from 'vue'
 import { useProtocolTree } from '@/rebuild/useProtocolTree'
 import { useCaseValues } from '@/rebuild/useCaseValues'
 import { findNode, collectIds, canMoveUp as canMoveUpOp, canMoveDown as canMoveDownOp, canIndent as canIndentOp, canOutdent as canOutdentOp, moveTargets as moveTargetsOp } from '@resqdocs/protocol-core/creator'
@@ -25,6 +25,19 @@ const blocks = useBlockLibrary()
 const root = tree.root
 const selectedId = ref<string | null>(root.value.id)
 const view = ref<'aufbau' | 'eigenschaften' | 'vorschau'>('aufbau')
+
+// Ab lg alle drei Segmente gleichzeitig; darunter nur das aktive. Reaktiv per matchMedia (lg=1024px),
+// damit die teuren Ganzbaum-Segmente (Aufbau/Vorschau) mobil per v-if GAR NICHT gemountet sind, wenn man
+// in "Eigenschaften" editiert. Sonst laeuft bei JEDEM Property-Toggle das render()-computed der Vorschau
+// (ContainerPreview) + der rekursive Baum-Diff ueber das GANZE Protokoll mit (immutable Root-Swap) -> spuerbarer
+// Jank/Reflow bei grossen Protokollen. Eigenschaften bleibt bewusst via hidden-Klasse gemountet (kein State-Reset).
+const mql = typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)') : null
+const isLg = ref(mql?.matches ?? false)
+function onLgChange(): void {
+  isLg.value = mql?.matches ?? false
+}
+onMounted(() => mql?.addEventListener('change', onLgChange))
+onUnmounted(() => mql?.removeEventListener('change', onLgChange))
 
 const api: TreeEditorApi = {
   selectedId,
@@ -141,7 +154,8 @@ provide(TREE_EDITOR, api)
     </div>
 
     <div class="lg:grid lg:grid-cols-3 lg:items-start lg:gap-4">
-      <section class="lg:block" :class="{ hidden: view !== 'aufbau' }">
+      <!-- v-if statt hidden: mobil den Ganzbaum-Aufbau aus dem Render-/Mount-Pfad nehmen (Jank-Ursache) -->
+      <section v-if="isLg || view === 'aufbau'" class="lg:block">
         <!-- overflow-visible: das absolute ⋮-Aktionsmenue darf ueber den Kartenrand hinausragen -->
         <div class="card overflow-visible bg-base-100 shadow">
           <div class="card-body gap-2 p-3">
@@ -155,7 +169,8 @@ provide(TREE_EDITOR, api)
         <ContainerProperties :root="root" />
       </section>
 
-      <section class="lg:block" :class="{ hidden: view !== 'vorschau' }">
+      <!-- v-if statt hidden: das teure render()-computed der Vorschau mobil nur mounten, wenn sichtbar -->
+      <section v-if="isLg || view === 'vorschau'" class="lg:block">
         <ContainerPreview :root="root" />
       </section>
     </div>

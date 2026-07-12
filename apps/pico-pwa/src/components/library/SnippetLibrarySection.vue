@@ -103,12 +103,14 @@ function confirmDelete(): void {
         <button class="btn btn-primary btn-xs ml-auto" type="button" :disabled="adding" @click="addAndEdit"><span aria-hidden="true">＋</span> Snippet</button>
       </div>
 
+      <!-- Wide-Screens: Zeilen als Dichte-Grid (2->3->4 Spalten); die offene Edit-Karte spannt col-span-full. -->
+      <div class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       <template v-for="s in snippets" :key="s.id">
         <!-- READ: kompakte Summary-Zeile (Antippen -> bearbeiten) -->
         <button
           v-if="editingId !== s.id"
           type="button"
-          class="flex min-h-11 w-full items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-left shadow-sm active:bg-base-200"
+          class="flex min-h-11 w-full min-w-0 items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-left shadow-sm active:bg-base-200"
           :aria-expanded="false"
           :aria-label="`Snippet ${summaryTitle(s)} — bearbeiten`"
           @click="openEdit(s)"
@@ -123,7 +125,7 @@ function confirmDelete(): void {
         <!-- EDIT: Karte (Ring + Titel + Text + Fertig) -->
         <div
           v-else
-          class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
+          class="col-span-full flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
           @focusout="onFocusOut"
           @keydown.esc="closeEdit"
         >
@@ -150,6 +152,7 @@ function confirmDelete(): void {
           </div>
         </div>
       </template>
+      </div>
       <p v-if="!snippets.length" class="px-1 py-1 text-sm text-base-content/60">Noch keine Snippets.</p>
     </div>
 

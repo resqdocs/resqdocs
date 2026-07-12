@@ -159,3 +159,28 @@ test('sanitizeValues (via parseDraft): Score-Zeile (#55) - Pack-Years {cigarette
   // NaN + leeres Objekt = keine Nutzerarbeit -> beide Zeilen raus
   assert.deepEqual(d.values.leer, { state: 'function', rows: [] })
 })
+
+test('sanitizeValues (via parseDraft): Funktions-Status custom+Freitext und excluded ueberleben den Roundtrip', () => {
+  const raw = {
+    protocolId: 'p',
+    createdAt: T0,
+    lastTouchedAt: T0,
+    expiresAt: T0 + HOUR,
+    ttlHours: 3,
+    values: {
+      frei: { state: 'function', rows: [{ name: 'ASS' }], status: 'custom', text: 'siehe Akte' },
+      raus: { state: 'function', rows: [{ name: 'ASS' }], status: 'excluded' },
+      leer: { state: 'function', rows: [{ name: 'ASS' }] },
+      freiOhneText: { state: 'function', rows: [], status: 'custom' },
+    },
+  }
+  const d = parseDraft(raw)!
+  // custom: Status + Freitext bleiben, Zeilen erhalten (Allowlist)
+  assert.deepEqual(d.values.frei, { state: 'function', rows: [{ name: 'ASS' }], status: 'custom', text: 'siehe Akte' })
+  // excluded: Status bleibt (kein text-Feld)
+  assert.deepEqual(d.values.raus, { state: 'function', rows: [{ name: 'ASS' }], status: 'excluded' })
+  // kein Status = confirmed (rueckwaerts-kompatibel, kein status/text im Output)
+  assert.deepEqual(d.values.leer, { state: 'function', rows: [{ name: 'ASS' }] })
+  // custom ohne text -> auf '' normalisiert (typeof-Guard)
+  assert.deepEqual(d.values.freiOhneText, { state: 'function', rows: [], status: 'custom', text: '' })
+})
