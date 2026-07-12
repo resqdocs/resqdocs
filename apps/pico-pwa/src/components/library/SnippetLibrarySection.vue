@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import type { LibrarySnippet } from '@/storage/types'
 import { useBausteine } from '@/composables/useBausteine'
-import ConfirmDialog from '@/components/rebuild/ConfirmDialog.vue'
+import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 
 /**
  * Snippets im Bausteine-Menü. Mode-in-place wie Medikamente/Ärzte (Wiedererkennung): kompakte

@@ -5,27 +5,16 @@
 // reload persistieren - kein reload-Fenster mit veralteter Liste). NUR neutrale Bausteine.
 
 import { ref } from 'vue'
-import { Capacitor } from '@capacitor/core'
 import type { Container } from '@resqdocs/protocol-core/model'
-import { createBlockRepositoryOnClient, createMemoryBlockRepository, type BlockRepository } from '@resqdocs/protocol-core/blockRepository'
+import type { BlockRepository } from '@resqdocs/protocol-core/blockRepository'
+import { resolveBlockRepository, getLibraryMode, type LibraryMode } from './repositoryProvider.ts'
 import type { SaveBausteinOutcome } from './treeEditor'
 import { newBlockId } from './blockId'
 
-// Repository einmalig waehlen: nativ SQLite (geteilte DB resqdocs-library), Web-Dev Memory.
+// Repository einmalig aufloesen (host-injiziert: App SQLite, Online-Editor IndexedDB, sonst Memory).
 let repoPromise: Promise<BlockRepository> | null = null
 function getBlockRepository(): Promise<BlockRepository> {
-  if (repoPromise) return repoPromise
-  repoPromise = (async () => {
-    if (!Capacitor.isNativePlatform()) return createMemoryBlockRepository() // Web-Dev: nicht persistent
-    try {
-      const { getSharedCapacitorSqlClient } = await import('@/storage/sqlite/capacitorSqlClient')
-      const client = await getSharedCapacitorSqlClient() // dieselbe migrierte Verbindung wie Library/PZN
-      return createBlockRepositoryOnClient(client)
-    } catch (err) {
-      console.error('SQLite-Baustein-Bibliothek nicht verfuegbar, nutze In-Memory:', err)
-      return createMemoryBlockRepository()
-    }
-  })()
+  if (!repoPromise) repoPromise = resolveBlockRepository()
   return repoPromise
 }
 
@@ -34,11 +23,11 @@ let shared: ReturnType<typeof create> | null = null
 function create() {
   const blocks = ref<Container[]>([])
   const loaded = ref(false)
-  const libraryMode = ref<'memory' | 'sqlite'>('memory')
+  const libraryMode = ref<LibraryMode>('memory')
 
   async function reload(): Promise<void> {
     const repo = await getBlockRepository()
-    libraryMode.value = Capacitor.isNativePlatform() ? 'sqlite' : 'memory'
+    libraryMode.value = getLibraryMode()
     blocks.value = await repo.loadAll()
     loaded.value = true
   }

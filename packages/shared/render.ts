@@ -82,14 +82,19 @@ function renderFieldR(field: Field, values: Values): Rendered | null {
  *  Leere Funktion ohne Titel -> null (entfaellt, wie excluded). Das Geschwister-Layout macht der Eltern-Join. */
 function renderFunctionR(node: FunctionNode, values: Values): Rendered | null {
   const def = FUNCTION_REGISTRY[node.functionKind]
-  if (!def) return null // unbekannte Funktion (z. B. aus Fremd-Import) -> entfaellt, kein Crash
   const fill = values[node.id]
-  // Nicht erhoben (grau −): Funktion inkl. Titel entfaellt komplett (analog Container excluded).
-  if (fill?.state === 'function' && fill.status === 'excluded') return null
-  // Freitext (✎ custom): der editierte Text ist der Body (ueberschreibt Zeilen/Standardtext);
-  // sonst die Zeilen aus der Registry, sonst der Standardtext-Fallback (node.default).
   const custom = fill?.state === 'function' && fill.status === 'custom'
-  const body = custom ? (fill.text ?? '') : def.renderBody(fill, node.config) // config steuert das Zeilen-Layout
+  // Unbekannte Funktion (Versions-Skew/Fremd-Import): keine Registry-Zeilen. Sie entfaellt wie bisher
+  // KOMPLETT (auch mit Titel) - AUSSER es gibt Freitext (✎) oder einen Standardtext; die duerfen nicht
+  // still verloren gehen (sonst widerspraeche die Ausgabe der „erfuellt"/Pflicht-Anzeige).
+  if (!def && !custom && !(node.default && node.default.trim() !== '')) return null
+  // Nicht erhoben (grau −): Funktion inkl. Titel entfaellt komplett (analog Container excluded).
+  // AUSNAHME: eine Pflicht-Funktion darf nicht still verschwinden (required) -> faellt auf
+  // Ergebnis/Standardtext zurueck statt zu entfallen (deckt sich mit isFunctionFilled/Pflicht-Anzeige).
+  if (fill?.state === 'function' && fill.status === 'excluded' && !node.required) return null
+  // Freitext (✎ custom) ueberschreibt Zeilen/Standardtext; sonst die Zeilen aus der Registry (unbekannt:
+  // keine), sonst der Standardtext-Fallback (node.default).
+  const body = custom ? (fill.text ?? '') : (def?.renderBody(fill, node.config) ?? '') // config steuert das Zeilen-Layout
   const effectiveBody = custom ? body : (body || (node.default ?? ''))
   let text: string | null
   if (node.title && node.showTitle) {

@@ -75,6 +75,11 @@ export interface Field {
    *  - fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine
    *  Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert. */
   multiline?: boolean
+  /** Pflichtfeld: das Feld „darf nicht still verschwinden". Im Einsatz entfaellt der −-Zustand
+   *  (nicht erhoben); es bleiben ✓ (Auswahl/Standard) und ✎ (eigener Wert). „Nicht erhebbar" wird bei
+   *  Bedarf sichtbar via ✎ dokumentiert, nicht per −. Rein additiv, kein Submit-Gate; der Renderer
+   *  bleibt unveraendert. Ein leeres Pflichtfeld wird nur visuell als „noch offen" markiert. */
+  required?: boolean
 }
 
 /** Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan).
@@ -118,9 +123,14 @@ export interface FunctionNode {
   functionKind: FunctionKind
   /** Ausgabe-Formatierung der Funktions-Zeilen (Layout/Trenner/Praefix/Suffix). */
   config?: FunctionConfig
-  /** Standardtext: Fallback-Body, wenn die Funktion im Einsatz KEINE Eintraege hat (analog Field.default /
-   *  Container.emptyText). Vorhandene Zeilen haben Vorrang. Nur bei Listen-Funktionen (Medikamentenplan/Aerzte). */
+  /** Standardtext: Fallback-Body, wenn die Funktion im Einsatz nichts ausgibt (analog Field.default /
+   *  Container.emptyText) - Listen-Funktionen ohne Eintraege ODER Rechner ohne Ergebnis. Erfasste
+   *  Werte/Zeilen haben Vorrang. Gilt fuer ALLE functionKinds. */
   default?: string
+  /** Pflicht (analog Field.required): der −-Zustand (nicht erhoben) entfaellt im Einsatz; ✓/✎ bleiben.
+   *  „Erfuellt" = die Funktion liefert nicht-leeren Ausgabetext (Zeilen ODER Freitext ODER Standardtext).
+   *  Rein additiv, kein Submit-Gate; nur visuelle „noch offen"-Markierung. */
+  required?: boolean
 }
 
 export type Node = Container | Field | FunctionNode
@@ -179,10 +189,14 @@ export type FunctionRow = MedikamenteRow | ArztRow | PackYearsRow | NEWS2Row
 /** Ausfuell-Zustand eines BLATTS im Einsatz. Feld = Tri-State; Funktion = eigene Daten (rows).
  *  Fehlt -> 'confirmed' (Standardwert). */
 export type FieldFill =
-  | { state: 'confirmed' } // Standardwert wird verwendet
+  | { state: 'confirmed'; prevValue?: string } // Standardwert wird verwendet; prevValue = ruhend gemerkter, zuletzt getippter Freitext
   | { state: 'custom'; value: string } // bearbeiteter Wert
-  | { state: 'excluded' } // nicht erhoben -> entfaellt in der Ausgabe
-  | { state: 'function'; rows: FunctionRow[]; status?: 'confirmed' | 'custom' | 'excluded'; text?: string } // Funktions-Zeilen + Tri-State-Status + Freitext (custom) NEBEN den Zeilen; status fehlt -> confirmed (rueckwaerts-kompatibel)
+  | { state: 'excluded'; prevValue?: string } // nicht erhoben -> entfaellt in der Ausgabe; prevValue = ruhend gemerkter Freitext
+  | { state: 'function'; rows: FunctionRow[]; status?: 'confirmed' | 'custom' | 'excluded'; text?: string; prevText?: string } // Funktions-Zeilen + Tri-State-Status + Freitext (custom) NEBEN den Zeilen; status fehlt -> confirmed (rueckwaerts-kompatibel); prevText = ruhend gemerkter Freitext
+// prevValue/prevText sind RUHENDE Wiederherstellungs-Puffer: sie bewahren den zuletzt via ✎ getippten
+// Freitext beim versehentlichen Verlassen von 'custom', damit er beim Zurueckschalten auf ✎ verbatim
+// zurueckkommt. Sie erscheinen NIE in der Ausgabe (Renderer/fillValue ignorieren sie) - excluded bleibt
+// excluded, confirmed nutzt den Standardwert. Reine Recovery-Semantik, keine Modell-/Ausgabe-Aenderung.
 
 /** Default-Heading (Vorschlag Markdown), eingefroren (geteilter Fallback). */
 export const DEFAULT_HEADING: Heading = Object.freeze({

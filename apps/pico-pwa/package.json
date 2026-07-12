@@ -1,7 +1,7 @@
 {
   "name": "@resqdocs/pico-pwa",
   "private": true,
-  "version": "1.1.1",
+  "version": "1.2.0",
   "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
@@ -10,36 +10,37 @@
     "preview": "vite preview",
     "ios": "bash scripts/open-ios.sh",
     "android": "bash scripts/open-android.sh",
-    "test:shared": "node --test --experimental-strip-types --experimental-sqlite ../../packages/shared/creator/creator.test.mjs ../../packages/shared/renderer/render.test.mjs ../../packages/shared/renderer/runtime.test.mjs ../../packages/shared/medplan/medplan.test.mjs ../../packages/shared/tools/scores.test.mjs ../../packages/shared/creator.test.ts ../../packages/shared/render.test.ts ../../packages/shared/fill.test.ts ../../packages/shared/ids.test.ts ../../packages/shared/deviations.test.ts ../../packages/shared/library.test.ts ../../packages/shared/templateIO.test.ts ../../packages/shared/blockIO.test.ts ../../packages/shared/caseDraft.test.ts ../../packages/shared/functions/registry.test.ts",
-    "test:app": "node --test --experimental-strip-types --experimental-sqlite src/composables/caseState.test.ts src/composables/temporaryCaseDraft.test.ts src/composables/temporaryCaseDraftRepository.test.ts src/composables/temporaryCaseDraftController.test.ts src/composables/creatorSession.test.ts src/composables/creatorSessionStore.test.ts src/composables/bausteineMapping.test.ts src/composables/useDisclaimer.test.ts src/composables/useUsageNotice.test.ts src/storage/storage.test.ts src/storage/sqlite/sqliteLibraryRepository.test.ts src/pico/picoClient.test.ts src/pico/firmwareUpdate.test.ts src/pico/firmwareNotice.test.ts src/pico/firmwareArtifacts.test.ts src/medplan/useMedplanScan.test.ts src/medplan/scannerMode.test.ts src/medications/useMedicationLookup.test.ts src/medications/pznNotice.test.ts src/medications/packageScan.test.ts src/medications/staerkeSuggestion.test.ts src/medications/pznLibrary.test.ts src/medications/pznExport.test.ts src/medications/pznLibraryRepository.test.ts src/medications/pznLibrarySqliteRepository.test.ts src/utils/gzip.test.ts src/utils/displayName.test.ts src/rebuild/protocolRepository.test.ts src/rebuild/blockRepository.test.ts src/rebuild/blockId.test.ts src/rebuild/blockSummary.test.ts src/rebuild/useProtocolTree.test.ts",
+    "test:shared": "node --test --experimental-strip-types --experimental-sqlite ../../packages/shared/creator/creator.test.mjs ../../packages/shared/renderer/render.test.mjs ../../packages/shared/renderer/runtime.test.mjs ../../packages/shared/medplan/medplan.test.mjs ../../packages/shared/tools/scores.test.mjs ../../packages/shared/creator.test.ts ../../packages/shared/render.test.ts ../../packages/shared/fill.test.ts ../../packages/shared/ids.test.ts ../../packages/shared/deviations.test.ts ../../packages/shared/required.test.ts ../../packages/shared/library.test.ts ../../packages/shared/templateIO.test.ts ../../packages/shared/blockIO.test.ts ../../packages/shared/caseDraft.test.ts ../../packages/shared/functions/registry.test.ts",
+    "test:app": "node --test --experimental-strip-types --experimental-sqlite src/composables/caseState.test.ts src/composables/temporaryCaseDraft.test.ts src/composables/temporaryCaseDraftRepository.test.ts src/composables/temporaryCaseDraftController.test.ts src/composables/creatorSession.test.ts src/composables/creatorSessionStore.test.ts src/composables/bausteineMapping.test.ts src/composables/useDisclaimer.test.ts src/composables/useUsageNotice.test.ts src/storage/storage.test.ts src/storage/sqlite/sqliteLibraryRepository.test.ts src/pico/picoClient.test.ts src/pico/firmwareUpdate.test.ts src/pico/firmwareNotice.test.ts src/pico/firmwareArtifacts.test.ts src/medplan/useMedplanScan.test.ts src/medplan/scannerMode.test.ts src/medications/useMedicationLookup.test.ts src/medications/pznNotice.test.ts src/medications/packageScan.test.ts src/medications/staerkeSuggestion.test.ts src/medications/pznLibrary.test.ts src/medications/pznExport.test.ts src/medications/pznLibraryRepository.test.ts src/medications/pznLibrarySqliteRepository.test.ts src/utils/gzip.test.ts src/utils/displayName.test.ts src/rebuild/protocolRepository.test.ts src/rebuild/blockRepository.test.ts ../../packages/protocol-core-ui/blockId.test.ts ../../packages/protocol-core-ui/blockSummary.test.ts ../../packages/protocol-core-ui/useProtocolTree.test.ts ../../packages/protocol-core-ui/useCaseValues.test.ts",
     "test": "npm run test:shared && npm run test:app"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "^8.1.0",
-    "@capacitor/android": "^8.4.0",
+    "@capacitor/android": "^8.4.1",
     "@capacitor/app": "^8.1.0",
-    "@capacitor/camera": "^8.2.0",
-    "@capacitor/core": "^8.4.0",
+    "@capacitor/camera": "^8.2.1",
+    "@capacitor/core": "^8.4.1",
     "@capacitor/filesystem": "^8.1.2",
-    "@capacitor/ios": "^8.4.0",
+    "@capacitor/ios": "^8.4.1",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/share": "^8.0.1",
     "@resqdocs/protocol-core": "file:../../packages/shared",
-    "@zxing/browser": "^0.2.0",
-    "@zxing/library": "^0.22.0",
+    "@resqdocs/protocol-core-ui": "file:../../packages/protocol-core-ui",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
     "capacitor-native-settings": "^8.1.0",
-    "vue": "^3.5.38"
+    "vue": "^3.5.39"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.4.0",
-    "@tailwindcss/vite": "^4.3.1",
+    "@capacitor/cli": "^8.4.1",
+    "@tailwindcss/vite": "^4.3.2",
     "@types/node": "^24.12.3",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/tsconfig": "^0.9.1",
-    "daisyui": "^5.5.23",
-    "tailwindcss": "^4.3.1",
+    "daisyui": "^5.6.17",
+    "tailwindcss": "^4.3.2",
     "typescript": "~6.0.3",
-    "vite": "^8.0.16",
-    "vue-tsc": "^3.3.5"
+    "vite": "^8.1.4",
+    "vue-tsc": "^3.3.7"
   }
 }

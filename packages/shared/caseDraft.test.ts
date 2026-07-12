@@ -184,3 +184,25 @@ test('sanitizeValues (via parseDraft): Funktions-Status custom+Freitext und excl
   // custom ohne text -> auf '' normalisiert (typeof-Guard)
   assert.deepEqual(d.values.freiOhneText, { state: 'function', rows: [], status: 'custom', text: '' })
 })
+
+test('parseDraft: ruhend gemerkter Freitext (prevValue/prevText) ueberlebt den Entwurf (BEWAHREN)', () => {
+  const raw = {
+    version: 1,
+    protocolId: null,
+    createdAt: 0,
+    lastTouchedAt: 0,
+    expiresAt: 10_000,
+    ttlHours: 3,
+    values: {
+      exMerkt: { state: 'excluded', prevValue: 'Anamnese-Text' },
+      okMerkt: { state: 'confirmed', prevValue: 'Verlauf' },
+      leerMerkt: { state: 'confirmed', prevValue: '' }, // leer -> nicht uebernehmen
+      fnMerkt: { state: 'function', rows: [{ name: 'ASS' }], status: 'excluded', prevText: 'frei gemerkt' },
+    },
+  }
+  const d = parseDraft(raw)!
+  assert.deepEqual(d.values.exMerkt, { state: 'excluded', prevValue: 'Anamnese-Text' })
+  assert.deepEqual(d.values.okMerkt, { state: 'confirmed', prevValue: 'Verlauf' })
+  assert.deepEqual(d.values.leerMerkt, { state: 'confirmed' }) // leerer Puffer wird verworfen
+  assert.deepEqual(d.values.fnMerkt, { state: 'function', rows: [{ name: 'ASS' }], status: 'excluded', prevText: 'frei gemerkt' })
+})

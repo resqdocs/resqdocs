@@ -199,11 +199,27 @@ if (JSON.stringify(gatedKinds) !== JSON.stringify(schemaKinds)) {
 const appBaseline = featureVersions.baseline
 function buildFeatureVersions(lang) {
   const de = lang === 'de'
-  const header = de
+  const fnHeader = de
     ? ['| Funktion | im JSON (`functionKind`) | ab App-Version |', '|---|---|---|']
     : ['| Function | in JSON (`functionKind`) | since app version |', '|---|---|---|']
-  const rows = featureVersions.functions.map((f) => `| ${de ? f.de : f.en} | \`${f.kind}\` | ${f.minVersion} |`)
-  return [...header, ...rows].join('\n')
+  const fnRows = featureVersions.functions.map((f) => `| ${de ? f.de : f.en} | \`${f.kind}\` | ${f.minVersion} |`)
+  const parts = [[...fnHeader, ...fnRows].join('\n')]
+  // 6c) Field-Gating: einzelne Eigenschaften mit eigener Mindestversion (rein additiv, nicht erzwungen).
+  const fields = featureVersions.fields ?? []
+  if (fields.length) {
+    const intro = de
+      ? 'Zusätzlich sind einzelne **Eigenschaften** erst ab einer Mindestversion verfügbar:'
+      : 'Additionally, individual **properties** are only available from a minimum version:'
+    const fHeader = de
+      ? ['| Eigenschaft | im JSON | gilt für | ab App-Version |', '|---|---|---|---|']
+      : ['| Property | in JSON | applies to | since app version |', '|---|---|---|---|']
+    const scope = (f) => (f.on === 'function' ? (de ? 'Funktionen' : 'functions') : f.on)
+    const fRows = fields.map(
+      (f) => `| ${de ? f.de : f.en} | \`${f.prop}\` | ${scope(f)} (${de ? f.note_de : f.note_en}) | ${f.minVersion} |`,
+    )
+    parts.push(intro + '\n\n' + [...fHeader, ...fRows].join('\n'))
+  }
+  return parts.join('\n\n')
 }
 
 // 7) Pro Sprache: KURZER Prompt (verweist auf die Doku-URL) + VOLLSTAENDIGE Doku (Schema + Referenz +

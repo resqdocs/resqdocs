@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.2.0] - 2026-07-12
+
+### Features
+
+- Required fields: mark individual fields or whole functions as required; missing entries are summarized on the parent section, and jumping to an open item expands the relevant sections automatically
+- Unified tri-state (confirmed / free text / not recorded) with a standard-text fallback now also covers select fields and calculator functions (for example NEWS2 and pack-years)
+- Browser-based online editor: edit protocols directly in the browser with local storage for several protocols side by side, a version selector with matching field gating, and an optional bring-your-own-LLM assistant
+- Recommendation and entry point to create templates with your own language model, on the project site and in the app's onboarding guide
+
+### Bug Fixes
+
+- The default protocol is reliably preselected when starting a new case
+- Editor theming and utility-class fixes (including the "+" menu)
+- The AI starter suggestion is phrased more neutrally so it is not misread as an instruction
+
+### Changed
+
+- Typed free text is preserved instead of discarded on mistypes
+- Online editor layout: collapsible sidebars, a width-adjustable preview, clearer chevrons, wordmark and favicon
+- Updated the UI library (daisyUI) and aligned shared dependencies to a common baseline
+
 ## [1.1.1] - 2026-07-10
 
 ### Features

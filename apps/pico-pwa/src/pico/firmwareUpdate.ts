@@ -26,15 +26,9 @@ const POLL_BUDGET_MS = 90000
  * Numerischer Semver-Vergleich: >0 wenn a neuer als b, 0 bei gleich, <0 sonst.
  * Unparsbare Segmente zaehlen als 0 (defensiv gegen kaputte fwVersion).
  */
-export function compareVersions(a: string, b: string): number {
-  const pa = a.split('.').map((s) => parseInt(s, 10) || 0)
-  const pb = b.split('.').map((s) => parseInt(s, 10) || 0)
-  for (let i = 0; i < 3; i++) {
-    const d = (pa[i] ?? 0) - (pb[i] ?? 0)
-    if (d !== 0) return d
-  }
-  return 0
-}
+// compareVersions ist in den Kern gehoben (auch vom Online-Editor-Versions-Gating genutzt); hier
+// re-exportiert, damit die bestehenden Firmware-Importe (./firmwareUpdate) unveraendert bleiben.
+export { compareVersions } from '@resqdocs/protocol-core/version'
 
 /** Uint8Array -> Base64, blockweise (kein Spread/apply ueber grosse Arrays). */
 export function bytesToBase64(bytes: Uint8Array): string {

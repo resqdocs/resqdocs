@@ -11,8 +11,9 @@
  */
 import { computed, ref } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
-import { useCaseValues } from '@/rebuild/useCaseValues'
+import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { countDeviations } from '@resqdocs/protocol-core/deviations'
+import { countOpenRequired } from '@resqdocs/protocol-core/required'
 import EinsatzField from './EinsatzField.vue'
 import MedplanFunction from './MedplanFunction.vue'
 import AerzteFunction from './AerzteFunction.vue'
@@ -28,6 +29,9 @@ const excluded = computed(() => Boolean(props.node.excludable) && caseValues.get
 // Abweichungen vom Standard im Teilbaum (reaktiv) -> "N abweichend"-Vorschau im Kopf
 // ("abweichend" deckt custom UND excluded ab; "geaendert" passt fuer "nicht erhoben" nicht).
 const deviations = computed(() => countDeviations(props.node, caseValues.values.value))
+// Offene Pflichtfelder im Teilbaum -> Aggregat-Marker am (evtl. zugeklappten) Container-Kopf, damit
+// man ein verstecktes Pflichtfeld sieht, ohne die Sektion aufklappen zu muessen.
+const openRequired = computed(() => countOpenRequired(props.node, caseValues.values.value))
 // „Default zu, Abweichung auf" (B): collapsible Sektion startet EINGEKLAPPT, wenn alles auf Standard
 // steht; bei Abweichungen offen. Danach FREI toggelbar - `open` ist nur der Initialwert aus deviations.
 const open = ref(deviations.value > 0)
@@ -65,8 +69,13 @@ const headingClass = computed(() => {
         <ContainerFillToggle v-if="node.excludable" :node="node" />
         {{ label(node) }}
       </span>
-      <span v-if="deviations > 0" class="badge badge-warning badge-sm shrink-0">{{ deviations }} abweichend</span>
-      <span v-else class="shrink-0 text-xs text-base-content/40">Standard</span>
+      <span class="flex shrink-0 items-center gap-1.5">
+        <!-- Pflichtfeld-Aggregat: zeigt AM ZUGEKLAPPTEN Container, dass darin N Pflichtfelder offen sind
+             (der „*"-Sprachcode der Felder; amber = noch offen). -->
+        <span v-if="openRequired > 0" class="badge badge-warning badge-sm gap-0.5" :title="`${openRequired} Pflichtfeld${openRequired === 1 ? '' : 'er'} noch offen`"><span aria-hidden="true">*</span>{{ openRequired }}<span class="sr-only"> Pflichtfeld(er) noch offen</span></span>
+        <span v-if="deviations > 0" class="badge badge-warning badge-sm">{{ deviations }} abweichend</span>
+        <span v-else-if="openRequired === 0" class="text-xs text-base-content/40">Standard</span>
+      </span>
     </summary>
     <div class="collapse-content">
       <div class="flex flex-col gap-1.5 pt-1">
@@ -89,6 +98,7 @@ const headingClass = computed(() => {
     <div class="flex items-center gap-2">
       <ContainerFillToggle v-if="node.excludable" :node="node" />
       <component :is="headingTag" :class="headingClass">{{ label(node) }}</component>
+      <span v-if="openRequired > 0" class="badge badge-warning badge-sm gap-0.5 shrink-0" :title="`${openRequired} Pflichtfeld${openRequired === 1 ? '' : 'er'} noch offen`"><span aria-hidden="true">*</span>{{ openRequired }}<span class="sr-only"> Pflichtfeld(er) noch offen</span></span>
     </div>
     <template v-if="node.children.length">
       <template v-for="child in node.children" :key="child.id">
