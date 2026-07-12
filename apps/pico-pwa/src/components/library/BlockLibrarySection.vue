@@ -2,10 +2,10 @@
 import { computed, ref } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { exportBlock, parseBlock } from '@resqdocs/protocol-core/blockIO'
-import { blockStructureLabel } from '@/rebuild/blockSummary'
+import { blockStructureLabel } from '@resqdocs/protocol-core-ui/blockSummary'
 import { shareJson, copyToClipboard } from '@/utils/fileTransfer'
-import { useBlockLibrary } from '@/rebuild/useBlockLibrary'
-import ConfirmDialog from '@/components/rebuild/ConfirmDialog.vue'
+import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
+import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 
 /**
  * Blöcke im Bausteine-Menü (Rework Slice 2): wiederverwendbare v1-Container-Teilbäume. Mode-in-place

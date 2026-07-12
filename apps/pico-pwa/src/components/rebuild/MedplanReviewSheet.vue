@@ -13,11 +13,11 @@ import type { MedikamenteRow, ArztRow } from '@resqdocs/protocol-core/model'
 import { useMedplanScan } from '@/medplan/useMedplanScan'
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { usePznLibrary } from '@/medications/usePznLibrary'
-import { useProtocolTree } from '@/rebuild/useProtocolTree'
+import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
 import { formatMedikament, medikamentRowHasData, staerkeOhneDuplikat } from '@resqdocs/protocol-core/functions/registry'
 import MedplanScanOverlay from '@/components/MedplanScanOverlay.vue'
-import ConfirmDialog from './ConfirmDialog.vue'
+import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 
 const emit = defineEmits<{ apply: [rows: MedikamenteRow[], doctor?: ArztRow]; close: [] }>()
 

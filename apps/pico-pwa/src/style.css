@@ -1,5 +1,9 @@
 /* Tailwind CSS v4 + daisyUI 5 — CSS-first config (no tailwind.config.js). */
 @import "tailwindcss";
+/* Die geteilten Editor-Komponenten liegen im Paket @resqdocs/protocol-core-ui (ausserhalb dieses
+   Projektordners). Tailwind scannt Projekt-eigene Dateien automatisch, aber NICHT das Paket -> ohne
+   diese Quelle fehlen dessen Utility-Klassen (z. B. das absolute ＋-Menue w-44/right-0) im CSS. */
+@source "../../../packages/protocol-core-ui";
 @plugin "daisyui" {
   themes: light --default, dark --prefersdark;
 }

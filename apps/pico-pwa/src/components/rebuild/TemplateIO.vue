@@ -7,8 +7,8 @@
  */
 import { ref, computed, watch } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
-import { useProtocolTree } from '@/rebuild/useProtocolTree'
-import { useTreeEditor } from '@/rebuild/treeEditor'
+import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
+import { useTreeEditor } from '@resqdocs/protocol-core-ui/treeEditor'
 import { exportTemplate, parseTemplate } from '@resqdocs/protocol-core/templateIO'
 import { useTemplateExport } from '@/composables/useTemplateExport'
 import { useAppVersion } from '@/composables/useAppVersion'

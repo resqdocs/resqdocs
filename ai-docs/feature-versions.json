@@ -1,6 +1,35 @@
 {
-  "_comment": "Hand-gepflegt, committet. Ab welcher ResQDocs-APP-Version (nicht Format-Version) ein functionKind verfuegbar ist - Funktionen kommen per App-Update dazu. Der Generator (scripts/ai-docs/gen-ai-docs.mjs) rendert daraus die Tabelle {{FEATURE_VERSIONS}} in der KI-Doku UND ERZWINGT, dass jeder functionKind aus dem Schema hier steht (sonst Build-Abbruch -> kein ungegatetes Feature geht live). 'baseline' = Mindest-App-Version fuer den v1-Vorlagen-Import ueberhaupt (Container+Feld). Beim Release eines Features hier die reale Mindestversion eintragen.",
+  "_comment": "Hand-gepflegt, committet. Ab welcher ResQDocs-APP-Version (nicht Format-Version) ein functionKind bzw. eine gegatete Eigenschaft verfuegbar ist - Funktionen/Felder kommen per App-Update dazu. Der Generator (scripts/ai-docs/gen-ai-docs.mjs) rendert daraus die Tabelle {{FEATURE_VERSIONS}} in der KI-Doku UND ERZWINGT, dass jeder functionKind aus dem Schema hier steht (sonst Build-Abbruch -> kein ungegatetes Feature geht live). 'baseline' = Mindest-App-Version fuer den v1-Vorlagen-Import ueberhaupt (Container+Feld). 'fields' = einzelne Knoten-Eigenschaften mit eigener Mindestversion (Field-Gating; nicht erzwungen, da rein additiv). Beim Release eines Features hier die reale Mindestversion eintragen.",
   "baseline": "1.0.0",
+  "fields": [
+    {
+      "prop": "default",
+      "on": "function",
+      "de": "Standardtext",
+      "en": "Default text",
+      "note_de": "Fallback ohne Ausgabe: Listen ohne Einträge, Rechner ohne Ergebnis",
+      "note_en": "fallback when there is no output: lists without entries, calculators without a result",
+      "minVersion": "1.1.1"
+    },
+    {
+      "prop": "required",
+      "on": "field",
+      "de": "Pflichtfeld",
+      "en": "Required",
+      "note_de": "Feld darf im Einsatz nicht still entfallen (kein „nicht erhoben\"); leer = „noch offen\"",
+      "note_en": "field cannot be silently skipped during a case (no \"not collected\"); empty = \"still open\"",
+      "minVersion": "1.2.0"
+    },
+    {
+      "prop": "required",
+      "on": "function",
+      "de": "Pflichtfeld",
+      "en": "Required",
+      "note_de": "Funktion darf im Einsatz nicht still entfallen; leer = „noch offen\"",
+      "note_en": "function cannot be silently skipped during a case; empty = \"still open\"",
+      "minVersion": "1.2.0"
+    }
+  ],
   "functions": [
     {
       "kind": "medikamentenplan",

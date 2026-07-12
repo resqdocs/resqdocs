@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useBausteine } from '@/composables/useBausteine'
-import { useBlockLibrary } from '@/rebuild/useBlockLibrary'
+import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
 import SnippetLibrarySection from './SnippetLibrarySection.vue'
 import BlockLibrarySection from './BlockLibrarySection.vue'
 

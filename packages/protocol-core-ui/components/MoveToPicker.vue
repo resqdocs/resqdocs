@@ -8,7 +8,7 @@
  */
 import { ref, computed } from 'vue'
 import type { Node, Container } from '@resqdocs/protocol-core/model'
-import { useTreeEditor } from '@/rebuild/treeEditor'
+import { useTreeEditor } from '../treeEditor.ts'
 import { parentOf } from '@resqdocs/protocol-core/creator'
 
 const props = defineProps<{ nodeId: string; nodeLabel: string }>()

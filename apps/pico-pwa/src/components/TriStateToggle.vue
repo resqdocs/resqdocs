@@ -10,8 +10,10 @@ const props = withDefaults(defineProps<{
   modelValue: TriState
   /** Pflichtpunkt: Zustand 'nicht erhoben' wird nicht angeboten. */
   allowExcluded?: boolean
+  /** 'abweichend/eigener Text' (✎) wird angeboten. Bei Select-Feldern ohne allowCustom = false. */
+  allowCustom?: boolean
   label: string
-}>(), { allowExcluded: true })
+}>(), { allowExcluded: true, allowCustom: true })
 
 const emit = defineEmits<{ 'update:modelValue': [v: TriState] }>()
 
@@ -24,7 +26,12 @@ const TITLE: Record<TriState, string> = {
 
 function cycle(): void {
   let next = NEXT[props.modelValue]
-  if (next === 'excluded' && !props.allowExcluded) next = NEXT[next]
+  // Nicht angebotene Zustaende ueberspringen (✎ nur bei allowCustom, − nur bei allowExcluded).
+  // 'confirmed' ist immer erlaubt -> die Schleife terminiert.
+  let guard = 0
+  while (((next === 'custom' && !props.allowCustom) || (next === 'excluded' && !props.allowExcluded)) && guard++ < 3) {
+    next = NEXT[next]
+  }
   emit('update:modelValue', next)
 }
 </script>

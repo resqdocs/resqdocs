@@ -2,13 +2,26 @@
 /** Rekursive Baum-Zeile (Container ODER Feld; self-reference ueber den Dateinamen). Aktionen
  *  rufen die zentrale Tree-API (provide/inject). Container: ＋ mit Typwahl (Container/Feld) +
  *  rekursive Kinder. Feld: Blatt (kein ＋, keine Kinder). :key="child.id" = stabile Wiederverwendung. */
-import { ref, computed } from 'vue'
+import { ref, computed, inject } from 'vue'
 import type { Node, FunctionKind } from '@resqdocs/protocol-core/model'
-import { useTreeEditor } from '@/rebuild/treeEditor'
+import { useTreeEditor } from '../treeEditor.ts'
+import { snippetPickerKey, allowedFunctionKindsKey } from '../injection.ts'
 import MoveToPicker from './MoveToPicker.vue'
-import SnippetPicker from './SnippetPicker.vue'
 import BlockPicker from './BlockPicker.vue'
 import type { Container } from '@resqdocs/protocol-core/model'
+
+// Snippet-Auswahl wird vom Host injiziert (App: SnippetPicker über die Bausteine-Sammlung); ohne sie
+// entfällt „Snippet einfügen" (der Online-Editor kann später eine eigene Quelle bereitstellen).
+const SnippetPicker = inject(snippetPickerKey, null)
+
+// Versions-Gating der Funktionen: der Online-Editor stellt die für die gewählte App-Version anbietbaren
+// functionKinds bereit; fehlt der Provider (Mobile-App = eigene Version), sind ALLE erlaubt.
+const allowedKinds = inject(allowedFunctionKindsKey, null)
+const ALL_FUNCTION_KINDS: FunctionKind[] = ['medikamentenplan', 'aerzte', 'packYears', 'news2']
+function kindAllowed(k: FunctionKind): boolean {
+  return !allowedKinds || allowedKinds.value.includes(k)
+}
+const anyFunctionAllowed = computed(() => ALL_FUNCTION_KINDS.some(kindAllowed))
 
 const props = defineProps<{ node: Node; depth: number }>()
 const tree = useTreeEditor()
@@ -110,17 +123,17 @@ function confirmDelete(): void {
             <template v-if="addView === 'root'">
               <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('container')">Container</button>
               <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('field')">Feld</button>
-              <button type="button" class="btn btn-ghost btn-xs justify-between" @click="addView = 'functions'">Funktion<span class="text-base-content/40" aria-hidden="true">›</span></button>
-              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="openSnippetPicker">Snippet einfügen</button>
+              <button v-if="anyFunctionAllowed" type="button" class="btn btn-ghost btn-xs justify-between" @click="addView = 'functions'">Funktion<span class="text-base-content/40" aria-hidden="true">›</span></button>
+              <button v-if="SnippetPicker" type="button" class="btn btn-ghost btn-xs justify-start" @click="openSnippetPicker">Snippet einfügen</button>
               <button type="button" class="btn btn-ghost btn-xs justify-start" @click="openBlockPicker">Block einfügen</button>
             </template>
             <!-- Funktions-Auswahl: kurze Abfrage, welche Funktion eingefügt werden soll -->
             <template v-else>
               <button type="button" class="btn btn-ghost btn-xs justify-start gap-1 text-base-content/60" @click="addView = 'root'"><span aria-hidden="true">‹</span> zurück</button>
-              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'medikamentenplan')">Medikamentenplan</button>
-              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'aerzte')">Ärzte</button>
-              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'packYears')">Pack-Years</button>
-              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'news2')">NEWS2</button>
+              <button v-if="kindAllowed('medikamentenplan')" type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'medikamentenplan')">Medikamentenplan</button>
+              <button v-if="kindAllowed('aerzte')" type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'aerzte')">Ärzte</button>
+              <button v-if="kindAllowed('packYears')" type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'packYears')">Pack-Years</button>
+              <button v-if="kindAllowed('news2')" type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'news2')">NEWS2</button>
             </template>
           </div>
         </template>
@@ -137,7 +150,7 @@ function confirmDelete(): void {
     </div>
 
     <MoveToPicker v-if="pickerOpen" :node-id="node.id" :node-label="label(node)" @close="pickerOpen = false" />
-    <SnippetPicker v-if="snippetPickerOpen" title="Snippet als Feld einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
+    <component :is="SnippetPicker" v-if="SnippetPicker && snippetPickerOpen" title="Snippet als Feld einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
     <BlockPicker v-if="blockPickerOpen" title="Block als Container einfügen" @select="onInsertBlock" @close="blockPickerOpen = false" />
 
     <!-- Loesch-Bestaetigung: irreversibel; bei einem Container werden alle Nachfahren mit-geloescht (Liste). -->

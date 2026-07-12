@@ -9,8 +9,8 @@
  * die Tree-API (selectProtocol), damit selectedId (EditorView) mitgesetzt wird.
  */
 import { ref, computed, nextTick, watch } from 'vue'
-import { useProtocolTree } from '@/rebuild/useProtocolTree'
-import { useTreeEditor } from '@/rebuild/treeEditor'
+import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
+import { useTreeEditor } from '@resqdocs/protocol-core-ui/treeEditor'
 import { useStorage } from '@/storage/useStorage'
 import SaveStatusBadge from './SaveStatusBadge.vue'
 import TemplateIO from './TemplateIO.vue'

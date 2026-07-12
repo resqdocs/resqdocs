@@ -11,12 +11,17 @@ import EinsatzView from '@/components/rebuild/EinsatzView.vue'
 import EditorView from '@/components/rebuild/EditorView.vue'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
 import { useStorage } from '@/storage/useStorage'
-import { useProtocolPersistence } from '@/rebuild/protocolPersistence'
+import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
+import { configureNativeRepositories } from '@/rebuild/configureNativeRepositories'
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { usePznNotice } from '@/medications/usePznNotice'
 import { PZN_DICTIONARY_ENABLED } from '@/medications/featureFlags'
 import { useTemporaryCaseDraft } from '@/composables/useTemporaryCaseDraft'
 import { useUsageNotice } from '@/composables/useUsageNotice'
+
+// Rework-Repositories auf die native Capacitor/SQLite-Schicht verdrahten (Web bleibt Memory). MUSS vor
+// dem ersten Aufloesen (protocolPersistence.init / useBlockLibrary) laufen -> synchron im Setup.
+configureNativeRepositories()
 
 // App-Einstellungen laden + Storage-Backend wählen (nativ → SQLite, Web → Memory). Einmalig, idempotent.
 const storage = useStorage()

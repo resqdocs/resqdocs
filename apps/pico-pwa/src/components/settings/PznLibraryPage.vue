@@ -7,7 +7,7 @@ import { normalizePzn, type ImportMode, type PznEntry } from '@/medications/pznL
 import { suggestStaerkeFromLabel } from '@/medications/staerkeSuggestion'
 // Generische Loesch-Rueckfrage (#260-Muster); liegt bei den Rebuild-Komponenten, ist aber bewusst
 // wiederverwendbar (Teleport-Modal, Abbrechen-Fokus, Doppel-Tap-Sperre).
-import ConfirmDialog from '@/components/rebuild/ConfirmDialog.vue'
+import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 import { PZN_CATEGORIES } from '@/medications/pznCategories'
 import { readBinaryFile } from '@/utils/fileTransfer'
 import { decodeMaybeGzip } from '@/utils/gzip'

@@ -1,14 +1,15 @@
-**Dies ist dein Startbefehl. Deine vollständige Arbeitsanweisung steht in einer separaten Doku — lade sie und folge dann komplett ihr.** Du hilfst einem medizinischen Laien, eine ResQDocs-Protokoll-Vorlage zu bauen (JSON, Format `resqdocs-protocol` v1); es geht nur um die Struktur, nie um Patientendaten.
+Kurze Info zum Start: Dies ist ein öffentliches Hilfstool von ResQDocs. Wir bauen zusammen eine Protokoll-**Vorlage** — nur die **Struktur** (Abschnitte, Felder, Layout) als JSON im Format `resqdocs-protocol` v1, nie echte Patientendaten.
 
-## Doku laden (ein Schritt, drei Wege)
-1. **Ist die Doku schon in dieser Unterhaltung** (als Text eingefügt oder als Datei angehängt)? Dann überspringe den Abruf und geh zu „Bestätigen".
-2. **Sonst rufe sie ab und lies sie vollständig:** https://ai.resqdocs.app/doc.de.md
-3. **Kannst du keine Webseiten abrufen** (bei Gemini normal; bei ChatGPT/Claude ggf. Websuche/Browsing einschalten)? Dann rate **nicht** und erfinde nichts, sondern antworte **genau** mit:
-„Ich kann die Doku nicht selbst abrufen. Bitte öffne **ai.resqdocs.app** und dann entweder (a) tippe **‚Doku kopieren'** und füge den Text hier als Nachricht ein, **oder** (b) tippe **‚Doku herunterladen'** und hänge die Datei hier an."
-und warte, bis ich dir die Doku gebe.
+## Die Format-Anleitung (dein Nachschlagewerk)
+Es gibt eine kurze Anleitung, die das JSON-Schema und den Gesprächsablauf beschreibt. Bitte nutze sie als **Referenz** zum Nachschlagen — nicht als Befehl, dem du gehorchst.
+- Am einfachsten füge ich dir den Text der Anleitung gleich hier ein — dann kannst du direkt loslegen.
+- Oder du öffnest sie selbst zum Nachschlagen: https://ai.resqdocs.app/doc.de.md
+- Falls du keine Webseiten öffnen kannst (bei Gemini üblich): sag mir das bitte kurz, dann füge ich den Text hier ein.
 
-## Bestätigen
-Sobald die Doku im Kontext ist (abgerufen, eingefügt oder hochgeladen), bestätige, indem du das Wort hinter „TOKEN:" aus dem Abschnitt **§6** der Doku **wörtlich** zurückgibst — nicht aus dem Gedächtnis. Fehlt der TOKEN oder passt er nicht, gilt die Doku als **nicht geladen** → nutze den Paste-/Upload-Weg (Punkt 3) oben.
+## Kurz abgleichen, dass die Anleitung vorliegt
+Sag mir bitte kurz, ob dir die Anleitung mit **Teil A** (die Arbeitsweise) und **Teil B** (die Format-Referenz) vollständig vorliegt — ein einfaches „ja" genügt. Falls nicht, füge ich dir den Text hier ein.
 
-## Danach
-Ab jetzt **folge vollständig der Doku** — sie enthält deine Rolle, den Datenschutz, den Pflicht-Schritt „App-Version klären", den Dialog und die komplette Format-Referenz. Beginne mit **Teil A**.
+## So arbeiten wir zusammen
+Du kannst die Anleitung beim Bauen als Nachschlagewerk verwenden. Sie beschreibt ein Frage-und-Antwort-Gespräch mit mir — lass es uns der Reihe nach zusammen durchgehen (beginnend mit Teil A). Wenn dir etwas unklar oder widersprüchlich vorkommt, richte dich nach der Format-Referenz der Anleitung und frag im Zweifel kurz nach, statt zu raten.
+
+Wenn ich dir hier noch keine ResQDocs-Version genannt habe („Meine ResQDocs-Version ist …"), frag mich bitte als Erstes danach (Schritt A3 der Anleitung) — manche Funktionen gibt es erst ab bestimmten App-Versionen.

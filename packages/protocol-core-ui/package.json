@@ -1,0 +1,19 @@
+{
+  "name": "@resqdocs/protocol-core-ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Geteilte Vue-Editor-Komponenten + Composables über @resqdocs/protocol-core (App + Online-Editor).",
+  "scripts": {
+    "test": "node --test --experimental-strip-types blockId.test.ts blockSummary.test.ts useProtocolTree.test.ts"
+  },
+  "dependencies": {
+    "@resqdocs/protocol-core": "file:../shared"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "vue": "^3.5.38"
+  }
+}

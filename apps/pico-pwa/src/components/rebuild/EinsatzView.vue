@@ -7,22 +7,26 @@
  * nebeneinander, Vorschau klebt. Die Vorschau nutzt denselben reinen Renderer wie die Ausgabe.
  */
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useProtocolTree } from '@/rebuild/useProtocolTree'
+import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
+import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
 import { resolveInitialProtocolId } from '@resqdocs/protocol-core/library'
 import { useReworkCaseDraft } from '@/rebuild/useReworkCaseDraft'
 import { CASE_DRAFT_DELETED_NOTICE, type ReworkCaseDraft } from '@resqdocs/protocol-core/caseDraft'
-import { useCaseValues } from '@/rebuild/useCaseValues'
+import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { usePicoApi, type OsMode } from '@/composables/usePicoApi'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
 import { useStorage } from '@/storage/useStorage'
 import { render } from '@resqdocs/protocol-core/render'
+import { countOpenRequired } from '@resqdocs/protocol-core/required'
 import EinsatzSection from './EinsatzSection.vue'
 import EinsatzField from './EinsatzField.vue'
 import MedplanFunction from './MedplanFunction.vue'
 import AerzteFunction from './AerzteFunction.vue'
-import OutputText from './OutputText.vue'
+import ScoreFunction from './ScoreFunction.vue'
+import OutputText from '@resqdocs/protocol-core-ui/components/OutputText.vue'
 
 const { einsatzRoot: root, protocols, einsatzActiveId, selectEinsatz } = useProtocolTree()
+const { libraryLoaded } = useProtocolPersistence()
 const caseValues = useCaseValues()
 const view = ref<'ausfuellen' | 'vorschau'>('ausfuellen')
 
@@ -49,6 +53,23 @@ function clearDraftTimer(): void {
 // Vorschau = reiner Renderer ueber Definition + Einsatz-Werte (Tri-State je Feld).
 const text = computed(() => render(root.value, caseValues.values.value))
 
+// Pflichtfeld-Vollstaendigkeit: informativ, NIE blockierend (Senden bleibt immer moeglich).
+// Antippen springt zum ersten noch offenen Pflichtfeld (data-required-open, per resetKey re-evaluiert).
+const openRequired = computed(() => countOpenRequired(root.value, caseValues.values.value))
+function scrollToFirstOpen(): void {
+  const el = document.querySelector('[data-required-open]')
+  if (!el) return
+  // Ziel kann in zugeklappten <details>-Sektionen liegen (0 Hoehe -> scrollIntoView liefe ins Leere).
+  // Alle zugeklappten Eltern-Sektionen aufklappen (das @toggle synchronisiert den open-State der Sektion),
+  // dann nach dem Layout-Tick scrollen.
+  let d = el.closest('details:not([open])') as HTMLDetailsElement | null
+  while (d) {
+    d.open = true
+    d = (d.parentElement?.closest('details:not([open])') as HTMLDetailsElement | null) ?? null
+  }
+  void nextTick(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+}
+
 // Abschluss = bewusstes, bestaetigtes Loeschen der erfassten Werte (DSGVO, Art.-9-Gesundheitsdaten).
 // Loescht NUR die Werte (useCaseValues), nicht die Vorlage. resetKey erzwingt Re-Mount der Sektionen
 // -> Falt-/Open-Zustand startet frisch (alles wieder auf Standard, eingeklappt).
@@ -58,6 +79,16 @@ function confirmReset(): void {
   clearDraftTimer() // laufenden Trailing-Save abbrechen (sonst schriebe er den geloeschten Entwurf neu)
   caseValues.reset()
   void caseDraft.remove() // Abschluss = bewusstes Loeschen, auch des temporaeren Entwurfs
+  // Abschluss startet den naechsten Einsatz -> zurueck auf die Standard-Vorlage (persoenlicher Standard,
+  // sonst aktuelle Vorlage behalten). selectEinsatz direkt (kein applySwitch) -> lastSelectedProtocolId
+  // bleibt unberuehrt und es wird kein Aufloese-Guard neu bewaffnet. „Ein Protokoll pro Einsatz" bleibt.
+  const id = resolveInitialProtocolId(
+    protocols.value.map((p) => p.id),
+    storage.settings.defaultProtocolId,
+    einsatzActiveId.value,
+  )
+  if (id && id !== einsatzActiveId.value) selectEinsatz(id)
+  collapsed.value = true // Vorlagen-Auswahl wieder einklappen (wie beim manuellen Wechsel)
   resetKey.value += 1
   showConfirm.value = false
 }
@@ -116,7 +147,9 @@ let userSwitched = false
 // Einmalige Aufloesung, sobald Settings + Bibliothek + Draft-Ladung bereit sind: ein gueltiger
 // Entwurf wird FORTGESETZT (gewinnt vor der Default-Vorauswahl), sonst Default Standard->zuletzt->erste.
 function maybeResolveOnReady(): void {
-  if (userSwitched || !storage.settingsLoaded.value || protocols.value.length === 0 || draftResult.value === null) return
+  // NICHT gegen den Seed aufloesen: erst wenn die persistierte Bibliothek geladen ist (libraryLoaded),
+  // sonst trifft resolveInitialProtocolId die persoenliche Standard-Vorlage nicht und verriegelt userSwitched.
+  if (userSwitched || !storage.settingsLoaded.value || !libraryLoaded.value || draftResult.value === null) return
   userSwitched = true
   const d = draftResult.value.draft
   if (d && d.protocolId && protocols.value.some((p) => p.id === d.protocolId)) {
@@ -139,7 +172,7 @@ function maybeResolveOnReady(): void {
   )
   if (id && id !== einsatzActiveId.value) selectEinsatz(id)
 }
-watch([() => storage.settingsLoaded.value, protocols, draftResult], maybeResolveOnReady, { immediate: true })
+watch([() => storage.settingsLoaded.value, () => libraryLoaded.value, protocols, draftResult], maybeResolveOnReady, { immediate: true })
 
 // Wechsel mit Verwerfen-Confirm (nur wenn schon Eingaben da). pendingId = transienter Dialog-Zustand.
 // Konservativ: JEDE Interaktion (auch ein blosses ✓-Bestaetigen materialisiert einen Key) zaehlt als
@@ -239,11 +272,24 @@ onUnmounted(clearDraftTimer)
               Felder ausfüllen: tippe auf <span class="whitespace-nowrap">✓/✎/−</span> je Feld (bestätigt · eigener Wert · nicht erhoben). Die Vorschau zeigt den Ausgabetext.
             </p>
           </div>
+
+          <!-- Pflichtfeld-Vollstaendigkeit: dezent, nicht blockierend. Antippen springt zum ersten offenen
+               Pflichtfeld. Bei 0 offen ausgeblendet (keine „alles gut"-Bestaetigung noetig). -->
+          <button
+            v-if="openRequired > 0"
+            type="button"
+            class="flex items-center gap-2 self-start rounded-lg border border-warning/40 bg-warning/10 px-3 py-1.5 text-left text-sm text-warning"
+            @click="scrollToFirstOpen"
+          >
+            <span class="badge badge-warning badge-sm shrink-0">{{ openRequired }}</span>
+            <span>{{ openRequired === 1 ? 'Pflichtfeld' : 'Pflichtfelder' }} noch offen — zum ersten springen</span>
+          </button>
           <div v-if="root.children.length" class="flex flex-col gap-6">
             <template v-for="child in root.children" :key="resetKey + '-' + child.id">
               <EinsatzSection v-if="child.type === 'container'" :node="child" :depth="0" :inside-collapse="false" />
               <MedplanFunction v-else-if="child.type === 'function' && child.functionKind === 'medikamentenplan'" :node="child" />
               <AerzteFunction v-else-if="child.type === 'function' && child.functionKind === 'aerzte'" :node="child" />
+              <ScoreFunction v-else-if="child.type === 'function'" :node="child" />
               <EinsatzField v-else-if="child.type === 'field'" :node="child" />
             </template>
           </div>
