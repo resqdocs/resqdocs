@@ -56,14 +56,19 @@ function sanitizeValues(v: unknown): Record<string, FieldFill> {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return {}
   const out: Record<string, FieldFill> = {}
   for (const [k, raw] of Object.entries(v as Record<string, unknown>)) {
-    const f = raw as { state?: unknown; value?: unknown; rows?: unknown; status?: unknown; text?: unknown }
-    if (f?.state === 'confirmed' || f?.state === 'excluded') out[k] = { state: f.state }
+    const f = raw as { state?: unknown; value?: unknown; rows?: unknown; status?: unknown; text?: unknown; prevValue?: unknown; prevText?: unknown }
+    // Ruhend gemerkter Freitext (BEWAHREN) muss den Entwurf ueberleben - sonst ginge er bei Neustart/Crash
+    // (genau dem Zweck des Entwurfs) verloren. Gleiche Datenklasse wie value/text, die ohnehin persistiert
+    // werden; erscheint NIE in der Ausgabe (Renderer ignoriert prevValue/prevText).
+    const prevValue = typeof f.prevValue === 'string' && f.prevValue !== '' ? f.prevValue : undefined
+    const prevText = typeof f.prevText === 'string' && f.prevText !== '' ? f.prevText : undefined
+    if (f?.state === 'confirmed' || f?.state === 'excluded') out[k] = prevValue ? { state: f.state, prevValue } : { state: f.state }
     else if (f?.state === 'custom' && typeof f.value === 'string') out[k] = { state: 'custom', value: f.value }
     // Funktions-Status + Freitext (custom) mit durchreichen; confirmed = kein status-Feld (Default).
     else if (f?.state === 'function') {
-      if (f.status === 'excluded') out[k] = { state: 'function', rows: sanitizeRows(f.rows), status: 'excluded' }
+      if (f.status === 'excluded') out[k] = prevText ? { state: 'function', rows: sanitizeRows(f.rows), status: 'excluded', prevText } : { state: 'function', rows: sanitizeRows(f.rows), status: 'excluded' }
       else if (f.status === 'custom') out[k] = { state: 'function', rows: sanitizeRows(f.rows), status: 'custom', text: typeof f.text === 'string' ? f.text : '' }
-      else out[k] = { state: 'function', rows: sanitizeRows(f.rows) }
+      else out[k] = prevText ? { state: 'function', rows: sanitizeRows(f.rows), prevText } : { state: 'function', rows: sanitizeRows(f.rows) }
     }
   }
   return out

@@ -8,6 +8,7 @@ export const TAB_GUIDE_HINT_ID = 'tab-guide-v2'
 import { computed, ref } from 'vue'
 import { useStorage } from '@/storage/useStorage'
 import { useDisclaimer } from '@/composables/useDisclaimer'
+import { useAppVersion } from '@/composables/useAppVersion'
 
 /**
  * Mehrseitige Onboarding-Tour (#142, #72-Mechanik): erscheint NACH dem
@@ -21,6 +22,11 @@ import { useDisclaimer } from '@/composables/useDisclaimer'
 const HINT_ID = TAB_GUIDE_HINT_ID
 const storage = useStorage()
 const disclaimer = useDisclaimer()
+
+// KI-Empfehlung (#261): dauerhaft auffindbar im Guide (über „?"), auch wenn der Vorlagen-Hinweis
+// weggeklickt wurde. ?v=<echte App-Version> -> die KI-Seite stempelt sie in den Prompt (kein Rückfragen).
+const { version } = useAppVersion()
+const aiUrl = computed(() => `https://ai.resqdocs.app?v=${encodeURIComponent(version.value)}`)
 
 // Erst zeigen, wenn (a) die persistierten Einstellungen geladen sind (#147:
 // sonst rendert die Tour kurz auf Defaults und verschwindet) und (b) der
@@ -163,6 +169,21 @@ function onTouchEnd(e: TouchEvent): void {
                 </p>
               </div>
             </div>
+            <!-- KI-Empfehlung (#261): der einfachste Weg zur ersten Vorlage; jederzeit hier im Guide auffindbar. -->
+            <a :href="aiUrl" target="_blank" rel="noopener" class="card border border-primary/30 bg-primary/5 shadow-sm transition hover:bg-primary/10">
+              <div class="card-body flex-row items-start gap-3 p-4">
+                <span class="rounded-lg bg-primary/15 p-2 text-primary">
+                  <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                  </svg>
+                </span>
+                <p class="text-sm">
+                  <strong>Am einfachsten mit KI:</strong> Lass deine erste Vorlage von deinem eigenen KI-Assistenten
+                  (ChatGPT, Claude, Gemini) bauen — auf <span class="font-medium text-primary">ai.resqdocs.app</span>.
+                  Er fragt alles ab und liefert die fertige Vorlage zum Import.
+                </p>
+              </div>
+            </a>
             <div class="card bg-base-100 shadow-sm">
               <div class="card-body flex-row items-start gap-3 p-4">
                 <span class="rounded-lg bg-primary/10 p-2 text-primary">

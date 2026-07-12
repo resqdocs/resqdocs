@@ -542,6 +542,24 @@ test('renderFunction: unbekannter functionKind -> null (kein Crash)', () => {
   assert.equal(render(tree, { x: { state: 'function', rows: [{ name: 'A' }] } }), '')
 })
 
+test('renderFunction: unbekannter functionKind -> Freitext (✎) und Standardtext bleiben erhalten', () => {
+  const custom: Container = { type: 'container', id: 'r', children: [{ type: 'function', id: 'x', functionKind: 'unbekannt' as 'medikamentenplan', title: 'X', showTitle: true }] }
+  // Freitext ueberschreibt -> darf NICHT still verschwinden (Versions-Skew)
+  assert.equal(render(custom, { x: { state: 'function', rows: [], status: 'custom', text: 'siehe Anlage' } }), '## X\nsiehe Anlage')
+  // Standardtext-Fallback -> bleibt erhalten
+  const withDefault: Container = { type: 'container', id: 'r', children: [{ type: 'function', id: 'x', functionKind: 'unbekannt' as 'medikamentenplan', title: 'X', showTitle: true, default: 'nicht erhoben' }] }
+  assert.equal(render(withDefault, {}), '## X\nnicht erhoben')
+})
+
+test('renderFunction: Pflicht-Funktion verschwindet bei − (excluded) NICHT still (faellt auf Standardtext)', () => {
+  const req: Container = { type: 'container', id: 'r', children: [{ type: 'function', id: 'mp', functionKind: 'medikamentenplan', title: 'Medikation', showTitle: true, required: true, default: 'keine' }] }
+  // required + excluded -> statt zu entfallen: Standardtext-Fallback (darf nicht still verschwinden)
+  assert.equal(render(req, { mp: { state: 'function', rows: [], status: 'excluded' } }), '## Medikation\nkeine')
+  // Gegenprobe: NICHT-required + excluded entfaellt weiterhin komplett
+  const opt: Container = { type: 'container', id: 'r', children: [{ type: 'function', id: 'mp', functionKind: 'medikamentenplan', title: 'Medikation', showTitle: true, default: 'keine' }] }
+  assert.equal(render(opt, { mp: { state: 'function', rows: [], status: 'excluded' } }), '')
+})
+
 test('blankLineBefore wirkt nur auf Banner-Elemente (Stale-Flag auf Normalfeld ignoriert)', () => {
   const tree: Container = {
     type: 'container',

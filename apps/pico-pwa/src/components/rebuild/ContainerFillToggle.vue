@@ -4,7 +4,7 @@
  *  @click.stop.prevent, damit ein Tipp in einer collapse-summary nicht das Einklappen ausloest. */
 import { computed } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
-import { useCaseValues } from '@/rebuild/useCaseValues'
+import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 
 const props = defineProps<{ node: Container }>()
 const caseValues = useCaseValues()

@@ -12,7 +12,7 @@ import { ref, watch } from 'vue'
  * sofort in den Einsatz (+ persistenten Entwurf) -> App-Schliessen/Akku-Tod verliert nichts. „Fertig"
  * / Backdrop schliesst nur. Ans Geraet geht NICHTS - das passiert erst bei „An Geraet senden".
  */
-const props = defineProps<{ modelValue: string; title: string }>()
+const props = defineProps<{ modelValue: string; title: string; required?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [v: string] }>()
 
 const dialog = ref<HTMLDialogElement | null>(null)
@@ -46,6 +46,7 @@ function close(): void {
     type="button"
     class="textarea textarea-bordered textarea-sm min-h-[3.5rem] w-full whitespace-pre-wrap text-left"
     :aria-label="`${title} bearbeiten`"
+    :aria-required="required || undefined"
     @click="open"
   >
     <span v-if="modelValue" class="line-clamp-2 text-base-content/80">{{ modelValue }}</span>
@@ -61,6 +62,7 @@ function close(): void {
         class="textarea textarea-bordered min-h-0 w-full flex-1 text-base leading-relaxed"
         :placeholder="`${title} …`"
         :aria-label="title"
+        :aria-required="required || undefined"
         @input="onInput"
       />
       <div class="flex justify-end">

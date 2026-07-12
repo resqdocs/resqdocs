@@ -9,8 +9,8 @@
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
-import { blockStructureLabel } from '@/rebuild/blockSummary'
-import { useBlockLibrary } from '@/rebuild/useBlockLibrary'
+import { blockStructureLabel } from '../blockSummary.ts'
+import { useBlockLibrary } from '../useBlockLibrary.ts'
 
 withDefaults(defineProps<{ title?: string }>(), { title: 'Block einfügen' })
 const emit = defineEmits<{ select: [block: Container]; close: [] }>()

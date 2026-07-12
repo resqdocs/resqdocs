@@ -12,9 +12,11 @@
  */
 import { ref, computed, onMounted } from 'vue'
 import type { Field } from '@resqdocs/protocol-core/model'
-import { useCaseValues } from '@/rebuild/useCaseValues'
+import { isRequiredOpen } from '@resqdocs/protocol-core/required'
+import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import TriStateToggle from '@/components/TriStateToggle.vue'
-import LongTextField from './LongTextField.vue'
+import RequiredMark from '@/components/RequiredMark.vue'
+import LongTextField from '@resqdocs/protocol-core-ui/components/LongTextField.vue'
 import SnippetPicker from './SnippetPicker.vue'
 
 const props = defineProps<{ node: Field }>()
@@ -35,8 +37,25 @@ const def = computed(() => {
   return d ?? ''
 })
 const label = computed(() => (props.node.title && props.node.title.trim()) || props.node.id)
+// Pflichtfeld „noch offen": liefert keinen Wert (leer). Reiner visueller Hinweis, kein Gate.
+const isOpen = computed(() => isRequiredOpen(props.node, fill.value))
 const customValue = computed(() => (fill.value.state === 'custom' ? fill.value.value : def.value))
 const excluded = computed(() => fill.value.state === 'excluded')
+// BEWAHREN: ruhend gemerkter Freitext (prevValue) - erscheint, wenn das Feld auf ✓/− steht, aber zuvor
+// via ✎ Text getippt wurde. Wird NIE ausgegeben (Renderer ignoriert prevValue); nur Recovery + Hinweis.
+const preservedText = computed(() => {
+  const f = fill.value
+  if (f.state !== 'confirmed' && f.state !== 'excluded') return ''
+  const prev = f.prevValue ?? ''
+  if (prev === '') return ''
+  // Select: nur ECHTEN individuell-Freitext zum Zurueckholen anbieten (allowCustom + nicht in den Optionen).
+  // Eine gemerkte Options-Auswahl ist kein „getippter Text"; ohne ✎-Modus (allowCustom=false) gibt es
+  // ohnehin nichts, wohin man ihn zurueckholen koennte (sonst re-materialisierte man einen unsichtbaren Wert).
+  if (isSelect.value) return props.node.allowCustom && !options.value.includes(prev) ? prev : ''
+  return prev
+})
+// Vorbelegung beim (Zurueck-)Wechsel auf ✎: laufender custom-Wert, sonst der gemerkte Text, sonst Default.
+const restoreValue = computed(() => (fill.value.state === 'custom' ? fill.value.value : preservedText.value || def.value))
 // Mehrzeilig darstellen/editieren, wenn das Feld als multiline definiert IST oder der aktuelle Wert
 // Zeilenumbrueche enthaelt (z. B. ein via Snippet gesetzter mehrzeiliger custom-Wert). Sonst verschluckt ein
 // einzeiliges <input> die \n und der erste Edit verwirft sie still (Verify).
@@ -47,6 +66,16 @@ const useLongText = computed(() => !!props.node.multiline || customValue.value.i
 // daher KEIN veralteter Zustand nach reset()/excluded (loest Review-Befunde 1, 2, 4).
 const individuellRef = ref(false)
 onMounted(() => {
+  // Pflichtfeld darf nicht als „nicht erhoben" (excluded) verharren (z. B. aus Import/Alt-Daten):
+  // der Toggle bietet − bei required nicht an -> stillen Widerspruch defensiv auf confirmed heilen.
+  if (props.node.required && fill.value.state === 'excluded') caseValues.set(props.node.id, { state: 'confirmed' })
+  // Pflicht-Select OHNE „individuell" hat keinen ✎-Modus + versteckten Toggle: ein verwaister custom-Wert
+  // (nicht in options, z. B. nach Options-Edit) waere unsichtbar/uneditierbar, wuerde aber im Renderer
+  // ausgegeben. Auf confirmed (Standard-Option) heilen -> Anzeige == Ausgabe. NUR Orphans (gueltige
+  // Options-Werte bleiben als bewusste Auswahl erhalten).
+  if (isSelect.value && props.node.required && !props.node.allowCustom && fill.value.state === 'custom' && !options.value.includes(fill.value.value)) {
+    caseValues.set(props.node.id, { state: 'confirmed' })
+  }
   if (fill.value.state === 'custom' && props.node.allowCustom && !options.value.includes(fill.value.value)) {
     individuellRef.value = true
   }
@@ -63,8 +92,15 @@ const selectedOption = computed<string | null>(() => {
 
 // --- Freitext-Feld: Tri-State wie gehabt ---
 function onState(next: 'confirmed' | 'custom' | 'excluded'): void {
-  if (next === 'custom') caseValues.set(props.node.id, { state: 'custom', value: customValue.value })
+  // ✎: mit dem gemerkten Text (falls vorhanden) vorbelegen, sonst Default -> versehentliches Verlassen
+  // ist verlustfrei zurueckholbar.
+  if (next === 'custom') caseValues.set(props.node.id, { state: 'custom', value: restoreValue.value })
   else caseValues.set(props.node.id, { state: next })
+}
+// „Zurueckholen"-Hinweis: zurueck in den ✎-Modus (Feld = Freitext, Select = individuell).
+function restorePreserved(): void {
+  if (isSelect.value) pickIndividuell()
+  else onState('custom')
 }
 function onInput(e: Event): void {
   caseValues.setCustom(props.node.id, (e.target as HTMLInputElement).value)
@@ -85,61 +121,74 @@ function pickOption(opt: string): void {
 }
 function pickIndividuell(): void {
   individuellRef.value = true
-  // vorhandenen Freitext behalten, sonst leer starten
-  const keep = fill.value.state === 'custom' && !options.value.includes(fill.value.value) ? fill.value.value : ''
+  // vorhandenen individuell-Freitext behalten, sonst den ruhend gemerkten Text (Wiederherstellung), sonst leer
+  const keep = fill.value.state === 'custom' && !options.value.includes(fill.value.value) ? fill.value.value : preservedText.value
   caseValues.setCustom(props.node.id, keep)
 }
 function pickExcluded(): void {
   caseValues.set(props.node.id, { state: 'excluded' })
 }
+// Auswahl im ✓-Modus: das Dropdown/die Radios fuehren NUR Wert-Optionen; „individuell" (✎) und
+// „nicht erhoben" (−) laufen ueber den Tri-State-Toggle, nicht mehr ueber vergrabene Sentinel-Optionen.
 function onSelectChange(e: Event): void {
-  const v = (e.target as HTMLSelectElement).value
-  if (v === '-2') pickExcluded()
-  else if (v === '-1') pickIndividuell()
-  else pickOption(options.value[Number(v)])
+  pickOption(options.value[Number((e.target as HTMLSelectElement).value)])
+}
+
+// Tri-State am Select — einheitlich mit dem Freitext-Feld: ✓ = Auswahl (Optionen sichtbar),
+// ✎ = individuell (eigener Freitext, nur bei allowCustom), − = nicht erhoben.
+const selectTriState = computed<'confirmed' | 'custom' | 'excluded'>(() =>
+  excluded.value ? 'excluded' : individuell.value ? 'custom' : 'confirmed',
+)
+function onSelectState(next: 'confirmed' | 'custom' | 'excluded'): void {
+  if (next === 'excluded') pickExcluded()
+  else if (next === 'custom') pickIndividuell()
+  else {
+    // zurueck in den Auswahl-Modus: Standard-Option (confirmed); die sichtbaren Optionen erlauben das Umwaehlen.
+    individuellRef.value = false
+    caseValues.set(props.node.id, { state: 'confirmed' })
+  }
 }
 </script>
 
 <template>
-  <div class="flex flex-col gap-1" :class="!isSelect && excluded ? 'opacity-60' : ''">
-    <!-- SELECT: Optionen immer sichtbar; Status steckt in der Auswahl -->
+  <div class="flex flex-col gap-1" :class="!isSelect && excluded ? 'opacity-60' : ''" :data-required-open="node.required && isOpen ? '' : undefined">
+    <!-- SELECT: Tri-State wie Freitext — ✓ Auswahl (Optionen sichtbar) / ✎ individuell / − nicht erhoben.
+         ✎ nur bei allowCustom; Optionen bleiben im ✓-Modus (Default) sofort sichtbar. -->
     <template v-if="isSelect">
-      <span class="text-sm font-medium">{{ label }}</span>
-
-      <!-- wenige Optionen -> Radios (als Gruppe mit Label) -->
-      <div v-if="!useDropdown" role="radiogroup" :aria-label="label" class="flex flex-col gap-1 pl-1">
-        <label v-for="opt in options" :key="opt" class="flex cursor-pointer items-center gap-2 text-sm">
-          <input type="radio" class="radio radio-sm shrink-0" :name="`sel-${node.id}`" :checked="selectedOption === opt" @change="pickOption(opt)" />
-          <span>{{ opt }}</span>
-        </label>
-        <label v-if="node.allowCustom" class="flex cursor-pointer items-center gap-2 text-sm">
-          <input type="radio" class="radio radio-sm shrink-0" :name="`sel-${node.id}`" :checked="individuell" :aria-controls="`indiv-${node.id}`" @change="pickIndividuell" />
-          <span>individuell …</span>
-        </label>
-        <input v-if="node.allowCustom && individuell" :id="`indiv-${node.id}`" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" placeholder="eigener Text" @input="onInput" />
-        <!-- „nicht erhoben" optisch abgesetzt (Status, kein Wert); aktiv nicht gedimmt -->
-        <label class="mt-1 flex cursor-pointer items-center gap-2 border-t border-base-200 pt-1.5 text-sm" :class="excluded ? 'text-base-content' : 'italic text-base-content/60'">
-          <input type="radio" class="radio radio-sm shrink-0" :name="`sel-${node.id}`" :checked="excluded" @change="pickExcluded" />
-          <span>nicht erhoben</span>
-        </label>
+      <div class="flex items-center gap-2">
+        <!-- Pflicht-Select OHNE „individuell" hat nur EINEN Zustand (✓) -> kein Toggle (waere ein toter Knopf);
+             die Optionen sind ohnehin sofort sichtbar. Sonst normaler Tri-State. -->
+        <TriStateToggle v-if="node.allowCustom || !node.required" :model-value="selectTriState" :label="label" :allow-custom="!!node.allowCustom" :allow-excluded="!node.required" @update:model-value="onSelectState" />
+        <span class="text-sm font-medium" :class="node.allowCustom || !node.required ? '' : 'pl-9'">{{ label }}<RequiredMark v-if="node.required" :open="isOpen" /></span>
       </div>
 
-      <!-- viele Optionen -> Dropdown (Index-basiert + Sentinels, kollisionsfrei) -->
-      <template v-else>
-        <select class="select select-sm w-full" :value="excluded ? '-2' : individuell ? '-1' : String(options.indexOf(selectedOption ?? ''))" :aria-label="label" @change="onSelectChange">
+      <!-- ✓ Auswahl: Radios bei wenigen, Dropdown bei vielen Optionen -->
+      <div v-if="selectTriState === 'confirmed'" class="pl-9">
+        <div v-if="!useDropdown" role="radiogroup" :aria-label="label" :aria-required="node.required || undefined" class="flex flex-col gap-1">
+          <label v-for="opt in options" :key="opt" class="flex cursor-pointer items-center gap-2 text-sm">
+            <input type="radio" class="radio radio-sm shrink-0" :name="`sel-${node.id}`" :checked="selectedOption === opt" @change="pickOption(opt)" />
+            <span>{{ opt }}</span>
+          </label>
+        </div>
+        <select v-else class="select select-sm w-full" :value="String(options.indexOf(selectedOption ?? ''))" :aria-label="label" :aria-required="node.required || undefined" @change="onSelectChange">
           <option v-for="(opt, i) in options" :key="i" :value="i">{{ opt }}</option>
-          <option v-if="node.allowCustom" :value="-1">individuell …</option>
-          <option :value="-2">nicht erhoben</option>
         </select>
-        <input v-if="node.allowCustom && individuell" :id="`indiv-${node.id}`" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" placeholder="eigener Text" @input="onInput" />
-      </template>
+      </div>
+
+      <!-- ✎ individuell: eigener Freitext -->
+      <div v-else-if="selectTriState === 'custom'" class="pl-9">
+        <input class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
+      </div>
+
+      <!-- − nicht erhoben -->
+      <p v-else class="pl-9 text-sm italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
     </template>
 
     <!-- FREITEXT-Feld: Tri-State (Eingabe erst bei ✎) -->
     <template v-else>
       <div class="flex items-center gap-2">
-        <TriStateToggle :model-value="triState" :label="label" @update:model-value="onState" />
-        <span class="text-sm font-medium">{{ label }}</span>
+        <TriStateToggle :model-value="triState" :label="label" :allow-excluded="!node.required" @update:model-value="onState" />
+        <span class="text-sm font-medium">{{ label }}<RequiredMark v-if="node.required" :open="isOpen" /></span>
         <!-- Icon-only (Bausteine-4-Quadrate-Icon aus dem Dock -> Wiedererkennung); Bedeutung via aria-label/Tooltip -->
         <button type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 shrink-0 px-1.5" aria-label="Snippet einfügen" title="Snippet einfügen" @click="snippetPickerOpen = true">
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -153,11 +202,22 @@ function onSelectChange(e: Event): void {
       <p v-if="fill.state === 'confirmed'" class="pl-9 text-sm text-base-content/70" :class="useLongText ? 'whitespace-pre-wrap' : ''">{{ def || '(kein Standardwert)' }}</p>
       <div v-else-if="fill.state === 'custom'" class="pl-9">
         <!-- mehrzeilig (Feld-Def ODER Wert mit Umbruechen) -> grosses Textfeld; sonst die einzeilige Zeile -->
-        <LongTextField v-if="useLongText" :model-value="customValue" :title="label" @update:model-value="caseValues.setCustom(node.id, $event)" />
-        <input v-else class="input input-sm w-full" :value="customValue" :aria-label="`${label}: eigener Wert`" @input="onInput" />
+        <LongTextField v-if="useLongText" :model-value="customValue" :title="label" :required="node.required" @update:model-value="caseValues.setCustom(node.id, $event)" />
+        <input v-else class="input input-sm w-full" :value="customValue" :aria-label="`${label}: eigener Wert`" :aria-required="node.required || undefined" @input="onInput" />
       </div>
       <p v-else class="pl-9 text-sm italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
       <SnippetPicker v-if="snippetPickerOpen" title="Snippet als Wert einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
     </template>
+
+    <!-- Pflichtfeld noch offen: ruhiger Amber-Hinweis (kein roter Rahmen/kein Gate — darf im Einsatz
+         legitim noch leer sein). Einheitlich mit dem pl-9-Raster der „nicht erhoben"-Zeile. -->
+    <p v-if="node.required && isOpen" class="pl-9 text-sm text-warning">Pflichtfeld – noch offen</p>
+
+    <!-- BEWAHREN: getippter Text ruht (Feld steht auf ✓/−) -> ruhiger, antippbarer Hinweis zum
+         verlustfreien Zurueckholen. Der Text erscheint NIE in der Ausgabe, solange er ruht. -->
+    <button v-if="preservedText" type="button" class="flex min-h-11 items-center gap-1.5 pl-9 text-left text-sm text-info hover:underline" :title="preservedText" @click="restorePreserved">
+      <span aria-hidden="true">✎</span>
+      <span>Getippter Text gemerkt — zurückholen</span>
+    </button>
   </div>
 </template>

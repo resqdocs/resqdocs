@@ -32,3 +32,11 @@ export function fillValue(field: Field, fill: FieldFill = DEFAULT_FILL): string 
   if (opts && opts.length) return field.default != null && opts.includes(field.default) ? field.default : opts[0]
   return field.default ?? ''
 }
+
+/** „Erfuellt" (fuer die Pflichtfeld-Vollstaendigkeit): der Feldwert loest sich zu nicht-leerem Text auf.
+ *  confirmed-mit-Standardwert zaehlt als erfuellt (der Wert IST erhoben); leeres confirmed/custom sowie
+ *  excluded = nicht erfuellt. Deckt sich mit dem, was der Renderer ausgibt (fillValue). */
+export function isFilled(field: Field, fill: FieldFill = DEFAULT_FILL): boolean {
+  const v = fillValue(field, fill)
+  return v != null && v.trim() !== ''
+}

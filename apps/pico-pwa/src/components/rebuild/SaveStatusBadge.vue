@@ -4,7 +4,7 @@
  * keine Logikaenderung. Asymmetrie (quellenbasiert, GitLab Pajamas): Erfolg blendet sich aus,
  * Fehler bleibt sichtbar + Retry. Im Web-Dev (Memory) ein dezenter „nicht persistent"-Hinweis.
  */
-import { useProtocolPersistence } from '@/rebuild/protocolPersistence'
+import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
 
 const { saveStatus, libraryMode, retrySave } = useProtocolPersistence()
 </script>

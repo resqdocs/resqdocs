@@ -19,9 +19,34 @@ export function useCaseValues() {
     cycle(id: string, def: string): void {
       values.value = { ...values.value, [id]: cycleFill(values.value[id] ?? DEFAULT_FILL, def) }
     },
-    /** Fuellzustand direkt setzen (z. B. aus dem TriStateToggle, der den naechsten Zustand liefert). */
+    /** Fuellzustand direkt setzen (z. B. aus dem TriStateToggle, der den naechsten Zustand liefert).
+     *  BEWAHREN: verlaesst man 'custom' mit nicht-leerem Freitext Richtung confirmed/excluded, wird der
+     *  getippte Text als ruhendes prevValue mitgefuehrt (Wiederherstellung beim Zurueckschalten auf ✎).
+     *  prevValue ist nie in der Ausgabe. */
     set(id: string, fill: FieldFill): void {
-      values.value = { ...values.value, [id]: fill }
+      const prev = values.value[id]
+      // Gemerkten Freitext bestimmen: beim Verlassen von 'custom' der getippte Wert; zwischen den
+      // Nicht-custom-Zustaenden (confirmed<->excluded) der bereits gemerkte prevValue -> er ueberlebt
+      // auch ein Weiter-Zykeln, bis der Nutzer wieder auf ✎ schaltet (dann ist er der Live-Wert).
+      const carried =
+        prev?.state === 'custom'
+          ? prev.value.trim() !== ''
+            ? prev.value
+            : undefined
+          : prev?.state === 'confirmed' || prev?.state === 'excluded'
+            ? prev.prevValue
+            : undefined
+      let next = fill
+      if (carried && (fill.state === 'confirmed' || fill.state === 'excluded') && !fill.prevValue) {
+        next = { ...fill, prevValue: carried }
+      }
+      values.value = { ...values.value, [id]: next }
+    },
+    /** Ruhend gemerkter Freitext eines Felds (prevValue), sonst ''. Fuer den „Text gemerkt"-Hinweis
+     *  + die Wiederherstellung beim Zurueckschalten auf ✎. */
+    getPrevValue(id: string): string {
+      const f = values.value[id]
+      return (f?.state === 'confirmed' || f?.state === 'excluded') ? (f.prevValue ?? '') : ''
     },
     /** Eigenen Wert setzen (Re-Edit innerhalb von custom - behaelt den Tipptext). */
     setCustom(id: string, value: string): void {
@@ -74,7 +99,14 @@ export function useCaseValues() {
       const f = values.value[id]
       return f?.state === 'function' && f.status === 'custom' ? (f.text ?? '') : ''
     },
-    /** Funktions-Status setzen, ROWS erhaltend. confirmed = kein status-Feld; custom behaelt den Freitext. */
+    /** Ruhend gemerkter Funktions-Freitext (prevText), sonst ''. Analog getPrevValue fuer Funktionen. */
+    getFunctionPrevText(id: string): string {
+      const f = values.value[id]
+      return f?.state === 'function' && (f.status ?? 'confirmed') !== 'custom' ? (f.prevText ?? '') : ''
+    },
+    /** Funktions-Status setzen, ROWS erhaltend. confirmed = kein status-Feld; custom behaelt den Freitext.
+     *  BEWAHREN: verlaesst man status='custom' mit nicht-leerem Freitext, wird er als ruhendes prevText
+     *  mitgefuehrt (Wiederherstellung beim Zurueckschalten auf ✎); prevText ist nie in der Ausgabe. */
     setFunctionStatus(id: string, status: 'confirmed' | 'custom' | 'excluded'): void {
       const f = values.value[id]
       const rows = f?.state === 'function' ? f.rows : []
@@ -82,6 +114,19 @@ export function useCaseValues() {
       if (status === 'confirmed') fill = { state: 'function', rows }
       else if (status === 'excluded') fill = { state: 'function', rows, status: 'excluded' }
       else fill = { state: 'function', rows, status: 'custom', text: f?.state === 'function' ? (f.text ?? '') : '' }
+      // Gemerkten Funktions-Freitext mitfuehren (analog set): aus 'custom' der getippte Text, sonst der
+      // bereits gemerkte prevText -> ueberlebt confirmed<->excluded, bis wieder auf ✎ geschaltet wird.
+      const carried =
+        f?.state === 'function'
+          ? (f.status ?? 'confirmed') === 'custom'
+            ? (f.text ?? '').trim() !== ''
+              ? f.text
+              : undefined
+            : f.prevText
+          : undefined
+      if (carried && status !== 'custom' && fill.state === 'function') {
+        fill = { ...fill, prevText: carried }
+      }
       values.value = { ...values.value, [id]: fill }
     },
     /** Freitext setzen -> status=custom, ROWS erhaltend. */

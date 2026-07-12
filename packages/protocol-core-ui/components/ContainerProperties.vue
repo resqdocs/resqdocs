@@ -8,7 +8,7 @@ import { DEFAULT_HEADING, DEFAULT_SEPARATOR } from '@resqdocs/protocol-core/mode
 import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 import { findNode, findPath, suggestFreeId } from '@resqdocs/protocol-core/creator'
 import { sanitizeId } from '@resqdocs/protocol-core/ids'
-import { useTreeEditor } from '@/rebuild/treeEditor'
+import { useTreeEditor } from '../treeEditor.ts'
 
 const props = defineProps<{ root: Container }>()
 const tree = useTreeEditor()
@@ -216,12 +216,12 @@ async function saveAsBaustein(): Promise<void> {
         </label>
       </div>
 
-      <!-- FUNKTION (Listen-Funktion): Standardtext, wenn im Einsatz keine Eintraege da sind -> Fallback-Body
-           in der Ausgabe (node.default). Vorhandene Zeilen haben Vorrang. -->
-      <fieldset v-if="node.type === 'function' && isListFunction" class="fieldset">
-        <legend class="fieldset-legend">Standardtext (wenn keine Einträge)</legend>
-        <input class="input w-full" :value="node.default ?? ''" placeholder="z. B. keine Dauermedikation bekannt" @input="set({ default: ($event.target as HTMLInputElement).value || undefined })" />
-        <p class="text-xs text-base-content/50">Wird in der Ausgabe gezeigt, wenn die Funktion leer ist. Vorhandene Einträge haben Vorrang.</p>
+      <!-- FUNKTION (alle Arten): Standardtext-Fallback in der Ausgabe (node.default), wenn die Funktion nichts
+           ausgibt - Listen ohne Einträge bzw. Rechner ohne Ergebnis. Erfasste Werte/Zeilen haben Vorrang. -->
+      <fieldset v-if="node.type === 'function'" class="fieldset">
+        <legend class="fieldset-legend">Standardtext (wenn leer / nicht erhoben)</legend>
+        <input class="input w-full" :value="node.default ?? ''" :placeholder="isListFunction ? 'z. B. keine Dauermedikation bekannt' : 'z. B. Score nicht erhoben'" @input="set({ default: ($event.target as HTMLInputElement).value || undefined })" />
+        <p class="text-xs text-base-content/50">Wird in der Ausgabe gezeigt, wenn die Funktion nichts ausgibt (keine Einträge / kein Ergebnis). Erfasste Werte haben Vorrang.</p>
       </fieldset>
 
       <!-- BASIS: Ueberschrift/Titel in der Ausgabe (showTitle). Beim Feld = „Abschnitt mit Ueberschrift".
@@ -229,6 +229,13 @@ async function saveAsBaustein(): Promise<void> {
       <label v-if="hasTitle" class="flex w-full cursor-pointer items-center gap-2 py-0">
         <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.showTitle === true" @change="set({ showTitle: ($event.target as HTMLInputElement).checked })" />
         <span class="text-sm">{{ node.type === 'field' ? 'Als Abschnitt mit Überschrift ausgeben' : 'Titel in der Ausgabe zeigen' }}</span>
+      </label>
+
+      <!-- FELD/FUNKTION: Pflichtfeld. Im Einsatz entfaellt der −-Zustand (nicht erhoben); ✓/✎ bleiben.
+           Ein leeres Pflichtfeld wird nur visuell als „noch offen" markiert (kein Zwang, keine Sperre). -->
+      <label v-if="node.type === 'field' || node.type === 'function'" class="flex w-full cursor-pointer items-center gap-2 py-0">
+        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.required === true" @change="set({ required: ($event.target as HTMLInputElement).checked || undefined })" />
+        <span class="text-sm">Pflichtfeld <span class="whitespace-nowrap text-base-content/50">(✓ / ✎, kein „nicht erhoben")</span></span>
       </label>
 
       <!-- CONTAINER: einklappbar + als „nicht erhoben" markierbar (Basis).

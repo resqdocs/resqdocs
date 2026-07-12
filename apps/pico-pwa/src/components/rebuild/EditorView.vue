@@ -7,17 +7,19 @@
  * ab lg drei Spalten. Zentrale Tree-API per provide/inject an die rekursiven Knoten.
  */
 import { ref, provide, toRaw, onMounted, onUnmounted } from 'vue'
-import { useProtocolTree } from '@/rebuild/useProtocolTree'
-import { useCaseValues } from '@/rebuild/useCaseValues'
+import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
+import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { findNode, collectIds, canMoveUp as canMoveUpOp, canMoveDown as canMoveDownOp, canIndent as canIndentOp, canOutdent as canOutdentOp, moveTargets as moveTargetsOp } from '@resqdocs/protocol-core/creator'
-import { TREE_EDITOR, type TreeEditorApi } from '@/rebuild/treeEditor'
-import { useBlockLibrary } from '@/rebuild/useBlockLibrary'
+import { TREE_EDITOR, type TreeEditorApi } from '@resqdocs/protocol-core-ui/treeEditor'
+import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
 import type { Container } from '@resqdocs/protocol-core/model'
-import ContainerTreeNode from './ContainerTreeNode.vue'
-import ContainerProperties from './ContainerProperties.vue'
-import ContainerPreview from './ContainerPreview.vue'
+import ContainerTreeNode from '@resqdocs/protocol-core-ui/components/ContainerTreeNode.vue'
+import ContainerProperties from '@resqdocs/protocol-core-ui/components/ContainerProperties.vue'
+import ContainerPreview from '@resqdocs/protocol-core-ui/components/ContainerPreview.vue'
 import LibraryBar from './LibraryBar.vue'
 import AiToolNotice from './AiToolNotice.vue'
+import SnippetPicker from './SnippetPicker.vue'
+import { snippetPickerKey } from '@resqdocs/protocol-core-ui/injection'
 
 const tree = useProtocolTree()
 const caseValues = useCaseValues()
@@ -128,6 +130,9 @@ const api: TreeEditorApi = {
   },
 }
 provide(TREE_EDITOR, api)
+// Snippet-Auswahl für die Baum-Knoten bereitstellen (App-Bausteine-Sammlung); der Online-Editor liefert
+// hier später seine eigene Quelle oder nichts (dann entfällt „Snippet einfügen").
+provide(snippetPickerKey, SnippetPicker)
 </script>
 
 <template>

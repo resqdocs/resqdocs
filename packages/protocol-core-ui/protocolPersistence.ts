@@ -5,38 +5,25 @@
 // mit sichtbarem Save-Status. NUR Vorlagen (keine Patientendaten).
 
 import { ref, watch } from 'vue'
-import { Capacitor } from '@capacitor/core'
 import { useProtocolTree } from './useProtocolTree.ts'
-import {
-  createReworkRepositoryOnClient,
-  createMemoryProtocolRepository,
-  loadOrSeed,
-  syncProtocols,
-  type ProtocolRepository,
-} from '@resqdocs/protocol-core/protocolRepository'
+import { loadOrSeed, syncProtocols, type ProtocolRepository } from '@resqdocs/protocol-core/protocolRepository'
+import { resolveProtocolRepository, getLibraryMode, type LibraryMode } from './repositoryProvider.ts'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
-// Repository einmalig waehlen: nativ SQLite (geteilte DB resqdocs-library), Web-Dev Memory.
+// Repository einmalig aufloesen (host-injiziert: App SQLite, Online-Editor IndexedDB, sonst Memory).
 let repoPromise: Promise<ProtocolRepository> | null = null
 function getReworkRepository(): Promise<ProtocolRepository> {
-  if (repoPromise) return repoPromise
-  repoPromise = (async () => {
-    if (!Capacitor.isNativePlatform()) return createMemoryProtocolRepository() // Web-Dev: nicht persistent
-    try {
-      const { getSharedCapacitorSqlClient } = await import('@/storage/sqlite/capacitorSqlClient')
-      const client = await getSharedCapacitorSqlClient() // dieselbe migrierte Verbindung wie Library/PZN
-      return createReworkRepositoryOnClient(client)
-    } catch (err) {
-      console.error('SQLite-Rework-Bibliothek nicht verfuegbar, nutze In-Memory:', err)
-      return createMemoryProtocolRepository()
-    }
-  })()
+  if (!repoPromise) repoPromise = resolveProtocolRepository()
   return repoPromise
 }
 
 const saveStatus = ref<SaveStatus>('idle')
-const libraryMode = ref<'memory' | 'sqlite'>('memory')
+const libraryMode = ref<LibraryMode>('memory')
+// true, sobald die persistierte Bibliothek den Seed abgeloest hat (bzw. der Seed als Fallback steht).
+// Konsumenten (z. B. Einsatz-Default-Auswahl) duerfen erst DANN gegen die Bibliothek aufloesen -
+// sonst laeuft die Aufloesung gegen den Seed und trifft die persoenliche Standard-Vorlage nicht.
+const libraryLoaded = ref(false)
 let started = false
 let activeRepo: ProtocolRepository | null = null // fuer den Retry-Pfad
 
@@ -71,7 +58,7 @@ export function useProtocolPersistence() {
       return
     }
     activeRepo = repo
-    libraryMode.value = Capacitor.isNativePlatform() ? 'sqlite' : 'memory'
+    libraryMode.value = getLibraryMode()
 
     // Boot-Laden/Seed ISOLIERT: ein Fehler hier (z. B. defekte DB) darf den Auto-Save NICHT
     // verhindern und ist KEIN Speicherfehler -> nur loggen, mit der In-Memory-Default-Bibliothek weiter.
@@ -80,6 +67,8 @@ export function useProtocolPersistence() {
     } catch (err) {
       console.error('Rework-Bibliothek laden/seeden fehlgeschlagen:', err instanceof Error ? err.message : err)
     }
+    // Bibliothek steht (geladen ODER Seed-Fallback nach Fehler) -> Konsumenten duerfen jetzt aufloesen.
+    libraryLoaded.value = true
 
     // Auto-Save: jede Aenderung debounced spiegeln (Watch NACH dem Laden -> initiales setProtocols
     // schreibt nicht). Wird IMMER gesetzt, auch wenn das Laden scheiterte.
@@ -107,5 +96,5 @@ export function useProtocolPersistence() {
     )
   }
 
-  return { init, saveStatus, libraryMode, retrySave }
+  return { init, saveStatus, libraryMode, libraryLoaded, retrySave }
 }

@@ -10,13 +10,15 @@
  */
 import { computed, ref } from 'vue'
 import type { FunctionNode, ArztRow, MedikamenteRow } from '@resqdocs/protocol-core/model'
-import { useCaseValues } from '@/rebuild/useCaseValues'
-import { useProtocolTree } from '@/rebuild/useProtocolTree'
+import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
+import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
 import { formatArzt, arztRowHasData, medikamentRowHasData } from '@resqdocs/protocol-core/functions/registry'
 import AerzteReviewSheet from './AerzteReviewSheet.vue'
-import ConfirmDialog from './ConfirmDialog.vue'
+import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 import FunctionFillToggle from './FunctionFillToggle.vue'
+import RequiredMark from '@/components/RequiredMark.vue'
+import { isRequiredOpen } from '@resqdocs/protocol-core/required'
 
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
@@ -26,6 +28,13 @@ const { einsatzRoot } = useProtocolTree()
 const rows = computed<ArztRow[]>(() => caseValues.getRows(props.node.id) as ArztRow[])
 const filledCount = computed(() => rows.value.filter((r) => r.name.trim()).length)
 const label = computed(() => (props.node.title && props.node.title.trim()) || 'Ärzte')
+// Pflicht-Funktion „noch offen": keine Zeilen/kein Freitext/kein Standardtext -> reiner visueller Hinweis.
+const isOpen = computed(() => isRequiredOpen(props.node, caseValues.get(props.node.id)))
+// BEWAHREN: ruhend gemerkter Funktions-Freitext (prevText) -> antippbarer „zurueckholen"-Hinweis. Nie in der Ausgabe.
+const preservedText = computed(() => caseValues.getFunctionPrevText(props.node.id))
+function restorePreserved(): void {
+  caseValues.setFunctionText(props.node.id, caseValues.getFunctionPrevText(props.node.id) || (props.node.default ?? ''))
+}
 const excluded = computed(() => caseValues.getFunctionStatus(props.node.id) === 'excluded') // Tri-State (Slice 2): nicht erhoben
 // Tri-State (Slice 3): ✎ Freitext - ein eigener Text ersetzt in der Ausgabe die Zeilen (Zeilen bleiben erhalten).
 const custom = computed(() => caseValues.getFunctionStatus(props.node.id) === 'custom')
@@ -149,14 +158,22 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
+  <div class="flex flex-col gap-2" :data-required-open="node.required && isOpen ? '' : undefined">
     <div class="flex items-center gap-2">
       <!-- Tri-State (Slice 2): ✓ erhoben / − nicht erhoben; bei − entfaellt die Funktion in der Ausgabe. -->
       <FunctionFillToggle :node="node" />
-      <span class="text-sm font-semibold">{{ label }}</span>
+      <span class="text-sm font-semibold">{{ label }}<RequiredMark v-if="node.required" :open="isOpen" /></span>
       <span v-if="!excluded && !custom && filledCount" class="badge badge-neutral badge-sm">{{ filledCount }}</span>
       <button v-if="!excluded && !custom && rows.length" type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
     </div>
+
+    <p v-if="node.required && isOpen" class="pl-9 text-sm text-warning">Pflichtfeld – noch offen</p>
+
+    <!-- BEWAHREN: getippter Funktions-Freitext ruht (Status ✓/−) -> antippbar zum verlustfreien Zurueckholen. -->
+    <button v-if="preservedText" type="button" class="flex min-h-11 items-center gap-1.5 pl-9 text-left text-sm text-info hover:underline" :title="preservedText" @click="restorePreserved">
+      <span aria-hidden="true">✎</span>
+      <span>Getippter Text gemerkt — zurückholen</span>
+    </button>
 
     <!-- nicht erhoben: Zeilen-Verwaltung aus, nur Hinweis. Daten bleiben erhalten und kommen beim Zurueckschalten wieder. -->
     <p v-if="excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>

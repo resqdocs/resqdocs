@@ -192,6 +192,10 @@
         "multiline": {
           "type": "boolean",
           "description": "Freitext mehrzeilig erfassen: im ✎-Modus ein grosses Textfeld (Sheet) statt einzeiligem <input>\n- fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Pflichtfeld: das Feld „darf nicht still verschwinden\". Im Einsatz entfaellt der −-Zustand (nicht erhoben); es bleiben ✓ (Auswahl/Standard) und ✎ (eigener Wert). „Nicht erhebbar\" wird bei Bedarf sichtbar via ✎ dokumentiert, nicht per −. Rein additiv, kein Submit-Gate; der Renderer bleibt unveraendert. Ein leeres Pflichtfeld wird nur visuell als „noch offen\" markiert."
         }
       },
       "required": [
@@ -243,6 +247,14 @@
         "config": {
           "$ref": "#/definitions/FunctionConfig",
           "description": "Ausgabe-Formatierung der Funktions-Zeilen (Layout/Trenner/Praefix/Suffix)."
+        },
+        "default": {
+          "type": "string",
+          "description": "Standardtext: Fallback-Body, wenn die Funktion im Einsatz nichts ausgibt (analog Field.default / Container.emptyText) - Listen-Funktionen ohne Eintraege ODER Rechner ohne Ergebnis. Erfasste Werte/Zeilen haben Vorrang. Gilt fuer ALLE functionKinds."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Pflicht (analog Field.required): der −-Zustand (nicht erhoben) entfaellt im Einsatz; ✓/✎ bleiben. „Erfuellt\" = die Funktion liefert nicht-leeren Ausgabetext (Zeilen ODER Freitext ODER Standardtext). Rein additiv, kein Submit-Gate; nur visuelle „noch offen\"-Markierung."
         }
       },
       "required": [
