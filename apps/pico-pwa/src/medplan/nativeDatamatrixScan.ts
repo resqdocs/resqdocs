@@ -1,4 +1,5 @@
-// nativeDatamatrixScan.ts (#170) — nativer BMP-Data-Matrix-Scan (Android + iOS).
+// nativeDatamatrixScan.ts (#170) — nativer BMP-Data-Matrix-Scan (nur Android; iOS-Plugin nicht
+// registriert -> iOS/Web nutzen den WebView-Scanner, siehe nativeDatamatrixScanAvailable()).
 //
 // Architektur (belegt durch Crash-Research, siehe datamatrixDecoder.ts):
 //   native Einzel-Foto-Aufnahme (@capacitor/camera, System-/Geraete-Kamera) ->
@@ -12,10 +13,14 @@ import { Capacitor } from '@capacitor/core'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { DatamatrixDecoder } from './datamatrixDecoder'
 
-/** Nativer Pfad auf Android (zxing-cpp) UND iOS (Apple Vision); Web nutzt den WebView-Scanner. */
+/**
+ * Nativer Pfad NUR auf Android (zxing-cpp, Plugin registriert via MainActivity.registerPlugin).
+ * iOS ist BEWUSST ausgeschlossen: das DatamatrixDecoder-Plugin ist dort nicht ins Xcode-Target
+ * eingebunden/registriert -> decode() wuerde ablehnen. iOS + Web nutzen daher den funktionierenden
+ * WebView-Scanner (@zxing/browser). Ein echter iOS-Nativ-Scanner ist ein eigenes, spaeteres Thema.
+ */
 export function nativeDatamatrixScanAvailable(): boolean {
-  const p = Capacitor.getPlatform()
-  return p === 'android' || p === 'ios'
+  return Capacitor.getPlatform() === 'android'
 }
 
 export type NativeScanResult =

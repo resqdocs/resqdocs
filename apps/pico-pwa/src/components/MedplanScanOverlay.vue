@@ -33,22 +33,81 @@ const error = ref<string | null>(null)
 const torchSupported = ref(false)
 const torchOn = ref(false)
 const slowHint = ref(false)
+/** Tap-to-Refocus verfuegbar? Nur Android/Chrome; iOS-WebKit meldet kein focusMode -> false. */
+const focusTapSupported = ref(false)
+/** Kurzer visueller Tap-Puls an der Tippstelle (rein kosmetisch, kein pointsOfInterest). */
+const pulse = ref<{ x: number; y: number; key: number } | null>(null)
 /** Aktuell laufende konkrete Strategie (fuer den Schnellumschalter). */
 const activeMode = ref<'webview_standard' | 'webview_optimized'>('webview_optimized')
 let controls: IScannerControls | null = null
 let done = false
 let slowTimer: ReturnType<typeof setTimeout> | undefined
+let refocusBusy = false
+let refocusTimer: ReturnType<typeof setTimeout> | undefined
+let pulseKey = 0
+const REFOCUS_RETURN_MS = 700
+
+function currentVideoTrack(): MediaStreamTrack | null {
+  const stream = video.value?.srcObject
+  if (!(stream instanceof MediaStream)) return null
+  return stream.getVideoTracks()[0] ?? null
+}
+
+function focusModes(track: MediaStreamTrack | null): string[] {
+  const caps = track?.getCapabilities?.() as unknown as { focusMode?: string[] } | undefined
+  return caps?.focusMode ?? []
+}
 
 /** Dauerfokus NUR setzen, wenn die Kamera ihn meldet (best-effort, iOS oft nicht). */
 function applyContinuousFocus(): void {
-  const stream = video.value?.srcObject
-  if (!(stream instanceof MediaStream)) return
-  const track = stream.getVideoTracks()[0]
-  const caps = track?.getCapabilities?.() as unknown as { focusMode?: string[] } | undefined
-  if (caps?.focusMode?.includes('continuous')) {
+  const track = currentVideoTrack()
+  if (track && focusModes(track).includes('continuous')) {
     const c = { advanced: [{ focusMode: 'continuous' }] } as unknown as MediaTrackConstraints
     void track.applyConstraints(c).catch(() => {})
   }
+}
+
+/** Tap-to-Refocus NUR, wenn BEIDE Modi vorhanden sind: single-shot zum Antriggern UND continuous
+ *  zum Zuruecksetzen. Ohne continuous koennten wir einen Sweep ausloesen, den wir nicht rueckgaengig
+ *  machen koennen -> Fokus bliebe gelockt, was grosse Matrizen kaputt macht. */
+function detectFocusTapSupport(): void {
+  const modes = focusModes(currentVideoTrack())
+  focusTapSupported.value = modes.includes('single-shot') && modes.includes('continuous')
+}
+
+/**
+ * Nutzer-initiierter Refokus (Tap-to-Focus): EIN single-shot-AF-Sweep, danach GARANTIERT zurueck
+ * auf continuous. Nie automatisch -> der optimierte Scan-Pfad bleibt exakt wie bisher. Der Track
+ * wird bei JEDEM Tap frisch geholt (restartScanner tauscht den Stream). iOS/Unsupported: der Guard
+ * greift vor jedem applyConstraints -> stiller No-op, kein Throw, keine Affordance.
+ */
+function refocus(ev: PointerEvent): void {
+  const track = currentVideoTrack()
+  const modes = focusModes(track)
+  if (!track || !modes.includes('single-shot') || !modes.includes('continuous')) return
+  if (refocusBusy) return
+  refocusBusy = true
+
+  // Visuelles Tap-Ack an der Tippstelle (Fokus ist global, kein Koordinaten-Fokus).
+  const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect()
+  pulse.value = { x: ev.clientX - rect.left, y: ev.clientY - rect.top, key: ++pulseKey }
+
+  const single = { advanced: [{ focusMode: 'single-shot' }] } as unknown as MediaTrackConstraints
+  void track.applyConstraints(single).catch(() => {})
+  // Reset haengt am Timer, NICHT am await -> refocusBusy kann nicht haengenbleiben, falls
+  // applyConstraints auf einer wackligen Kamera-HAL nie resolved.
+  refocusTimer = setTimeout(() => {
+    const back = { advanced: [{ focusMode: 'continuous' }] } as unknown as MediaTrackConstraints
+    // Torch-Re-Assert ERST, nachdem continuous gesetzt ist (.finally): manche Androids loeschen
+    // beim Fokus-applyConstraints den Torch; unsequenziert koennte switchTorch(true) vor dem
+    // Loeschen laufen und der Blitz bliebe aus, waehrend torchOn 'an' zeigt.
+    void track.applyConstraints(back)
+      .catch(() => {})
+      .finally(() => {
+        if (torchOn.value && controls?.switchTorch) void controls.switchTorch(true).catch(() => {})
+      })
+    refocusBusy = false
+  }, REFOCUS_RETURN_MS)
 }
 
 async function startScanner(): Promise<void> {
@@ -79,6 +138,7 @@ async function startScanner(): Promise<void> {
       },
     )
     torchSupported.value = typeof controls.switchTorch === 'function'
+    detectFocusTapSupport()
     if (optimized) {
       applyContinuousFocus()
       slowTimer = setTimeout(() => { slowHint.value = true }, SLOW_HINT_MS)
@@ -92,10 +152,14 @@ async function restartScanner(): Promise<void> {
   try { controls?.stop() } catch { /* egal */ }
   controls = null
   if (slowTimer) clearTimeout(slowTimer)
+  if (refocusTimer) clearTimeout(refocusTimer)
+  refocusBusy = false
   done = false
   slowHint.value = false
   torchOn.value = false
   torchSupported.value = false
+  focusTapSupported.value = false
+  pulse.value = null
   await startScanner()
 }
 
@@ -122,6 +186,7 @@ onMounted(startScanner)
 
 onBeforeUnmount(() => {
   if (slowTimer) clearTimeout(slowTimer)
+  if (refocusTimer) clearTimeout(refocusTimer)
   controls?.stop() // schaltet Torch automatisch aus
 })
 </script>
@@ -129,13 +194,25 @@ onBeforeUnmount(() => {
 <template>
   <!-- Root in Theme-Farbe (matcht hell/dunkel/resqdocs); nur der Kamera-Bereich bleibt dunkel. -->
   <div class="fixed inset-0 z-50 flex flex-col bg-base-100">
-    <!-- Kamerabild + Orientierungsrahmen (Rahmen rein dekorativ, blockiert Tap/Decode nicht). -->
-    <div class="relative min-h-0 w-full flex-1 bg-black">
+    <!-- Kamerabild + Orientierungsrahmen (Rahmen rein dekorativ, blockiert Tap/Decode nicht).
+         Tap auf den Kamera-Bereich = Refokus (nur wo unterstuetzt; passiv, ohne preventDefault). -->
+    <div
+      class="relative min-h-0 w-full flex-1 bg-black"
+      :class="{ 'cursor-pointer': focusTapSupported }"
+      @pointerdown="refocus"
+    >
       <video ref="video" class="h-full w-full object-cover" autoplay playsinline muted />
       <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
         <!-- Rahmen durch BEIDE Viewport-Maße begrenzt -> auch im Querformat sinnvoll. -->
         <div class="aspect-square w-[min(55vw,55vh)] max-w-[18rem] rounded-2xl border-2 border-white/90 shadow-[0_0_0_100vmax_rgba(0,0,0,0.45)]" />
       </div>
+      <!-- Tap-Puls: reines visuelles Ack an der Tippstelle (nur wenn Refokus unterstuetzt wird). -->
+      <div
+        v-if="pulse"
+        :key="pulse.key"
+        class="focus-pulse pointer-events-none absolute h-16 w-16 rounded-full border-2 border-white/90"
+        :style="{ left: pulse.x + 'px', top: pulse.y + 'px' }"
+      />
     </div>
 
     <!-- Steuerleiste in Theme-Farben (daisyUI base-100/base-content) -> immer sichtbar + passend.
@@ -144,6 +221,7 @@ onBeforeUnmount(() => {
       <p v-if="error" class="text-center text-sm text-error">{{ error }}</p>
       <template v-else>
         <p class="truncate text-center text-xs text-base-content/70">BMP-Code flach in den Rahmen halten · Reflexionen vermeiden</p>
+        <p v-if="focusTapSupported" class="truncate text-center text-[11px] text-base-content/50">Zum Scharfstellen aufs Kamerabild tippen.</p>
         <p v-if="slowHint" class="truncate text-center text-[11px] text-base-content/50">Abstand langsam verändern, Reflexionen vermeiden.</p>
       </template>
 
@@ -200,3 +278,20 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Tap-Puls: kurz aufblitzender Ring an der Tippstelle als Rueckmeldung fuer den Refokus. */
+.focus-pulse {
+  animation: focus-pulse 0.5s ease-out forwards;
+}
+@keyframes focus-pulse {
+  from {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 0.9;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0;
+  }
+}
+</style>

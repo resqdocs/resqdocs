@@ -109,11 +109,11 @@ function apply(): void {
           </label>
         </div>
 
-        <label class="flex cursor-pointer items-center gap-2 py-0">
+        <label class="flex min-h-11 cursor-pointer items-center gap-2 py-2">
           <input v-model="onOxygen" type="checkbox" class="toggle toggle-sm shrink-0" />
           <span class="text-sm">Sauerstoffgabe (O₂)</span>
         </label>
-        <label class="flex cursor-pointer items-center gap-2 py-0">
+        <label class="flex min-h-11 cursor-pointer items-center gap-2 py-2">
           <input v-model="scale2" type="checkbox" class="toggle toggle-sm shrink-0" />
           <span class="text-sm">SpO₂-Skala 2 <span class="text-base-content/50">(ärztl. Ziel 88–92 %, z. B. COPD)</span></span>
         </label>

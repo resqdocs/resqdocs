@@ -111,6 +111,36 @@ function create() {
     }
     return id // fuers Mode-in-place: der Aufrufer oeffnet die frisch angelegte Karte
   }
+  /** Import: ein Snippet mit gegebenem Titel + Text als NEUES anlegen (frische id -> keine Kollision).
+   *  Optimistisch wie addSnippet; oeffnet KEINE Edit-Karte (der Aufrufer zeigt nur eine Erfolgsmeldung). */
+  async function addSnippetFrom(title: string, text: string): Promise<string> {
+    // Vor dem Anlegen sicherstellen, dass die Liste geladen ist: createUniqueId ist DETERMINISTISCH
+    // (snippet, snippet-2, …). Ohne geladene ids liefert es bei leerer Liste „snippet" und
+    // saveSnippet (INSERT OR REPLACE) wuerde ein bestehendes DB-Snippet ueberschreiben. Der Import kann
+    // von ausserhalb des Bausteine-Tabs kommen (Vorlagen-Sheet / Cross-Routing), wo noch nichts geladen ist.
+    if (!loaded.value) {
+      try {
+        await reload()
+      } catch (err) {
+        console.error('Snippet-Bibliothek laden vor dem Import fehlgeschlagen:', err instanceof Error ? err.message : err)
+      }
+    }
+    // Konnte die Liste NICHT geladen werden (reload gescheitert), ist die id-Basis unvollstaendig ->
+    // die deterministische createUniqueId ('snippet', 'snippet-2', …) koennte ein ungeladenes DB-Snippet
+    // ueberschreiben (INSERT OR REPLACE). Dann kollisionssicher randomisieren (wie newBlockId bei Bloecken).
+    const id = loaded.value
+      ? createUniqueId('snippet', new Set(snippets.value.map((s) => s.id)))
+      : `snippet-imp-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
+    const ts = nowIso()
+    const snippet = { id, title: title.trim() || 'Importiertes Snippet', text, createdAt: ts, updatedAt: ts }
+    snippets.value = [...snippets.value, snippet]
+    try {
+      await storage.getLibraryRepository().saveSnippet(snippet)
+    } catch {
+      await reload()
+    }
+    return id
+  }
   async function updateSnippet(id: string, patch: { title?: string; text?: string }): Promise<void> {
     const cur = snippets.value.find((s) => s.id === id)
     if (!cur) return
@@ -143,6 +173,7 @@ function create() {
     renameBlock,
     deleteBlock,
     addSnippet,
+    addSnippetFrom,
     updateSnippet,
     deleteSnippet,
   }

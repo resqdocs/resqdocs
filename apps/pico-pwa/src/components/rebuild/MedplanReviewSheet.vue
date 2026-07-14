@@ -8,7 +8,7 @@
  * Uebernahme. DSGVO: Roh-Scan + Entwurf nur im RAM (useMedplanScan), reset() verwirft alles; erst
  * „Uebernehmen" macht die GEPRUEFTEN Zeilen zu Einsatz-Werten.
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import type { MedikamenteRow, ArztRow } from '@resqdocs/protocol-core/model'
 import { useMedplanScan } from '@/medplan/useMedplanScan'
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
@@ -19,6 +19,9 @@ import { formatMedikament, medikamentRowHasData, staerkeOhneDuplikat } from '@re
 import MedplanScanOverlay from '@/components/MedplanScanOverlay.vue'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 
+// mode: 'camera' (Standard, „Plan scannen" → Kamera gleich auf) | 'scanner' („Externer Scanner" →
+// Feld für HID-/Bluetooth-Scanner fokussiert, keine Kamera).
+const props = withDefaults(defineProps<{ mode?: 'camera' | 'scanner' }>(), { mode: 'camera' })
 const emit = defineEmits<{ apply: [rows: MedikamenteRow[], doctor?: ArztRow]; close: [] }>()
 
 const lookup = useMedicationLookup()
@@ -82,6 +85,11 @@ function confirmPending(): void {
 const scanOpen = ref(false)
 const manualOpen = ref(false)
 const manualText = ref('')
+const manualTextarea = ref<HTMLTextAreaElement | null>(null)
+// Externer-Scanner-Modus: dieselbe große Eingabe wie „Text einfügen", aber fokussiert + Enter-Übernahme,
+// damit ein als HID-/Bluetooth-Tastatur gekoppelter Scanner (z. B. NETUM C750) hineintippt. scannerMode
+// trennt das sauber vom unveränderten Einfüge-Pfad (dort bleibt Enter ein Zeilenumbruch).
+const scannerMode = ref(false)
 
 function rowPzn(i: number): string | undefined {
   return structuredRows.value[i]?.pzn
@@ -131,6 +139,41 @@ async function onManualAdd(): Promise<void> {
     await resolveFromLibrary()
   }
 }
+
+/** „Text einfügen" (Zwischenablage): Verhalten UNVERÄNDERT – Toggle, kein Auto-Fokus, Enter = Zeilenumbruch. */
+function openManual(): void {
+  if (manualOpen.value && !scannerMode.value) { manualOpen.value = false; return }
+  scannerMode.value = false
+  manualOpen.value = true
+}
+/** „Externer Scanner" (HID-/Bluetooth-Tastatur, z. B. NETUM C750): dieselbe Eingabe öffnen + fokussieren,
+ *  damit die getippten Zeichen dort landen; danach identischer Pfad wie ein Kamera-Scan. */
+function openScanner(): void {
+  scannerMode.value = true
+  manualOpen.value = true
+  void nextTick(() => manualTextarea.value?.focus())
+}
+/** Enter im Feld NUR im Scanner-Modus übernehmen (abschließendes CR = freihändig); Einfüge-Modus: Zeilenumbruch. */
+function onTextareaEnter(ev: KeyboardEvent): void {
+  if (!scannerMode.value) return
+  ev.preventDefault()
+  void onScannerSubmit()
+}
+async function onScannerSubmit(): Promise<void> {
+  // Trim-Guard: leeres Feld nicht an den Parser geben. Synchron leeren VOR dem await (keine Kollision mit
+  // nächstem Seiten-Burst); Feld BLEIBT offen (kein manualOpen=false) für mehrseitige Pläne. Identischer
+  // Pfad wie Kamera-Scan: ingest() + resolveFromLibrary() (PZN-Abgleich, Dosierung/Stärke, Aussteller).
+  const text = manualText.value.trim()
+  if (!text) return
+  manualText.value = ''
+  if (ingest(text)) await resolveFromLibrary()
+  void nextTick(() => manualTextarea.value?.focus())
+}
+/** „Übernehmen": im Scanner-Modus mit Refokus (Mehrseiten), im Einfüge-Modus unverändert. */
+function onManualSubmitClick(): void {
+  if (scannerMode.value) void onScannerSubmit()
+  else void onManualAdd()
+}
 function applyAndClose(): void {
   if (!medCount.value) return
   const meds = structuredRows.value.filter((r) => r.name.trim())
@@ -157,7 +200,9 @@ function discardAndClose(): void {
 }
 
 onMounted(() => {
-  scanOpen.value = true // „Plan scannen" = Scan-Absicht -> Kamera gleich oeffnen
+  // „Plan" -> Kamera gleich öffnen; „Externer Scanner" -> Scanner-Feld öffnen + fokussieren (keine Kamera).
+  if (props.mode === 'scanner') openScanner()
+  else scanOpen.value = true
 })
 </script>
 
@@ -169,8 +214,8 @@ onMounted(() => {
 
   <!-- Review-Sheet (Bottom-Sheet, teleported; bewusst KEIN daisyUI .modal wegen z-999 ueber der Kamera) -->
   <Teleport to="body">
-    <div class="overlay-backdrop fixed inset-0 z-40 flex items-end" role="dialog" aria-modal="true">
-      <div class="overlay-surface flex max-h-[85vh] w-full flex-col gap-3 rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+    <div class="overlay-backdrop fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center" role="dialog" aria-modal="true">
+      <div class="overlay-surface flex max-h-[85vh] w-full flex-col gap-3 rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:mx-auto sm:max-w-lg sm:rounded-2xl">
         <div class="flex items-center justify-between gap-2">
           <span class="text-base font-semibold">Medikationsplan scannen</span>
           <div class="flex items-center gap-2">
@@ -184,12 +229,26 @@ onMounted(() => {
         <!-- Scan-/Eingabe-Steuerung -->
         <div class="flex flex-wrap gap-2">
           <button type="button" class="btn btn-sm btn-primary min-h-11 gap-1" @click="scanOpen = true">{{ structuredRows.length ? 'Weitere Seite scannen' : 'Code scannen' }}</button>
-          <button type="button" class="btn btn-sm btn-ghost min-h-11" @click="manualOpen = !manualOpen">Text einfügen</button>
+          <button type="button" class="btn btn-sm btn-ghost min-h-11" @click="openManual">Text einfügen</button>
         </div>
 
         <div v-if="manualOpen" class="flex flex-col gap-2">
-          <textarea v-model="manualText" rows="3" class="textarea textarea-bordered textarea-sm w-full font-mono" placeholder="BMP-Code-Inhalt (XML, beginnt mit <MP …>) einfügen" aria-label="BMP-Code-Inhalt" />
-          <button type="button" class="btn btn-sm self-start min-h-11" :disabled="!manualText.trim()" @click="onManualAdd">Übernehmen</button>
+          <p v-if="scannerMode" id="medplan-ext-scanner-hint" class="text-xs text-base-content/60">
+            Externer Scanner (per Bluetooth oder Kabel als Tastatur gekoppelt): Feld ist aktiv – jetzt den
+            BMP-Code scannen. Er wird automatisch übernommen (oder „Übernehmen" tippen); Prüfung, PZN-Abgleich
+            und Dosierung/Stärke laufen genau wie beim Kamera-Scan.
+          </p>
+          <textarea
+            ref="manualTextarea"
+            v-model="manualText"
+            rows="3"
+            class="textarea textarea-bordered textarea-sm w-full font-mono"
+            :placeholder="scannerMode ? 'BMP-Code hierher scannen (externer Scanner)…' : 'BMP-Code-Inhalt (XML, beginnt mit <MP …>) einfügen'"
+            :aria-label="scannerMode ? 'BMP-Code scannen (externer Scanner)' : 'BMP-Code-Inhalt'"
+            :aria-describedby="scannerMode ? 'medplan-ext-scanner-hint' : undefined"
+            @keydown.enter="onTextareaEnter"
+          />
+          <button type="button" class="btn btn-sm self-start min-h-11" :disabled="!manualText.trim()" @click="onManualSubmitClick">Übernehmen</button>
         </div>
 
         <p v-if="error" class="text-sm text-error" role="alert">{{ error }}</p>
@@ -200,9 +259,9 @@ onMounted(() => {
           <span class="text-xs text-base-content/60">Ausstellende Praxis aus dem Plan:</span>
           <span class="text-sm">{{ aussteller.name }}<template v-if="aussteller.ort">, {{ aussteller.ort }}</template><template v-if="aussteller.nummer">, {{ aussteller.nummer.typ }} {{ aussteller.nummer.wert }}</template><template v-if="aussteller.telefon">, Tel. {{ aussteller.telefon }}</template></span>
           <div class="flex flex-wrap items-center gap-3 text-sm" role="radiogroup" aria-label="Aussteller dokumentieren">
-            <label class="flex items-center gap-1"><input v-model="ausstellerRolle" type="radio" value="" class="radio radio-xs" /> nicht dokumentieren</label>
-            <label class="flex items-center gap-1"><input v-model="ausstellerRolle" type="radio" value="Hausarzt" class="radio radio-xs" /> als Hausarzt</label>
-            <label class="flex items-center gap-1"><input v-model="ausstellerRolle" type="radio" value="Facharzt" class="radio radio-xs" /> als Facharzt</label>
+            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="" class="radio radio-sm" /> nicht dokumentieren</label>
+            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Hausarzt" class="radio radio-sm" /> als Hausarzt</label>
+            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Facharzt" class="radio radio-sm" /> als Facharzt</label>
           </div>
           <p v-if="ausstellerRolle" class="text-xs text-success">→ wird in die Ärzte-Liste übernommen</p>
         </div>
