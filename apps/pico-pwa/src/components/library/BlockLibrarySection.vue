@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
-import { exportBlock, parseBlock } from '@resqdocs/protocol-core/blockIO'
+import { exportBlock } from '@resqdocs/protocol-core/blockIO'
+import { routeImport } from '@/composables/useImportRouting'
 import { blockStructureLabel } from '@resqdocs/protocol-core-ui/blockSummary'
 import { shareJson, copyToClipboard } from '@/utils/fileTransfer'
 import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
@@ -14,7 +15,7 @@ import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.v
  * ist hier read-only (Kurzinfo Anzahl Einträge) — angelegt werden Blöcke über „Als Baustein speichern"
  * im Vorlagen-Editor. NUR hier verwaltet; im Editor werden Blöcke nur eingefügt.
  */
-const { blocks, addBausteinFromContainer, renameBlock, deleteBlock } = useBlockLibrary()
+const { blocks, renameBlock, deleteBlock } = useBlockLibrary()
 
 const editingId = ref<string | null>(null)
 const draftTitle = ref('')
@@ -75,15 +76,10 @@ function toggleImport(): void {
   ioMsg.value = null
 }
 async function doImport(text: string): Promise<void> {
-  const r = parseBlock(text)
-  if (!r.ok) {
-    ioMsg.value = { kind: 'err', text: r.error }
-    return
-  }
-  // Als NEUER Block (frische Zufalls-id via addBausteinFromContainer -> keine Kollision); Titel behalten.
-  const out = await addBausteinFromContainer(r.tree, (r.tree.title ?? '').trim() || 'Importierter Baustein')
-  ioMsg.value = out.ok ? { kind: 'ok', text: `Block „${out.title}“ importiert.` } : { kind: 'err', text: out.error }
-  if (out.ok) {
+  // Schema-erkennend: eine hier eingeworfene Snippet-/Vorlagen-Datei landet trotzdem am richtigen Ort.
+  const outcome = await routeImport(text)
+  ioMsg.value = { kind: outcome.ok ? 'ok' : 'err', text: outcome.message }
+  if (outcome.ok) {
     importText.value = ''
     importOpen.value = false
   }
@@ -139,7 +135,9 @@ async function exportDownload(b: Container): Promise<void> {
       <div class="flex items-center gap-2">
         <h3 class="font-semibold">Blöcke</h3>
         <span v-if="blocks.length" class="badge badge-neutral badge-sm">{{ blocks.length }}</span>
-        <button class="btn btn-ghost btn-xs ml-auto" type="button" :class="importOpen ? 'btn-active' : ''" @click="toggleImport">Importieren</button>
+        <button class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 px-1.5" type="button" :class="importOpen ? 'btn-active' : ''" aria-label="Block importieren" title="Importieren" @click="toggleImport">
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
+        </button>
       </div>
 
       <!-- Import: Block-JSON einfügen oder Datei wählen (eigenes resqdocs-block-Schema, getrennt von Vorlagen) -->
@@ -148,14 +146,14 @@ async function exportDownload(b: Container): Promise<void> {
         <textarea v-model="importText" rows="4" class="textarea textarea-bordered w-full text-xs" placeholder='{"schema":"resqdocs-block","version":1,"tree":{ … }}' aria-label="Block-JSON"></textarea>
         <div class="flex flex-wrap items-center gap-2">
           <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="!importText.trim()" @click="doImport(importText)">Laden</button>
-          <input type="file" accept="application/json,.json" class="file-input file-input-sm" aria-label="Block-Datei wählen" @change="onImportFile" />
+          <input type="file" accept="application/json,.json" class="file-input file-input-sm min-h-11" aria-label="Block-Datei wählen" @change="onImportFile" />
         </div>
         <p class="text-xs text-base-content/50">Wird als neuer Block in die Bibliothek importiert.</p>
       </div>
       <p v-if="ioMsg" class="text-xs" :class="ioMsg.kind === 'ok' ? 'text-success' : 'text-error'">{{ ioMsg.text }}</p>
 
-      <!-- Wide-Screens: Zeilen als Dichte-Grid (2->3->4 Spalten); die offene Edit-Karte spannt col-span-full. -->
-      <div class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <!-- Einspaltige Liste über die volle Breite (konsistent zugeklappt/offen; vorher Dichte-Grid). -->
+      <div class="flex flex-col gap-2">
       <template v-for="b in blocks" :key="b.id">
         <!-- READ: kompakte Summary-Zeile (Antippen -> umbenennen) -->
         <button
@@ -175,7 +173,7 @@ async function exportDownload(b: Container): Promise<void> {
         <!-- EDIT: Karte (Ring + Titel + read-only Struktur-Info + Fertig) -->
         <div
           v-else
-          class="col-span-full flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
+          class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
           @focusout="onFocusOut"
           @keydown.esc="closeEdit"
         >
@@ -191,8 +189,13 @@ async function exportDownload(b: Container): Promise<void> {
           </div>
           <p class="px-1 text-xs text-base-content/60">Wiederverwendbarer Block · {{ blockStructureLabel(b) }}</p>
           <div class="flex flex-wrap justify-end gap-2">
-            <button type="button" class="btn btn-ghost btn-sm min-h-11" aria-label="Block-JSON kopieren" @click="exportCopy(b)">{{ copiedId === b.id ? 'Kopiert' : 'Kopieren' }}</button>
-            <button type="button" class="btn btn-ghost btn-sm min-h-11" aria-label="Block teilen oder als Datei sichern" :disabled="sharing" @click="exportDownload(b)">Teilen</button>
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="copiedId === b.id ? 'Block-JSON kopiert' : 'Block-JSON kopieren'" title="Kopieren" @click="exportCopy(b)">
+              <svg v-if="copiedId === b.id" class="size-5 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+              <svg v-else class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" aria-label="Block teilen oder als Datei sichern" title="Teilen" :disabled="sharing" @click="exportDownload(b)">
+              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7" /><path d="M12 16V3" /><path d="M8 7l4-4 4 4" /></svg>
+            </button>
             <button type="button" class="btn btn-primary btn-sm min-h-11" @click="closeEdit">Fertig</button>
           </div>
         </div>

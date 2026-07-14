@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.2.1] - 2026-07-14
+
+### Features
+
+- Capture the medication plan with an external (HID) barcode scanner, offered as a third option in the scan dialog; scanned data runs through the same check and hand-off as a camera scan
+- Tap to refocus while scanning the medication-plan barcode (Android)
+- Combine several text snippets into a single free-text field instead of replacing it
+- Share and import reusable text snippets
+- Smart import that detects the file type and routes it to the right destination
+
+### Bug Fixes
+
+- Fixed overlapping rows in the multi-select snippet picker on iOS
+- On iOS, only the scanner that actually runs is offered
+- iPad and large-screen polish: skip button, block-library width, scan dialogs, onboarding width, body text, settings spacing and 44 pt touch targets
+- Complete favicon fallbacks in the online editor (ico / png / apple-touch)
+
+### Changed
+
+- Secondary actions on block-library cards shown as compact icons to save space
+
 ## [1.2.0] - 2026-07-12
 
 ### Features

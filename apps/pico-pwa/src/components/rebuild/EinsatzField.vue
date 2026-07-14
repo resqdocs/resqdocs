@@ -105,10 +105,16 @@ function restorePreserved(): void {
 function onInput(e: Event): void {
   caseValues.setCustom(props.node.id, (e.target as HTMLInputElement).value)
 }
-// Snippet als Feldwert einsetzen (custom): kippt das Feld auf 'custom', der Wert bleibt normal editierbar
-// (kein eingefrorener Text). Ueberschreibt einen evtl. schon getippten Wert bewusst (schnelles Einsetzen).
+// Snippet(s) als Feldwert einsetzen (custom): kippt das Feld auf 'custom', der Wert bleibt normal editierbar.
+// ANHAENGEN statt Ersetzen — so lassen sich mehrere Mustertexte kombinieren (Aufklaerung u. ae.), ohne dass
+// der bestehende Text verloren geht. Basis = laufender ✎-Freitext ODER der ruhend gemerkte Text (prevValue,
+// [[bewahren-eingabe]]); ein via Multi-Select verketteter Block kommt als EIN text an. Trenner = Leerzeile
+// (schaltet useLongText automatisch aufs grosse Textfeld).
 function onInsertSnippet(text: string): void {
-  caseValues.setCustom(props.node.id, text)
+  // trimEnd: endet die Basis schon auf Umbruch/Whitespace, sonst entstünde eine doppelte Leerzeile.
+  const base = (fill.value.state === 'custom' ? fill.value.value : preservedText.value).trimEnd()
+  const combined = base !== '' ? `${base}\n\n${text}` : text
+  caseValues.setCustom(props.node.id, combined)
   snippetPickerOpen.value = false
 }
 
@@ -206,7 +212,7 @@ function onSelectState(next: 'confirmed' | 'custom' | 'excluded'): void {
         <input v-else class="input input-sm w-full" :value="customValue" :aria-label="`${label}: eigener Wert`" :aria-required="node.required || undefined" @input="onInput" />
       </div>
       <p v-else class="pl-9 text-sm italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
-      <SnippetPicker v-if="snippetPickerOpen" title="Snippet als Wert einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
+      <SnippetPicker v-if="snippetPickerOpen" multiple title="Snippets als Wert einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
     </template>
 
     <!-- Pflichtfeld noch offen: ruhiger Amber-Hinweis (kein roter Rahmen/kein Gate — darf im Einsatz
