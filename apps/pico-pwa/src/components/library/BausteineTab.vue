@@ -24,14 +24,14 @@ onMounted(() => {
 <template>
   <div class="flex flex-col gap-4">
     <h2 class="text-base font-semibold">Bausteine</h2>
-    <p class="text-sm text-base-content/60">
+    <p class="max-w-prose text-sm text-base-content/60">
       Wiederverwendbare Snippets und Blöcke für deine Vorlagen und Einsätze.
     </p>
 
-    <div role="note" class="alert alert-info text-sm">
+    <div role="note" class="alert alert-info max-w-prose text-sm">
       Bausteine sind neutrale, wiederverwendbare Inhalte. Keine Patientendaten oder Einsatzdaten speichern.
     </div>
-    <p class="text-xs" :class="libraryMode === 'sqlite' ? 'text-base-content/60' : 'text-warning'">
+    <p class="max-w-prose text-xs" :class="libraryMode === 'sqlite' ? 'text-base-content/60' : 'text-warning'">
       <template v-if="libraryMode === 'sqlite'">Bausteine werden lokal auf diesem Gerät gespeichert.</template>
       <template v-else>Web-Entwicklung: Bausteine sind nur in-memory und nach App-Neustart weg.</template>
     </p>
@@ -39,7 +39,7 @@ onMounted(() => {
     <SnippetLibrarySection />
     <BlockLibrarySection />
 
-    <p class="text-xs text-base-content/50">
+    <p class="max-w-prose text-xs text-base-content/50">
       Snippet einfügen: im Vorlagen-Editor als Feld-Vorgabe oder im Einsatz direkt als Feldwert.
       Blöcke anlegen: im Vorlagen-Editor an einem Container „Als Baustein speichern".
     </p>

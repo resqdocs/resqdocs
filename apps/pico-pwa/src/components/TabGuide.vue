@@ -79,14 +79,19 @@ function onTouchEnd(e: TouchEvent): void {
       @touchstart.passive="onTouchStart"
       @touchend.passive="onTouchEnd"
     >
-      <div
-        class="mx-auto flex min-h-full w-full max-w-md flex-col px-6 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]"
+      <!-- Überspringen: absolut in der ECHTEN oberen rechten Ecke des Overlays (unabhängig von der
+           zentrierten, breitenbegrenzten Content-Spalte) — sonst driftet es auf iPad/Großbild an die
+           Spaltenkante bzw. optisch in die vertikale Mitte. Safe-Area + 44pt-Touch-Target. -->
+      <button
+        type="button"
+        class="btn btn-ghost absolute z-10 min-h-11 min-w-11 top-[max(12px,env(safe-area-inset-top))] right-[max(12px,env(safe-area-inset-right))]"
+        @click="dismiss"
       >
-        <!-- Überspringen: auf jeder Seite gut sichtbar (NN/g) -->
-        <div class="flex justify-end">
-          <button class="btn btn-ghost btn-sm" type="button" @click="dismiss">Überspringen</button>
-        </div>
-
+        Überspringen
+      </button>
+      <div
+        class="mx-auto flex min-h-full w-full max-w-md flex-col pb-[max(24px,env(safe-area-inset-bottom))] pl-[max(24px,env(safe-area-inset-left))] pr-[max(24px,env(safe-area-inset-right))] pt-[max(56px,calc(env(safe-area-inset-top)+2.5rem))] sm:max-w-lg"
+      >
         <!-- Seite 1: Willkommen / Wertversprechen -->
         <div v-if="step === 0" class="flex flex-1 flex-col items-center justify-center gap-5 text-center">
           <img src="/brand.svg" alt="ResQDocs" class="brand-logo brand-logo-light h-20 w-auto" />
@@ -248,9 +253,9 @@ function onTouchEnd(e: TouchEvent): void {
             />
           </div>
           <div class="flex items-center gap-2">
-            <button v-if="step > 0" class="btn btn-ghost btn-sm" type="button" @click="prev">Zurück</button>
-            <button v-if="step < LAST" class="btn btn-primary btn-sm flex-1" type="button" @click="next">Weiter</button>
-            <button v-else class="btn btn-primary btn-sm flex-1" type="button" @click="dismiss">Los geht's</button>
+            <button v-if="step > 0" class="btn btn-ghost min-h-11" type="button" @click="prev">Zurück</button>
+            <button v-if="step < LAST" class="btn btn-primary min-h-11 flex-1" type="button" @click="next">Weiter</button>
+            <button v-else class="btn btn-primary min-h-11 flex-1" type="button" @click="dismiss">Los geht's</button>
           </div>
           <p class="text-center text-xs text-base-content/50">
             Diese Tour findest du jederzeit über das ?-Symbol oben rechts.

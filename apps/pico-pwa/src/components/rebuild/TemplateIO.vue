@@ -9,7 +9,9 @@ import { ref, computed, watch } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { useTreeEditor } from '@resqdocs/protocol-core-ui/treeEditor'
-import { exportTemplate, parseTemplate } from '@resqdocs/protocol-core/templateIO'
+import { exportTemplate } from '@resqdocs/protocol-core/templateIO'
+import { detectAndParse, kindNoun } from '@resqdocs/protocol-core/importRouter'
+import { routeDetected } from '@/composables/useImportRouting'
 import { useTemplateExport } from '@/composables/useTemplateExport'
 import { useAppVersion } from '@/composables/useAppVersion'
 
@@ -61,18 +63,29 @@ function finishImport(added: Container): void {
   importText.value = ''
   mode.value = 'closed'
 }
-function load(text: string): void {
-  const r = parseTemplate(text)
+async function load(text: string): Promise<void> {
+  // Schema-erkennend: eine hier eingeworfene Baustein-/Snippet-Datei landet trotzdem am richtigen Ort.
+  const r = detectAndParse(text)
   if (!r.ok) {
-    msg.value = { kind: 'err', text: r.error }
+    msg.value = { kind: 'err', text: (r.kind ? `${kindNoun(r.kind)} erkannt, aber ` : '') + r.error }
     return
   }
-  // Kennungs-Kollision -> fragen (ueberschreiben / als neue importieren); sonst direkt als neue.
-  if (tree.protocolExists(r.tree.id)) {
-    pendingImport.value = r.tree
+  if (r.kind === 'protocol') {
+    // Vorlage: Kennungs-Kollision -> fragen (ueberschreiben / als neue); sonst direkt als neue.
+    if (tree.protocolExists(r.tree.id)) {
+      pendingImport.value = r.tree
+      return
+    }
+    finishImport(tree.importProtocol(r.tree))
     return
   }
-  finishImport(tree.importProtocol(r.tree))
+  // Baustein/Snippet: zentral ans richtige Ziel (landet in der Bausteine-Bibliothek).
+  const outcome = await routeDetected(r)
+  msg.value = { kind: outcome.ok ? 'ok' : 'err', text: outcome.message }
+  if (outcome.ok) {
+    importText.value = ''
+    mode.value = 'closed'
+  }
 }
 function doOverwrite(): void {
   if (pendingImport.value) finishImport(tree.overwriteProtocol(pendingImport.value))
