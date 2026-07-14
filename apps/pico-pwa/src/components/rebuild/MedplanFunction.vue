@@ -180,6 +180,8 @@ async function onPackageDecoded(p: { text: string; format: PackageBarcodeFormat 
 
 // --- BMP-Plan-Scan: Review-Sheet (mehrere Zeilen) -> nach Pruefung anhaengen ---
 const bmpOpen = ref(false)
+// Kamera (Standard) vs. externer HID-/Bluetooth-Scanner (öffnet das Feld statt der Kamera).
+const bmpMode = ref<'camera' | 'scanner'>('camera')
 function onBmpApply(scanned: MedikamenteRow[], doctor?: ArztRow): void {
   const cleaned = rows.value.filter(medikamentRowHasData)
   caseValues.setRows(props.node.id, [...cleaned, ...scanned]) // gepruefte Zeilen anhaengen
@@ -202,10 +204,12 @@ function onBmpApply(scanned: MedikamenteRow[], doctor?: ArztRow): void {
 
 // Scan-Art-Auswahl: EIN „Scannen"-Knopf -> kleines Sheet (Packung/Plan) statt zwei Direktbuttons.
 const scanPickerOpen = ref(false)
-function pickScan(kind: 'package' | 'plan'): void {
+function pickScan(kind: 'package' | 'plan' | 'external'): void {
   scanPickerOpen.value = false
-  if (kind === 'package') startPackageScan()
-  else bmpOpen.value = true
+  if (kind === 'package') { startPackageScan(); return }
+  // 'plan' -> Kamera; 'external' -> Plan-Sheet direkt im Scanner-Modus (Feld statt Kamera).
+  bmpMode.value = kind === 'external' ? 'scanner' : 'camera'
+  bmpOpen.value = true
 }
 </script>
 
@@ -314,13 +318,28 @@ function pickScan(kind: 'package' | 'plan'): void {
             <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-6 w-6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.822 1.316Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" /></svg>
             </span>
-            <span>Packung scannen</span>
+            <span class="flex flex-col text-left">
+              <span>Packung scannen</span>
+              <span class="text-xs text-base-content/60">Einzelnes Medikament von der Packung</span>
+            </span>
           </button>
           <button type="button" class="flex min-h-14 w-full items-center gap-4 rounded-xl bg-base-200 px-3 text-base font-normal transition-colors active:bg-base-300" @click="pickScan('plan')">
             <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-6 w-6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
             </span>
-            <span>Plan (BMP) scannen</span>
+            <span class="flex flex-col text-left">
+              <span>Plan (BMP) scannen</span>
+              <span class="text-xs text-base-content/60">Ganzer Plan mit der Kamera</span>
+            </span>
+          </button>
+          <button type="button" class="flex min-h-14 w-full items-center gap-4 rounded-xl bg-base-200 px-3 text-base font-normal transition-colors active:bg-base-300" @click="pickScan('external')">
+            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-6 w-6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.5v15M7.5 4.5v15M11.25 4.5v15M15 4.5v15M18.75 4.5v15" /></svg>
+            </span>
+            <span class="flex flex-col text-left">
+              <span>Externer Scanner</span>
+              <span class="text-xs text-base-content/60">Ganzer Plan mit Bluetooth-/Kabel-Scanner</span>
+            </span>
           </button>
           <div class="mt-1 flex justify-end">
             <button type="button" class="btn btn-ghost" @click="scanPickerOpen = false">Abbrechen</button>
@@ -337,7 +356,7 @@ function pickScan(kind: 'package' | 'plan'): void {
     </Teleport>
 
     <!-- BMP-Plan-Scan + Review (teleportet sich selbst) -->
-    <MedplanReviewSheet v-if="bmpOpen" @apply="onBmpApply" @close="bmpOpen = false" />
+    <MedplanReviewSheet v-if="bmpOpen" :mode="bmpMode" @apply="onBmpApply" @close="bmpOpen = false" />
 
     <!-- Lösch-Rückfrage (#260): Einzelzeile mit Daten oder „alle zurücksetzen" (teleportet sich selbst) -->
     <ConfirmDialog

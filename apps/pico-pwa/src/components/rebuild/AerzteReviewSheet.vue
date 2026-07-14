@@ -95,8 +95,8 @@ onMounted(() => {
 
   <!-- Review-Sheet (Bottom-Sheet, teleported; bewusst KEIN daisyUI .modal wegen z-999 ueber der Kamera) -->
   <Teleport to="body">
-    <div class="overlay-backdrop fixed inset-0 z-40 flex items-end" role="dialog" aria-modal="true">
-      <div class="overlay-surface flex max-h-[85vh] w-full flex-col gap-3 rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+    <div class="overlay-backdrop fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center" role="dialog" aria-modal="true">
+      <div class="overlay-surface flex max-h-[85vh] w-full flex-col gap-3 rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:mx-auto sm:max-w-lg sm:rounded-2xl">
         <div class="flex items-center justify-between gap-2">
           <span class="text-base font-semibold">Arzt aus Medikationsplan</span>
           <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11" aria-label="Schließen" @click="discardAndClose">✕</button>
@@ -119,9 +119,9 @@ onMounted(() => {
           <span class="text-xs text-base-content/60">Ausstellende Praxis aus dem Plan:</span>
           <span class="text-sm font-medium">{{ aussteller.name }}<template v-if="aussteller.ort">, {{ aussteller.ort }}</template><template v-if="aussteller.nummer">, {{ aussteller.nummer.typ }} {{ aussteller.nummer.wert }}</template><template v-if="aussteller.telefon">, Tel. {{ aussteller.telefon }}</template></span>
           <div class="flex flex-wrap items-center gap-3 text-sm" role="radiogroup" aria-label="Rolle des Arztes">
-            <label class="flex items-center gap-1"><input v-model="ausstellerRolle" type="radio" value="" class="radio radio-xs" /> ohne Rolle</label>
-            <label class="flex items-center gap-1"><input v-model="ausstellerRolle" type="radio" value="Hausarzt" class="radio radio-xs" /> Hausarzt</label>
-            <label class="flex items-center gap-1"><input v-model="ausstellerRolle" type="radio" value="Facharzt" class="radio radio-xs" /> Facharzt</label>
+            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="" class="radio radio-sm" /> ohne Rolle</label>
+            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Hausarzt" class="radio radio-sm" /> Hausarzt</label>
+            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Facharzt" class="radio radio-sm" /> Facharzt</label>
           </div>
 
           <!-- Cross-Uebernahme: Medikamente auch anlegen? Nur wenn ein Medikamentenplan existiert. -->
