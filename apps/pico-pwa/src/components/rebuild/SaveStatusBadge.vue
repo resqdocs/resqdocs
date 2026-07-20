@@ -6,12 +6,17 @@
  */
 import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
 
-const { saveStatus, libraryMode, retrySave } = useProtocolPersistence()
+const { saveStatus, libraryMode, libraryError, retrySave } = useProtocolPersistence()
 </script>
 
 <template>
   <span role="status" aria-live="polite" class="inline-flex items-center gap-1 text-xs">
-    <template v-if="saveStatus === 'saving'">
+    <!-- Vorrang: Bibliothek nicht lesbar -> ehrlich „nicht gespeichert", KEIN Retry (schreibt bewusst nicht). -->
+    <template v-if="libraryError">
+      <span class="text-error" aria-hidden="true">!</span>
+      <span class="text-error">Bibliothek nicht lesbar — wird nicht gespeichert</span>
+    </template>
+    <template v-else-if="saveStatus === 'saving'">
       <span class="loading loading-spinner loading-xs"></span>
       <span class="text-base-content/60">Speichert …</span>
     </template>

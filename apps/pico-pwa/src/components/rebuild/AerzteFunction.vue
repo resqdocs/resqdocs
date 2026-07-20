@@ -56,7 +56,12 @@ function setEditName(el: unknown): void {
   }
 }
 
-const summary = (r: ArztRow): string => formatArzt(r) || 'Leerer Arzt'
+const summary = (r: ArztRow): string => formatArzt(r) || 'Leerer Eintrag'
+
+/** Kontakt-Rollen (Angehörige/Betreuer): eigener Feldsatz (Name/Telefon + 2 Häkchen, kein Ort/Arztnummer). */
+function isKontakt(r: ArztRow): boolean {
+  return r.rolle === 'Angehöriger' || r.rolle === 'Betreuer'
+}
 
 function setRow(i: number, patch: Partial<ArztRow>): void {
   caseValues.setRows(
@@ -218,23 +223,39 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
             :ref="setEditName"
             class="input input-sm flex-1 font-medium"
             :value="r.name"
-            placeholder="Arzt / Praxis"
-            :aria-label="`Arzt ${i + 1} Name`"
+            :placeholder="isKontakt(r) ? 'Name' : 'Arzt / Praxis'"
+            :aria-label="`Eintrag ${i + 1} Name`"
             @input="setRow(i, { name: ($event.target as HTMLInputElement).value })"
           />
-          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Arzt ' + (i + 1)} entfernen`" @click="requestRemove(i)">✕</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Eintrag ' + (i + 1)} entfernen`" @click="requestRemove(i)">✕</button>
         </div>
         <div class="flex gap-2">
           <select class="select select-sm w-32 shrink-0" :value="r.rolle ?? ''" aria-label="Rolle" @change="setRow(i, { rolle: (($event.target as HTMLSelectElement).value || undefined) as ArztRow['rolle'] })">
             <option value="">Rolle —</option>
             <option value="Hausarzt">Hausarzt</option>
             <option value="Facharzt">Facharzt</option>
+            <option value="Angehöriger">Angehöriger</option>
+            <option value="Betreuer">Betreuer</option>
           </select>
-          <input class="input input-sm min-w-0 flex-1" :value="r.ort ?? ''" placeholder="Ort" aria-label="Ort" @input="setRow(i, { ort: ($event.target as HTMLInputElement).value })" />
+          <!-- Arzt: Ort; Kontaktperson: Ort entfällt (im Zweifel nicht relevant) -->
+          <input v-if="!isKontakt(r)" class="input input-sm min-w-0 flex-1" :value="r.ort ?? ''" placeholder="Ort" aria-label="Ort" @input="setRow(i, { ort: ($event.target as HTMLInputElement).value })" />
         </div>
         <div class="flex gap-2">
           <input class="input input-sm min-w-0 flex-1" :value="r.telefon ?? ''" placeholder="Telefon" inputmode="tel" aria-label="Telefon" @input="setRow(i, { telefon: ($event.target as HTMLInputElement).value })" />
-          <input class="input input-sm min-w-0 flex-1" :value="r.arztnummer ?? ''" placeholder="Arztnummer" aria-label="Arztnummer" @input="setRow(i, { arztnummer: ($event.target as HTMLInputElement).value })" />
+          <!-- Arztnummer nur bei Arzt-Rollen (Kontaktperson hat keine) -->
+          <input v-if="!isKontakt(r)" class="input input-sm min-w-0 flex-1" :value="r.arztnummer ?? ''" placeholder="Arztnummer" aria-label="Arztnummer" @input="setRow(i, { arztnummer: ($event.target as HTMLInputElement).value })" />
+        </div>
+        <!-- Kontaktperson: rechtliche Flags. Patientenverfügung = Dokument (§ 1827 BGB, WAS); Vollmacht/
+             Betreuung = wer entscheiden darf (Vorsorgevollmacht § 1820 / rechtl. Betreuung § 1814). -->
+        <div v-if="isKontakt(r)" class="flex flex-col gap-1">
+          <label class="flex min-h-11 items-center gap-2 py-2">
+            <input type="checkbox" class="checkbox checkbox-sm shrink-0" :checked="!!r.patientenverfuegung" aria-label="Patientenverfügung liegt vor" @change="setRow(i, { patientenverfuegung: ($event.target as HTMLInputElement).checked })" />
+            <span class="text-sm">Patientenverfügung liegt vor</span>
+          </label>
+          <label class="flex min-h-11 items-center gap-2 py-2">
+            <input type="checkbox" class="checkbox checkbox-sm shrink-0" :checked="!!r.vollmacht" aria-label="Vollmacht oder Betreuung liegt vor" @change="setRow(i, { vollmacht: ($event.target as HTMLInputElement).checked })" />
+            <span class="text-sm">Vollmacht/Betreuung liegt vor</span>
+          </label>
         </div>
         <button type="button" class="btn btn-primary btn-sm min-h-11 self-end" @click="closeEdit">Fertig</button>
       </div>
@@ -242,11 +263,11 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
 
     <!-- Unterer Zurücksetzen-Button; mb-1 setzt ihn von der Aktionsleiste ab (Proximity, Apple ≥12pt). -->
     <button v-if="rows.length" type="button" class="btn btn-ghost btn-sm mb-1 min-h-11 self-end text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
-    <p v-if="!rows.length" class="text-xs italic text-base-content/50">Noch keine Ärzte erfasst.</p>
+    <p v-if="!rows.length" class="text-xs italic text-base-content/50">Noch nichts erfasst.</p>
 
     <!-- Aktionsleiste: manuell anlegen + Plan scannen (zieht den ausstellenden Arzt aus dem BMP). -->
     <div class="flex gap-2">
-      <button type="button" class="btn btn-primary btn-sm min-h-11 grow gap-1" @click="addRow"><span aria-hidden="true">＋</span> Arzt</button>
+      <button type="button" class="btn btn-primary btn-sm min-h-11 grow gap-1" @click="addRow"><span aria-hidden="true">＋</span> Eintrag</button>
       <button type="button" class="btn btn-outline btn-sm min-h-11 grow gap-2" @click="bmpOpen = true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5 shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
         Arzt aus Plan scannen

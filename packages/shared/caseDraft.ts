@@ -46,6 +46,23 @@ export function isEmptyValues(values: Record<string, FieldFill>): boolean {
   return Object.keys(values).length === 0
 }
 
+/** Auto-Save-Timing des Entwurfs. 600 ms Trailing-Debounce (bewusst nicht enger — kein Schreib-Hammer
+ *  auf Preferences beim Tippen), mit ~2 s-Deckel gegen durchgehende Eingabe. */
+export const DRAFT_DEBOUNCE_MS = 600
+export const DRAFT_MAX_WAIT_MS = 2000
+
+/** Wartezeit (ms) bis zum naechsten Auto-Save: `debounceMs` nach Ruhe, ABER spaetestens `maxWaitMs`
+ *  nach der ERSTEN Aenderung des Bursts (`pendingSince`). Ohne den Deckel bliebe waehrend
+ *  durchgehender Eingabe nichts persistiert, weil der Timer bei jeder Aenderung neu startet. */
+export function nextDraftDebounceWait(
+  pendingSince: number,
+  now: number,
+  debounceMs: number = DRAFT_DEBOUNCE_MS,
+  maxWaitMs: number = DRAFT_MAX_WAIT_MS,
+): number {
+  return Math.min(debounceMs, Math.max(0, pendingSince + maxWaitMs - now))
+}
+
 /** Abgelaufen, sobald die Inaktivitaets-Frist erreicht ist (now >= expiresAt). */
 export function isDraftExpired(draft: ReworkCaseDraft, now: number): boolean {
   return now >= draft.expiresAt

@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.3.0] - 2026-07-20
+
+### Features
+
+- Optional cloud backup of your templates, blocks and text snippets to a hidden, app-private folder of your iCloud (iPhone/iPad) or Google account (Android), with restore on a new device; backups run automatically in the background and you restore by picking a snapshot from the history
+- Automatic local backups of your library that you can share and import again
+- Progress indicator when saving and importing large medication-code (PZN) libraries, so the app no longer freezes
+
+### Bug Fixes
+
+- Never overwrite the library when individual entries are unreadable (partial corruption)
+- Report errors when opening or restoring the library instead of silently discarding them
+- Various stability improvements
+
+### Changed
+
+- Clearer factory reset that resets the app in a single step and deletes patient data first
+
 ## [1.2.1] - 2026-07-14
 
 ### Features

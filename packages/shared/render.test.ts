@@ -602,19 +602,19 @@ test('#55: Funktion inline wie ein Feld (Score UND Liste); nur Titel-Banner blei
 
   // inline hinter einem Feld -> eine Zeile mit Separator
   const inlineTree: Container = { type: 'container', id: 'r', separator: ', ', children: [feld, py({ inline: true })] }
-  assert.equal(render(inlineTree, vals), 'A: x, Pack-Years: ≈23 py (30/Tag, 15 J.)')
+  assert.equal(render(inlineTree, vals), 'A: x, Pack-Years: ca. 23 py (30/Tag, 15 J.)')
 
   // noSeparatorBefore -> klebt ohne Trenner
   const glueTree: Container = { type: 'container', id: 'r', separator: ', ', children: [feld, py({ inline: true, noSeparatorBefore: true })] }
-  assert.equal(render(glueTree, vals), 'A: xPack-Years: ≈23 py (30/Tag, 15 J.)')
+  assert.equal(render(glueTree, vals), 'A: xPack-Years: ca. 23 py (30/Tag, 15 J.)')
 
   // ohne inline -> eigene Zeile (Default block)
   const blockTree: Container = { type: 'container', id: 'r', separator: ', ', children: [feld, py({})] }
-  assert.equal(render(blockTree, vals), 'A: x\nPack-Years: ≈23 py (30/Tag, 15 J.)')
+  assert.equal(render(blockTree, vals), 'A: x\nPack-Years: ca. 23 py (30/Tag, 15 J.)')
 
   // Banner-Score (titleInline nicht true) mit inline -> bleibt Block (nie inline gejoint)
   const bannerTree: Container = { type: 'container', id: 'r', separator: ', ', children: [feld, { type: 'function', id: 'py', functionKind: 'packYears', title: 'Pack-Years', showTitle: true, heading: H('## ', ''), inline: true }] }
-  assert.equal(render(bannerTree, vals), 'A: x\n## Pack-Years\n≈23 py (30/Tag, 15 J.)')
+  assert.equal(render(bannerTree, vals), 'A: x\n## Pack-Years\nca. 23 py (30/Tag, 15 J.)')
 
   // Funktion mit TITEL-BANNER (Titel auf eigener Zeile) bleibt Block, auch mit inline=true - wie ein Banner-Feld.
   const bannerList: Container = { type: 'container', id: 'r', separator: ', ', children: [feld, { type: 'function', id: 'mp', functionKind: 'medikamentenplan', title: 'Medikamente', showTitle: true, heading: H('', ''), inline: true }] }

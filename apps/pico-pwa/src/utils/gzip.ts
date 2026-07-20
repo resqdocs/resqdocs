@@ -68,3 +68,24 @@ export function bytesToBase64(bytes: Uint8Array): string {
   }
   return btoa(bin)
 }
+
+/** Wie bytesToBase64, aber NICHT-blockierend: gibt regelmäßig dem Event-Loop das Zeichnen frei (yield) und
+ *  meldet Fortschritt. Für große PZN-Backups, damit die UI beim Packen nicht einfriert. */
+export async function bytesToBase64Async(
+  bytes: Uint8Array,
+  onProgress?: (done: number, total: number) => void,
+): Promise<string> {
+  let bin = ''
+  const CHUNK = 0x8000
+  let sinceYield = 0
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
+    if (++sinceYield >= 16) {
+      sinceYield = 0
+      onProgress?.(Math.min(i + CHUNK, bytes.length), bytes.length)
+      await new Promise((r) => setTimeout(r)) // Macrotask-Yield -> UI kann zeichnen
+    }
+  }
+  onProgress?.(bytes.length, bytes.length)
+  return btoa(bin)
+}

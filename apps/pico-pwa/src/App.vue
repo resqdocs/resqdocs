@@ -16,7 +16,7 @@ import { configureNativeRepositories } from '@/rebuild/configureNativeRepositori
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { usePznNotice } from '@/medications/usePznNotice'
 import { PZN_DICTIONARY_ENABLED } from '@/medications/featureFlags'
-import { useTemporaryCaseDraft } from '@/composables/useTemporaryCaseDraft'
+import { useReworkCaseDraft } from '@/rebuild/useReworkCaseDraft'
 import { useUsageNotice } from '@/composables/useUsageNotice'
 
 // Rework-Repositories auf die native Capacitor/SQLite-Schicht verdrahten (Web bleibt Memory). MUSS vor
@@ -106,7 +106,9 @@ watch(activeTab, (t) => {
 // Temporärer Einsatzentwurf (#173): Ablaufprüfung beim App-Resume und sparsam
 // periodisch, solange die App offen ist. `visibilitychange` deckt iOS/Android-
 // WebView (Vorder-/Hintergrund) UND Web ab — ohne zusätzliche Capacitor-Plugins.
-const draft = useTemporaryCaseDraft()
+// Der LIVE-Entwurf (Rework): ohne diese laufende Prüfung liefe die Ablaufzeit nie
+// ab, solange die App offen bleibt — im Dienst also praktisch nie.
+const draft = useReworkCaseDraft()
 function onVisible(): void {
   if (document.visibilityState === 'visible') { void draft.checkExpiry(); void check() } // beim Zurückkehren Bridge gleich neu prüfen
 }
@@ -185,13 +187,13 @@ onBeforeUnmount(() => {
          komfortabel schmal bleiben. (frueher: eine geteilte max-w-5xl-Deckelung, #23) -->
     <main class="flex w-full flex-col gap-4 p-4 md:p-6">
       <!-- Einsatz — Neuaufbau. Die fruehere Einsatz-Ansicht (ProtocolRuntimeView) wurde entfernt;
-           bei Bedarf im Git-Tag alterstand nachschlagbar. -->
+           bei Bedarf in der Git-Historie nachschlagbar. -->
       <div v-show="activeTab === 'einsatz'" class="mx-auto flex w-full max-w-xl flex-col gap-4 md:max-w-3xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[110rem]">
         <EinsatzView />
       </div>
 
       <!-- Vorlagen-Editor — Neuaufbau. Der fruehere Editor (ProtocolsTab / protocols/editor/*) wurde
-           entfernt; bei Bedarf im Git-Tag alterstand nachschlagbar. -->
+           entfernt; bei Bedarf in der Git-Historie nachschlagbar. -->
       <!-- Editor = Werkzeug: waechst mit dem Screen. Breite aligned mit dem 3-Spalten-Grid (lg) + weiter auf xl/2xl. -->
       <div v-show="activeTab === 'protokolle'" class="mx-auto w-full max-w-xl md:max-w-3xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[110rem]">
         <EditorView />

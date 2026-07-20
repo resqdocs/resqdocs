@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Zweitnetz gegen Versions-Drift (GAP 4): blockt das Pushen eines Release-Tags vX.Y.Z, solange
+# package.json / Android versionName / iOS MARKETING_VERSION nicht übereinstimmen.
+# Aktivieren (einmalig, pro Klon):  git config core.hooksPath .githooks
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+blocked=0
+
+# stdin: <local ref> <local sha> <remote ref> <remote sha>  je gepushter Ref
+while read -r _localref _localsha remoteref _remotesha; do
+  if [[ "$remoteref" == refs/tags/v* ]]; then
+    if ! node "$ROOT/apps/pico-pwa/scripts/check-version-consistency.mjs"; then
+      echo "✖ pre-push: Versions-Inkonsistenz — Tag ${remoteref#refs/tags/} NICHT gepusht." >&2
+      blocked=1
+    fi
+  fi
+done
+
+exit "$blocked"
