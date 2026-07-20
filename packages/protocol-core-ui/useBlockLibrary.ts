@@ -80,7 +80,21 @@ function create() {
     }
   }
 
-  return { blocks, loaded, libraryMode, reload, addBausteinFromContainer, renameBlock, deleteBlock }
+  /** „Alles lokal zuruecksetzen" (Datenschutz): Baustein-Bibliothek wirklich leeren. Optimistisch wie
+   *  die uebrigen Schreibwege; bei Fehler aus der Persistenz zurueckholen. Das Repository ist hier
+   *  memoisiert -> der Reset MUSS ueber diesen Weg laufen, damit er dieselbe Instanz trifft.
+   *  Kein Seed: eine leere Baustein-Bibliothek ist ein gueltiger Zustand. */
+  async function resetLibrary(): Promise<void> {
+    blocks.value = []
+    loaded.value = true
+    try {
+      await (await getBlockRepository()).reset()
+    } catch {
+      await reload().catch(() => {})
+    }
+  }
+
+  return { blocks, loaded, libraryMode, reload, addBausteinFromContainer, renameBlock, deleteBlock, resetLibrary }
 }
 
 export function useBlockLibrary() {

@@ -6,7 +6,7 @@
 // korrupte/fremde Dateien sauber als ungültig (null) abweisen — OHNE zu werfen.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { decodeMaybeGzip } from './gzip.ts'
+import { decodeMaybeGzip, bytesToBase64, bytesToBase64Async } from './gzip.ts'
 
 const JSON_TEXT = '{"version":2,"entries":{"00012345":"Aspirin","00524306":{"wirkstoff":"Ibuprofen","label":"Ibu 400","category":"","note":""}}}'
 
@@ -65,4 +65,28 @@ test('decodeMaybeGzip: Nicht-gzip-Binär (PNG) → kein Throw; JSON.parse weist 
   await assert.doesNotReject(async () => { out = await decodeMaybeGzip(png) })
   assert.notEqual(out, 'unset') // hat zurückgegeben (nicht geworfen)
   assert.throws(() => JSON.parse(out as unknown as string)) // kein gültiges JSON → ungültig
+})
+
+// bytesToBase64Async: nicht-blockierende base64-Kodierung fürs große PZN-Packen. Muss byte-identisch zur
+// synchronen Variante sein und Fortschritt melden (sonst wäre die UI-Progress-Bar falsch).
+test('bytesToBase64Async == bytesToBase64 (identisches Ergebnis) + Fortschritt', async () => {
+  // groß genug, dass der 16-Chunk-Yield (16 * 0x8000 = 512 KB) mehrfach greift und onProgress mit done<total feuert
+  const bytes = new Uint8Array(1_500_000)
+  for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 31 + 7) & 0xff
+  const seen: Array<{ done: number; total: number }> = []
+  const b64 = await bytesToBase64Async(bytes, (done, total) => seen.push({ done, total }))
+  assert.equal(b64, bytesToBase64(bytes), 'async-base64 muss byte-identisch zur sync-Variante sein')
+  assert.ok(seen.length >= 2, 'onProgress muss mehrfach feuern')
+  assert.ok(
+    seen.some((p) => p.done < p.total),
+    'mindestens ein Zwischenstand (done<total)',
+  )
+  const last = seen[seen.length - 1]
+  assert.equal(last.done, last.total, 'letzter Fortschritt ist 100 %')
+})
+
+test('bytesToBase64Async: leere und kleine Eingabe korrekt', async () => {
+  assert.equal(await bytesToBase64Async(new Uint8Array(0)), '')
+  const small = new Uint8Array([1, 2, 3, 4, 5])
+  assert.equal(await bytesToBase64Async(small), bytesToBase64(small))
 })

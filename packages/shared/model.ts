@@ -147,15 +147,23 @@ export interface MedikamenteRow {
   pzn?: string
 }
 
-/** Eine Aerzte-Zeile (Funktion Aerzte). name pflicht (wie MedikamenteRow), Rest optional -> ein gescannter
- *  Arzt kommt immer in die Liste, auch ohne Rolle. arztnummer = ein freies Feld (LANR/IK/IDF gemischt). */
+/** Eine Zeile der Funktion „Ärzte & Kontaktpersonen". name pflicht (wie MedikamenteRow), Rest optional
+ *  -> ein gescannter Arzt kommt immer in die Liste, auch ohne Rolle. arztnummer = ein freies Feld
+ *  (LANR/IK/IDF gemischt). Angehörige/Betreuer = Kontaktperson-Feldsatz (Name/Telefon + zwei Flags,
+ *  KEIN Arztnummer/Ort); der BMP-Cross-Scan liefert immer nur Hausarzt/Facharzt (nie eine Kontakt-Rolle). */
 export interface ArztRow {
   name: string
-  /** Hausarzt|Facharzt - der BMP liefert das nicht; leer = nicht dokumentiert. */
-  rolle?: 'Hausarzt' | 'Facharzt'
+  /** Hausarzt/Facharzt = Arzt-Feldsatz; Angehöriger/Betreuer = Kontaktperson-Feldsatz. Leer = nicht
+   *  dokumentiert. Der BMP liefert nur Hausarzt/Facharzt. */
+  rolle?: 'Hausarzt' | 'Facharzt' | 'Angehöriger' | 'Betreuer'
   ort?: string
   telefon?: string
   arztnummer?: string
+  /** nur Kontakt-Rollen: Patientenverfügung (Dokument, § 1827 BGB — WAS zu tun ist) liegt vor. */
+  patientenverfuegung?: boolean
+  /** nur Kontakt-Rollen: Vorsorgevollmacht (§ 1820 BGB) bzw. rechtliche Betreuung (§ 1814 BGB) —
+   *  WER jetzt entscheiden darf — liegt vor. */
+  vollmacht?: boolean
 }
 
 /** Eingabe der Funktion „Pack-Years" (#55-Rework): genau EINE Zeile pro Score-Knoten, reine Zahlen.

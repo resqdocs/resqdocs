@@ -64,16 +64,16 @@ test('renderBody: namelose Zeilen gefiltert (beide Layouts); leer -> ""', () => 
 })
 
 // --- Funktion „Pack-Years" (#55-Rework) ---
-test('packYears (#55): kaufmännisch gerundete GANZE py, „≈" wenn gerundet; unvollständig -> leer', () => {
+test('packYears (#55): kaufmännisch gerundete GANZE py, „ca." wenn gerundet; unvollständig -> leer', () => {
   const def = FUNCTION_REGISTRY.packYears
   const fill = (rows: unknown[]): FieldFill => ({ state: 'function', rows } as FieldFill)
   assert.equal(def.label, 'Pack-Years')
-  // 22,5 -> kaufmännisch 23, gerundet -> „≈"
-  assert.equal(def.renderBody(fill([{ cigarettesPerDay: 30, years: 15 }])), '≈23 py (30/Tag, 15 J.)')
+  // 22,5 -> kaufmännisch 23, gerundet -> „ca."
+  assert.equal(def.renderBody(fill([{ cigarettesPerDay: 30, years: 15 }])), 'ca. 23 py (30/Tag, 15 J.)')
   // glatt 10 -> ohne Zeichen
   assert.equal(def.renderBody(fill([{ cigarettesPerDay: 20, years: 10 }])), '10 py (20/Tag, 10 J.)')
   // 15,5 -> 16 (Beispiel des Maintainers)
-  assert.equal(def.renderBody(fill([{ cigarettesPerDay: 31, years: 10 }])), '≈16 py (31/Tag, 10 J.)')
+  assert.equal(def.renderBody(fill([{ cigarettesPerDay: 31, years: 10 }])), 'ca. 16 py (31/Tag, 10 J.)')
   assert.equal(def.hasData(fill([{ cigarettesPerDay: 30, years: 15 }])), true)
   // unvollstaendig -> keine Ausgabe, keine Daten
   assert.equal(def.renderBody(fill([{ cigarettesPerDay: 30 }])), '')
@@ -82,9 +82,9 @@ test('packYears (#55): kaufmännisch gerundete GANZE py, „≈" wenn gerundet; 
   assert.equal(def.hasData(undefined), false)
   // 0 ist ein gueltiger Wert (Nichtraucher-Doku), glatt -> ohne Zeichen
   assert.equal(def.renderBody(fill([{ cigarettesPerDay: 0, years: 0 }])), '0 py (0/Tag, 0 J.)')
-  // sampleFill (Editor-Vorschau): festes Demo-Fill -> renderBody zeigt das gerundete „≈"-Format
+  // sampleFill (Editor-Vorschau): festes Demo-Fill -> renderBody zeigt das gerundete „ca."-Format
   assert.ok(def.sampleFill)
-  assert.equal(def.renderBody(def.sampleFill!()), '≈23 py (30/Tag, 15 J.)')
+  assert.equal(def.renderBody(def.sampleFill!()), 'ca. 23 py (30/Tag, 15 J.)')
 })
 
 test('sampleFill (#55): Listen-Funktionen liefern Muster-Zeilen fuer die Editor-Vorschau', () => {
@@ -99,8 +99,8 @@ test('sampleFill (#55): Listen-Funktionen liefern Muster-Zeilen fuer die Editor-
   const arzt = FUNCTION_REGISTRY.aerzte
   assert.ok(arzt.sampleFill)
   const arztOut = arzt.renderBody(arzt.sampleFill!())
-  assert.match(arztOut, /\(Hausarzt\)/)
-  assert.match(arztOut, /\(Facharzt\)/)
+  assert.match(arztOut, /\(Hausarzt\)/) // Muster-Arzt
+  assert.match(arztOut, /\(Angehöriger\), Tel\. .*Patientenverfügung \+ Vollmacht\/Betreuung vorhanden/) // Muster-Kontaktperson
 })
 
 test('news2 (#55): „NEWS2 Score (Risiko …) - Kernwerte"; unvollständig -> leer; scale2 schaltet Skala 2', () => {
@@ -146,6 +146,21 @@ test('formatArzt: Name [(Rolle)][, Ort, Tel. ..., Arztnr. ...]', () => {
   )
 })
 
+test('formatArzt Kontaktperson (Angehörige/Betreuer): Name (Rolle)[, Tel.][, Flags vorhanden]; kein Ort/Arztnr.', () => {
+  assert.equal(formatArzt({ name: 'Max Muster', rolle: 'Angehöriger' }), 'Max Muster (Angehöriger)')
+  assert.equal(
+    formatArzt({ name: 'Max Muster', rolle: 'Angehöriger', telefon: '0170 1234567', patientenverfuegung: true, vollmacht: true }),
+    'Max Muster (Angehöriger), Tel. 0170 1234567, Patientenverfügung + Vollmacht/Betreuung vorhanden',
+  )
+  // nur ein Flag
+  assert.equal(formatArzt({ name: 'Erika M.', rolle: 'Betreuer', patientenverfuegung: true }), 'Erika M. (Betreuer), Patientenverfügung vorhanden')
+  assert.equal(formatArzt({ name: 'Erika M.', rolle: 'Betreuer', vollmacht: true }), 'Erika M. (Betreuer), Vollmacht/Betreuung vorhanden')
+  // Kontakt ignoriert Arzt-Felder (Ort/Arztnummer) in der AUSGABE, selbst wenn gesetzt
+  assert.equal(formatArzt({ name: 'Max', rolle: 'Angehöriger', ort: 'Kiel', arztnummer: '999' }), 'Max (Angehöriger)')
+  // namenlos-robust (keine führenden Trenner)
+  assert.equal(formatArzt({ name: '', rolle: 'Angehöriger', telefon: '0170' }), '(Angehöriger), Tel. 0170')
+})
+
 test('aerzte.renderBody: block (Default) + inline; namelose gefiltert; leer -> ""', () => {
   const A: ArztRow[] = [
     { name: 'Dr. A', rolle: 'Hausarzt' },
@@ -177,6 +192,9 @@ test('medikamentRowHasData/arztRowHasData (#260): jede Eingabe zaehlt, Whitespac
   assert.equal(arztRowHasData({ name: '', ort: ' ' }), false)
   assert.equal(arztRowHasData({ name: '', telefon: '0431' }), true)
   assert.equal(arztRowHasData({ name: '', arztnummer: '123456789' }), true)
+  // Kontakt-Flags zaehlen ebenfalls als Nutzereingabe (sonst wuerde eine reine Haken-Zeile stumm verworfen)
+  assert.equal(arztRowHasData({ name: '', rolle: 'Angehöriger', patientenverfuegung: true }), true)
+  assert.equal(arztRowHasData({ name: '', vollmacht: true }), true)
 })
 
 test('singleLine-Vertrag (#55): jede einzeilige Score-Funktion rendert NIE einen Zeilenumbruch', () => {

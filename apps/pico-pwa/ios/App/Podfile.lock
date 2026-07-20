@@ -1,14 +1,16 @@
 PODS:
-  - Capacitor (8.4.0):
+  - Capacitor (8.4.1):
     - CapacitorCordova
-  - CapacitorCamera (8.2.0):
+  - CapacitorApp (8.1.0):
+    - Capacitor
+  - CapacitorCamera (8.2.1):
     - Capacitor
     - IONCameraLib (~> 1.0.4)
   - CapacitorCommunitySqlite (8.1.0):
     - Capacitor
     - SQLCipher
     - ZIPFoundation
-  - CapacitorCordova (8.4.0)
+  - CapacitorCordova (8.4.1)
   - CapacitorFilesystem (8.1.2):
     - Capacitor
     - IONFilesystemLib (~> 1.1.1)
@@ -29,6 +31,7 @@ PODS:
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
   - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
   - "CapacitorCommunitySqlite (from `../../node_modules/@capacitor-community/sqlite`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
@@ -47,6 +50,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../node_modules/@capacitor/app"
   CapacitorCamera:
     :path: "../../node_modules/@capacitor/camera"
   CapacitorCommunitySqlite:
@@ -63,10 +68,11 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/share"
 
 SPEC CHECKSUMS:
-  Capacitor: 75bd117ba037a51bb0f19ded32c67f4b3bc16600
-  CapacitorCamera: 8f6acf83664118321111e76acef86390211ccb08
+  Capacitor: 35242afe195b1e53c58ca1b827d1b444c5e6602b
+  CapacitorApp: 449ffe26375e96f8aaaee625ac6e01e5c57c8650
+  CapacitorCamera: 1b9dde3aaffbd1f051486f4cee2b4cdd962662ae
   CapacitorCommunitySqlite: eac6acfb852f46e7988fc59604d7f900498d354e
-  CapacitorCordova: 71d81f350e6c30bf2a846593b5c480fbd68e9bac
+  CapacitorCordova: eebe6bcf807b1b06f3f48237650f96bbcd0eef09
   CapacitorFilesystem: 2db285a1ac6e475cc27cae2e1bea999000f9e2be
   CapacitorNativeSettings: d512b84fdcc04948c32f267621079a0d7c0d452f
   CapacitorPreferences: cca2021f386efb75947c850334447d9ff22b14f1
@@ -76,6 +82,6 @@ SPEC CHECKSUMS:
   SQLCipher: eb79c64049cb002b4e9fcb30edb7979bf4706dfc
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: 1218e9b70438a4cc383e5e817476f63d05a11984
+PODFILE CHECKSUM: d647910ee1058573771a75bb2cb4ac1d2ec8da16
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.17.0

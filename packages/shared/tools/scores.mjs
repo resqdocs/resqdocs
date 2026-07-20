@@ -28,11 +28,13 @@ export function packYears({ cigarettesPerDay, years }) {
 }
 
 // Rework-Kurzform der Packungsjahre (#55): kaufmaennisch auf eine GANZE Zahl gerundet (round half up;
-// Pack-Years sind stets >= 0); ein „≈" davor, WENN gerundet wurde (exakte glatte Werte ohne Zeichen).
+// Pack-Years sind stets >= 0); „ca. " davor, WENN gerundet wurde (exakte glatte Werte ohne Praefix).
+// BEWUSST „ca." statt „≈": das Ungefaehr-Zeichen tippt die Bridge auf dem NIDA-Windows-Layout nicht
+// sauber (nicht in der de_DE-Keystroke-Tabelle der Firmware).
 export function packYearsShort(raw) {
   const r = Number(raw);
   const rounded = Math.round(r);
-  return `${Math.abs(r - rounded) > 1e-9 ? '≈' : ''}${rounded} py`;
+  return `${Math.abs(r - rounded) > 1e-9 ? 'ca. ' : ''}${rounded} py`;
 }
 
 // --- BMI ------------------------------------------------------------------------
