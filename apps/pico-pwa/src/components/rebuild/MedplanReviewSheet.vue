@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * BMP-Plan-Scan + Review-Sheet (Rework, Slice 3b). GESTALTERISCHES Rework: die erprobte dev-Scan-/
- * Review-LOGIK (useMedplanScan, PZN-Lookup, Aussteller-Opt-in, Einzel-Transfer, Datenschutz) wird
- * 1:1 portiert (aus MedplanScanSection.vue); nur das Template ist neu (Bottom-Sheet, Rework-Stil).
+ * BMP-Plan-Scan + Review-Sheet (Rework, Slice 3b). Traegt die erprobte Scan-/Review-LOGIK
+ * (useMedplanScan, PZN-Lookup, Aussteller-Opt-in, Einzel-Transfer, Datenschutz) im Bottom-Sheet
+ * des Rework-Stils. Dies ist die LIVE-Komponente des BMP-Scans.
  *
  * Maintainer-Entscheid: bei mehreren Medikamenten auf einmal ein editierbarer Review-Schritt vor der
  * Uebernahme. DSGVO: Roh-Scan + Entwurf nur im RAM (useMedplanScan), reset() verwirft alles; erst

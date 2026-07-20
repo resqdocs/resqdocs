@@ -163,7 +163,7 @@ test('previewValues (#55): feste Beispielwerte fuer JEDE Funktion mit sampleFill
   assert.deepEqual(vals.py, { state: 'function', rows: [{ cigarettesPerDay: 30, years: 15 }] })
   // End-to-end: mit diesen Werten werden Score UND Medikamente in der Vorschau-Ausgabe sichtbar.
   const out = render(root, vals)
-  assert.ok(out.includes('≈23 py (30/Tag, 15 J.)'))
+  assert.ok(out.includes('ca. 23 py (30/Tag, 15 J.)'))
   assert.ok(out.includes('Beispiel-Wirkstoff A 500 mg, 1-0-1'))
   // Ohne previewValues (leere Werte = Einsatz-Start) bleiben die Funktions-Bodies leer (nur der Titel).
   assert.ok(!render(root).includes('py ('))

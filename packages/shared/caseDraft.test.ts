@@ -1,7 +1,7 @@
 // Laeuft mit:  node --test --experimental-strip-types
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { clampTtlHours, touchDraft, isDraftExpired, parseDraft } from './caseDraft.ts'
+import { clampTtlHours, touchDraft, isDraftExpired, parseDraft, nextDraftDebounceWait } from './caseDraft.ts'
 import { createReworkCaseDraftRepository, REWORK_CASE_DRAFT_KEY } from './caseDraftRepository.ts'
 import type { KeyValueAdapter } from './adapters.ts'
 
@@ -23,6 +23,21 @@ function fakeAdapter(): KeyValueAdapter & { store: Map<string, string> } {
     },
   }
 }
+
+test('nextDraftDebounceWait: 600ms nach Ruhe, aber ~2s-Deckel bei durchgehender Eingabe', () => {
+  // Erste Aenderung des Bursts (pendingSince == now): voller Debounce.
+  assert.equal(nextDraftDebounceWait(1000, 1000), 600)
+  // Aenderung 500ms spaeter, Deckel noch weit weg -> weiter voller Debounce.
+  assert.equal(nextDraftDebounceWait(1000, 1500), 600)
+  // Nahe am Deckel (1900ms seit Burst-Start): nur noch bis zum Deckel warten.
+  assert.equal(nextDraftDebounceWait(0, 1900), 100)
+  // Deckel erreicht -> sofort (0) schreiben, statt den Timer weiter aufzuschieben.
+  assert.equal(nextDraftDebounceWait(0, 2000), 0)
+  assert.equal(nextDraftDebounceWait(0, 5000), 0) // ueberschritten -> nie negativ
+  // Konfigurierbar: eigener Debounce/Deckel.
+  assert.equal(nextDraftDebounceWait(0, 250, 300, 1000), 300)
+  assert.equal(nextDraftDebounceWait(0, 900, 300, 1000), 100)
+})
 
 test('clampTtlHours: Bereich 1-5, Default 3', () => {
   assert.equal(clampTtlHours(3), 3)

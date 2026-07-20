@@ -1,8 +1,8 @@
 # Protokoll-Kreator — MVP-Spezifikation (#13)
 
 > ⚠️ **Beschreibt den Pre-Rework-Stand** (altes Modell). Der In-App-Editor wurde reworked;
-> aktuelle Wahrheit für App+Package: [`docs/rework/`](rework/README.md). Historischer Stand am
-> Git-Tag `alterstand`.
+> aktuelle Wahrheit für App+Package: [`docs/rework/`](rework/README.md). Historischer Stand in
+> der Git-Historie.
 >
 > **Entscheidungsreife Spezifikation** des Protokoll-Kreators (Tab *Protokolle*) **vor** der
 > Implementierung. Status: **Entwurf (0.x)** — `1.0`/MVP-Zeitpunkt deklariert der Maintainer.

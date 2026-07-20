@@ -11,6 +11,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Build-Guard (Vorfall 1.2.1): bricht HART ab, wenn Web-Version (package.json) != nativer Store-Version.
+echo "==> Versions-Konsistenz prüfen"
+node scripts/check-version-consistency.mjs
+
 echo "==> npm install"
 npm install
 

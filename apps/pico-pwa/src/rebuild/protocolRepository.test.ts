@@ -1,7 +1,7 @@
 // Laeuft mit:  node --test --experimental-strip-types
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createReworkRepositoryOnClient, createMemoryProtocolRepository, isValidProtocolTree, loadOrSeed, syncProtocols } from '@resqdocs/protocol-core/protocolRepository'
+import { createReworkRepositoryOnClient, createMemoryProtocolRepository, isValidProtocolTree, loadOrSeed, syncProtocols, ProtocolLibraryUnreadableError } from '@resqdocs/protocol-core/protocolRepository'
 import { createContainer, createField, addChild } from '@resqdocs/protocol-core/creator'
 import { createFakeSqlClient } from '../storage/sqlite/fakeSqlClient.ts'
 import { runMigrations } from '../storage/sqlite/sqliteMigrations.ts'
@@ -106,6 +106,63 @@ test('loadOrSeed: leere Bibliothek -> seedet + speichert; gefuellte -> laedt', a
   const second = await loadOrSeed(repo, [sample('anders', 'Anders')])
   assert.equal(second.length, 1)
   assert.equal(second[0].id, 'seed')
+})
+
+test('DATENVERLUST-SCHUTZ: loadOrSeed wirft + LÖSCHT NICHT, wenn Zeilen da sind aber loadAll leer liefert', async () => {
+  const client = createFakeSqlClient()
+  await runMigrations(client)
+  const repo = createReworkRepositoryOnClient(client, () => FIXED)
+  // Zwei Zeilen, die loadAll NICHT lesen kann (defektes JSON) -> loadAll = [], aber count = 2.
+  // GENAU das Szenario, das ohne Schutz zum Datenverlust führte (loadOrSeed -> replaceAll löscht sie).
+  await client.run('INSERT OR REPLACE INTO rework_protocols (id, title, protocol_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)', ['x', 'X', '{kaputt', FIXED, FIXED])
+  await client.run('INSERT OR REPLACE INTO rework_protocols (id, title, protocol_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)', ['y', 'Y', 'auch kaputt', FIXED, FIXED])
+  assert.equal((await repo.loadAll()).length, 0)
+  assert.equal(await repo.count(), 2)
+  await assert.rejects(() => loadOrSeed(repo, [sample('seed', 'Seed')]), ProtocolLibraryUnreadableError)
+  assert.equal(await repo.count(), 2, 'die unlesbaren Zeilen müssen unangetastet bleiben')
+})
+
+test('DATENVERLUST-SCHUTZ: replaceAll LÖSCHT NICHT die unlesbaren Zeilen (Teilkorruption)', async () => {
+  const client = createFakeSqlClient()
+  await runMigrations(client)
+  const repo = createReworkRepositoryOnClient(client, () => FIXED)
+  // 2 lesbare + 1 unlesbare Zeile. loadAll liefert die 2 lesbaren -> der Nutzer sah die unlesbare NIE.
+  await repo.save(sample('gut1', 'Gut 1'))
+  await repo.save(sample('gut2', 'Gut 2'))
+  await client.run('INSERT OR REPLACE INTO rework_protocols (id, title, protocol_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)', ['kaputt', 'Kaputt', '{nicht json', FIXED, FIXED])
+  assert.equal((await repo.loadAll()).length, 2)
+  assert.equal(await repo.count(), 3)
+  // Auto-Save spiegelt NUR den geladenen (lesbaren) Arbeitsstand zurück — GENAU der Pfad, der bisher
+  // die unlesbare Zeile löschte (sie fehlt in `keep`). Nach dem Fix muss sie erhalten bleiben.
+  await syncProtocols(repo, await repo.loadAll())
+  assert.equal(await repo.count(), 3, 'die unlesbare Zeile muss erhalten bleiben')
+  assert.deepEqual((await repo.loadAll()).map((p) => p.id).sort(), ['gut1', 'gut2'])
+  // Gegenprobe: eine LESBARE Vorlage, die der Nutzer bewusst entfernt, wird weiterhin gelöscht.
+  await syncProtocols(repo, [sample('gut1', 'Gut 1')])
+  assert.equal((await repo.loadAll()).map((p) => p.id).join(), 'gut1')
+  assert.equal(await repo.count(), 2, 'unlesbare Zeile bleibt, nur die bewusst entfernte lesbare geht')
+})
+
+test('loadOrSeed: leere Tabelle -> seedet ADDITIV via save (kein replaceAll)', async () => {
+  const client = createFakeSqlClient()
+  await runMigrations(client)
+  const repo = createReworkRepositoryOnClient(client, () => FIXED)
+  assert.equal(await repo.count(), 0)
+  const seeded = await loadOrSeed(repo, [sample('seed', 'Seed')])
+  assert.equal(seeded.length, 1)
+  assert.equal(await repo.count(), 1)
+})
+
+test('count(): Roh-Zeilenzahl inkl. unlesbarer Zeilen (Memory + SQLite)', async () => {
+  const mem = createMemoryProtocolRepository([sample('a', 'A')])
+  assert.equal(await mem.count(), 1)
+  const client = createFakeSqlClient()
+  await runMigrations(client)
+  const repo = createReworkRepositoryOnClient(client, () => FIXED)
+  await repo.save(sample('ok', 'Gut'))
+  await client.run('INSERT OR REPLACE INTO rework_protocols (id, title, protocol_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)', ['bad', 'Kaputt', '{kaputt', FIXED, FIXED])
+  assert.equal(await repo.count(), 2) // zählt auch die unlesbare Zeile
+  assert.equal((await repo.loadAll()).length, 1) // loadAll filtert sie raus
 })
 
 test('syncProtocols: upsert vorhandene + loesche entfernte', async () => {

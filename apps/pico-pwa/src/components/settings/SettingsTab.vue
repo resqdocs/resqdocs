@@ -11,6 +11,7 @@ import PznSection from './PznSection.vue'
 import PznLibraryPage from './PznLibraryPage.vue'
 import ScannerSection from './ScannerSection.vue'
 import PrivacyDataSection from './PrivacyDataSection.vue'
+import BackupSection from './BackupSection.vue'
 import InfoHelpSection from './InfoHelpSection.vue'
 import LegalSection from './LegalSection.vue'
 import OpenSourceSection from './OpenSourceSection.vue'
@@ -125,6 +126,14 @@ watch(page, (p) => {
         <PrivacyDataSection />
         <!-- Altes PZN-Wörterbuch (Netz-Download) — deaktiviert (IFA/DSGVO), nur sichtbar wenn Flag an. -->
         <PznSection v-if="PZN_DICTIONARY_ENABLED" />
+      </div>
+    </div>
+
+    <div class="collapse collapse-arrow bg-base-100 shadow">
+      <input type="checkbox" aria-label="Sicherung und Wiederherstellung ein- oder ausklappen" />
+      <div class="collapse-title min-h-11 font-semibold">Sicherung &amp; Wiederherstellung</div>
+      <div class="collapse-content flex flex-col gap-4">
+        <BackupSection />
       </div>
     </div>
 

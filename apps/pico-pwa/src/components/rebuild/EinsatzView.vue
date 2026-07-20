@@ -10,8 +10,10 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
 import { resolveInitialProtocolId } from '@resqdocs/protocol-core/library'
+import { App } from '@capacitor/app'
+import type { PluginListenerHandle } from '@capacitor/core'
 import { useReworkCaseDraft } from '@/rebuild/useReworkCaseDraft'
-import { CASE_DRAFT_DELETED_NOTICE, type ReworkCaseDraft } from '@resqdocs/protocol-core/caseDraft'
+import { CASE_DRAFT_DELETED_NOTICE, nextDraftDebounceWait, type ReworkCaseDraft } from '@resqdocs/protocol-core/caseDraft'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { usePicoApi, type OsMode } from '@/composables/usePicoApi'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
@@ -41,15 +43,45 @@ function showDraftNotice(text: string): void {
     if (draftNotice.value === text) draftNotice.value = null
   }, 6000)
 }
-// Debounce-Timer des Auto-Saves zentral - damit confirmReset/applySwitch ihn VOR dem Loeschen
-// abbrechen koennen (sonst schriebe ein Trailing-Save den gerade geloeschten Entwurf neu).
+// Auto-Save-Timing (600 ms Debounce + ~2 s-Deckel) liegt in caseDraft.ts (nextDraftDebounceWait). Der
+// Deckel sorgt dafuer, dass bei durchgehender Eingabe spaetestens nach ~2 s einmal geschrieben wird —
+// sonst bliebe waehrend eines langen Bursts nichts persistiert (der Timer startet bei jeder Aenderung
+// neu). So schrumpft das Verlustfenster bei hartem Absturz vom ganzen Burst auf hoechstens ~2 s; der
+// allerletzte in-flight-Stand vor sofortigem Akku-Tod ist prinzipbedingt nicht garantiert rettbar.
+//
+// Zentral, damit confirmReset/applySwitch den Trailing-Save VOR dem Loeschen abbrechen koennen (sonst
+// schriebe er den gerade geloeschten Entwurf neu). draftPendingSince = Beginn des aktuellen Bursts (0 = nichts offen).
 let draftTimer: ReturnType<typeof setTimeout> | null = null
+let draftPendingSince = 0
 function clearDraftTimer(): void {
   if (draftTimer) {
     clearTimeout(draftTimer)
     draftTimer = null
   }
+  draftPendingSince = 0
 }
+function commitDraftNow(): void {
+  draftTimer = null
+  draftPendingSince = 0
+  void caseDraft.save(einsatzActiveId.value, caseValues.values.value)
+}
+function scheduleDraftSave(): void {
+  const now = Date.now()
+  if (!draftPendingSince) draftPendingSince = now
+  if (draftTimer) clearTimeout(draftTimer)
+  draftTimer = setTimeout(commitDraftNow, nextDraftDebounceWait(draftPendingSince, now))
+}
+/** Ausstehenden Entwurf SOFORT wegschreiben statt auf den Debounce zu warten (App-Hintergrund/Unmount) —
+ *  der einzige verlaessliche Pre-Kill-Moment auf iOS-WebKit. Nur wenn wirklich etwas offen ist. */
+function flushDraft(): void {
+  if (!draftTimer || restoring) return
+  clearDraftTimer()
+  void caseDraft.save(einsatzActiveId.value, caseValues.values.value)
+}
+function onAppHidden(): void {
+  if (document.visibilityState === 'hidden') flushDraft()
+}
+let appStateListener: PluginListenerHandle | null = null
 // Vorschau = reiner Renderer ueber Definition + Einsatz-Werte (Tri-State je Feld).
 const text = computed(() => render(root.value, caseValues.values.value))
 
@@ -101,6 +133,16 @@ const pico = usePicoApi()
 const { reachable, check, markReachable } = useBridgeConnection()
 onMounted(() => {
   void check()
+  // Der Ablauf wird von AUSSEN ausgeloest (App.vue prueft laufend), der sichtbare Zustand liegt aber
+  // hier. Ohne diesen Handler bliebe der Tab nach dem Ablauf vollstaendig ausgefuellt (er wird nur
+  // ausgeblendet, nie abgeraeumt) und der naechste Tastendruck schriebe den Entwurf mit frischer Frist
+  // zurueck. clearDraftTimer ZUERST — sonst uebermalt ein Trailing-Save das gerade Geloeschte.
+  caseDraft.setClearHandler(() => {
+    clearDraftTimer()
+    caseValues.reset()
+    resetKey.value += 1 // Falt-/Open-Zustand frisch (wie beim Abschluss)
+    showDraftNotice(CASE_DRAFT_DELETED_NOTICE)
+  })
   // Temporaeren Einsatzentwurf laden (Repository prueft TTL -> abgelaufen wird sofort geloescht).
   caseDraft
     .load()
@@ -111,6 +153,18 @@ onMounted(() => {
     .catch(() => {
       draftResult.value = { draft: null, expired: false }
     })
+
+  // Pre-Kill-Flush: einen faelligen Entwurf beim App-Hintergrund SOFORT wegschreiben, statt auf den
+  // Debounce zu warten (den WKWebView im Hintergrund evtl. gar nicht mehr feuert). appStateChange ist
+  // der verlaessliche Native-Trigger (iOS), visibilitychange/pagehide die Web-/Android-Absicherung.
+  // Kostet im Normalbetrieb NICHTS — feuert nur beim Wechsel in den Hintergrund.
+  document.addEventListener('visibilitychange', onAppHidden)
+  window.addEventListener('pagehide', flushDraft)
+  void App.addListener('appStateChange', ({ isActive }) => {
+    if (!isActive) flushDraft()
+  }).then((h) => {
+    appStateListener = h
+  })
 })
 const sending = ref(false)
 const sendMsg = ref<{ kind: 'ok' | 'err'; text: string } | null>(null)
@@ -213,16 +267,18 @@ function toggleDefault(): void {
 // (Abschluss/Wechsel) loescht den Entwurf (in caseDraft.save).
 watch(
   caseValues.values,
-  (vals) => {
+  () => {
     if (restoring) return // Resume-Save ueberspringen (TTL nicht verlaengern)
-    clearDraftTimer()
-    draftTimer = setTimeout(() => {
-      void caseDraft.save(einsatzActiveId.value, vals)
-    }, 600)
+    scheduleDraftSave()
   },
   { deep: true },
 )
-onUnmounted(clearDraftTimer)
+onUnmounted(() => {
+  flushDraft() // ausstehenden Save NICHT verwerfen (frueher: clearDraftTimer) — sonst geht die letzte Aenderung verloren
+  document.removeEventListener('visibilitychange', onAppHidden)
+  window.removeEventListener('pagehide', flushDraft)
+  void appStateListener?.remove()
+})
 </script>
 
 <template>

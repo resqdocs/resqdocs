@@ -64,8 +64,30 @@ export function formatMedikament(r: MedikamenteRow): string {
   return s
 }
 
-/** Eine Aerzte-Zeile als Klartext: Name [(Rolle)][, Ort, Tel. ..., Arztnr. ...]. Namenlos-robust. */
+/** Kontakt-Rollen (Angehörige/Betreuer): eigener Feldsatz Name/Telefon + zwei Rechts-Flags, KEINE
+ *  Arztnummer/Ort. Alles andere (Hausarzt/Facharzt/ohne Rolle) = Arzt-Feldsatz. */
+const KONTAKT_ROLLEN = new Set<ArztRow['rolle']>(['Angehöriger', 'Betreuer'])
+
+/** Eine Kontaktperson als Klartext: Name (Rolle)[, Tel. ...][, Patientenverfügung [+ Vollmacht/Betreuung]
+ *  vorhanden]. Namenlos-robust (gleiche s-Guard-Idiomatik wie formatArzt). */
+function formatKontakt(r: ArztRow): string {
+  let s = r.name.trim()
+  if (r.rolle) s += s ? ` (${r.rolle})` : `(${r.rolle})`
+  const details: string[] = []
+  const tel = r.telefon?.trim()
+  if (tel) details.push(`Tel. ${tel}`)
+  const flags: string[] = []
+  if (r.patientenverfuegung) flags.push('Patientenverfügung')
+  if (r.vollmacht) flags.push('Vollmacht/Betreuung')
+  if (flags.length) details.push(`${flags.join(' + ')} vorhanden`)
+  if (details.length) s += s ? `, ${details.join(', ')}` : details.join(', ')
+  return s
+}
+
+/** Eine Zeile als Klartext. Arzt: Name [(Rolle)][, Ort, Tel. ..., Arztnr. ...]. Kontaktperson
+ *  (Angehörige/Betreuer): eigener Feldsatz (formatKontakt). Namenlos-robust. */
 export function formatArzt(r: ArztRow): string {
+  if (KONTAKT_ROLLEN.has(r.rolle)) return formatKontakt(r)
   let s = r.name.trim()
   if (r.rolle) s += s ? ` (${r.rolle})` : `(${r.rolle})`
   const details: string[] = []
@@ -96,7 +118,7 @@ export function staerkeOhneDuplikat(name: string, staerke: string | undefined): 
 }
 
 export function arztRowHasData(r: ArztRow): boolean {
-  return !!(r.name.trim() || r.rolle || r.ort?.trim() || r.telefon?.trim() || r.arztnummer?.trim())
+  return !!(r.name.trim() || r.rolle || r.ort?.trim() || r.telefon?.trim() || r.arztnummer?.trim() || r.patientenverfuegung || r.vollmacht)
 }
 
 const medikamentenplan: FunctionDef = {
@@ -121,14 +143,14 @@ const medikamentenplan: FunctionDef = {
 }
 
 const aerzte: FunctionDef = {
-  label: 'Ärzte',
-  // Editor-Vorschau: Muster-Hausarzt + -Facharzt (KEINE echten Personen) - zeigt das Zeilenformat
-  // „Name (Rolle), Ort, Tel. …".
+  label: 'Ärzte & Kontaktpersonen',
+  // Editor-Vorschau: Muster-Arzt + Muster-Kontaktperson (KEINE echten Personen) - zeigt beide Zeilen-
+  // formate: „Name (Rolle), Ort, Tel. …" (Arzt) und „Name (Rolle), Tel. …, … vorhanden" (Kontakt).
   sampleFill: () => ({
     state: 'function',
     rows: [
       { name: 'Dr. med. Muster', rolle: 'Hausarzt', ort: 'Musterstadt', telefon: '01234 56789' },
-      { name: 'Dr. med. Beispiel', rolle: 'Facharzt', ort: 'Musterstadt' },
+      { name: 'Erika Muster', rolle: 'Angehöriger', telefon: '0170 1234567', patientenverfuegung: true, vollmacht: true },
     ],
   }),
   renderBody(fill, config) {
@@ -155,7 +177,7 @@ function packYearsComplete(r: PackYearsRow | undefined): r is Required<PackYears
 const packYearsFn: FunctionDef = {
   label: 'Pack-Years',
   singleLine: true,
-  // Editor-Vorschau: 30 Zig./Tag × 15 J. = 22,5 -> „≈23 py" (zeigt das gerundete Format inkl. „≈").
+  // Editor-Vorschau: 30 Zig./Tag × 15 J. = 22,5 -> „ca. 23 py" (zeigt das gerundete Format inkl. „ca.").
   sampleFill: () => ({ state: 'function', rows: [{ cigarettesPerDay: 30, years: 15 }] }),
   renderBody(fill) {
     const r = scoreRow<PackYearsRow>(fill)
