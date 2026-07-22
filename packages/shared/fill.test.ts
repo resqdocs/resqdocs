@@ -53,3 +53,74 @@ test('fillValue: Select - default NICHT in options -> oberste Option', () => {
 test('fillValue: Select - leere Optionen ignoriert (oberste = erste nicht-leere)', () => {
   assert.equal(fillValue({ type: 'field', id: 's', options: ['', 'B'] }, { state: 'confirmed' }), 'B')
 })
+
+// --- Multi-Select ---------------------------------------------------------------------------------
+import { joinFieldValues, toggleMultiOption, multiSelected, multiFill, defaultOptionValue } from './fill.ts'
+
+const multiField: Field = {
+  type: 'field', id: 'm', multiple: true,
+  options: ['Beidseits belüftet', 'Giemen', 'feinblasige RGs', 'Brummen'],
+  exclusiveOptions: ['Beidseits belüftet'],
+  default: 'Beidseits belüftet',
+}
+
+test('joinFieldValues: deutsche Aufzählung (Komma + „und")', () => {
+  assert.equal(joinFieldValues([]), '')
+  assert.equal(joinFieldValues(['a']), 'a')
+  assert.equal(joinFieldValues(['a', 'b']), 'a und b')
+  assert.equal(joinFieldValues(['a', 'b', 'c']), 'a, b und c')
+  assert.equal(joinFieldValues(['a', '', 'c']), 'a und c') // leere raus
+})
+
+test('toggleMultiOption: hinzufügen/entfernen + options-Reihenfolge', () => {
+  const a = toggleMultiOption([], 'Giemen', multiField)
+  assert.deepEqual(a, ['Giemen'])
+  const b = toggleMultiOption(a, 'feinblasige RGs', multiField)
+  assert.deepEqual(b, ['Giemen', 'feinblasige RGs']) // options-Reihenfolge
+  const c = toggleMultiOption(b, 'Giemen', multiField)
+  assert.deepEqual(c, ['feinblasige RGs']) // entfernt
+})
+
+test('toggleMultiOption: exklusive Option („Keine/Normal") verdrängt alles und umgekehrt', () => {
+  // exklusive Option wählen -> alle anderen raus
+  assert.deepEqual(toggleMultiOption(['Giemen', 'Brummen'], 'Beidseits belüftet', multiField), ['Beidseits belüftet'])
+  // eine NICHT-exklusive dazu -> die exklusive fliegt raus
+  assert.deepEqual(toggleMultiOption(['Beidseits belüftet'], 'Giemen', multiField), ['Giemen'])
+})
+
+test('multiFill: Status steckt in der Auswahl (leer=excluded, Standard-Menge=confirmed, sonst=custom+values)', () => {
+  assert.deepEqual(multiFill(multiField, []), { state: 'excluded' })
+  assert.deepEqual(multiFill(multiField, ['Beidseits belüftet']), { state: 'confirmed' }) // = Default -> nie materialisiert
+  assert.deepEqual(multiFill(multiField, ['Giemen', 'feinblasige RGs']), {
+    state: 'custom', value: 'Giemen und feinblasige RGs', values: ['Giemen', 'feinblasige RGs'],
+  })
+})
+
+test('multiSelected: Auswahl aus dem Fill lesen (inkl. Rückwärts-Kompat: custom ohne values)', () => {
+  assert.deepEqual(multiSelected(multiField, { state: 'excluded' }), [])
+  assert.deepEqual(multiSelected(multiField, { state: 'confirmed' }), ['Beidseits belüftet'])
+  assert.deepEqual(multiSelected(multiField, { state: 'custom', value: 'Giemen und Brummen', values: ['Giemen', 'Brummen'] }), ['Giemen', 'Brummen'])
+  // VORWÄRTS/RÜCKWÄRTS-KOMPAT: alte/Single-Daten (custom OHNE values) -> [value], kein Absturz
+  assert.deepEqual(multiSelected(multiField, { state: 'custom', value: 'Giemen' }), ['Giemen'])
+})
+
+test('KOMPAT: fillValue liest custom.value auch bei Multi (value = Fliesstext) — alte Apps bekommen korrekten Text', () => {
+  const f = multiFill(multiField, ['Giemen', 'feinblasige RGs'])
+  assert.equal(fillValue(multiField, f), 'Giemen und feinblasige RGs') // eine ALTE App liest nur .value -> stimmt
+  assert.equal(defaultOptionValue(multiField), 'Beidseits belüftet')
+})
+
+test('multiFill: erzwingt Exklusiv-Regel final (auch bei exklusivem Namen via Freitext)', () => {
+  // Auswahl enthaelt Pathologien + die exklusive Option (z. B. via Freitext eingeschmuggelt) -> exklusive gewinnt
+  assert.deepEqual(multiFill(multiField, ['Giemen', 'Brummen', 'Beidseits belüftet']), { state: 'confirmed' })
+  // mehrere Nicht-Exklusive bleiben nebeneinander
+  assert.deepEqual(multiFill(multiField, ['Giemen', 'Brummen']), {
+    state: 'custom', value: 'Giemen und Brummen', values: ['Giemen', 'Brummen'],
+  })
+})
+
+test('orderByOptions/multiFill: doppelte Options-Strings verdoppeln die Ausgabe NICHT (Dedup wie Single)', () => {
+  const dupField: Field = { type: 'field', id: 'd', multiple: true, options: ['A', 'A', 'B'] }
+  assert.deepEqual(toggleMultiOption(['A'], 'B', dupField), ['A', 'B']) // kein 'A','A'
+  assert.deepEqual(multiFill(dupField, ['A', 'A', 'B']), { state: 'custom', value: 'A und B', values: ['A', 'B'] })
+})

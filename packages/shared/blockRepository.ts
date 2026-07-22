@@ -20,7 +20,7 @@ const nowIso = (): string => new Date().toISOString()
 
 // Tiefe Kopie ueber JSON. BEWUSST NICHT structuredClone: das wirft auf Vue-REACTIVE-Proxies einen
 // DataCloneError (versionsunabhaengig) -> Boot-Crash. Container-Baeume sind reines JSON -> verlustfrei.
-// Vgl. buglog bug-040/213 und protocolRepository.ts.
+// Vgl. protocolRepository.ts.
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T
 
 /** Repository ueber einen SqlClient (nativ: geteilte Verbindung; Tests: fakeSqlClient).

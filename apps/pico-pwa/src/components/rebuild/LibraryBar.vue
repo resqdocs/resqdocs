@@ -14,14 +14,12 @@ import { useTreeEditor } from '@resqdocs/protocol-core-ui/treeEditor'
 import { useStorage } from '@/storage/useStorage'
 import SaveStatusBadge from './SaveStatusBadge.vue'
 import TemplateIO from './TemplateIO.vue'
-import { useTemplateExport } from '@/composables/useTemplateExport'
 
 const tree = useProtocolTree()
 const editor = useTreeEditor()
 const storage = useStorage()
 const protocols = tree.protocols
 const editorActiveId = tree.editorActiveId
-const { shareTemplate } = useTemplateExport()
 
 const active = computed(() => protocols.value.find((p) => p.id === editorActiveId.value) ?? protocols.value[0])
 const activeTitle = computed(() => (active.value?.title && active.value.title.trim()) || active.value?.id || '')
@@ -96,10 +94,31 @@ function sheetDuplicate(): void {
   sheetOpen.value = false
   onDuplicate()
 }
-async function sheetExport(): Promise<void> {
-  const t = active.value // active = die getippte Vorlage (openSheet hat sie aktiv gesetzt)
-  sheetOpen.value = false
-  if (t) await shareTemplate(t)
+// PRO-VORLAGE (wirkt auf DIESE Vorlage): „Teilen" = verschluesselter Link/QR (sichtbares Zeilen-Icon),
+// „Als Datei exportieren" = Datei/JSON (Kebab). Beide oeffnen das Daten-Blatt FOKUSSIERT auf ihren
+// Abschnitt — sauber getrennt (Teilen zeigt nie Datei-Kram und umgekehrt).
+async function rowShare(id: string): Promise<void> {
+  switchTo(id) // die getippte Zeile aktiv setzen -> TemplateIO teilt genau diese Vorlage
+  dataOpen.value = true
+  await nextTick()
+  dataIo.value?.openShare()
+}
+async function sheetExportFile(): Promise<void> {
+  sheetOpen.value = false // active ist durch openSheet bereits gesetzt
+  dataOpen.value = true
+  await nextTick()
+  dataIo.value?.openExport()
+}
+// BIBLIOTHEKS-EBENE (legen eine NEUE Vorlage an -> gehoeren neben „Neue Vorlage", NICHT an eine Zeile):
+async function receiveNewTemplate(): Promise<void> {
+  dataOpen.value = true
+  await nextTick()
+  dataIo.value?.openReceive()
+}
+async function importNewTemplate(): Promise<void> {
+  dataOpen.value = true
+  await nextTick()
+  dataIo.value?.openImportFile()
 }
 function sheetMove(delta: number): void {
   sheetOpen.value = false
@@ -110,8 +129,9 @@ function sheetDelete(): void {
   showDelete.value = true
 }
 
-// --- Daten-Sheet (Import/Export) ---
+// --- Daten-Sheet (Teilen/Empfangen + Datei-Export/Import) ---
 const dataOpen = ref(false)
+const dataIo = ref<InstanceType<typeof TemplateIO> | null>(null) // fuer die Direkt-Spruenge openShare/openReceive
 
 // --- Liste einklappbar (offen by default); zugeklappt nur aktive Vorlage + Menue ---
 const collapsed = ref(false)
@@ -128,7 +148,6 @@ const collapsed = ref(false)
       </button>
       <div class="flex shrink-0 items-center gap-2">
         <SaveStatusBadge />
-        <button type="button" class="btn btn-ghost btn-sm min-h-9 w-9 px-0 text-lg leading-none" aria-label="Mehr: Daten (Export/Import)" @click="dataOpen = true">⋮</button>
       </div>
     </div>
 
@@ -152,12 +171,22 @@ const collapsed = ref(false)
             <span v-if="p.id === editorActiveId" aria-hidden="true">✓</span>
             <span class="truncate">{{ (p.title && p.title.trim()) || p.id }}</span>
           </button>
+          <button type="button" class="btn btn-ghost btn-sm min-h-11 w-11 px-0" :aria-label="`${(p.title && p.title.trim()) || p.id} teilen (Link und QR)`" title="Teilen (Link & QR)" @click="rowShare(p.id)">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
+          </button>
           <button type="button" class="btn btn-ghost btn-sm min-h-11 w-11 px-0 text-lg leading-none" :aria-label="`Aktionen für ${(p.title && p.title.trim()) || p.id}`" @click="openSheet(p.id)">⋮</button>
         </div>
       </li>
-      <!-- Anlegen (haeufig) bleibt sichtbar -->
+      <!-- Drei Entstehungswege einer NEUEN Vorlage (Bibliotheks-Ebene): leer · per verschluesseltem
+           Link/QR empfangen · aus Datei importieren -->
       <li>
         <button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-primary hover:bg-base-200" @click="onAdd">＋ Neue Vorlage</button>
+      </li>
+      <li>
+        <button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-primary hover:bg-base-200" @click="receiveNewTemplate">↓ Empfangen (Link & QR)</button>
+      </li>
+      <li>
+        <button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-primary hover:bg-base-200" @click="importNewTemplate">⭳ Aus Datei importieren…</button>
       </li>
     </ul>
 
@@ -168,7 +197,7 @@ const collapsed = ref(false)
         <ul class="menu w-full px-0">
           <li><button type="button" class="min-h-12" @click="sheetRename">Umbenennen</button></li>
           <li><button type="button" class="min-h-12" @click="sheetDuplicate">Duplizieren</button></li>
-          <li><button type="button" class="min-h-12" @click="sheetExport">Exportieren</button></li>
+          <li><button type="button" class="min-h-12" @click="sheetExportFile">Als Datei exportieren…</button></li>
           <li><button type="button" class="min-h-12" :disabled="isFirst" @click="sheetMove(-1)">Nach oben</button></li>
           <li><button type="button" class="min-h-12" :disabled="isLast" @click="sheetMove(1)">Nach unten</button></li>
           <li><button type="button" class="min-h-12 text-error" :disabled="protocols.length <= 1" @click="sheetDelete">Löschen</button></li>
@@ -182,8 +211,8 @@ const collapsed = ref(false)
     <div class="modal modal-bottom" :class="{ 'modal-open': dataOpen }" role="dialog" aria-modal="true">
       <div class="modal-box">
         <h3 class="text-sm font-semibold">Daten</h3>
-        <p class="pb-2 text-xs text-base-content/60">Vorlage exportieren (mit Auswahl) oder eine Vorlage importieren.</p>
-        <TemplateIO />
+        <p class="pb-2 text-xs text-base-content/60"><b>Teilen/Empfangen</b> = verschlüsselter Link/QR. <b>Export/Import</b> = Datei/JSON.</p>
+        <TemplateIO ref="dataIo" />
         <button type="button" class="btn btn-ghost btn-block mt-2" @click="dataOpen = false">Schließen</button>
       </div>
       <button type="button" class="modal-backdrop" aria-label="Schließen" @click="dataOpen = false"></button>

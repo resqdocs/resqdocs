@@ -110,6 +110,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - **Mit einem Standardwert vorbelegen?** (`default`) — Steht im Feld, bis der Nutzer etwas anderes einträgt. *Beispiel: „Bewusstsein" startet mit „wach, orientiert".*
 - **Auswahlliste statt Freitext?** (`options`) — Der Nutzer wählt aus festen Werten (Liste von Strings). *Beispiel: „Übergabe an" mit „Notaufnahme/Arzt/Pflegepersonal".*
 - **Zusätzlich eigene Eingabe erlauben?** (`allowCustom`) — Auswahl plus die Möglichkeit, etwas Eigenes zu schreiben. *Beispiel: „Atmung" mit festen Stufen, aber auch frei beschreibbar.*
+- **Mehrfachauswahl erlauben?** (`multiple`, ab App 1.4.0) — Mehrere Optionen gleichzeitig wählbar (Checkboxen bei ≤6, Multiselect-Dropdown bei >6). *Beispiel: „Auskultation" — beidseits belüftet UND Giemen zugleich.* Nur mit `options`. Die Ausgabe verkettet die gewählten Werte als Aufzählung („a, b und c"). Optional `exclusiveOptions` (Teilmenge von `options`): eine „Keine/Normalbefund"-Option, die alle anderen ausschließt (und umgekehrt) — *Beispiel: „Keine Zyanose" schließt „zentrale/periphere Zyanose" aus.*
 - **Großes, mehrzeiliges Textfeld?** (`multiline`) — Für längere Texte mit Zeilenumbrüchen. *Beispiel: „Anamnese" mit mehreren Sätzen.*
 
 ### Nur Funktionen (Medikamentenplan/Ärzte)

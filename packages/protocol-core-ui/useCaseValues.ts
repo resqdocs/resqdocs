@@ -52,6 +52,11 @@ export function useCaseValues() {
     setCustom(id: string, value: string): void {
       values.value = { ...values.value, [id]: { state: 'custom', value } }
     },
+    /** Fuellzustand direkt setzen (Multi-Select: der aus der Auswahl abgeleitete confirmed/excluded/
+     *  custom+values). Ohne die Single-Freitext-prevValue-Bewahrung von set(). */
+    setFill(id: string, fill: FieldFill): void {
+      values.value = { ...values.value, [id]: fill }
+    },
     /** 2-stufig (Container): bestaetigt <-> nicht erhoben. */
     toggleExcluded(id: string): void {
       const next: FieldFill = values.value[id]?.state === 'excluded' ? DEFAULT_FILL : { state: 'excluded' }

@@ -9,6 +9,7 @@ import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 import { findNode, findPath, suggestFreeId } from '@resqdocs/protocol-core/creator'
 import { sanitizeId } from '@resqdocs/protocol-core/ids'
 import { useTreeEditor } from '../treeEditor.ts'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 const props = defineProps<{ root: Container }>()
 const tree = useTreeEditor()
@@ -103,6 +104,9 @@ function setOption(i: number, value: string): void {
   opts[i] = value
   const patch: Record<string, unknown> = { options: opts }
   if (node.value?.type === 'field' && node.value.default === old) patch.default = value // Default mitziehen
+  // Exklusiv-Markierung referenziert den exakten String -> beim Umbenennen mitziehen, sonst wird sie „tot".
+  if (node.value?.type === 'field' && node.value.exclusiveOptions?.includes(old))
+    patch.exclusiveOptions = node.value.exclusiveOptions.map((o) => (o === old ? value : o))
   set(patch)
 }
 function removeOption(i: number): void {
@@ -111,8 +115,35 @@ function removeOption(i: number): void {
   opts.splice(i, 1)
   const patch: Record<string, unknown> = { options: opts.length ? opts : undefined }
   if (node.value?.type === 'field' && node.value.default === removed) patch.default = undefined
-  if (!opts.length) patch.allowCustom = undefined // keine Optionen mehr -> kein „individuell"
+  if (!opts.length) {
+    patch.allowCustom = undefined // keine Optionen mehr -> kein „individuell"
+    patch.multiple = undefined // ... und kein Multi-Select
+    patch.exclusiveOptions = undefined
+  } else if (node.value?.type === 'field' && node.value.exclusiveOptions?.includes(removed)) {
+    const ex = node.value.exclusiveOptions.filter((o) => o !== removed)
+    patch.exclusiveOptions = ex.length ? ex : undefined
+  }
   set(patch)
+}
+// Option loeschen — bei nicht-leerer Option vorher via ConfirmDialog nachfragen (EINHEITLICH zum Block-/
+// Vorlagen-Loeschen, gleiches Modal). Leere (frische) Option direkt entfernen.
+const pendingOptionDelete = ref<number | null>(null)
+function confirmRemoveOption(i: number): void {
+  const opt = fieldOptions()[i]
+  if (opt && opt.trim() !== '') pendingOptionDelete.value = i
+  else removeOption(i)
+}
+function doDeleteOption(): void {
+  if (pendingOptionDelete.value !== null) removeOption(pendingOptionDelete.value)
+  pendingOptionDelete.value = null
+}
+/** Eine Option als „schliesst andere aus" markieren/entmarkieren (Multi-Select). Schreibt den exakten
+ *  Options-String in exclusiveOptions — kein zweites Vokabular. */
+function toggleExclusiveOption(opt: string, on: boolean): void {
+  if (node.value?.type !== 'field') return
+  const cur = node.value.exclusiveOptions ?? []
+  const next = on ? [...new Set([...cur, opt])] : cur.filter((o) => o !== opt)
+  set({ exclusiveOptions: next.length ? next : undefined })
 }
 function moveOption(i: number, delta: number): void {
   const opts = fieldOptions().slice()
@@ -205,14 +236,23 @@ async function saveAsBaustein(): Promise<void> {
         <div v-for="(opt, i) in (node.options ?? [])" :key="i" class="flex items-center gap-1">
           <input v-if="new Set((node.options ?? []).filter((o) => o !== '')).size > 1" type="radio" class="radio radio-xs shrink-0" :name="`default-${node.id}`" :checked="effectiveFieldDefault === opt" :aria-label="`als Standard: ${opt}`" title="als Standard" @change="set({ default: opt })" />
           <input class="input input-sm min-w-0 flex-1" :value="opt" placeholder="Option" @input="setOption(i, ($event.target as HTMLInputElement).value)" />
+          <!-- Multi-Select: Option als „schliesst andere aus" (Keine/Normal) markieren -->
+          <label v-if="node.multiple && opt !== ''" class="flex shrink-0 cursor-pointer items-center gap-1" :title="`„${opt}“ schließt andere Auswahlen aus`">
+            <input type="checkbox" class="checkbox checkbox-xs" :checked="(node.exclusiveOptions ?? []).includes(opt)" :aria-label="`„${opt}“ schließt andere aus`" @change="toggleExclusiveOption(opt, ($event.target as HTMLInputElement).checked)" />
+            <span class="text-xs text-base-content/50">excl.</span>
+          </label>
           <button type="button" class="btn btn-ghost btn-xs px-1" :disabled="i === 0" aria-label="nach oben" @click="moveOption(i, -1)">↑</button>
           <button type="button" class="btn btn-ghost btn-xs px-1" :disabled="i === (node.options?.length ?? 0) - 1" aria-label="nach unten" @click="moveOption(i, 1)">↓</button>
-          <button type="button" class="btn btn-ghost btn-xs px-1 text-error" aria-label="entfernen" @click="removeOption(i)">✕</button>
+          <button type="button" class="btn btn-ghost btn-xs px-1 text-error" aria-label="entfernen" @click="confirmRemoveOption(i)">✕</button>
         </div>
         <button type="button" class="btn btn-ghost btn-xs self-start" @click="addOption">＋ Eintrag hinzufügen</button>
         <label v-if="node.options && node.options.length" class="flex w-full cursor-pointer items-center gap-2 py-0">
           <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.allowCustom === true" @change="set({ allowCustom: ($event.target as HTMLInputElement).checked })" />
           <span class="text-sm">„individuell" erlauben (Freitext als letzte Option)</span>
+        </label>
+        <label v-if="node.options && node.options.length" class="flex w-full cursor-pointer items-center gap-2 py-0">
+          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.multiple === true" @change="set(($event.target as HTMLInputElement).checked ? { multiple: true } : { multiple: undefined, exclusiveOptions: undefined })" />
+          <span class="text-sm">Mehrfachauswahl erlauben</span>
         </label>
       </div>
 
@@ -388,4 +428,14 @@ async function saveAsBaustein(): Promise<void> {
     </div>
   </div>
   <p v-else class="text-sm text-base-content/50">Nichts ausgewählt — links unter „Aufbau" einen Eintrag wählen.</p>
+
+  <!-- Option loeschen: gleiches Modal wie Block-/Vorlagen-Loeschen (einheitlich, kein nativer confirm) -->
+  <ConfirmDialog
+    v-if="pendingOptionDelete !== null && node?.type === 'field'"
+    :title="`Option „${(node.options ?? [])[pendingOptionDelete] ?? ''}“ löschen?`"
+    message="Die Option wird aus der Auswahlliste entfernt."
+    confirm-label="Löschen"
+    @confirm="doDeleteOption"
+    @cancel="pendingOptionDelete = null"
+  />
 </template>

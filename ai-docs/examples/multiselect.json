@@ -1,0 +1,35 @@
+{
+  "schema": "resqdocs-protocol",
+  "version": 1,
+  "tree": {
+    "type": "container",
+    "id": "atmung",
+    "title": "Atmung (B)",
+    "showTitle": true,
+    "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+    "children": [
+      {
+        "type": "field",
+        "id": "auskultation",
+        "title": "Auskultation",
+        "showTitle": true,
+        "multiple": true,
+        "options": ["Beidseits belüftet, frei ohne RGs", "Giemen", "Brummen", "feinblasige RGs", "grobblasige RGs", "einseitig abgeschwächt"],
+        "exclusiveOptions": ["Beidseits belüftet, frei ohne RGs"],
+        "default": "Beidseits belüftet, frei ohne RGs",
+        "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+      },
+      {
+        "type": "field",
+        "id": "zyanose",
+        "title": "Zyanose",
+        "showTitle": true,
+        "multiple": true,
+        "options": ["Keine Zyanose", "zentrale Zyanose", "periphere Zyanose"],
+        "exclusiveOptions": ["Keine Zyanose"],
+        "default": "Keine Zyanose",
+        "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+      }
+    ]
+  }
+}

@@ -20,8 +20,11 @@ import {
   removeProtocol as removeOp,
   moveProtocol as moveProtocolOp,
   importProtocol as importProtocolOp,
-  overwriteProtocol as overwriteProtocolOp,
+  overwriteProtocolById as overwriteProtocolByIdOp,
   protocolExists as protocolExistsOp,
+  findProtocolByName as findProtocolByNameOp,
+  resolveImportTarget as resolveImportTargetOp,
+  type ImportTarget,
 } from '@resqdocs/protocol-core/library'
 
 const protocols = ref<Container[]>([createContainer('protokoll')])
@@ -142,11 +145,23 @@ export function useProtocolTree() {
       editorActiveId.value = added.id
       return added
     },
-    /** Bestehende Vorlage mit gleicher Wurzel-id durch den Import-Baum ersetzen. */
-    overwriteProtocol(tree: Container): Container {
-      const { protocols: next, added } = overwriteProtocolOp(protocols.value, tree)
+    /** Vorhandene Vorlage mit gleichem NAMEN suchen (fuer die Ueberschreiben-oder-neu-Abfrage). */
+    findProtocolByName(title: string | undefined): Container | undefined {
+      return findProtocolByNameOp(protocols.value, title)
+    },
+    /** Datensicher bestimmen, ob ein empfangener/importierter Baum eine bestehende Vorlage ueberschreibt
+     *  (nur bei NAMENS-Gleichheit) oder als neue Vorlage landet. Nie ueber die id (kollidiert zufaellig). */
+    resolveImportTarget(tree: Container): ImportTarget {
+      return resolveImportTargetOp(protocols.value, tree)
+    },
+    /** Die per Namen getroffene Vorlage (existingId) durch den Import-Baum ersetzen (kollisionssicher). */
+    overwriteProtocolById(existingId: string, tree: Container): Container {
+      const { protocols: next, added } = overwriteProtocolByIdOp(protocols.value, existingId, tree, nextId)
       protocols.value = next
       editorActiveId.value = added.id
+      // einsatzActiveId nachfuehren: zeigte der Einsatz-Tab auf die ersetzte Vorlage, folgt er auf die neue id
+      // (sonst verwaist er nach einem etwaigen Re-id und der Einsatz springt still auf die erste Vorlage).
+      if (einsatzActiveId.value === existingId) einsatzActiveId.value = added.id
       return added
     },
     rename(id: string, title: string): void {
