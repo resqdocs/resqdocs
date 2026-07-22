@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { collidesId, reId, duplicateProtocol, renameProtocol, removeProtocol, moveProtocol, resolveInitialProtocolId, protocolExists, importProtocol, overwriteProtocol } from './library.ts'
+import { collidesId, reId, duplicateProtocol, renameProtocol, removeProtocol, moveProtocol, resolveInitialProtocolId, protocolExists, importProtocol, findProtocolByName, overwriteProtocolById, resolveImportTarget } from './library.ts'
 import { createContainer, createField, createFunction, addChild } from './creator.ts'
 import type { Container, Node } from './model.ts'
 
@@ -101,13 +101,6 @@ test('importProtocol retitle: haengt „ (Import)" an + frische id', () => {
   assert.notEqual(added.id, 'a')
 })
 
-test('overwriteProtocol: ersetzt die Vorlage mit gleicher id', () => {
-  const a = { ...createContainer('a'), title: 'Alt' }
-  const { protocols } = overwriteProtocol([a, createContainer('c')], { ...createContainer('a'), title: 'Neu' })
-  assert.equal(protocols.length, 2)
-  assert.equal(protocols.find((p) => p.id === 'a')?.title, 'Neu')
-})
-
 test('protocolExists: erkennt Kennungs-Kollision', () => {
   const ps = [createContainer('a'), createContainer('b')]
   assert.equal(protocolExists(ps, 'b'), true)
@@ -131,4 +124,56 @@ test('moveProtocol: verschiebt + clamped an den Raendern, no-op bei unbekannt', 
   assert.deepEqual(moveProtocol(ps, 'a', -1).map((p) => p.id), ['a', 'b', 'c']) // clamp oben
   assert.deepEqual(moveProtocol(ps, 'c', 1).map((p) => p.id), ['a', 'b', 'c']) // clamp unten
   assert.deepEqual(moveProtocol(ps, 'zzz', 1).map((p) => p.id), ['a', 'b', 'c']) // unbekannt
+})
+
+test('findProtocolByName: getrimmt + case-insensitiv; leer -> undefined', () => {
+  const ps = [{ ...createContainer('p1'), title: 'Reanimation' }, { ...createContainer('p2'), title: 'Intubation' }]
+  assert.equal(findProtocolByName(ps, '  reanimation ')?.id, 'p1')
+  assert.equal(findProtocolByName(ps, 'REANIMATION')?.id, 'p1')
+  assert.equal(findProtocolByName(ps, 'Unbekannt'), undefined)
+  assert.equal(findProtocolByName(ps, '   '), undefined)
+  assert.equal(findProtocolByName(ps, undefined), undefined)
+})
+
+test('overwriteProtocolById: ersetzt die gleichnamige (andere Kennung), Name bleibt, kollisionssicher', () => {
+  const existing = { ...createContainer('alt'), title: 'Reanimation' }
+  const other = { ...createContainer('other'), title: 'Intubation' }
+  const incoming = { ...createContainer('neu'), title: 'Reanimation' } // gleicher NAME, andere Kennung
+  const { protocols, added } = overwriteProtocolById([existing, other], 'alt', incoming, idGen())
+  assert.equal(protocols.length, 2)
+  assert.ok(!protocols.some((p) => p.id === 'alt')) // alte gleichnamige entfernt
+  assert.ok(protocols.some((p) => p.id === 'other')) // fremde bleibt
+  assert.equal(added.title, 'Reanimation') // Name bleibt, KEIN „(Import)"
+  assert.ok(protocols.some((p) => p.id === added.id && p.title === 'Reanimation'))
+})
+
+test('overwriteProtocolById: Kennungs-Kollision mit Rest-Bibliothek -> Import-Baum wird re-id-et', () => {
+  const other = { ...createContainer('shared-id'), title: 'Intubation' }
+  const existing = { ...createContainer('alt'), title: 'Reanimation' }
+  const incoming = { ...createContainer('shared-id'), title: 'Reanimation' } // kollidiert mit 'other'
+  const { added } = overwriteProtocolById([existing, other], 'alt', incoming, idGen())
+  assert.notEqual(added.id, 'shared-id')
+})
+
+test('resolveImportTarget: DATENSICHER — id-Kollision loest NIE Ueberschreiben aus, Dialog nennt die lokale Vorlage', () => {
+  // KRITISCH-Szenario aus dem Audit: A teilt umbenannte Default-Vorlage (id 'protokoll'), B hat eine
+  // anders benannte Vorlage MIT DERSELBEN id 'protokoll'. Frueher gewann die id -> Ueberschreiben ->
+  // Bs Vorlage still zerstoert. Jetzt: kein Namens-Treffer -> als NEUE Vorlage, kein Datenverlust.
+  const bLibrary = [{ ...createContainer('protokoll'), title: 'Schlaganfall' }]
+  const incoming = { ...createContainer('protokoll'), title: 'Herzinfarkt' } // gleiche id, anderer Name
+  assert.deepEqual(resolveImportTarget(bLibrary, incoming), { mode: 'new' })
+
+  // Namensgleichheit -> ueberschreiben anbieten; name = die LOKAL getroffene Vorlage (nie der eingehende)
+  const local = [{ ...createContainer('n7'), title: 'Reanimation' }]
+  const incoming2 = { ...createContainer('protokoll'), title: '  reanimation ' } // gleicher Name, andere id
+  const t = resolveImportTarget(local, incoming2)
+  assert.deepEqual(t, { mode: 'overwrite', existingId: 'n7', name: 'Reanimation' })
+
+  // Selbst wenn eine id-Kollision NEBEN einem Namens-Treffer existiert, gewinnt der Name (bedeutungstragend)
+  const mixed = [{ ...createContainer('protokoll'), title: 'Y' }, { ...createContainer('n1'), title: 'X' }]
+  const incomingX = { ...createContainer('protokoll'), title: 'X' } // id kollidiert mit 'Y', Name matcht 'X'
+  assert.deepEqual(resolveImportTarget(mixed, incomingX), { mode: 'overwrite', existingId: 'n1', name: 'X' })
+
+  // Titellose Vorlage -> kein Namens-Treffer -> NEU (sichere Dublette statt falschem Ueberschreiben)
+  assert.deepEqual(resolveImportTarget([createContainer('protokoll')], createContainer('protokoll')), { mode: 'new' })
 })

@@ -33,6 +33,9 @@ Zusätzlich sind einzelne **Eigenschaften** erst ab einer Mindestversion verfüg
 | Standardtext | `default` | Funktionen (Fallback ohne Ausgabe: Listen ohne Einträge, Rechner ohne Ergebnis) | 1.1.1 |
 | Pflichtfeld | `required` | field (Feld darf im Einsatz nicht still entfallen (kein „nicht erhoben"); leer = „noch offen") | 1.2.0 |
 | Pflichtfeld | `required` | Funktionen (Funktion darf im Einsatz nicht still entfallen; leer = „noch offen") | 1.2.0 |
+| Kontaktpersonen mit Rechts-Flags | `vollmacht` | Funktionen (Ärzte-Funktion: Kontaktpersonen (Angehörige/Betreuer) mit Rolle + Patientenverfügung/Vollmacht) | 1.3.0 |
+| Mehrfachauswahl | `multiple` | field (Options-Feld erlaubt mehrere Optionen gleichzeitig (Checkboxen ≤6 / Multiselect-Dropdown >6); Wert = Aufzählung „a, b und c“) | 1.4.0 |
+| Ausschließende Optionen | `exclusiveOptions` | field (Bei Mehrfachauswahl: „Keine/Normalbefund“-Optionen (exakte options-Strings), die alle anderen ausschließen) | 1.4.0 |
 
 **Gate-Regel:** Ein `functionKind` ist verfügbar **nur, wenn seine Mindestversion ≤ der Nutzer-Version** ist. Sonst biete ihn nicht an; fragt der Nutzer danach, sag „das braucht mindestens Version X". **Schreibe niemals** einen `functionKind` ins JSON, den die genannte Version nicht kennt. Container und Felder gehen ab Version 1.0.0 immer. Nennt der Nutzer eine Version **vor 1.0.0** (oder keine), nimm die Basis an — nur `container` + `field`, keine Funktionen — und weise darauf hin, dass Funktionen und der Vorlagen-Import selbst mindestens 1.0.0 brauchen.
 
@@ -126,6 +129,8 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `blankLineBefore` (boolean): Optische Leerzeile (Absatz) VOR diesem Feld - nur wirksam, wenn darueber etwas ausgegeben wird UND das Feld eine eigene Titel-/Banner-Zeile hat (multiline oder titleInline=false).
 - `options` (Liste von string): Vordefinierte Auswahl-Optionen. Gesetzt -> das Feld ist ein SELECT (Wert = Ausgabetext). Tri-State unveraendert: ✓ = default (sonst options[0]), ✎ = Option waehlen/Freitext, − = entfaellt.
 - `allowCustom` (boolean): Bei einem Select zusaetzlich „individuell" -> Freitext anbieten (Default aus).
+- `multiple` (boolean): Mehrfachauswahl: mehrere Optionen gleichzeitig waehlbar (Checkboxen bei ≤6, Multi-Dropdown bei >6). Nur mit options wirksam. Fehlt/false -> Einfachauswahl wie bisher. ADDITIV + rueckwaerts/vorwaerts- kompatibel: alte App-Versionen ignorieren das Feld und rendern normales Single-Select (kein Bump von BLOCK_VERSION/PROTOCOL_VERSION -> geteilte „Multi"-Bloecke werden von aelteren Apps akzeptiert).
+- `exclusiveOptions` (Liste von string): Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein „Keine/Normalbefund" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv).
 - `multiline` (boolean): Freitext mehrzeilig erfassen: im ✎-Modus ein grosses Textfeld (Sheet) statt einzeiligem <input> - fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert.
 - `required` (boolean): Pflichtfeld: das Feld „darf nicht still verschwinden". Im Einsatz entfaellt der −-Zustand (nicht erhoben); es bleiben ✓ (Auswahl/Standard) und ✎ (eigener Wert). „Nicht erhebbar" wird bei Bedarf sichtbar via ✎ dokumentiert, nicht per −. Rein additiv, kein Submit-Gate; der Renderer bleibt unveraendert. Ein leeres Pflichtfeld wird nur visuell als „noch offen" markiert.
 
@@ -351,6 +356,17 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
           "type": "boolean",
           "description": "Bei einem Select zusaetzlich „individuell\" -> Freitext anbieten (Default aus)."
         },
+        "multiple": {
+          "type": "boolean",
+          "description": "Mehrfachauswahl: mehrere Optionen gleichzeitig waehlbar (Checkboxen bei ≤6, Multi-Dropdown bei >6). Nur mit options wirksam. Fehlt/false -> Einfachauswahl wie bisher. ADDITIV + rueckwaerts/vorwaerts- kompatibel: alte App-Versionen ignorieren das Feld und rendern normales Single-Select (kein Bump von BLOCK_VERSION/PROTOCOL_VERSION -> geteilte „Multi\"-Bloecke werden von aelteren Apps akzeptiert)."
+        },
+        "exclusiveOptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein „Keine/Normalbefund\" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv)."
+        },
         "multiline": {
           "type": "boolean",
           "description": "Freitext mehrzeilig erfassen: im ✎-Modus ein grosses Textfeld (Sheet) statt einzeiligem <input>\n- fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert."
@@ -485,6 +501,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - **Mit einem Standardwert vorbelegen?** (`default`) — Steht im Feld, bis der Nutzer etwas anderes einträgt. *Beispiel: „Bewusstsein" startet mit „wach, orientiert".*
 - **Auswahlliste statt Freitext?** (`options`) — Der Nutzer wählt aus festen Werten (Liste von Strings). *Beispiel: „Übergabe an" mit „Notaufnahme/Arzt/Pflegepersonal".*
 - **Zusätzlich eigene Eingabe erlauben?** (`allowCustom`) — Auswahl plus die Möglichkeit, etwas Eigenes zu schreiben. *Beispiel: „Atmung" mit festen Stufen, aber auch frei beschreibbar.*
+- **Mehrfachauswahl erlauben?** (`multiple`, ab App 1.4.0) — Mehrere Optionen gleichzeitig wählbar (Checkboxen bei ≤6, Multiselect-Dropdown bei >6). *Beispiel: „Auskultation" — beidseits belüftet UND Giemen zugleich.* Nur mit `options`. Die Ausgabe verkettet die gewählten Werte als Aufzählung („a, b und c"). Optional `exclusiveOptions` (Teilmenge von `options`): eine „Keine/Normalbefund"-Option, die alle anderen ausschließt (und umgekehrt) — *Beispiel: „Keine Zyanose" schließt „zentrale/periphere Zyanose" aus.*
 - **Großes, mehrzeiliges Textfeld?** (`multiline`) — Für längere Texte mit Zeilenumbrüchen. *Beispiel: „Anamnese" mit mehreren Sätzen.*
 
 ### Nur Funktionen (Medikamentenplan/Ärzte)
@@ -808,6 +825,46 @@ Zeigt Layout-Feinheiten: einklappbar, als „nicht erhoben" abwählbar, Felder n
         "blankLineBefore": true,
         "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" },
         "config": { "rowLayout": "inline", "rowSeparator": " · " }
+      }
+    ]
+  }
+}
+```
+
+### multiselect
+Zeigt Mehrfachauswahl (`multiple`): Auskultation/Zyanose mit mehreren gleichzeitig wählbaren Optionen und einer exklusiven „Keine/Normal"-Option (`exclusiveOptions`), die alle anderen ausschließt. Ab App-Version 1.4.0.
+```json
+{
+  "schema": "resqdocs-protocol",
+  "version": 1,
+  "tree": {
+    "type": "container",
+    "id": "atmung",
+    "title": "Atmung (B)",
+    "showTitle": true,
+    "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+    "children": [
+      {
+        "type": "field",
+        "id": "auskultation",
+        "title": "Auskultation",
+        "showTitle": true,
+        "multiple": true,
+        "options": ["Beidseits belüftet, frei ohne RGs", "Giemen", "Brummen", "feinblasige RGs", "grobblasige RGs", "einseitig abgeschwächt"],
+        "exclusiveOptions": ["Beidseits belüftet, frei ohne RGs"],
+        "default": "Beidseits belüftet, frei ohne RGs",
+        "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+      },
+      {
+        "type": "field",
+        "id": "zyanose",
+        "title": "Zyanose",
+        "showTitle": true,
+        "multiple": true,
+        "options": ["Keine Zyanose", "zentrale Zyanose", "periphere Zyanose"],
+        "exclusiveOptions": ["Keine Zyanose"],
+        "default": "Keine Zyanose",
+        "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
       }
     ]
   }

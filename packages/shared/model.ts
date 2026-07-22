@@ -71,6 +71,14 @@ export interface Field {
   options?: string[]
   /** Bei einem Select zusaetzlich „individuell" -> Freitext anbieten (Default aus). */
   allowCustom?: boolean
+  /** Mehrfachauswahl: mehrere Optionen gleichzeitig waehlbar (Checkboxen bei ≤6, Multi-Dropdown bei >6).
+   *  Nur mit options wirksam. Fehlt/false -> Einfachauswahl wie bisher. ADDITIV + rueckwaerts/vorwaerts-
+   *  kompatibel: alte App-Versionen ignorieren das Feld und rendern normales Single-Select (kein Bump von
+   *  BLOCK_VERSION/PROTOCOL_VERSION -> geteilte „Multi"-Bloecke werden von aelteren Apps akzeptiert). */
+  multiple?: boolean
+  /** Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein
+   *  „Keine/Normalbefund" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv). */
+  exclusiveOptions?: string[]
   /** Freitext mehrzeilig erfassen: im ✎-Modus ein grosses Textfeld (Sheet) statt einzeiligem <input>
    *  - fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine
    *  Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert. */
@@ -198,8 +206,8 @@ export type FunctionRow = MedikamenteRow | ArztRow | PackYearsRow | NEWS2Row
  *  Fehlt -> 'confirmed' (Standardwert). */
 export type FieldFill =
   | { state: 'confirmed'; prevValue?: string } // Standardwert wird verwendet; prevValue = ruhend gemerkter, zuletzt getippter Freitext
-  | { state: 'custom'; value: string } // bearbeiteter Wert
-  | { state: 'excluded'; prevValue?: string } // nicht erhoben -> entfaellt in der Ausgabe; prevValue = ruhend gemerkter Freitext
+  | { state: 'custom'; value: string; values?: string[] } // bearbeiteter Wert; values gesetzt = Mehrfachauswahl (value = gerenderter Fliesstext, damit auch alte Apps beim Lesen den korrekten Text bekommen)
+  | { state: 'excluded'; prevValue?: string; prevValues?: string[] } // nicht erhoben -> entfaellt in der Ausgabe; prevValue = ruhend gemerkter Freitext, prevValues = ruhend gemerkte Multi-Auswahl
   | { state: 'function'; rows: FunctionRow[]; status?: 'confirmed' | 'custom' | 'excluded'; text?: string; prevText?: string } // Funktions-Zeilen + Tri-State-Status + Freitext (custom) NEBEN den Zeilen; status fehlt -> confirmed (rueckwaerts-kompatibel); prevText = ruhend gemerkter Freitext
 // prevValue/prevText sind RUHENDE Wiederherstellungs-Puffer: sie bewahren den zuletzt via ✎ getippten
 // Freitext beim versehentlichen Verlassen von 'custom', damit er beim Zurueckschalten auf ✎ verbatim

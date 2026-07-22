@@ -73,14 +73,28 @@ function sanitizeValues(v: unknown): Record<string, FieldFill> {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return {}
   const out: Record<string, FieldFill> = {}
   for (const [k, raw] of Object.entries(v as Record<string, unknown>)) {
-    const f = raw as { state?: unknown; value?: unknown; rows?: unknown; status?: unknown; text?: unknown; prevValue?: unknown; prevText?: unknown }
+    const f = raw as { state?: unknown; value?: unknown; values?: unknown; rows?: unknown; status?: unknown; text?: unknown; prevValue?: unknown; prevValues?: unknown; prevText?: unknown }
     // Ruhend gemerkter Freitext (BEWAHREN) muss den Entwurf ueberleben - sonst ginge er bei Neustart/Crash
     // (genau dem Zweck des Entwurfs) verloren. Gleiche Datenklasse wie value/text, die ohnehin persistiert
     // werden; erscheint NIE in der Ausgabe (Renderer ignoriert prevValue/prevText).
     const prevValue = typeof f.prevValue === 'string' && f.prevValue !== '' ? f.prevValue : undefined
     const prevText = typeof f.prevText === 'string' && f.prevText !== '' ? f.prevText : undefined
-    if (f?.state === 'confirmed' || f?.state === 'excluded') out[k] = prevValue ? { state: f.state, prevValue } : { state: f.state }
-    else if (f?.state === 'custom' && typeof f.value === 'string') out[k] = { state: 'custom', value: f.value }
+    if (f?.state === 'excluded') {
+      // Multi-Select: ruhend gemerkte Auswahl (prevValues) erhalten (verlustfreies Zurueckholen).
+      const pv = Array.isArray(f.prevValues) ? (f.prevValues as unknown[]).filter((v): v is string => typeof v === 'string') : []
+      out[k] = pv.length
+        ? (prevValue ? { state: 'excluded', prevValue, prevValues: pv } : { state: 'excluded', prevValues: pv })
+        : (prevValue ? { state: 'excluded', prevValue } : { state: 'excluded' })
+    } else if (f?.state === 'confirmed') {
+      out[k] = prevValue ? { state: 'confirmed', prevValue } : { state: 'confirmed' }
+    }
+    else if (f?.state === 'custom' && typeof f.value === 'string') {
+      // Multi-Select: values (diskrete Auswahl) mit erhalten, sonst ginge die Mehrfachauswahl beim Speichern
+      // verloren. Nur String-Arrays uebernehmen; value bleibt der verkettete Fliesstext (Ausgabe bleibt gleich).
+      out[k] = Array.isArray(f.values)
+        ? { state: 'custom', value: f.value, values: (f.values as unknown[]).filter((v): v is string => typeof v === 'string') }
+        : { state: 'custom', value: f.value }
+    }
     // Funktions-Status + Freitext (custom) mit durchreichen; confirmed = kein status-Feld (Default).
     else if (f?.state === 'function') {
       if (f.status === 'excluded') out[k] = prevText ? { state: 'function', rows: sanitizeRows(f.rows), status: 'excluded', prevText } : { state: 'function', rows: sanitizeRows(f.rows), status: 'excluded' }

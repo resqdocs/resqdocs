@@ -13,6 +13,7 @@
 import { ref, computed, onMounted } from 'vue'
 import type { Field } from '@resqdocs/protocol-core/model'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
+import { multiSelected, toggleMultiOption, multiFill, joinFieldValues } from '@resqdocs/protocol-core/fill'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import TriStateToggle from '@/components/TriStateToggle.vue'
 import RequiredMark from '@/components/RequiredMark.vue'
@@ -73,15 +74,21 @@ onMounted(() => {
   // (nicht in options, z. B. nach Options-Edit) waere unsichtbar/uneditierbar, wuerde aber im Renderer
   // ausgegeben. Auf confirmed (Standard-Option) heilen -> Anzeige == Ausgabe. NUR Orphans (gueltige
   // Options-Werte bleiben als bewusste Auswahl erhalten).
-  if (isSelect.value && props.node.required && !props.node.allowCustom && fill.value.state === 'custom' && !options.value.includes(fill.value.value)) {
+  // NUR Single-Select: bei Multi ist custom.value der verkettete Fliesstext (nie in options) -> diese
+  // Orphan-Heilung wuerde sonst jede Mehrfachauswahl still auf die Standard-Option zuruecksetzen (Datenverlust).
+  if (isSelect.value && !props.node.multiple && props.node.required && !props.node.allowCustom && fill.value.state === 'custom' && !options.value.includes(fill.value.value)) {
     caseValues.set(props.node.id, { state: 'confirmed' })
   }
-  if (fill.value.state === 'custom' && props.node.allowCustom && !options.value.includes(fill.value.value)) {
+  if (!props.node.multiple && fill.value.state === 'custom' && props.node.allowCustom && !options.value.includes(fill.value.value)) {
     individuellRef.value = true
   }
 })
 const individuell = computed(
-  () => fill.value.state === 'custom' && !!props.node.allowCustom && (individuellRef.value || !options.value.includes(customValue.value)),
+  () =>
+    fill.value.state === 'custom' &&
+    !(Array.isArray(fill.value.values) && fill.value.values.length > 0) && // Multi-Auswahl (values) ist KEIN Freitext
+    !!props.node.allowCustom &&
+    (individuellRef.value || !options.value.includes(customValue.value)),
 )
 // aktuell gewaehlte Option (null = excluded/individuell). Orphan-Wert (nach Editor-Aenderung der
 // options) faellt sichtbar auf die Standard-Option zurueck statt ins Leere/auf den Sentinel.
@@ -154,13 +161,97 @@ function onSelectState(next: 'confirmed' | 'custom' | 'excluded'): void {
     caseValues.set(props.node.id, { state: 'confirmed' })
   }
 }
+
+// --- Multi-Select (Feld.multiple): Checkboxen bei ≤6, Multi-Dropdown bei >6. Der Erhebungs-Status steckt
+// in der Auswahl selbst (leer=nicht erhoben, Standard-Menge=confirmed, sonst custom) — genau wie Single. ---
+const isMulti = computed(() => isSelect.value && !!props.node.multiple)
+const optionSet = computed(() => new Set(options.value))
+const selectedSet = computed(() => multiSelected(props.node, fill.value))
+const selectedOptions = computed(() => selectedSet.value.filter((v) => optionSet.value.has(v)))
+const selectedOptionSet = computed(() => new Set(selectedOptions.value))
+// Checkbox antippen (nur im ✓-Modus). Pflicht-Multi darf nicht auf „nicht erhoben" (excluded) fallen ->
+// leeres Abwaehlen zurueck auf die Standard-Menge (sonst Sackgasse, da bei required kein −-Toggle).
+function toggleMulti(opt: string): void {
+  const next = multiFill(props.node, toggleMultiOption(selectedSet.value, opt, props.node))
+  caseValues.setFill(props.node.id, props.node.required && next.state === 'excluded' ? { state: 'confirmed' } : next)
+}
+// Tri-State identisch zum Single-Select: ✓ Auswahl (Checkboxen) / ✎ individuell (eigener Freitext, wie
+// vorher — KEIN Feld unter den Checkboxen) / − nicht erhoben. „individuell" reicht ueber pickIndividuell.
+function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
+  if (next === 'custom') {
+    pickIndividuell() // ✎: eigener Freitext (custom OHNE values), genau wie beim Single-Select
+    return
+  }
+  if (next === 'excluded') {
+    // BEWAHREN: ✎-Freitext als prevValue, sonst die Options-Auswahl als prevValues -> verlustfrei zurueckholbar.
+    const f = fill.value
+    if (f.state === 'custom' && !(Array.isArray(f.values) && f.values.length) && f.value.trim() !== '') {
+      caseValues.setFill(props.node.id, { state: 'excluded', prevValue: f.value })
+    } else {
+      const sel = selectedOptions.value.filter((s) => s.trim() !== '')
+      caseValues.setFill(props.node.id, sel.length ? { state: 'excluded', prevValues: sel } : { state: 'excluded' })
+    }
+    return
+  }
+  // ✓ zurueck zur Auswahl: gemerkte Options-Auswahl (prevValues) wiederherstellen; sonst ueber set() gehen,
+  // damit ein getippter ✎-Freitext als prevValue ERHALTEN bleibt („zurueckholen"-Hinweis) — einheitlich zum
+  // Single-Select, statt ihn beim ✎->✓-Wechsel still zu verlieren.
+  individuellRef.value = false
+  const f = fill.value
+  if (f.state === 'excluded' && f.prevValues && f.prevValues.length) {
+    caseValues.setFill(props.node.id, multiFill(props.node, f.prevValues))
+  } else {
+    caseValues.set(props.node.id, { state: 'confirmed' })
+  }
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-1" :class="!isSelect && excluded ? 'opacity-60' : ''" :data-required-open="node.required && isOpen ? '' : undefined">
+    <!-- MULTI-SELECT (Feld.multiple): Checkboxen bei wenigen, Multi-Dropdown bei vielen. Status = Auswahl
+         (nichts=nicht erhoben, Standard-Menge=confirmed, sonst custom). Exklusive „Keine/Normal"-Option
+         verdraengt andere automatisch. −-Zustand nur, wenn nicht Pflichtfeld. -->
+    <template v-if="isMulti">
+      <div class="flex items-center gap-2">
+        <TriStateToggle v-if="node.allowCustom || !node.required" :model-value="selectTriState" :label="label" :allow-custom="!!node.allowCustom" :allow-excluded="!node.required" @update:model-value="onMultiTriState" />
+        <span class="text-sm font-medium" :class="node.allowCustom || !node.required ? '' : 'pl-9'">{{ label }}<RequiredMark v-if="node.required" :open="isOpen" /></span>
+      </div>
+
+      <!-- ✓ Mehrfachauswahl: Checkboxen bei ≤6 (gleiches Raster wie die Radios), Multi-Dropdown bei >6 -->
+      <div v-if="selectTriState === 'confirmed'" class="pl-9">
+        <div v-if="!useDropdown" role="group" :aria-label="label" class="flex flex-col gap-1">
+          <label v-for="opt in options" :key="opt" class="flex cursor-pointer items-center gap-2 text-sm">
+            <input type="checkbox" class="checkbox checkbox-sm shrink-0" :checked="selectedOptionSet.has(opt)" @change="toggleMulti(opt)" />
+            <span>{{ opt }}</span>
+          </label>
+        </div>
+        <details v-else class="dropdown w-full">
+          <summary class="select select-sm flex w-full items-center" :aria-label="label">
+            <span class="truncate">{{ selectedOptions.length ? joinFieldValues(selectedOptions) : 'auswählen …' }}</span>
+          </summary>
+          <ul class="menu dropdown-content z-10 mt-1 max-h-64 w-full flex-nowrap overflow-y-auto rounded-box border border-base-300 bg-base-100 p-2 shadow">
+            <li v-for="opt in options" :key="opt">
+              <label class="flex cursor-pointer items-center gap-2">
+                <input type="checkbox" class="checkbox checkbox-sm shrink-0" :checked="selectedOptionSet.has(opt)" @change="toggleMulti(opt)" />
+                <span>{{ opt }}</span>
+              </label>
+            </li>
+          </ul>
+        </details>
+      </div>
+
+      <!-- ✎ individuell: eigener Freitext — genau wie beim Single-Select (kein Feld unter den Checkboxen) -->
+      <div v-else-if="selectTriState === 'custom'" class="pl-9">
+        <input class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
+      </div>
+
+      <!-- − nicht erhoben -->
+      <p v-else class="pl-9 text-sm italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
+    </template>
+
     <!-- SELECT: Tri-State wie Freitext — ✓ Auswahl (Optionen sichtbar) / ✎ individuell / − nicht erhoben.
          ✎ nur bei allowCustom; Optionen bleiben im ✓-Modus (Default) sofort sichtbar. -->
-    <template v-if="isSelect">
+    <template v-else-if="isSelect">
       <div class="flex items-center gap-2">
         <!-- Pflicht-Select OHNE „individuell" hat nur EINEN Zustand (✓) -> kein Toggle (waere ein toter Knopf);
              die Optionen sind ohnehin sofort sichtbar. Sonst normaler Tri-State. -->

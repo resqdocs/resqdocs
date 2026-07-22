@@ -428,7 +428,7 @@ async function deleteAll(): Promise<void> {
       <div class="card-body gap-3 p-4">
         <!-- Erfassen/Bearbeiten: manuell oder per Packungs-Scan (Scan identifiziert bekannte PZN).
              Gleiches Feld-Muster wie die Edit-Karte der Liste (Label UEBER dem Feld, volle Breite) -
-             daisyUI-5-Falle: form-control stapelt schmale Inputs nicht mehr (Cerebrum #149). -->
+             daisyUI 5: form-control stapelt schmale Inputs nicht mehr. -->
         <div class="flex flex-col gap-2">
           <label class="flex flex-col gap-1">
             <span class="text-xs text-base-content/60">PZN</span>

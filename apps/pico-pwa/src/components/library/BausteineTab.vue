@@ -4,6 +4,7 @@ import { useBausteine } from '@/composables/useBausteine'
 import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
 import SnippetLibrarySection from './SnippetLibrarySection.vue'
 import BlockLibrarySection from './BlockLibrarySection.vue'
+import BausteineReceive from './BausteineReceive.vue'
 
 /**
  * Bausteine-Tab (#13-F3). Verwaltet neutrale, wiederverwendbare Inhalte in der lokalen Library.
@@ -35,6 +36,8 @@ onMounted(() => {
       <template v-if="libraryMode === 'sqlite'">Bausteine werden lokal auf diesem Gerät gespeichert.</template>
       <template v-else>Web-Entwicklung: Bausteine sind nur in-memory und nach App-Neustart weg.</template>
     </p>
+
+    <BausteineReceive />
 
     <SnippetLibrarySection />
     <BlockLibrarySection />

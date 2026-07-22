@@ -221,3 +221,13 @@ test('parseDraft: ruhend gemerkter Freitext (prevValue/prevText) ueberlebt den E
   assert.deepEqual(d.values.leerMerkt, { state: 'confirmed' }) // leerer Puffer wird verworfen
   assert.deepEqual(d.values.fnMerkt, { state: 'function', rows: [{ name: 'ASS' }], status: 'excluded', prevText: 'frei gemerkt' })
 })
+
+test('sanitize: custom.values (Multi-Select) bleibt beim Speichern erhalten', () => {
+  const d = touchDraft(null, { m: { state: 'custom', value: 'Giemen und Brummen', values: ['Giemen', 'Brummen'] } }, 'p', 3, T0)
+  assert.deepEqual(d.values.m, { state: 'custom', value: 'Giemen und Brummen', values: ['Giemen', 'Brummen'] })
+})
+
+test('sanitize: prevValues (Multi „−" gemerkte Auswahl) bleibt erhalten', () => {
+  const d = touchDraft(null, { m: { state: 'excluded', prevValues: ['Giemen', 'Brummen'] } }, 'p', 3, T0)
+  assert.deepEqual(d.values.m, { state: 'excluded', prevValues: ['Giemen', 'Brummen'] })
+})

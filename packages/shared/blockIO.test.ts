@@ -45,3 +45,21 @@ test('Trennung: parseTemplate lehnt Block-Datei ab, parseBlock lehnt Vorlagen-Da
   assert.equal(parseBlock(blockFile).ok, true)
   assert.equal(parseTemplate(templateFile).ok, true)
 })
+
+test('KOMPAT: Block mit multiple/exclusiveOptions-Feld (Version 1) wird akzeptiert (kein Versions-Bump)', () => {
+  const json = JSON.stringify({
+    schema: BLOCK_SCHEMA, version: BLOCK_VERSION,
+    tree: { type: 'container', id: 'blk-x', children: [
+      { type: 'field', id: 'm', title: 'Auskultation', multiple: true,
+        options: ['Beidseits belüftet', 'Giemen'], exclusiveOptions: ['Beidseits belüftet'] },
+    ] },
+  })
+  const r = parseBlock(json)
+  assert.equal(r.ok, true)
+  // Feld-Properties bleiben erhalten (kein Whitelist-Stripping) -> neue App nutzt sie, alte ignoriert sie.
+  if (r.ok) {
+    const f = r.tree.children[0] as { multiple?: boolean; exclusiveOptions?: string[] }
+    assert.equal(f.multiple, true)
+    assert.deepEqual(f.exclusiveOptions, ['Beidseits belüftet'])
+  }
+})

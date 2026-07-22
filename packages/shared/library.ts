@@ -72,6 +72,15 @@ export function protocolExists(protocols: Container[], id: string): boolean {
   return protocols.some((p) => p.id === id)
 }
 
+/** Erste Vorlage mit gleichem NAMEN (getrimmt, case-insensitiv) — fuer die Namens-Kollisionsabfrage beim
+ *  Import/Empfang (z. B. eine geteilte Vorlage heisst wie eine vorhandene). Leerer Name -> kein Treffer. */
+export function findProtocolByName(protocols: Container[], title: string | undefined): Container | undefined {
+  const norm = (t: string | undefined): string => (t ?? '').trim().toLowerCase()
+  const target = norm(title)
+  if (!target) return undefined
+  return protocols.find((p) => norm(p.title) === target)
+}
+
 /** Vorlage als NEUE Vorlage importieren. Kollidiert IRGENDEINE id mit der bestehenden Bibliothek,
  *  wird der Baum frisch ge-id-et (kollisionsfrei). `retitle` haengt „ (Import)" an den Titel
  *  (zum Unterscheiden bei gleicher Kennung). */
@@ -87,8 +96,32 @@ export function importProtocol(
   return { protocols: [...protocols, added], added }
 }
 
-/** Bestehende Vorlage mit gleicher Wurzel-id durch den Import-Baum ERSETZEN (Ueberschreiben). */
-export function overwriteProtocol(protocols: Container[], tree: Container): { protocols: Container[]; added: Container } {
-  const exists = protocols.some((p) => p.id === tree.id)
-  return { protocols: exists ? protocols.map((p) => (p.id === tree.id ? tree : p)) : [...protocols, tree], added: tree }
+/** Ziel eines Vorlagen-Imports/-Empfangs bestimmen — DATENSICHER (bindend: nie fremde Protokolle zerstoeren).
+ *  Identitaet ist der NAME (das, was der Nutzer sieht). Die interne id kollidiert geraeteuebergreifend
+ *  ZUFAELLIG — die Default-Vorlage hat ueberall id 'protokoll', Zusatz-Vorlagen 'n1','n2',… — und darf
+ *  deshalb NIE ein Ueberschreiben ausloesen: sonst wuerde eine anders benannte fremde Vorlage still
+ *  zerstoert. Bei Namensgleichheit -> Ueberschreiben ANBIETEN, wobei `name` die LOKAL getroffene Vorlage
+ *  benennt (nie der eingehende Name), damit der Dialog niemals in die Irre fuehrt. Kein Namens-Treffer ->
+ *  als NEUE Vorlage importieren (importProtocol re-id-et bei id-Kollision) -> nie Datenverlust, hoechstens
+ *  eine harmlose, loeschbare Dublette. */
+export type ImportTarget = { mode: 'overwrite'; existingId: string; name: string } | { mode: 'new' }
+export function resolveImportTarget(protocols: Container[], tree: Container): ImportTarget {
+  const existing = findProtocolByName(protocols, tree.title)
+  if (existing) return { mode: 'overwrite', existingId: existing.id, name: (existing.title ?? '').trim() || existing.id }
+  return { mode: 'new' }
+}
+
+/** Eine per NAMEN gefundene Vorlage (existingId) durch den Import-Baum ersetzen — der EINZIGE Ueberschreib-Weg
+ *  (id-basiertes Ersetzen gibt es bewusst nicht mehr: geraeteuebergreifende id-Kollision wuerde die falsche
+ *  Vorlage treffen). Der Import-Baum traegt i. d. R. eine ANDERE Kennung als die getroffene Vorlage. Loesung:
+ *  alte Vorlage entfernen, dann den Baum kollisionssicher importieren (re-id-et gegen den REST der Bibliothek,
+ *  falls Knoten-ids kollidieren) — der Name bleibt, keine verwaisten/kollidierenden ids. */
+export function overwriteProtocolById(
+  protocols: Container[],
+  existingId: string,
+  tree: Container,
+  nextId: () => string,
+): { protocols: Container[]; added: Container } {
+  const rest = protocols.filter((p) => p.id !== existingId)
+  return importProtocol(rest, tree, nextId, false)
 }

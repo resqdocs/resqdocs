@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.4.0] - 2026-07-22
+
+### Features
+
+- Optional multiple choice for option fields: fields with predefined options can be set to allow selecting several options at once (small checkboxes, or a multi-select dropdown when there are many options); the layout stays consistent with the existing option field and existing templates keep working unchanged
+- Share templates securely: protocols, blocks and text snippets can be transferred between the app, the online editor and other users via a short code, link or QR code; the transfer is end-to-end encrypted, the server only ever sees encrypted data and deletes it automatically (single read up to at most seven days). Not intended for patient data.
+
+### Bug Fixes
+
+- Received templates never overwrite existing ones without asking: on a name clash you are prompted instead of replacing
+- Removed an unnecessary advertising-ID permission on Android
+- Various stability improvements
+
 ## [1.3.0] - 2026-07-20
 
 ### Features

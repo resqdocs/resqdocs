@@ -6,6 +6,9 @@ import { routeImport } from '@/composables/useImportRouting'
 import { blockStructureLabel } from '@resqdocs/protocol-core-ui/blockSummary'
 import { shareJson, copyToClipboard } from '@/utils/fileTransfer'
 import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
+import { useTransferShare } from '@resqdocs/protocol-core-ui/useTransferShare'
+import type { TransferTtl } from '@resqdocs/protocol-core/transferClient'
+import QrCode from '@/components/QrCode.vue'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 
 /**
@@ -44,6 +47,7 @@ function commitEdit(): void {
 function closeEdit(): void {
   commitEdit()
   editingId.value = null
+  shareOpenId.value = null
 }
 function onFocusOut(e: FocusEvent): void {
   if (pendingDelete.value !== null) return // Rückfrage offen: Karte bleibt offen
@@ -70,6 +74,37 @@ function confirmDelete(): void {
 const importOpen = ref(false)
 const importText = ref('')
 const ioMsg = ref<{ kind: 'ok' | 'err'; text: string } | null>(null)
+
+// --- Als verschlüsselten Kurz-Link teilen (Transfer, wie bei Vorlagen) ---
+const transferCfg = (import.meta.env.VITE_TRANSFER_URL as string | undefined)
+  ? { baseUrl: import.meta.env.VITE_TRANSFER_URL as string }
+  : undefined
+const { ttl: shareTtl, shareBusy, shareLink, shareError, share: shareStart, reset: shareReset } = useTransferShare(transferCfg)
+const shareOpenId = ref<string | null>(null)
+const linkCopied = ref(false)
+const TTL_LABELS: { value: TransferTtl; label: string }[] = [
+  { value: 'burn', label: '1× lesen' },
+  { value: '1h', label: '1 Stunde' },
+  { value: '24h', label: '24 Stunden' },
+  { value: '7d', label: '7 Tage' },
+]
+function openLinkShare(b: Container): void {
+  shareOpenId.value = shareOpenId.value === b.id ? null : b.id
+  shareReset()
+}
+function createBlockLink(b: Container): void {
+  void shareStart(exportBlock(blockForExport(b)))
+}
+async function copyBlockLink(): Promise<void> {
+  if (!shareLink.value) return
+  try {
+    await navigator.clipboard.writeText(shareLink.value.link)
+    linkCopied.value = true
+    window.setTimeout(() => (linkCopied.value = false), 2000)
+  } catch {
+    /* Clipboard nicht verfügbar — Nutzer kann den Link manuell markieren. */
+  }
+}
 
 function toggleImport(): void {
   importOpen.value = !importOpen.value
@@ -135,7 +170,7 @@ async function exportDownload(b: Container): Promise<void> {
       <div class="flex items-center gap-2">
         <h3 class="font-semibold">Blöcke</h3>
         <span v-if="blocks.length" class="badge badge-neutral badge-sm">{{ blocks.length }}</span>
-        <button class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 px-1.5" type="button" :class="importOpen ? 'btn-active' : ''" aria-label="Block importieren" title="Importieren" @click="toggleImport">
+        <button class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 px-1.5" type="button" :class="importOpen ? 'btn-active' : ''" aria-label="Block aus Datei importieren" title="Aus Datei importieren" @click="toggleImport">
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
         </button>
       </div>
@@ -193,10 +228,32 @@ async function exportDownload(b: Container): Promise<void> {
               <svg v-if="copiedId === b.id" class="size-5 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
               <svg v-else class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
             </button>
-            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" aria-label="Block teilen oder als Datei sichern" title="Teilen" :disabled="sharing" @click="exportDownload(b)">
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" aria-label="Block als Datei sichern" title="Als Datei" :disabled="sharing" @click="exportDownload(b)">
               <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7" /><path d="M12 16V3" /><path d="M8 7l4-4 4 4" /></svg>
             </button>
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :class="shareOpenId === b.id ? 'btn-active' : ''" aria-label="Block teilen (Link und QR)" title="Teilen (Link & QR)" @click="openLinkShare(b)">
+              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
+            </button>
             <button type="button" class="btn btn-primary btn-sm min-h-11" @click="closeEdit">Fertig</button>
+          </div>
+          <!-- Als-Link-teilen-Panel (verschlüsselter Kurzzeit-Transfer wie bei Vorlagen) -->
+          <div v-if="shareOpenId === b.id" class="flex flex-col gap-2 rounded-lg border border-base-300 bg-base-100 p-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <label class="text-xs font-semibold text-base-content/60">Gültigkeit</label>
+              <select v-model="shareTtl" class="select select-xs" aria-label="Gültigkeit des Transfer-Links">
+                <option v-for="t in TTL_LABELS" :key="t.value" :value="t.value">{{ t.label }}</option>
+              </select>
+              <button class="btn btn-primary btn-xs ml-auto" type="button" :disabled="shareBusy" @click="createBlockLink(b)">{{ shareBusy ? 'Erstelle …' : 'Link erstellen' }}</button>
+            </div>
+            <p v-if="shareError" class="text-xs text-error">{{ shareError }}</p>
+            <div v-if="shareLink" class="flex flex-col items-stretch gap-1 rounded bg-base-200 p-2">
+              <div class="flex items-center gap-1">
+                <input :value="shareLink.link" readonly class="input input-xs w-full font-mono" aria-label="Transfer-Link" />
+                <button class="btn btn-ghost btn-xs" type="button" @click="copyBlockLink">{{ linkCopied ? 'Kopiert' : 'Kopieren' }}</button>
+              </div>
+              <QrCode :value="shareLink.link" :size="180" />
+              <p class="text-xs text-base-content/50">Der Link ist das Geheimnis — nur mit vertrauten Personen teilen. Läuft ab bzw. wird nach dem Lesen gelöscht.</p>
+            </div>
           </div>
         </div>
       </template>

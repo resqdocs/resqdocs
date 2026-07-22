@@ -110,6 +110,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - **Prefill with a default?** (`default`) — Stays in the field until the user changes it. *Example: "Consciousness" starts as "alert, oriented".*
 - **Select list instead of free text?** (`options`) — The user picks from fixed values (list of strings). *Example: "Handover to" with "ED/physician/nursing staff".*
 - **Additionally allow custom input?** (`allowCustom`) — Select plus the option to type something else. *Example: "Breathing" with fixed grades but also free text.*
+- **Allow multiple selections?** (`multiple`, from app 1.4.0) — Several options selectable at once (checkboxes for ≤6, multi-select dropdown for >6). *Example: "Auscultation" — ventilated bilaterally AND wheezing at the same time.* Only with `options`. The output joins the chosen values as an enumeration ("a, b and c"). Optional `exclusiveOptions` (subset of `options`): a "none/normal" option that excludes all others (and vice versa) — *example: "No cyanosis" excludes "central/peripheral cyanosis".*
 - **Large multi-line text field?** (`multiline`) — For longer texts with line breaks. *Example: "History" with several sentences.*
 
 ### Functions only (medication list / doctors)
