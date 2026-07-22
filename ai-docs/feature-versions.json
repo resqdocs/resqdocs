@@ -1,5 +1,5 @@
 {
-  "_comment": "Hand-gepflegt, committet. Ab welcher ResQDocs-APP-Version (nicht Format-Version) ein functionKind bzw. eine gegatete Eigenschaft verfuegbar ist - Funktionen/Felder kommen per App-Update dazu. Der Generator (scripts/ai-docs/gen-ai-docs.mjs) rendert daraus die Tabelle {{FEATURE_VERSIONS}} in der KI-Doku UND ERZWINGT, dass jeder functionKind aus dem Schema hier steht (sonst Build-Abbruch -> kein ungegatetes Feature geht live). 'baseline' = Mindest-App-Version fuer den v1-Vorlagen-Import ueberhaupt (Container+Feld). 'fields' = einzelne Knoten-Eigenschaften mit eigener Mindestversion (Field-Gating; nicht erzwungen, da rein additiv). Beim Release eines Features hier die reale Mindestversion eintragen.",
+  "_comment": "Hand-gepflegt, committet. Ab welcher ResQDocs-APP-Version (nicht Format-Version) ein functionKind bzw. eine gegatete Eigenschaft verfuegbar ist - Funktionen/Felder kommen per App-Update dazu. Der KI-Doku-Generator rendert daraus die Tabelle {{FEATURE_VERSIONS}} und erzwingt, dass jeder functionKind aus dem Schema hier steht (sonst Build-Abbruch). 'baseline' = Mindest-App-Version fuer den v1-Vorlagen-Import ueberhaupt (Container+Feld). 'fields' = einzelne Knoten-Eigenschaften mit eigener Mindestversion (Field-Gating; nicht erzwungen, da rein additiv). Beim Release eines Features hier die reale Mindestversion eintragen.",
   "baseline": "1.0.0",
   "fields": [
     {
@@ -28,6 +28,33 @@
       "note_de": "Funktion darf im Einsatz nicht still entfallen; leer = „noch offen\"",
       "note_en": "function cannot be silently skipped during a case; empty = \"still open\"",
       "minVersion": "1.2.0"
+    },
+    {
+      "prop": "vollmacht",
+      "on": "function",
+      "de": "Kontaktpersonen mit Rechts-Flags",
+      "en": "Contact persons with legal flags",
+      "note_de": "Ärzte-Funktion: Kontaktpersonen (Angehörige/Betreuer) mit Rolle + Patientenverfügung/Vollmacht",
+      "note_en": "Doctors function: contact persons (relatives/carers) with role + advance directive / power of attorney",
+      "minVersion": "1.3.0"
+    },
+    {
+      "prop": "multiple",
+      "on": "field",
+      "de": "Mehrfachauswahl",
+      "en": "Multi-select",
+      "note_de": "Options-Feld erlaubt mehrere Optionen gleichzeitig (Checkboxen ≤6 / Multiselect-Dropdown >6); Wert = Aufzählung „a, b und c“",
+      "note_en": "option field allows several options at once (checkboxes ≤6 / multi-select dropdown >6); value = enumeration \"a, b and c\"",
+      "minVersion": "1.4.0"
+    },
+    {
+      "prop": "exclusiveOptions",
+      "on": "field",
+      "de": "Ausschließende Optionen",
+      "en": "Exclusive options",
+      "note_de": "Bei Mehrfachauswahl: „Keine/Normalbefund“-Optionen (exakte options-Strings), die alle anderen ausschließen",
+      "note_en": "with multi-select: \"none/normal\" options (exact option strings) that exclude all others",
+      "minVersion": "1.4.0"
     }
   ],
   "functions": [

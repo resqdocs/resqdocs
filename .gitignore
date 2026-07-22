@@ -59,3 +59,8 @@ core
 
 # github/licensed cache (ephemer im CI; NICHT committen)
 .licenses/
+
+# Lokale Screenshot-Zips + fastlane-Artefakte (nie committen)
+screen_*.zip
+apps/pico-pwa/ios/App/fastlane/report.xml
+apps/pico-pwa/ios/App/fastlane/README.md

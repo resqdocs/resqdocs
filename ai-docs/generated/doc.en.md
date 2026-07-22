@@ -33,6 +33,9 @@ Additionally, individual **properties** are only available from a minimum versio
 | Default text | `default` | functions (fallback when there is no output: lists without entries, calculators without a result) | 1.1.1 |
 | Required | `required` | field (field cannot be silently skipped during a case (no "not collected"); empty = "still open") | 1.2.0 |
 | Required | `required` | functions (function cannot be silently skipped during a case; empty = "still open") | 1.2.0 |
+| Contact persons with legal flags | `vollmacht` | functions (Doctors function: contact persons (relatives/carers) with role + advance directive / power of attorney) | 1.3.0 |
+| Multi-select | `multiple` | field (option field allows several options at once (checkboxes ≤6 / multi-select dropdown >6); value = enumeration "a, b and c") | 1.4.0 |
+| Exclusive options | `exclusiveOptions` | field (with multi-select: "none/normal" options (exact option strings) that exclude all others) | 1.4.0 |
 
 **Gate rule:** a `functionKind` is available **only if its minimum version ≤ the user's version**. Otherwise do not offer it; if the user asks, say "that needs at least version X". **Never write** a `functionKind` into the JSON that the stated version does not know. Containers and fields work from version 1.0.0 onward. If the user states a version **before 1.0.0** (or none), assume the base — only `container` + `field`, no functions — and point out that functions and the template import itself need at least 1.0.0.
 
@@ -126,6 +129,8 @@ Three node types: **Container** (section with children), **Field** (input field)
 - `blankLineBefore` (boolean)
 - `options` (list of string)
 - `allowCustom` (boolean)
+- `multiple` (boolean)
+- `exclusiveOptions` (list of string)
 - `multiline` (boolean)
 - `required` (boolean)
 
@@ -351,6 +356,17 @@ Three node types: **Container** (section with children), **Field** (input field)
           "type": "boolean",
           "description": "Bei einem Select zusaetzlich „individuell\" -> Freitext anbieten (Default aus)."
         },
+        "multiple": {
+          "type": "boolean",
+          "description": "Mehrfachauswahl: mehrere Optionen gleichzeitig waehlbar (Checkboxen bei ≤6, Multi-Dropdown bei >6). Nur mit options wirksam. Fehlt/false -> Einfachauswahl wie bisher. ADDITIV + rueckwaerts/vorwaerts- kompatibel: alte App-Versionen ignorieren das Feld und rendern normales Single-Select (kein Bump von BLOCK_VERSION/PROTOCOL_VERSION -> geteilte „Multi\"-Bloecke werden von aelteren Apps akzeptiert)."
+        },
+        "exclusiveOptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein „Keine/Normalbefund\" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv)."
+        },
         "multiline": {
           "type": "boolean",
           "description": "Freitext mehrzeilig erfassen: im ✎-Modus ein grosses Textfeld (Sheet) statt einzeiligem <input>\n- fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert."
@@ -485,6 +501,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - **Prefill with a default?** (`default`) — Stays in the field until the user changes it. *Example: "Consciousness" starts as "alert, oriented".*
 - **Select list instead of free text?** (`options`) — The user picks from fixed values (list of strings). *Example: "Handover to" with "ED/physician/nursing staff".*
 - **Additionally allow custom input?** (`allowCustom`) — Select plus the option to type something else. *Example: "Breathing" with fixed grades but also free text.*
+- **Allow multiple selections?** (`multiple`, from app 1.4.0) — Several options selectable at once (checkboxes for ≤6, multi-select dropdown for >6). *Example: "Auscultation" — ventilated bilaterally AND wheezing at the same time.* Only with `options`. The output joins the chosen values as an enumeration ("a, b and c"). Optional `exclusiveOptions` (subset of `options`): a "none/normal" option that excludes all others (and vice versa) — *example: "No cyanosis" excludes "central/peripheral cyanosis".*
 - **Large multi-line text field?** (`multiline`) — For longer texts with line breaks. *Example: "History" with several sentences.*
 
 ### Functions only (medication list / doctors)
@@ -808,6 +825,46 @@ Shows layout details: collapsible, excludable, inline fields, select with custom
         "blankLineBefore": true,
         "heading": { "prefix": "", "suffix": ":", "fill": "", "width": 0, "fillMode": "inclusive" },
         "config": { "rowLayout": "inline", "rowSeparator": " · " }
+      }
+    ]
+  }
+}
+```
+
+### multiselect
+Shows multi-select (`multiple`): auscultation/cyanosis with several options selectable at once and an exclusive "none/normal" option (`exclusiveOptions`) that excludes all others. From app version 1.4.0.
+```json
+{
+  "schema": "resqdocs-protocol",
+  "version": 1,
+  "tree": {
+    "type": "container",
+    "id": "atmung",
+    "title": "Atmung (B)",
+    "showTitle": true,
+    "heading": { "prefix": "", "suffix": "", "fill": "", "width": 0, "fillMode": "inclusive" },
+    "children": [
+      {
+        "type": "field",
+        "id": "auskultation",
+        "title": "Auskultation",
+        "showTitle": true,
+        "multiple": true,
+        "options": ["Beidseits belüftet, frei ohne RGs", "Giemen", "Brummen", "feinblasige RGs", "grobblasige RGs", "einseitig abgeschwächt"],
+        "exclusiveOptions": ["Beidseits belüftet, frei ohne RGs"],
+        "default": "Beidseits belüftet, frei ohne RGs",
+        "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
+      },
+      {
+        "type": "field",
+        "id": "zyanose",
+        "title": "Zyanose",
+        "showTitle": true,
+        "multiple": true,
+        "options": ["Keine Zyanose", "zentrale Zyanose", "periphere Zyanose"],
+        "exclusiveOptions": ["Keine Zyanose"],
+        "default": "Keine Zyanose",
+        "heading": { "prefix": "", "suffix": ": ", "fill": "", "width": 0, "fillMode": "inclusive" }
       }
     ]
   }

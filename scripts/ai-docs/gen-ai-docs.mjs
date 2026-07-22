@@ -143,6 +143,11 @@ const EXAMPLES = [
     en: 'Shows layout details: collapsible, excludable, inline fields, select with custom input.',
   },
   {
+    file: 'multiselect.json',
+    de: 'Zeigt Mehrfachauswahl (`multiple`): Auskultation/Zyanose mit mehreren gleichzeitig wählbaren Optionen und einer exklusiven „Keine/Normal"-Option (`exclusiveOptions`), die alle anderen ausschließt. Ab App-Version 1.4.0.',
+    en: 'Shows multi-select (`multiple`): auscultation/cyanosis with several options selectable at once and an exclusive "none/normal" option (`exclusiveOptions`) that excludes all others. From app version 1.4.0.',
+  },
+  {
     file: 'standardprotokoll.json',
     de: 'GOLD-BEISPIEL: vollständiges Standardprotokoll (Einsatz, Anamnese, Medikation, xABCDE, Messwerte, Maßnahmen, Übergabe). Dieses Beispiel zeigt das FORMAT und ist der Ausgangspunkt für „Standardprotokoll anpassen" — Struktur und Schreibweise exakt übernehmen, Inhalte (Abschnitte, Felder, Optionen) kommen aus dem Dialog mit dem Nutzer.',
     en: 'GOLD EXAMPLE: complete standard protocol (mission, history, medication, xABCDE, vitals, measures, handover). This example shows the FORMAT and is the starting point for "adapt the standard protocol" — copy structure and notation exactly; contents (sections, fields, options) come from the dialog with the user.',

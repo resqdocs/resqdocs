@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -39,6 +40,12 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Werbe-ID (AD_ID) beim Manifest-Merge hart entfernen: die App nutzt KEINE
+         Werbe-ID (keine Ads-/Analytics-/Firebase-SDKs). tools:node="remove" wirft die
+         Berechtigung raus, egal welche transitive Abhaengigkeit sie einschleust, damit
+         die Play-Erklaerung „keine Werbe-ID" konsistent bleibt (kein Release-Fehler). -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
 
     <!-- Kamera nur fuer den Medikationsplan-Scan (BMP, #9/#36, @zxing/browser im
          WebView). Nicht erforderlich: Geraete ohne Kamera koennen die App nutzen,

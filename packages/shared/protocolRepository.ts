@@ -33,7 +33,7 @@ const nowIso = (): string => new Date().toISOString()
 // Tiefe Kopie ueber JSON. Bewusst NICHT structuredClone: das wirft auf Vue-REACTIVE-Proxies einen
 // DataCloneError („could not be cloned") - VERSIONSUNABHAENGIG (NICHT „erst ab iOS 15.4"!). seed/
 // protocols sind deep-reactive; Container-Baeume sind reines JSON -> der JSON-Klon ist verlustfrei.
-// NICHT zu structuredClone zurueckbauen, sonst kehrt der Boot-Crash zurueck. Vgl. buglog bug-040/213.
+// NICHT zu structuredClone zurueckbauen, sonst kehrt der Boot-Crash zurueck.
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T
 
 /** Repository ueber einen SqlClient (nativ: geteilte Verbindung; Tests: fakeSqlClient). */
