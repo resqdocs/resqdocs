@@ -27,7 +27,7 @@ const onOxygen = ref<boolean>(props.initial?.onOxygen ?? false)
 const scale2 = ref<boolean>(props.initial?.scale2 ?? false)
 
 const num = (v: number | null): number | null => (v == null || !Number.isFinite(v) || v < 0 ? null : v)
-// SpO₂ ist physiologisch 0-100 % - >100 ist unmoeglich (Verify-Fund bug-304). Das HTML-max erzwingt bei
+// SpO₂ ist physiologisch 0-100 % - >100 ist unmoeglich. Das HTML-max erzwingt bei
 // v-model.number den gebundenen Wert NICHT -> die Obergrenze hier pruefen (Uebernehmen sperren + Hinweis).
 const spo2TooHigh = computed(() => {
   const n = num(spo2.value)

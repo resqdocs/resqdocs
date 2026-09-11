@@ -36,6 +36,7 @@ Additionally, individual **properties** are only available from a minimum versio
 | Contact persons with legal flags | `vollmacht` | functions (Doctors function: contact persons (relatives/carers) with role + advance directive / power of attorney) | 1.3.0 |
 | Multi-select | `multiple` | field (option field allows several options at once (checkboxes ≤6 / multi-select dropdown >6); value = enumeration "a, b and c") | 1.4.0 |
 | Exclusive options | `exclusiveOptions` | field (with multi-select: "none/normal" options (exact option strings) that exclude all others) | 1.4.0 |
+| Starts as "not assessed" | `defaultExcluded` | field, container (Field or section starts as "not assessed" instead of "confirmed" and only appears in the output once the user deliberately switches it on. For content needed only in specific situations. On a container it also requires excludable; on a field it is mutually exclusive with required.) | 1.5.0 |
 
 **Gate rule:** a `functionKind` is available **only if its minimum version ≤ the user's version**. Otherwise do not offer it; if the user asks, say "that needs at least version X". **Never write** a `functionKind` into the JSON that the stated version does not know. Containers and fields work from version 1.0.0 onward. If the user states a version **before 1.0.0** (or none), assume the base — only `container` + `field`, no functions — and point out that functions and the template import itself need at least 1.0.0.
 
@@ -109,6 +110,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - `heading` (Heading)
 - `collapsible` (boolean)
 - `excludable` (boolean)
+- `defaultExcluded` (boolean)
 - `inline` (boolean)
 - `noSeparatorBefore` (boolean)
 - `blankLineBefore` (boolean)
@@ -133,6 +135,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - `exclusiveOptions` (list of string)
 - `multiline` (boolean)
 - `required` (boolean)
+- `defaultExcluded` (boolean)
 
 #### FunctionNode — special function (functionKind: "medikamentenplan", "aerzte", "packYears", "news2")
 - `type` (always "function") — required
@@ -220,6 +223,10 @@ Three node types: **Container** (section with children), **Field** (input field)
         "excludable": {
           "type": "boolean",
           "description": "Option: im Einsatz als „nicht erhoben\" (excluded) markierbar -> 2-stufiger Status (✓ / −). Bei − entfaellt der ganze Container (inkl. Kinder) in der Ausgabe."
+        },
+        "defaultExcluded": {
+          "type": "boolean",
+          "description": "UNO Reverse: der Container startet im Einsatz auf „nicht erhoben\" statt auf „bestaetigt\" und erscheint erst, wenn der Anwender ihn bewusst einschaltet. Fuer Abschnitte, die man nur in bestimmten Lagen braucht (z. B. ein neurologischer Befund) - ein Tipp schaltet den ganzen Teilbaum zu, statt jedes Feld einzeln. Nur zusammen mit `excludable` sinnvoll: ohne den ✓/−-Schalter liesse sich der Container gar nicht wieder einschalten. Aendert NUR den Ausgangszustand, nicht die Vorlage selbst - im Editor bleibt der Abschnitt vollstaendig sichtbar."
         },
         "inline": {
           "type": "boolean",
@@ -374,6 +381,10 @@ Three node types: **Container** (section with children), **Field** (input field)
         "required": {
           "type": "boolean",
           "description": "Pflichtfeld: das Feld „darf nicht still verschwinden\". Im Einsatz entfaellt der −-Zustand (nicht erhoben); es bleiben ✓ (Auswahl/Standard) und ✎ (eigener Wert). „Nicht erhebbar\" wird bei Bedarf sichtbar via ✎ dokumentiert, nicht per −. Rein additiv, kein Submit-Gate; der Renderer bleibt unveraendert. Ein leeres Pflichtfeld wird nur visuell als „noch offen\" markiert."
+        },
+        "defaultExcluded": {
+          "type": "boolean",
+          "description": "UNO Reverse: das Feld startet im Einsatz auf „nicht erhoben\" (−) statt auf „bestaetigt\" (✓) und erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Fuer Felder, die man nur in bestimmten Lagen braucht. Schliesst sich mit `required` aus (ein Pflichtfeld darf nicht still entfallen); der Editor verhindert die Kombination. Aendert NUR den Ausgangszustand - die Vorlage bleibt vollstaendig, das Weglassen ist reiner Einsatz-Zustand."
         }
       },
       "required": [

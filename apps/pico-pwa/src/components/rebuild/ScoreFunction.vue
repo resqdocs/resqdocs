@@ -24,6 +24,8 @@ const caseValues = useCaseValues()
 
 const def = computed(() => FUNCTION_REGISTRY[props.node.functionKind])
 const label = computed(() => (props.node.title && props.node.title.trim()) || def.value?.label || 'Rechner')
+// Funktionen fuehren ihren Status eigenstaendig (state:'function' mit status), nicht ueber den
+// Feld-Tri-State. UNO Reverse ist fuer sie deshalb NICHT entschieden - bewusst kein Knoten hier.
 const fill = computed(() => caseValues.get(props.node.id))
 const ergebnis = computed(() => def.value?.renderBody(fill.value) ?? '')
 const hasData = computed(() => def.value?.hasData(fill.value) ?? false)

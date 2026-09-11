@@ -38,7 +38,7 @@ function create() {
     // Vor dem optimistischen Anhaengen sicherstellen, dass die Bibliothek geladen ist - sonst zeigt die
     // Liste nur den neuen Baustein (Boot-Race / beim Boot verschluckte reload-Rejection). Die id ist
     // zufaellig (newBlockId) -> selbst bei fehlgeschlagenem reload KEINE Kollision, kein Ueberschreiben
-    // eines bestehenden Bausteins (Verify bug-312).
+    // eines bestehenden Bausteins.
     if (!loaded.value) {
       try {
         await reload()

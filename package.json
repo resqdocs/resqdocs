@@ -2,8 +2,10 @@
   "name": "resqdocs-root",
   "private": true,
   "engines": {
-    "node": ">=22.18"
+    "node": ">=22.18",
+    "npm": ">=12"
   },
+  "packageManager": "npm@12.0.2",
   "scripts": {
     "gen:ai-docs": "node --experimental-strip-types scripts/ai-docs/gen-ai-docs.mjs",
     "gen:ai-docs:verify": "node scripts/ai-docs/verify-ai-docs.mjs",

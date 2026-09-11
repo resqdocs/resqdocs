@@ -1,5 +1,5 @@
 // Laeuft mit:  node --test --experimental-strip-types
-// Regression bug-312: die Baustein-id MUSS kollisionsfrei sein, ohne vom (evtl. leeren) In-Memory-Stand
+// Regression: die Baustein-id MUSS kollisionsfrei sein, ohne vom (evtl. leeren) In-Memory-Stand
 // abzuhaengen - sonst ueberschreibt ein Save bei Boot-Race einen bestehenden Baustein.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

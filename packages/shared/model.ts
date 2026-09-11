@@ -27,6 +27,14 @@ export interface Container {
   /** Option: im Einsatz als „nicht erhoben" (excluded) markierbar -> 2-stufiger Status (✓ / −).
    *  Bei − entfaellt der ganze Container (inkl. Kinder) in der Ausgabe. */
   excludable?: boolean
+  /** UNO Reverse: der Container startet im Einsatz auf „nicht erhoben" statt auf „bestaetigt" und
+   *  erscheint erst, wenn der Anwender ihn bewusst einschaltet. Fuer Abschnitte, die man nur in
+   *  bestimmten Lagen braucht (z. B. ein neurologischer Befund) - ein Tipp schaltet den ganzen
+   *  Teilbaum zu, statt jedes Feld einzeln.
+   *  Nur zusammen mit `excludable` sinnvoll: ohne den ✓/−-Schalter liesse sich der Container gar
+   *  nicht wieder einschalten. Aendert NUR den Ausgangszustand, nicht die Vorlage selbst - im Editor
+   *  bleibt der Abschnitt vollstaendig sichtbar. */
+  defaultExcluded?: boolean
   /** Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen). */
   inline?: boolean
   /** Kein Feld-Trenner VOR diesem Element (klebt ans vorherige inline-Element). */
@@ -88,6 +96,13 @@ export interface Field {
    *  Bedarf sichtbar via ✎ dokumentiert, nicht per −. Rein additiv, kein Submit-Gate; der Renderer
    *  bleibt unveraendert. Ein leeres Pflichtfeld wird nur visuell als „noch offen" markiert. */
   required?: boolean
+  /** UNO Reverse: das Feld startet im Einsatz auf „nicht erhoben" (−) statt auf „bestaetigt" (✓) und
+   *  erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Fuer Felder, die man
+   *  nur in bestimmten Lagen braucht.
+   *  Schliesst sich mit `required` aus (ein Pflichtfeld darf nicht still entfallen); der Editor
+   *  verhindert die Kombination. Aendert NUR den Ausgangszustand - die Vorlage bleibt vollstaendig,
+   *  das Weglassen ist reiner Einsatz-Zustand. */
+  defaultExcluded?: boolean
 }
 
 /** Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan).

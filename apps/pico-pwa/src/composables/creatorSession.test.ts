@@ -490,7 +490,7 @@ test('Einfügen mutiert die Eingabe-Session nicht', () => {
   assert.equal(JSON.stringify(s), snap)
 })
 
-test('REGRESSION bug-089: Transformationen vertragen Vue-reactive-Sessions (DataCloneError)', async () => {
+test('REGRESSION: Transformationen vertragen Vue-reactive-Sessions (DataCloneError)', async () => {
   const { reactive } = await import('vue')
   const session = reactive(fresh())
   // vorher: structuredClone(reactive(...)) warf DataCloneError bei jedem +Block/+Punkt

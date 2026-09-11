@@ -273,9 +273,36 @@ async function saveAsBaustein(): Promise<void> {
 
       <!-- FELD/FUNKTION: Pflichtfeld. Im Einsatz entfaellt der −-Zustand (nicht erhoben); ✓/✎ bleiben.
            Ein leeres Pflichtfeld wird nur visuell als „noch offen" markiert (kein Zwang, keine Sperre). -->
-      <label v-if="node.type === 'field' || node.type === 'function'" class="flex w-full cursor-pointer items-center gap-2 py-0">
-        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.required === true" @change="set({ required: ($event.target as HTMLInputElement).checked || undefined })" />
+      <label
+        v-if="node.type === 'field' || node.type === 'function'"
+        class="flex w-full items-center gap-2 py-0"
+        :class="node.type === 'field' && node.defaultExcluded ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
+        :title="node.type === 'field' && node.defaultExcluded ? 'Nicht zusammen mit „Startet auf \u201anicht erhoben\u2018\u201c moeglich.' : undefined"
+      >
+        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.required === true" :disabled="node.type === 'field' && node.defaultExcluded === true" @change="set({ required: ($event.target as HTMLInputElement).checked || undefined })" />
         <span class="text-sm">Pflichtfeld <span class="whitespace-nowrap text-base-content/50">(✓ / ✎, kein „nicht erhoben")</span></span>
+      </label>
+
+      <!-- FELD: UNO Reverse. Das Feld startet im Einsatz auf „nicht erhoben" statt auf „bestaetigt" und
+           erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Fuer Felder, die man
+           nur in bestimmten Lagen braucht.
+           Schliesst sich mit „Pflichtfeld" aus: ein Pflichtfeld darf nicht still entfallen. Statt den
+           Widerspruch zuzulassen und spaeter aufzuloesen, ist der jeweils andere Schalter gesperrt -
+           so kann er gar nicht erst entstehen. -->
+      <label
+        v-if="node.type === 'field'"
+        class="flex w-full items-center gap-2 py-0"
+        :class="node.required ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
+        :title="node.required ? 'Nicht zusammen mit „Pflichtfeld\u201c moeglich - ein Pflichtfeld darf nicht still entfallen.' : undefined"
+      >
+        <input
+          type="checkbox"
+          class="toggle toggle-sm shrink-0"
+          :checked="node.defaultExcluded === true"
+          :disabled="node.required === true"
+          @change="set({ defaultExcluded: ($event.target as HTMLInputElement).checked || undefined })"
+        />
+        <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/50">(nur bei Bedarf einschalten)</span></span>
       </label>
 
       <!-- CONTAINER: einklappbar + als „nicht erhoben" markierbar (Basis).
@@ -286,9 +313,28 @@ async function saveAsBaustein(): Promise<void> {
         <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.collapsible === true" @change="set({ collapsible: ($event.target as HTMLInputElement).checked })" />
         <span class="text-sm">einklappbar</span>
       </label>
-      <label v-if="node.type === 'container' && !isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
-        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.excludable === true" @change="set({ excludable: ($event.target as HTMLInputElement).checked })" />
+      <label
+        v-if="node.type === 'container' && !isRoot"
+        class="flex w-full items-center gap-2 py-0"
+        :class="node.defaultExcluded ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
+        :title="node.defaultExcluded ? 'Wird von „Startet auf \u201anicht erhoben\u2018\u201c vorausgesetzt.' : undefined"
+      >
+        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.excludable === true" :disabled="node.defaultExcluded === true" @change="set({ excludable: ($event.target as HTMLInputElement).checked })" />
         <span class="text-sm">Als „nicht erhoben" markierbar <span class="whitespace-nowrap">(✓ / −)</span></span>
+      </label>
+      <!-- CONTAINER: UNO Reverse. Der ganze Abschnitt startet auf „nicht erhoben" und erscheint erst,
+           wenn der Anwender ihn zuschaltet - ein Tipp statt jedes Feld einzeln.
+           Setzt „Als nicht erhoben markierbar" automatisch mit: ohne den ✓/−-Schalter liesse sich der
+           Abschnitt gar nicht wieder einschalten, das Flag waere wirkungslos. Deshalb auch die Sperre
+           andersherum - excludable laesst sich nicht abschalten, solange UNO Reverse an ist. -->
+      <label v-if="node.type === 'container' && !isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
+        <input
+          type="checkbox"
+          class="toggle toggle-sm shrink-0"
+          :checked="node.defaultExcluded === true"
+          @change="set(($event.target as HTMLInputElement).checked ? { defaultExcluded: true, excludable: true } : { defaultExcluded: undefined })"
+        />
+        <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/50">(nur bei Bedarf zuschalten)</span></span>
       </label>
 
       <!-- CONTAINER (nicht Wurzel): den Teilbaum als wiederverwendbaren Baustein in der Bibliothek ablegen -->

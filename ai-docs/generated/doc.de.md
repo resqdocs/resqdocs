@@ -36,6 +36,7 @@ Zusätzlich sind einzelne **Eigenschaften** erst ab einer Mindestversion verfüg
 | Kontaktpersonen mit Rechts-Flags | `vollmacht` | Funktionen (Ärzte-Funktion: Kontaktpersonen (Angehörige/Betreuer) mit Rolle + Patientenverfügung/Vollmacht) | 1.3.0 |
 | Mehrfachauswahl | `multiple` | field (Options-Feld erlaubt mehrere Optionen gleichzeitig (Checkboxen ≤6 / Multiselect-Dropdown >6); Wert = Aufzählung „a, b und c“) | 1.4.0 |
 | Ausschließende Optionen | `exclusiveOptions` | field (Bei Mehrfachauswahl: „Keine/Normalbefund“-Optionen (exakte options-Strings), die alle anderen ausschließen) | 1.4.0 |
+| Startet auf „nicht erhoben" | `defaultExcluded` | field, container (Feld oder Abschnitt startet im Einsatz auf „nicht erhoben" statt auf „bestätigt" und erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Für Inhalte, die man nur in bestimmten Lagen braucht. Am Container zusätzlich excludable nötig; am Feld nicht zusammen mit required.) | 1.5.0 |
 
 **Gate-Regel:** Ein `functionKind` ist verfügbar **nur, wenn seine Mindestversion ≤ der Nutzer-Version** ist. Sonst biete ihn nicht an; fragt der Nutzer danach, sag „das braucht mindestens Version X". **Schreibe niemals** einen `functionKind` ins JSON, den die genannte Version nicht kennt. Container und Felder gehen ab Version 1.0.0 immer. Nennt der Nutzer eine Version **vor 1.0.0** (oder keine), nimm die Basis an — nur `container` + `field`, keine Funktionen — und weise darauf hin, dass Funktionen und der Vorlagen-Import selbst mindestens 1.0.0 brauchen.
 
@@ -109,6 +110,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `heading` (Heading)
 - `collapsible` (boolean): Option: im Einsatz einklappbar.
 - `excludable` (boolean): Option: im Einsatz als „nicht erhoben" (excluded) markierbar -> 2-stufiger Status (✓ / −). Bei − entfaellt der ganze Container (inkl. Kinder) in der Ausgabe.
+- `defaultExcluded` (boolean): UNO Reverse: der Container startet im Einsatz auf „nicht erhoben" statt auf „bestaetigt" und erscheint erst, wenn der Anwender ihn bewusst einschaltet. Fuer Abschnitte, die man nur in bestimmten Lagen braucht (z. B. ein neurologischer Befund) - ein Tipp schaltet den ganzen Teilbaum zu, statt jedes Feld einzeln. Nur zusammen mit `excludable` sinnvoll: ohne den ✓/−-Schalter liesse sich der Container gar nicht wieder einschalten. Aendert NUR den Ausgangszustand, nicht die Vorlage selbst - im Editor bleibt der Abschnitt vollstaendig sichtbar.
 - `inline` (boolean): Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen).
 - `noSeparatorBefore` (boolean): Kein Feld-Trenner VOR diesem Element (klebt ans vorherige inline-Element).
 - `blankLineBefore` (boolean): Optische Leerzeile (Absatz) VOR diesem Element - nur wirksam, wenn darueber etwas ausgegeben wird UND das Element eine eigene Titel-/Banner-Zeile hat (Banner-Knoten; sonst still ohne Wirkung). Gedacht fuer Banner/Trenner, um Abschnitte sichtbar zu trennen.
@@ -133,6 +135,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `exclusiveOptions` (Liste von string): Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein „Keine/Normalbefund" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv).
 - `multiline` (boolean): Freitext mehrzeilig erfassen: im ✎-Modus ein grosses Textfeld (Sheet) statt einzeiligem <input> - fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert.
 - `required` (boolean): Pflichtfeld: das Feld „darf nicht still verschwinden". Im Einsatz entfaellt der −-Zustand (nicht erhoben); es bleiben ✓ (Auswahl/Standard) und ✎ (eigener Wert). „Nicht erhebbar" wird bei Bedarf sichtbar via ✎ dokumentiert, nicht per −. Rein additiv, kein Submit-Gate; der Renderer bleibt unveraendert. Ein leeres Pflichtfeld wird nur visuell als „noch offen" markiert.
+- `defaultExcluded` (boolean): UNO Reverse: das Feld startet im Einsatz auf „nicht erhoben" (−) statt auf „bestaetigt" (✓) und erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Fuer Felder, die man nur in bestimmten Lagen braucht. Schliesst sich mit `required` aus (ein Pflichtfeld darf nicht still entfallen); der Editor verhindert die Kombination. Aendert NUR den Ausgangszustand - die Vorlage bleibt vollstaendig, das Weglassen ist reiner Einsatz-Zustand.
 
 #### FunctionNode — Spezial-Funktion (functionKind: "medikamentenplan", "aerzte", "packYears", "news2")
 - `type` (immer "function") — Pflicht
@@ -220,6 +223,10 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
         "excludable": {
           "type": "boolean",
           "description": "Option: im Einsatz als „nicht erhoben\" (excluded) markierbar -> 2-stufiger Status (✓ / −). Bei − entfaellt der ganze Container (inkl. Kinder) in der Ausgabe."
+        },
+        "defaultExcluded": {
+          "type": "boolean",
+          "description": "UNO Reverse: der Container startet im Einsatz auf „nicht erhoben\" statt auf „bestaetigt\" und erscheint erst, wenn der Anwender ihn bewusst einschaltet. Fuer Abschnitte, die man nur in bestimmten Lagen braucht (z. B. ein neurologischer Befund) - ein Tipp schaltet den ganzen Teilbaum zu, statt jedes Feld einzeln. Nur zusammen mit `excludable` sinnvoll: ohne den ✓/−-Schalter liesse sich der Container gar nicht wieder einschalten. Aendert NUR den Ausgangszustand, nicht die Vorlage selbst - im Editor bleibt der Abschnitt vollstaendig sichtbar."
         },
         "inline": {
           "type": "boolean",
@@ -374,6 +381,10 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
         "required": {
           "type": "boolean",
           "description": "Pflichtfeld: das Feld „darf nicht still verschwinden\". Im Einsatz entfaellt der −-Zustand (nicht erhoben); es bleiben ✓ (Auswahl/Standard) und ✎ (eigener Wert). „Nicht erhebbar\" wird bei Bedarf sichtbar via ✎ dokumentiert, nicht per −. Rein additiv, kein Submit-Gate; der Renderer bleibt unveraendert. Ein leeres Pflichtfeld wird nur visuell als „noch offen\" markiert."
+        },
+        "defaultExcluded": {
+          "type": "boolean",
+          "description": "UNO Reverse: das Feld startet im Einsatz auf „nicht erhoben\" (−) statt auf „bestaetigt\" (✓) und erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Fuer Felder, die man nur in bestimmten Lagen braucht. Schliesst sich mit `required` aus (ein Pflichtfeld darf nicht still entfallen); der Editor verhindert die Kombination. Aendert NUR den Ausgangszustand - die Vorlage bleibt vollstaendig, das Weglassen ist reiner Einsatz-Zustand."
         }
       },
       "required": [

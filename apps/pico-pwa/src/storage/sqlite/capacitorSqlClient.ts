@@ -8,13 +8,16 @@ import type { SqlClient, SqlRow } from './sqlClient'
 import type { LibraryRepository } from '../types'
 import { runMigrations } from './sqliteMigrations'
 import { createLibraryRepositoryOnClient } from './sqliteLibraryRepository'
+import { openSharedConnection } from './openSharedConnection'
 
 const DB_NAME = 'resqdocs-library'
 
 export async function createCapacitorSqlClient(): Promise<SqlClient> {
   const sqlite = new SQLiteConnection(CapacitorSQLite)
-  const db = await sqlite.createConnection(DB_NAME, false, 'no-encryption', 1, false)
-  await db.open()
+  // Eine bereits bestehende native Verbindung WIEDERVERWENDEN statt an ihr zu scheitern.
+  // Warum das noetig ist, steht ausfuehrlich in openSharedConnection.ts - Kurzfassung: der
+  // Verbindungs-Pool liegt nativ und ueberlebt einen Neuaufbau des JavaScript-Kontexts.
+  const db = await openSharedConnection(sqlite, DB_NAME)
 
   // Transaktions-Mutex auf der GETEILTEN Verbindung. Library- und PZN-Backend teilen
   // EINE Verbindung; bulkPut yieldet zwischen den Zeilen. Ohne Serialisierung könnten
@@ -73,11 +76,21 @@ export async function createCapacitorSqlClient(): Promise<SqlClient> {
 let sharedClient: Promise<SqlClient> | null = null
 export function getSharedCapacitorSqlClient(): Promise<SqlClient> {
   if (!sharedClient) {
-    sharedClient = (async () => {
+    const versuch = (async () => {
       const client = await createCapacitorSqlClient()
       await runMigrations(client)
       return client
     })()
+    sharedClient = versuch
+    // Einen FEHLSCHLAG nicht memoisieren. Vorher blieb die abgelehnte Zusage stehen und jeder
+    // weitere Aufruf bekam sie zurueck - auch „Neu pruefen" in den Einstellungen. Ein einmaliger
+    // Fehler beim Start war damit fuer den ganzen App-Lauf endgueltig, und weil protocolPersistence
+    // bei libraryError den Auto-Save abschaltet, ging alles Folgende ungespeichert verloren.
+    // Der Identitaetsvergleich verhindert, dass ein spaet eintreffender Fehlschlag einen inzwischen
+    // erfolgreich aufgebauten Client wieder verwirft.
+    void versuch.catch(() => {
+      if (sharedClient === versuch) sharedClient = null
+    })
   }
   return sharedClient
 }

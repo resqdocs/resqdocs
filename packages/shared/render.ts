@@ -7,7 +7,7 @@
 
 import type { Container, Field, FunctionNode, Heading, Node, FieldFill } from './model.ts'
 import { DEFAULT_HEADING, DEFAULT_SEPARATOR } from './model.ts'
-import { fillValue } from './fill.ts'
+import { fillValue, defaultFill } from './fill.ts'
 import { FUNCTION_REGISTRY } from './functions/registry.ts'
 
 type Values = Record<string, FieldFill>
@@ -143,7 +143,10 @@ function joinNodesR(children: Node[], values: Values, sep: string): { text: stri
 
 function renderContainerR(container: Container, values: Values, inheritedSep: string): Rendered | null {
   // 2-stufiger Container-Status: „nicht erhoben" -> ganzer Container (inkl. Kinder) entfaellt.
-  if (container.excludable && values[container.id]?.state === 'excluded') return null
+  // „Nicht erhoben" -> der ganze Container entfaellt. Der Ausgangszustand ist knotenabhaengig:
+  // mit defaultExcluded (UNO Reverse) startet der Abschnitt ausgeblendet und erscheint erst, wenn
+  // der Anwender ihn einschaltet.
+  if (container.excludable && (values[container.id] ?? defaultFill(container)).state === 'excluded') return null
   const sep = container.separator ?? inheritedSep // zentral an der Wurzel, pro Container ueberschreibbar
   const joined = joinNodesR(container.children, values, sep)
   const hasBody = joined.text !== ''
