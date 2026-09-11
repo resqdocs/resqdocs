@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useStorage } from '@/storage/useStorage'
+import { speedFromDelay, delayFromSpeed, typingSpeedLabel, DELAY_MIN_MS, DELAY_MAX_MS } from '@/pico/typingSpeed'
 
 /** App-Einstellungen (Zielgerät, Design, Erscheinung). Über die
  * gekapselte Storage-Schicht — kein Backend-Wissen.
@@ -8,12 +10,17 @@ import { useStorage } from '@/storage/useStorage'
  * gespeicherten Werte + die Renderer-Default-Logik bleiben unberührt. */
 const { settings, saveSettings } = useStorage()
 
-/** Stufen-Label fuer die Tippgeschwindigkeit (kleineres delayMs = schneller). */
-function typingSpeedLabel(ms: number): string {
-  if (ms <= 30) return 'Schnell'
-  if (ms <= 90) return 'Normal'
-  return 'Langsam'
-}
+/**
+ * Der Regler zeigt GESCHWINDIGKEIT, gespeichert wird die VERZOEGERUNG.
+ * Ohne diese Umkehrung machte „nach rechts" langsamer - bei einem Feld namens „Tippgeschwindigkeit".
+ * Gespeichert bleibt weiterhin typingDelayMs, weil die Bridge genau das erwartet.
+ */
+const typingSpeed = computed({
+  get: () => speedFromDelay(settings.typingDelayMs),
+  set: (v: number) => {
+    settings.typingDelayMs = delayFromSpeed(v)
+  },
+})
 </script>
 
 <template>
@@ -47,21 +54,22 @@ function typingSpeedLabel(ms: number): string {
       <fieldset class="fieldset">
         <div class="flex items-center justify-between">
           <legend class="fieldset-legend">Tippgeschwindigkeit</legend>
-          <span class="text-xs text-base-content/60">{{ typingSpeedLabel(settings.typingDelayMs) }} · {{ settings.typingDelayMs }} ms</span>
+          <span class="text-xs text-base-content/60">{{ typingSpeedLabel(settings.typingDelayMs) }}</span>
         </div>
         <input
-          v-model.number="settings.typingDelayMs"
+          v-model.number="typingSpeed"
           type="range"
-          min="20"
-          max="70"
+          :min="DELAY_MIN_MS"
+          :max="DELAY_MAX_MS"
           step="10"
           class="range range-sm w-full"
-          aria-label="Tippgeschwindigkeit der Bridge in Millisekunden pro Zeichen"
+          aria-label="Tippgeschwindigkeit der Bridge — weiter rechts tippt schneller"
+          :aria-valuetext="typingSpeedLabel(settings.typingDelayMs)"
           @change="saveSettings()"
         />
         <div class="mt-1 flex justify-between text-xs text-base-content/60">
-          <span>Schnell</span>
           <span>Langsam</span>
+          <span>Schnell</span>
         </div>
       </fieldset>
 

@@ -24,7 +24,7 @@ const props = defineProps<{ node: Container; depth: number; insideCollapse: bool
 const caseValues = useCaseValues()
 
 // excludable + „nicht erhoben" -> ganze Sektion gedimmt, Kinder weg (entfallen in der Ausgabe).
-const excluded = computed(() => Boolean(props.node.excludable) && caseValues.get(props.node.id).state === 'excluded')
+const excluded = computed(() => Boolean(props.node.excludable) && caseValues.get(props.node.id, props.node).state === 'excluded')
 
 // Abweichungen vom Standard im Teilbaum (reaktiv) -> "N abweichend"-Vorschau im Kopf
 // ("abweichend" deckt custom UND excluded ab; "geaendert" passt fuer "nicht erhoben" nicht).

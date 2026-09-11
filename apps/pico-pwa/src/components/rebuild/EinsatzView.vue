@@ -26,9 +26,10 @@ import MedplanFunction from './MedplanFunction.vue'
 import AerzteFunction from './AerzteFunction.vue'
 import ScoreFunction from './ScoreFunction.vue'
 import OutputText from '@resqdocs/protocol-core-ui/components/OutputText.vue'
+import { entscheideUeberEntwurf } from '@/composables/caseDraftGuard'
 
 const { einsatzRoot: root, protocols, einsatzActiveId, selectEinsatz } = useProtocolTree()
-const { libraryLoaded } = useProtocolPersistence()
+const { libraryLoaded, libraryError } = useProtocolPersistence()
 const caseValues = useCaseValues()
 const view = ref<'ausfuellen' | 'vorschau'>('ausfuellen')
 
@@ -36,6 +37,26 @@ const view = ref<'ausfuellen' | 'vorschau'>('ausfuellen')
 const caseDraft = useReworkCaseDraft()
 const draftResult = ref<{ draft: ReworkCaseDraft | null; expired: boolean } | null>(null)
 const draftNotice = ref<string | null>(null)
+/**
+ * Das Schreiben des Entwurfs ist fehlgeschlagen. Bis hierher wurde jeder Fehlschlag verschluckt
+ * (`void caseDraft.save(...)` ohne .catch): der Nutzer dokumentierte weiter, ohne dass irgendetwas
+ * gespeichert wurde und ohne dass es auf dem Bildschirm zu sehen war. Bei einer Dokumentations-App
+ * ist genau das der teuerste denkbare stille Fehler.
+ */
+const draftSaveError = ref(false)
+
+/** Entwurf schreiben und einen Fehlschlag SICHTBAR machen statt ihn zu schlucken. */
+function saveDraftGuarded(): void {
+  void caseDraft
+    .save(einsatzActiveId.value, caseValues.values.value)
+    .then(() => {
+      draftSaveError.value = false
+    })
+    .catch((err: unknown) => {
+      draftSaveError.value = true
+      console.error('Einsatz-Entwurf konnte nicht gespeichert werden:', err)
+    })
+}
 let restoring = false // Resume (setAll) soll keinen Auto-Save ausloesen (TTL nicht verlaengern)
 function showDraftNotice(text: string): void {
   draftNotice.value = text
@@ -63,7 +84,7 @@ function clearDraftTimer(): void {
 function commitDraftNow(): void {
   draftTimer = null
   draftPendingSince = 0
-  void caseDraft.save(einsatzActiveId.value, caseValues.values.value)
+  saveDraftGuarded()
 }
 function scheduleDraftSave(): void {
   const now = Date.now()
@@ -76,7 +97,7 @@ function scheduleDraftSave(): void {
 function flushDraft(): void {
   if (!draftTimer || restoring) return
   clearDraftTimer()
-  void caseDraft.save(einsatzActiveId.value, caseValues.values.value)
+  saveDraftGuarded()
 }
 function onAppHidden(): void {
   if (document.visibilityState === 'hidden') flushDraft()
@@ -204,9 +225,20 @@ function maybeResolveOnReady(): void {
   // NICHT gegen den Seed aufloesen: erst wenn die persistierte Bibliothek geladen ist (libraryLoaded),
   // sonst trifft resolveInitialProtocolId die persoenliche Standard-Vorlage nicht und verriegelt userSwitched.
   if (userSwitched || !storage.settingsLoaded.value || !libraryLoaded.value || draftResult.value === null) return
-  userSwitched = true
+
+  // DATENVERLUST-SPERRE (siehe caseDraftGuard.ts): bei gestoerter Bibliothek weder fortsetzen noch
+  // verwerfen. userSwitched bleibt dann offen, damit ein spaeterer gesunder Start den Entwurf
+  // regulaer fortsetzt.
   const d = draftResult.value.draft
-  if (d && d.protocolId && protocols.value.some((p) => p.id === d.protocolId)) {
+  const entscheidung = entscheideUeberEntwurf({
+    libraryError: libraryError.value,
+    vorhandeneProtokollIds: protocols.value.map((p) => p.id),
+    entwurfProtokollId: d?.protocolId,
+  })
+  if (entscheidung === 'unangetastet-lassen') return
+
+  userSwitched = true
+  if (d?.protocolId && entscheidung === 'fortsetzen') {
     restoring = true // Resume loest keinen Auto-Save aus; nextTick gibt genau den Restore-Flush frei
     selectEinsatz(d.protocolId)
     caseValues.setAll(d.values)
@@ -218,6 +250,8 @@ function maybeResolveOnReady(): void {
     return
   }
   // Entwurf fuer eine geloeschte/unbekannte Vorlage -> verwaiste Patientendaten loeschen (DSGVO).
+  // Erreichbar nur im GESUNDEN Zustand: 'verwerfen' liefert entscheideUeberEntwurf nie, solange
+  // libraryError gesetzt ist.
   if (d) void caseDraft.remove()
   const id = resolveInitialProtocolId(
     protocols.value.map((p) => p.id),
@@ -283,6 +317,26 @@ onUnmounted(() => {
 
 <template>
   <div class="flex flex-col gap-4">
+    <!-- Speicher-Warnung. Bewusst GANZ OBEN, nicht wegklickbar und nicht in den Einstellungen
+         versteckt: wer hier dokumentiert, muss sofort sehen, dass nichts gesichert wird. Der Text
+         zu libraryError ist in protocolPersistence bereits ausformuliert - er wurde bisher nirgends
+         in der App ausgegeben. -->
+    <div
+      v-if="libraryError || draftSaveError"
+      class="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-sm text-error"
+      role="alert"
+      aria-live="assertive"
+    >
+      <p class="font-semibold">Achtung: Dieser Einsatz wird gerade NICHT gespeichert.</p>
+      <p class="mt-1 text-xs">
+        {{ libraryError ?? 'Der Einsatz-Entwurf liess sich nicht auf dem Geraet sichern.' }}
+      </p>
+      <p class="mt-1 text-xs">
+        Bitte den Einsatz jetzt sichern — Vorschau oeffnen und den Text uebertragen oder abschreiben.
+        Nicht zuruecksetzen und nicht deinstallieren.
+      </p>
+    </div>
+
     <p v-if="draftNotice" class="rounded-lg bg-info/10 px-3 py-2 text-center text-xs text-info" role="status" aria-live="polite">{{ draftNotice }}</p>
 
     <!-- Umschalter: oben zentriert + sticky (unter dem App-Header, Safe-Area beachtet),

@@ -5,19 +5,22 @@
 
 import { ref } from 'vue'
 import type { FieldFill, FunctionRow } from '@resqdocs/protocol-core/model'
-import { DEFAULT_FILL, cycleFill } from '@resqdocs/protocol-core/fill'
+import { defaultFill, cycleFill } from '@resqdocs/protocol-core/fill'
 
 const values = ref<Record<string, FieldFill>>({})
 
 export function useCaseValues() {
   return {
     values,
-    get(id: string): FieldFill {
-      return values.value[id] ?? DEFAULT_FILL
+    /** Fuellzustand eines Knotens. `node` mitgeben, damit der AUSGANGSZUSTAND knotenabhaengig
+     *  aufgeloest wird (UNO Reverse: defaultExcluded startet auf „nicht erhoben"). Ohne node bleibt
+     *  es beim bisherigen Standard „bestaetigt" - so brechen Altaufrufer nicht. */
+    get(id: string, node?: { defaultExcluded?: boolean } | null): FieldFill {
+      return values.value[id] ?? defaultFill(node)
     },
     /** Tri-State weiterschalten: confirmed -> custom(default) -> excluded -> confirmed. */
-    cycle(id: string, def: string): void {
-      values.value = { ...values.value, [id]: cycleFill(values.value[id] ?? DEFAULT_FILL, def) }
+    cycle(id: string, def: string, node?: { defaultExcluded?: boolean } | null): void {
+      values.value = { ...values.value, [id]: cycleFill(values.value[id] ?? defaultFill(node), def) }
     },
     /** Fuellzustand direkt setzen (z. B. aus dem TriStateToggle, der den naechsten Zustand liefert).
      *  BEWAHREN: verlaesst man 'custom' mit nicht-leerem Freitext Richtung confirmed/excluded, wird der
@@ -57,9 +60,14 @@ export function useCaseValues() {
     setFill(id: string, fill: FieldFill): void {
       values.value = { ...values.value, [id]: fill }
     },
-    /** 2-stufig (Container): bestaetigt <-> nicht erhoben. */
-    toggleExcluded(id: string): void {
-      const next: FieldFill = values.value[id]?.state === 'excluded' ? DEFAULT_FILL : { state: 'excluded' }
+    /** 2-stufig (Container): bestaetigt <-> nicht erhoben.
+     *  Der Vergleich MUSS gegen den Ausgangszustand des Knotens laufen, nicht gegen einen fehlenden
+     *  Eintrag: bei einem UNO-Reverse-Container ist „nicht erhoben" der Ausgangszustand, ein Tipp
+     *  haette sonst nur denselben Zustand materialisiert und sichtbar gar nichts getan - man haette
+     *  ZWEIMAL tippen muessen, um ihn einzuschalten. */
+    toggleExcluded(id: string, node?: { defaultExcluded?: boolean } | null): void {
+      const current = values.value[id] ?? defaultFill(node)
+      const next: FieldFill = current.state === 'excluded' ? { state: 'confirmed' } : { state: 'excluded' }
       values.value = { ...values.value, [id]: next }
     },
     /** id umbenannt -> Wert mit-migrieren (alter Key -> neuer Key), sonst verwaist er. */

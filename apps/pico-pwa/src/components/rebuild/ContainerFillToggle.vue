@@ -9,11 +9,11 @@ import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 const props = defineProps<{ node: Container }>()
 const caseValues = useCaseValues()
 
-const excluded = computed(() => caseValues.get(props.node.id).state === 'excluded')
+const excluded = computed(() => caseValues.get(props.node.id, props.node).state === 'excluded')
 const label = computed(() => (props.node.title && props.node.title.trim()) || props.node.id)
 
 function toggle(): void {
-  caseValues.toggleExcluded(props.node.id)
+  caseValues.toggleExcluded(props.node.id, props.node)
 }
 </script>
 

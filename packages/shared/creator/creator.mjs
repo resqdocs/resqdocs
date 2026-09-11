@@ -20,7 +20,7 @@ export const VARIABLE_TYPES = ["select", "boolean", "text", "number"];
 /** Operatoren des einfachen (MVP) visibleIf-Editors — genau eine Bedingung. */
 export const SIMPLE_OPS = ["eq", "in", "truthy", "filled", "state"];
 
-// structuredClone wirft DataCloneError auf Proxies (z. B. Vue-reactive, bug-089).
+// structuredClone wirft DataCloneError auf Proxies (z. B. Vue-reactive).
 // Fallback: JSON-Roundtrip - Protokolle sind reine JSON-Daten, verlustfrei.
 const clone = (x) => {
   try {

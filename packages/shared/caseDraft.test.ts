@@ -82,7 +82,7 @@ test('sanitizeValues (via parseDraft): function-Variante - Allowlist {name,staer
         state: 'function',
         rows: [
           { name: 'ASS', staerke: '100 mg', dosierung: '1-0-0', pzn: '123', aussteller: 'Dr. X' },
-          { name: '', dosierung: 'x' }, // namenlos, aber Daten -> bleibt (Nutzerarbeit, bug-300)
+          { name: '', dosierung: 'x' }, // namenlos, aber Daten -> bleibt (Nutzerarbeit)
           { name: '   ', kommentar: ' ' }, // komplett leer (nur Whitespace) -> raus
           { foo: 'bar' }, // kein name-String -> raus
         ],

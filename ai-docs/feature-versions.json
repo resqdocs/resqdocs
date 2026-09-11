@@ -55,6 +55,15 @@
       "note_de": "Bei Mehrfachauswahl: „Keine/Normalbefund“-Optionen (exakte options-Strings), die alle anderen ausschließen",
       "note_en": "with multi-select: \"none/normal\" options (exact option strings) that exclude all others",
       "minVersion": "1.4.0"
+    },
+    {
+      "prop": "defaultExcluded",
+      "on": "field, container",
+      "de": "Startet auf „nicht erhoben\"",
+      "en": "Starts as \"not assessed\"",
+      "note_de": "Feld oder Abschnitt startet im Einsatz auf „nicht erhoben\" statt auf „bestätigt\" und erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Für Inhalte, die man nur in bestimmten Lagen braucht. Am Container zusätzlich excludable nötig; am Feld nicht zusammen mit required.",
+      "note_en": "Field or section starts as \"not assessed\" instead of \"confirmed\" and only appears in the output once the user deliberately switches it on. For content needed only in specific situations. On a container it also requires excludable; on a field it is mutually exclusive with required.",
+      "minVersion": "1.5.0"
     }
   ],
   "functions": [

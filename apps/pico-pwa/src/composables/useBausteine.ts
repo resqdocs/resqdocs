@@ -97,8 +97,8 @@ function create() {
 
   // Snippet-CRUD OPTIMISTISCH: snippets.value SOFORT (synchron, vor dem await) aktualisieren, dann OHNE
   // reload() persistieren. reload() haengt nativ an echtem SQLite-Bridge-I/O (Macrotask) - das dazwischen
-  // liegende Fenster mit veralteter Liste verursachte Draft-Datenverlust + ID-Kollisionen (Verify bug-308/
-  // -309). Bei Persistenz-Fehler aus der DB zuruecksynchronisieren (reload).
+  // liegende Fenster mit veralteter Liste verursachte Draft-Datenverlust + ID-Kollisionen.
+  // Bei Persistenz-Fehler aus der DB zuruecksynchronisieren (reload).
   async function addSnippet(): Promise<string> {
     const id = createUniqueId('snippet', new Set(snippets.value.map((s) => s.id)))
     const ts = nowIso()

@@ -7,7 +7,7 @@ import type { LibraryBlock } from '@/storage/types'
  * #13-F4-Authoring). Ohne Vue/Storage, damit in node:test prüfbar.
  *
  * - **Tiefe Kopie** via JSON: proxy-sicher (currentBlock ist ein Vue-reactive-
- *   Proxy, auf dem structuredClone DataCloneError wirft — bug-089). Blöcke sind
+ *   Proxy, auf dem structuredClone DataCloneError wirft). Blöcke sind
  *   reine JSON-Daten (keine Funktionen/Dates), daher verlustfrei. Quelle bleibt
  *   unberührt → spätere Editor-Änderungen wirken nicht auf den Baustein zurück.
  * - **IDs werden übernommen** (Block-/Punkt-/findingGroup-Kind-ids). Beim späteren

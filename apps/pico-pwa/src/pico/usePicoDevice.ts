@@ -69,7 +69,16 @@ export function usePicoDevice() {
     busy.value = true
     error.value = null
     try {
-      const r = await client.typeText({ text: testText.value, os: os.value })
+      // Mit der EINGESTELLTEN Tippgeschwindigkeit senden, nicht mit dem Firmware-Default.
+      // Ohne delayMs tippte der Testtext immer mit 60 ms (picoClient.ts haengt den Wert nur an, wenn
+      // er gesetzt ist; bridge_s2.ino faellt sonst auf 60 zurueck) - der Test lief also unabhaengig
+      // vom Regler und an beiden Reglerenden gleich schnell. Genau der Knopf, mit dem man die
+      // Einstellung ausprobiert, zeigte ihre Wirkung nicht.
+      const r = await client.typeText({
+        text: testText.value,
+        os: os.value,
+        delayMs: storage.settings.typingDelayMs,
+      })
       return { ok: true, typed: r.typed }
     } catch (e) {
       error.value = (e as Error).message
