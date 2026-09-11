@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "description": "Geteilte Vue-Editor-Komponenten + Composables über @resqdocs/protocol-core (App + Online-Editor).",
+  "engines": {
+    "node": ">=22.18",
+    "npm": ">=12"
+  },
   "scripts": {
     "test": "node --test --experimental-strip-types blockId.test.ts blockSummary.test.ts useProtocolTree.test.ts"
   },

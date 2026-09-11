@@ -3,7 +3,7 @@
 // NICHT „ein Wert wird erzwungen". „Erfuellt" = das Blatt liefert nicht-leeren Ausgabetext.
 // Rein -> node-getestet. Renderer/Modell-Ausgabe bleiben unveraendert.
 import type { Node, Field, FunctionNode, FieldFill } from './model.ts'
-import { DEFAULT_FILL, isFilled } from './fill.ts'
+import { defaultFill, isFilled } from './fill.ts'
 import { FUNCTION_REGISTRY } from './functions/registry.ts'
 
 /** Liefert die Funktion nicht-leeren Ausgabetext? Zeilen (hasData) ODER Freitext (custom) ODER
@@ -19,7 +19,7 @@ export function isFunctionFilled(node: FunctionNode, fill: FieldFill | undefined
 /** Ist dieses Blatt ein OFFENES Pflichtfeld? (required gesetzt UND liefert keinen Wert.) */
 export function isRequiredOpen(node: Field | FunctionNode, fill: FieldFill | undefined): boolean {
   if (!node.required) return false
-  if (node.type === 'field') return !isFilled(node, fill ?? DEFAULT_FILL)
+  if (node.type === 'field') return !isFilled(node, fill ?? defaultFill(node))
   return !isFunctionFilled(node, fill)
 }
 
@@ -27,6 +27,8 @@ export function isRequiredOpen(node: Field | FunctionNode, fill: FieldFill | und
  *  Eine als „nicht erhoben" markierte Sektion entfaellt in der Ausgabe -> ihre Kinder zaehlen nicht. */
 export function countOpenRequired(node: Node, values: Record<string, FieldFill>): number {
   if (node.type === 'field' || node.type === 'function') return isRequiredOpen(node, values[node.id]) ? 1 : 0
-  if (node.excludable && values[node.id]?.state === 'excluded') return 0
+  // Wie im Renderer gegen den AUSGANGSZUSTAND pruefen, nicht gegen einen fehlenden Eintrag: sonst
+  // zaehlt ein UNO-Reverse-Abschnitt Pflichtfelder, die gar nicht in der Ausgabe stehen.
+  if (node.excludable && (values[node.id] ?? defaultFill(node)).state === 'excluded') return 0
   return node.children.reduce((sum, child) => sum + countOpenRequired(child, values), 0)
 }

@@ -24,7 +24,7 @@ const props = defineProps<{ node: Field }>()
 const caseValues = useCaseValues()
 const snippetPickerOpen = ref(false)
 
-const fill = computed(() => caseValues.get(props.node.id))
+const fill = computed(() => caseValues.get(props.node.id, props.node))
 // Funktions-Wert gehoert nie an ein Feld; typseitig auf den Tri-State abbilden (defensiv -> confirmed).
 const triState = computed<'confirmed' | 'custom' | 'excluded'>(() => (fill.value.state === 'function' ? 'confirmed' : fill.value.state))
 // echte Optionen: leere raus + dedupliziert (eindeutige Radios/Keys, kein Doppel-checked)

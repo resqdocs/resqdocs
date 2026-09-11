@@ -64,3 +64,7 @@ core
 screen_*.zip
 apps/pico-pwa/ios/App/fastlane/report.xml
 apps/pico-pwa/ios/App/fastlane/README.md
+
+# Python-Bytecode der Helferskripte
+__pycache__/
+*.pyc

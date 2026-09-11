@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.5.0] - 2026-09-10
+
+### Features
+
+- Fields and sections can default to "not collected": individual fields and whole sections can be preset to "not collected" (UNO Reverse), which is handy for anything that is only documented in specific cases
+
+### Changed
+
+- The typing-speed slider now runs in the expected direction and has a clearer label
+
+### Bug Fixes
+
+- A running case is preserved and a storage problem is shown instead of failing silently
+- Sharing text snippets and scrolling cards now behave correctly
+
 ## [1.4.0] - 2026-07-22
 
 ### Features

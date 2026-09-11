@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { App as CapApp } from '@capacitor/app'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { exportBlock } from '@resqdocs/protocol-core/blockIO'
 import { routeImport } from '@/composables/useImportRouting'
@@ -7,6 +8,7 @@ import { blockStructureLabel } from '@resqdocs/protocol-core-ui/blockSummary'
 import { shareJson, copyToClipboard } from '@/utils/fileTransfer'
 import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
 import { useTransferShare } from '@resqdocs/protocol-core-ui/useTransferShare'
+import { shouldCloseCard, tapIsPending } from '@resqdocs/protocol-core-ui/cardFocusGuard'
 import type { TransferTtl } from '@resqdocs/protocol-core/transferClient'
 import QrCode from '@/components/QrCode.vue'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
@@ -36,9 +38,13 @@ function setEditTitle(el: unknown): void {
 
 function openEdit(b: Container): void {
   commitEdit() // die bisher offene Karte zuerst speichern (iOS: ein Button-Tap löst KEIN focusout aus)
+  shareOpenId.value = null // Teilen-Panel gehoert zur alten Karte - sonst bleibt es verwaist offen
+  shareReset()
   focusNext = true
   editingId.value = b.id
   draftTitle.value = b.title ?? ''
+  // nextTick: editCardEl zeigt vor dem Rendern noch auf die ALTE Karte (oder auf null).
+  void nextTick(() => scrollIntoViewSoon(editCardEl.value))
 }
 function commitEdit(): void {
   const id = editingId.value
@@ -49,10 +55,110 @@ function closeEdit(): void {
   editingId.value = null
   shareOpenId.value = null
 }
+// Funktions-Refs, KEINE String-Refs: diese Elemente stehen in einem v-for, und dort setzt Vue eine
+// String-Ref auf ein ARRAY (ref_for). Genau daran ist der erste Scroll-Versuch gescheitert - der
+// Aufruf lief auf ein Array, scrollIntoView existiert dort nicht, und der Fehler verschwand still im
+// requestAnimationFrame. Gleiches Muster wie setEditTitle weiter unten. Es ist immer nur EINE Karte
+// offen (v-if/v-else je Zeile), also traegt eine einzelne Referenz.
+const editCardEl = ref<HTMLElement | null>(null)
+const sharePanelEl = ref<HTMLElement | null>(null)
+function setEditCard(el: unknown): void {
+  if (el) editCardEl.value = el as HTMLElement
+  else if (!el) editCardEl.value = null
+}
+function setSharePanel(el: unknown): void {
+  if (el) sharePanelEl.value = el as HTMLElement
+  else if (!el) sharePanelEl.value = null
+}
+
+/** Ein frisch aufgeklapptes Element ins Bild holen. „nearest" scrollt nur, wenn noetig, und reisst die
+ *  Liste nicht unnoetig herum; den Abstand zu Dock und Header liefert das scroll-margin am Element
+ *  selbst (siehe Template) - scrollIntoView kennt weder die feste Dock-Leiste noch den sticky Header
+ *  und schiebt sonst bis buendig an den Viewport-Rand, also HINTER das Dock.
+ *
+ *  Auf iOS verkleinert die Tastatur den sichtbaren Bereich (visualViewport), waehrend das Layout gleich
+ *  bleibt - scrollIntoView rechnet aber mit dem Layout-Viewport. Deshalb einmal nachziehen, sobald sich
+ *  der sichtbare Bereich nach dem Aufklappen aendert. Einmalig und zeitlich begrenzt, damit spaeteres
+ *  eigenes Scrollen des Nutzers nicht ueberschrieben wird.
+ *
+ *  Instanceof-Pruefung bewusst streng: bei einer String-Ref in einem v-for liefert Vue ein ARRAY, und
+ *  der Aufruf schlug dann still im requestAnimationFrame fehl (bekanntes Scroll-Problem). */
+function scrollIntoViewSoon(el: unknown): void {
+  if (!(el instanceof HTMLElement)) return
+  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  const doScroll = (): void => el.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
+  requestAnimationFrame(() => requestAnimationFrame(doScroll))
+
+  // Nachziehen, wenn die Tastatur den sichtbaren Bereich verkleinert (einmalig, max. 1 s Fenster).
+  const vv = window.visualViewport
+  if (!vv) return
+  let done = false
+  const once = (): void => {
+    if (done) return
+    done = true
+    vv.removeEventListener('resize', once)
+    requestAnimationFrame(doScroll)
+  }
+  vv.addEventListener('resize', once)
+  window.setTimeout(() => {
+    done = true
+    vv.removeEventListener('resize', once)
+  }, 1000)
+}
+
+// Pre-Kill-Flush + Speichern OHNE Schliessen (Muster EinsatzView.vue:157-167).
+// Warum noetig: closeEdit ist zugleich der Speicherpfad. Sobald der Waechter das Schliessen
+// unterdrueckt (Tap-Stempel, offenes Panel), faellt das Speichern mit aus - und der Fokus liegt danach
+// AUSSERHALB der Karte, es kann also gar kein zweites focusout mehr entstehen. Der getippte Text stuende
+// dann unbegrenzt nur im Arbeitsspeicher, ausgerechnet nach "Teilen" und "Als Datei", also genau bevor
+// der Nutzer die App verlaesst.
+function onAppHidden(): void {
+  if (document.visibilityState === 'hidden') commitEdit()
+}
+let appStateListener: { remove: () => void } | undefined
+onMounted(() => {
+  document.addEventListener('visibilitychange', onAppHidden)
+  window.addEventListener('pagehide', commitEdit)
+  void CapApp.addListener('appStateChange', ({ isActive }) => {
+    if (!isActive) commitEdit()
+  }).then((h) => {
+    appStateListener = h
+  })
+})
+onUnmounted(() => {
+  commitEdit()
+  document.removeEventListener('visibilitychange', onAppHidden)
+  window.removeEventListener('pagehide', commitEdit)
+  void appStateListener?.remove()
+})
+
+// Tap-Stempel: pointerdown/mousedown liegen VOR dem Fokuswechsel, ein @click-Handler nicht.
+// Ohne das schliesst der erste Tap auf „Teilen"/„Grosses Textfeld" die Karte, waehrend der Fokus noch
+// im Textfeld steht - die schuetzende Flagge wuerde erst danach gesetzt.
+let lastTapAt = 0
+function onCardTap(): void {
+  lastTapAt = Date.now()
+}
 function onFocusOut(e: FocusEvent): void {
-  if (pendingDelete.value !== null) return // Rückfrage offen: Karte bleibt offen
   const card = e.currentTarget as HTMLElement
-  if (!card.contains(e.relatedTarget as Node | null)) closeEdit()
+  // Geteilter Wächter (cardFocusGuard) — siehe SnippetLibrarySection: tapPending schützt den Tap auf
+  // ein Bedienelement der Karte, shareOpen den späteren Fokuswechsel in ein offenes Panel.
+  if (
+    !shouldCloseCard({
+      pendingDelete: pendingDelete.value !== null,
+      tapPending: tapIsPending(lastTapAt, Date.now()),
+      // NUR wenn das Panel zu DIESER Karte gehört - siehe SnippetLibrarySection: ein verwaistes
+      // shareOpenId würde sonst den Fokus-Commit jeder anderen Karte stilllegen.
+      shareOpen: shareOpenId.value !== null && shareOpenId.value === editingId.value,
+      focusStaysInside: card.contains(e.relatedTarget as Node | null),
+    })
+  ) {
+    // Schliessen unterdrueckt - aber NICHT das Speichern. Sonst nimmt der Waechter dem Tap genau den
+    // Commit weg, den er vorher hatte, und der Text bleibt nur im Arbeitsspeicher.
+    commitEdit()
+    return
+  }
+  closeEdit()
 }
 
 // Löschen mit Rückfrage (irreversibel). pendingDelete = block-id.
@@ -90,10 +196,17 @@ const TTL_LABELS: { value: TransferTtl; label: string }[] = [
 ]
 function openLinkShare(b: Container): void {
   shareOpenId.value = shareOpenId.value === b.id ? null : b.id
+  // IMMER zurücksetzen — siehe SnippetLibrarySection: shareLink gehört der Sektion, nicht der Karte.
+  // Ohne Reset beim Öffnen zeigte ein anderer Block den Link und QR-Code des vorherigen.
   shareReset()
+  // Erst nach dem Rendern: das Panel haengt an einem v-if und existiert vorher nicht.
+  if (shareOpenId.value === b.id) void nextTick(() => scrollIntoViewSoon(sharePanelEl.value))
 }
 function createBlockLink(b: Container): void {
-  void shareStart(exportBlock(blockForExport(b)))
+  void shareStart(exportBlock(blockForExport(b))).then(() => {
+    // Der QR-Code laesst das Panel um ~180px wachsen - sonst liegt er wieder unter der Kante.
+    if (shareLink.value) void nextTick(() => scrollIntoViewSoon(sharePanelEl.value))
+  })
 }
 async function copyBlockLink(): Promise<void> {
   if (!shareLink.value) return
@@ -131,7 +244,7 @@ function onImportFile(e: Event): void {
 
 // Export je Block (nur in der offenen Karte) — mit dem evtl. noch nicht committeten Draft-Titel.
 const copiedId = ref<string | null>(null)
-const sharing = ref(false) // Re-Entrancy-Guard: kein zweites Share, solange das System-Sheet offen ist (bug-316)
+const sharing = ref(false) // Re-Entrancy-Guard: kein zweites Share, solange das System-Sheet offen ist
 function blockForExport(b: Container): Container {
   return editingId.value === b.id ? { ...b, title: draftTitle.value.trim() || (b.title ?? '') } : b
 }
@@ -147,13 +260,13 @@ async function exportCopy(b: Container): Promise<void> {
   }
 }
 async function exportDownload(b: Container): Promise<void> {
-  if (sharing.value) return // Doppeltipp: der 2. Share rejectet sonst mit „in progress" -> falscher Fehler (bug-316)
+  if (sharing.value) return // Doppeltipp: der 2. Share rejectet sonst mit „in progress" -> falscher Fehler
   sharing.value = true
   const src = blockForExport(b)
   const name = ((src.title ?? '') || src.id || 'baustein').replace(/[^a-z0-9_-]+/gi, '-')
   try {
     // shareJson: nativ Cache-Datei + System-Share-Sheet („In Dateien sichern"/Teilen/AirDrop), Web -> Blob-
-    // Download. Der rohe <a download>-Blob funktioniert in der nativen WebView NICHT (bug-315).
+    // Download. Der rohe <a download>-Blob funktioniert in der nativen WebView NICHT.
     await shareJson(`baustein-${name}.json`, exportBlock(src), 'Baustein exportieren')
   } catch (err) {
     const m = err instanceof Error ? err.message : String(err)
@@ -208,8 +321,9 @@ async function exportDownload(b: Container): Promise<void> {
         <!-- EDIT: Karte (Ring + Titel + read-only Struktur-Info + Fertig) -->
         <div
           v-else
-          class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
-          @focusout="onFocusOut"
+          class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20 [scroll-margin-block-end:calc(6rem+env(safe-area-inset-bottom))] [scroll-margin-block-start:4.5rem]"
+          :ref="setEditCard"
+          @focusout="onFocusOut" @pointerdown="onCardTap" @mousedown="onCardTap"
           @keydown.esc="closeEdit"
         >
           <div class="flex items-center gap-2">
@@ -237,7 +351,7 @@ async function exportDownload(b: Container): Promise<void> {
             <button type="button" class="btn btn-primary btn-sm min-h-11" @click="closeEdit">Fertig</button>
           </div>
           <!-- Als-Link-teilen-Panel (verschlüsselter Kurzzeit-Transfer wie bei Vorlagen) -->
-          <div v-if="shareOpenId === b.id" class="flex flex-col gap-2 rounded-lg border border-base-300 bg-base-100 p-2">
+          <div v-if="shareOpenId === b.id" :ref="setSharePanel" class="flex flex-col gap-2 rounded-lg border border-base-300 bg-base-100 p-2 [scroll-margin-block-end:calc(6rem+env(safe-area-inset-bottom))] [scroll-margin-block-start:4.5rem]">
             <div class="flex flex-wrap items-center gap-2">
               <label class="text-xs font-semibold text-base-content/60">Gültigkeit</label>
               <select v-model="shareTtl" class="select select-xs" aria-label="Gültigkeit des Transfer-Links">

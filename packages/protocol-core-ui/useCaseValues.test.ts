@@ -62,3 +62,43 @@ test('Funktion: gemerkter Freitext ueberlebt excluded->confirmed', () => {
   cv.setFunctionStatus('mp', 'confirmed')
   assert.equal(cv.getFunctionPrevText('mp'), 'freitext')
 })
+
+// --- UNO Reverse: knotenabhaengiger Ausgangszustand -----------------------------------------------
+
+test('get: ohne Eintrag liefert den Ausgangszustand DES KNOTENS', () => {
+  const cv = useCaseValues()
+  cv.values.value = {}
+  assert.equal(cv.get('x').state, 'confirmed', 'ohne Knoten der bisherige Standard')
+  assert.equal(cv.get('x', { defaultExcluded: true }).state, 'excluded')
+  assert.equal(cv.get('x', { defaultExcluded: false }).state, 'confirmed')
+})
+
+test('toggleExcluded: ein UNO-Reverse-Container braucht EINEN Tipp zum Einschalten, nicht zwei', () => {
+  // Ohne Knoten-Kenntnis verglich der Umschalter gegen einen fehlenden Eintrag und schrieb beim
+  // ersten Tipp „nicht erhoben" - also genau den Zustand, in dem der Abschnitt schon war. Sichtbar
+  // waere gar nichts passiert.
+  const cv = useCaseValues()
+  const node = { defaultExcluded: true }
+  cv.values.value = {}
+  cv.toggleExcluded('neuro', node)
+  assert.equal(cv.get('neuro', node).state, 'confirmed', 'erster Tipp schaltet EIN')
+  cv.toggleExcluded('neuro', node)
+  assert.equal(cv.get('neuro', node).state, 'excluded', 'zweiter Tipp wieder aus')
+})
+
+test('toggleExcluded: normaler Container unveraendert (ein Tipp blendet aus)', () => {
+  const cv = useCaseValues()
+  cv.values.value = {}
+  cv.toggleExcluded('normal')
+  assert.equal(cv.get('normal').state, 'excluded')
+  cv.toggleExcluded('normal')
+  assert.equal(cv.get('normal').state, 'confirmed')
+})
+
+test('cycle: startet beim Ausgangszustand des Knotens', () => {
+  const cv = useCaseValues()
+  const node = { defaultExcluded: true }
+  cv.values.value = {}
+  cv.cycle('f', 'Standard', node) // excluded -> confirmed (einschalten)
+  assert.equal(cv.get('f', node).state, 'confirmed')
+})

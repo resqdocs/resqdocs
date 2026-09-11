@@ -58,7 +58,7 @@ App und Landing Page sind logisch und technisch getrennt und werden separat geba
 Alle Befehle inklusive `git pull` und `npm install` - einfach komplett kopieren.
 Repo-Pfad ggf. anpassen.
 
-**iOS** (öffnet garantiert die `.xcworkspace`, nie das `.xcodeproj` - bug-106-sicher):
+**iOS** (öffnet garantiert die `.xcworkspace`, nie das `.xcodeproj` - robust):
 
 ```bash
 cd ~/ResQDocs && git checkout dev && git pull

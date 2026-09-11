@@ -19,6 +19,7 @@ import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.v
 import FunctionFillToggle from './FunctionFillToggle.vue'
 import RequiredMark from '@/components/RequiredMark.vue'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
+import { shouldCloseCard, tapIsPending } from '@resqdocs/protocol-core-ui/cardFocusGuard'
 
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
@@ -29,7 +30,9 @@ const rows = computed<ArztRow[]>(() => caseValues.getRows(props.node.id) as Arzt
 const filledCount = computed(() => rows.value.filter((r) => r.name.trim()).length)
 const label = computed(() => (props.node.title && props.node.title.trim()) || 'Ärzte')
 // Pflicht-Funktion „noch offen": keine Zeilen/kein Freitext/kein Standardtext -> reiner visueller Hinweis.
-const isOpen = computed(() => isRequiredOpen(props.node, caseValues.get(props.node.id)))
+const isOpen = computed(() => // Funktionen fuehren ihren Status eigenstaendig (state:'function' mit status), nicht ueber den
+// Feld-Tri-State. UNO Reverse ist fuer sie deshalb NICHT entschieden - bewusst kein Knoten hier.
+isRequiredOpen(props.node, caseValues.get(props.node.id)))
 // BEWAHREN: ruhend gemerkter Funktions-Freitext (prevText) -> antippbarer „zurueckholen"-Hinweis. Nie in der Ausgabe.
 const preservedText = computed(() => caseValues.getFunctionPrevText(props.node.id))
 function restorePreserved(): void {
@@ -125,10 +128,29 @@ function openEdit(i: number): void {
 function closeEdit(): void {
   editingIndex.value = null
 }
+// Tap-Stempel: pointerdown/mousedown liegen VOR dem Fokuswechsel, ein @click-Handler nicht. Ohne das
+// schliesst der Tap auf ein Bedienelement der Karte sie, waehrend der Fokus noch in einem Feld steht -
+// eine schuetzende Flagge waere immer zu spaet. Gleiche Mechanik wie in den Bausteine-Bibliotheken.
+let lastTapAt = 0
+function onCardTap(): void {
+  lastTapAt = Date.now()
+}
 function onFocusOut(e: FocusEvent): void {
-  if (pendingRemove.value !== null) return // Rückfrage offen: Fokuswechsel ins Modal schließt die Karte nicht
   const card = e.currentTarget as HTMLElement
-  if (!card.contains(e.relatedTarget as Node | null)) closeEdit()
+  // Geteilter Waechter (cardFocusGuard). Wichtig hier: das Rollen-Auswahlfeld gibt den Fokus nach
+  // draussen, und die Rollenwahl blendet erst DANACH andere Felder ein (Patientenverfuegung/Vollmacht
+  // bei Kontaktpersonen, Ort/Arztnummer bei Aerzten). Ohne den Tap-Stempel klappte die Karte genau in
+  // dem Moment zu, in dem die neuen Felder erscheinen.
+  if (
+    !shouldCloseCard({
+      pendingDelete: pendingRemove.value !== null,
+      tapPending: tapIsPending(lastTapAt, Date.now()),
+      focusStaysInside: card.contains(e.relatedTarget as Node | null),
+    })
+  ) {
+    return
+  }
+  closeEdit()
 }
 function addRow(): void {
   const cleaned = rows.value.filter(arztRowHasData) // nur WIRKLICH leere Zeilen aufraeumen (#260)
@@ -216,6 +238,8 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
         v-else
         class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
         @focusout="onFocusOut"
+        @pointerdown="onCardTap"
+        @mousedown="onCardTap"
         @keydown.esc="closeEdit"
       >
         <div class="flex items-center gap-2">

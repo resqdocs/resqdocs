@@ -90,7 +90,7 @@ function create(opts: CreateSessionOptions = {}) {
   const session = reactive<CreatorSession>(initCreatorSession(opts.seed ?? [standardprotokoll]))
   // Mutationen/Transformationen bekommen den ROHEN Zustand (toRaw): die pure
   // Schicht klont via structuredClone, und das wirft auf reactive-Proxies
-  // DataCloneError (bug-089/#40). Reads (computed) bleiben auf `session`
+  // DataCloneError (#40). Reads (computed) bleiben auf `session`
   // fuers Reactivity-Tracking.
   const raw = (): CreatorSession => toRaw(session)
   const selectedBlockId = ref<string | null>(null)
