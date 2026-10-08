@@ -8,13 +8,15 @@
  * bleibt die Liste als Inhaltsverzeichnis lesbar. „fertig/raustippen": Fertig-Button ODER Fokus verlaesst
  * die Karte (focusout). v1 manuelle Erfassung; Packung-/BMP-Scan folgt.
  */
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { FunctionNode, MedikamenteRow, ArztRow } from '@resqdocs/protocol-core/model'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
 import { formatMedikament, medikamentRowHasData, arztRowHasData, staerkeOhneDuplikat } from '@resqdocs/protocol-core/functions/registry'
 import { usePznLibrary } from '@/medications/usePznLibrary'
+import type { PznEntry } from '@/medications/pznLibrary'
+import { meaningfulLength } from '@/medications/pznSuggest'
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { extractPznFromPackageCode, packageScanName, type PackageBarcodeFormat } from '@/medications/packageScan'
 import PackageScanOverlay from '@/components/PackageScanOverlay.vue'
@@ -142,6 +144,8 @@ function openEdit(i: number): void {
 }
 function closeEdit(): void {
   editingIndex.value = null
+  closeSuggest()
+  pendingStaerke.value = null
 }
 // Tap-Stempel: pointerdown/mousedown liegen VOR dem Fokuswechsel, ein @click-Handler nicht. Ohne das
 // schliesst der Tap auf ein Bedienelement der Karte sie, waehrend der Fokus noch in einem Feld steht -
@@ -157,7 +161,9 @@ function onFocusOut(e: FocusEvent): void {
   // ergaenztes Auswahlfeld oder Modal nicht dieselbe Falle aufmacht.
   if (
     !shouldCloseCard({
-      pendingDelete: pendingRemove.value !== null,
+      // Ein offener Dialog (Loeschung ODER Staerke-Rueckfrage) haelt die Karte offen: der Fokuswechsel
+      // ins teleportierte Modal darf sie nicht schliessen (und damit die Rueckfrage abraeumen).
+      pendingDelete: pendingRemove.value !== null || pendingStaerke.value !== null,
       tapPending: tapIsPending(lastTapAt, Date.now()),
       focusStaysInside: card.contains(e.relatedTarget as Node | null),
     })
@@ -169,6 +175,8 @@ function onFocusOut(e: FocusEvent): void {
 function addRow(): void {
   const cleaned = rows.value.filter(medikamentRowHasData) // nur WIRKLICH leere Zeilen aufraeumen (#260: Eingaben nie stumm verwerfen)
   focusNext = true // der Funktions-Ref der neuen Karte fokussiert beim Mount
+  closeSuggest() // frische Karte startet ohne Vorschlagsreste der vorigen Zeile
+  pendingStaerke.value = null
   caseValues.setRows(props.node.id, [...cleaned, { name: '' }])
   editingIndex.value = cleaned.length
   editingHadData.value = false // frisch angelegt = leer geboren -> ✕ darf ohne Rueckfrage aufraeumen
@@ -197,6 +205,80 @@ async function onPackageDecoded(p: { text: string; format: PackageBarcodeFormat 
   const staerke = staerkeOhneDuplikat(name, e?.staerke)
   const cleaned = rows.value.filter(medikamentRowHasData)
   caseValues.setRows(props.node.id, [...cleaned, { name, staerke, pzn }]) // anhaengen, kompakt (kein Edit-Open)
+}
+
+// --- Typeahead: das manuelle Namensfeld sucht in der PZN-Bibliothek (#275) -------------------------
+// Ab 3 Zeichen, entprellt. Auswahl fuellt Name/Staerke/PZN mit DERSELBEN Abbildung wie der Packung-Scan
+// (Wirkstoff vor Bezeichnung, Staerke ohne Namens-Dublette). Leere oder nicht lesbare Bibliothek ->
+// keine Vorschlaege, das Feld bleibt schlichtes Freitext-Input (vgl. #263-Finding 2). Nur EINE Karte
+// ist offen -> eine gemeinsame Vorschlagsliste, an editingIndex gebunden.
+const suggestions = ref<PznEntry[]>([])
+const suggestForRow = ref<number | null>(null)
+let suggestTimer: ReturnType<typeof setTimeout> | null = null
+// Grosszuegig, damit das gesuchte Medikament nicht unter der Kappung verschwindet; die Liste ist
+// scrollbar und bei genau SUGGEST_LIMIT Treffern weist ein Hinweis auf „weiter eingrenzen".
+const SUGGEST_LIMIT = 30
+const suggestCapped = computed(() => suggestions.value.length >= SUGGEST_LIMIT)
+
+// Nach der Auswahl gefragte Wirkstoffstaerke (#275, Maintainer-Wunsch): der Name ist sicher zu
+// uebernehmen, die Bibliotheks-Staerke passt aber nicht zwingend zur konkreten Verordnung (dasselbe
+// Praeparat gibt es in mehreren Staerken). Darum wird sie NICHT automatisch gesetzt, sondern kurz
+// abgefragt. Gilt genau fuer die zuletzt gewaehlte Zeile.
+const pendingStaerke = ref<{ row: number; value: string } | null>(null)
+const staerkeConfirmBtn = ref<HTMLButtonElement | null>(null)
+// Beim Oeffnen den Bestaetigen-Knopf fokussieren (Tastatur/ESC, Fokusanker). Positive Frage ->
+// Default-Fokus DARF hier auf „Uebernehmen" liegen (anders als ConfirmDialog vor Loeschungen).
+watch(pendingStaerke, (v) => {
+  if (v) void nextTick(() => staerkeConfirmBtn.value?.focus())
+})
+function applyStaerke(): void {
+  if (pendingStaerke.value) setRow(pendingStaerke.value.row, { staerke: pendingStaerke.value.value })
+  pendingStaerke.value = null
+}
+function dismissStaerke(): void {
+  pendingStaerke.value = null
+}
+
+function onNameInput(i: number, value: string): void {
+  setRow(i, { name: value })
+  pendingStaerke.value = null // neue Eingabe verwirft eine offene Staerke-Rueckfrage
+  if (suggestTimer) clearTimeout(suggestTimer)
+  if (meaningfulLength(value) < 3) {
+    suggestions.value = []
+    suggestForRow.value = null
+    return
+  }
+  suggestTimer = setTimeout(() => {
+    void pznLibrary
+      .suggest(value, SUGGEST_LIMIT)
+      .then((hits) => {
+        if (editingIndex.value !== i) return // Zeile gewechselt -> veraltetes Ergebnis verwerfen
+        suggestions.value = hits
+        suggestForRow.value = hits.length ? i : null
+      })
+      .catch(() => {
+        suggestions.value = [] // nicht lesbare Bibliothek: still auf Freitext zurueckfallen
+        suggestForRow.value = null
+      })
+  }, 180)
+}
+
+function chooseSuggestion(i: number, e: PznEntry): void {
+  const name = e.wirkstoff || e.label
+  // Name + PZN sofort; die Staerke nur auf Rueckfrage (und nur, wenn sie nicht ohnehin im Namen steckt).
+  setRow(i, { name, pzn: e.pzn })
+  closeSuggest()
+  const staerke = staerkeOhneDuplikat(name, e.staerke)
+  pendingStaerke.value = staerke ? { row: i, value: staerke } : null
+}
+
+function closeSuggest(): void {
+  if (suggestTimer) {
+    clearTimeout(suggestTimer)
+    suggestTimer = null
+  }
+  suggestions.value = []
+  suggestForRow.value = null
 }
 
 // --- BMP-Plan-Scan: Review-Sheet (mehrere Zeilen) -> nach Pruefung anhaengen ---
@@ -299,10 +381,32 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
             class="input input-sm flex-1 font-medium"
             :value="r.name"
             placeholder="Medikament"
+            role="combobox"
+            :aria-expanded="suggestForRow === i && suggestions.length > 0"
+            aria-autocomplete="list"
             :aria-label="`Medikament ${i + 1}`"
-            @input="setRow(i, { name: ($event.target as HTMLInputElement).value })"
+            @input="onNameInput(i, ($event.target as HTMLInputElement).value)"
+            @keydown.esc.stop="closeSuggest"
           />
           <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Medikament ' + (i + 1)} entfernen`" @click="requestRemove(i)">✕</button>
+        </div>
+        <!-- Vorschlaege aus der PZN-Bibliothek (#275): INNERHALB der Karte, damit der Tap-Guard
+             (onCardTap/focusout) den Tap nicht als „Karte verlassen" wertet. Auswahl fuellt die Zeile. -->
+        <div
+          v-if="suggestForRow === i && suggestions.length"
+          class="max-h-72 overflow-y-auto overscroll-contain rounded-box border border-base-300 bg-base-100"
+        >
+          <ul class="menu menu-sm w-full p-1" role="listbox" :aria-label="`Vorschläge für Medikament ${i + 1}`">
+            <li v-for="s in suggestions" :key="s.pzn">
+              <button type="button" role="option" class="flex flex-col items-start gap-0 py-1 text-left" @click="chooseSuggestion(i, s)">
+                <span class="font-medium">{{ s.wirkstoff || s.label }}</span>
+                <span class="text-xs text-base-content/60">
+                  <template v-if="s.staerke">{{ s.staerke }} · </template>PZN {{ s.pzn }}<template v-if="s.wirkstoff && s.label && s.label !== s.wirkstoff"> · {{ s.label }}</template>
+                </span>
+              </button>
+            </li>
+          </ul>
+          <p v-if="suggestCapped" class="px-3 pb-2 pt-0 text-xs italic text-base-content/50">Viele Treffer — weiter tippen zum Eingrenzen.</p>
         </div>
         <div class="flex gap-2">
           <input class="input input-sm min-w-0 flex-1" :value="r.staerke ?? ''" placeholder="Stärke (z. B. 400 mg)" aria-label="Wirkstärke" @input="setRow(i, { staerke: ($event.target as HTMLInputElement).value })" />
@@ -390,5 +494,30 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
       @confirm="confirmPendingRemove"
       @cancel="pendingRemove = null"
     />
+
+    <!-- Rückfrage Wirkstoffstärke (#275): kleines BENIGNES Modal (primär „Übernehmen", kein Destruktiv-
+         Stil, keine Scharfschalt-Sperre). ESC/Backdrop/„Nein" = nicht übernehmen. -->
+    <Teleport to="body">
+      <div
+        v-if="pendingStaerke"
+        class="modal modal-open"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Wirkstoffstärke übernehmen"
+        @keydown.esc="dismissStaerke"
+      >
+        <div class="modal-box">
+          <h3 class="text-base font-semibold">Wirkstoffstärke übernehmen?</h3>
+          <p class="pt-2 text-sm text-base-content/70">
+            Stärke <span class="font-medium">{{ pendingStaerke.value }}</span> in die Zeile übernehmen?
+          </p>
+          <div class="modal-action">
+            <button type="button" class="btn btn-ghost min-h-12" @click="dismissStaerke">Nein</button>
+            <button ref="staerkeConfirmBtn" type="button" class="btn btn-primary min-h-12" @click="applyStaerke">Übernehmen</button>
+          </div>
+        </div>
+        <button type="button" class="modal-backdrop" aria-label="Nein" tabindex="-1" @click="dismissStaerke"></button>
+      </div>
+    </Teleport>
   </div>
 </template>

@@ -22,7 +22,7 @@ Why: some functions only arrive with app updates. You may offer a **function** (
 | Function | in JSON (`functionKind`) | since app version |
 |---|---|---|
 | Medication list | `medikamentenplan` | 1.0.0 |
-| Doctors | `aerzte` | 1.0.0 |
+| Contacts/Doctors | `aerzte` | 1.0.0 |
 | Pack-years | `packYears` | 1.1.0 |
 | NEWS2 | `news2` | 1.1.0 |
 
@@ -37,6 +37,7 @@ Additionally, individual **properties** are only available from a minimum versio
 | Multi-select | `multiple` | field (option field allows several options at once (checkboxes ≤6 / multi-select dropdown >6); value = enumeration "a, b and c") | 1.4.0 |
 | Exclusive options | `exclusiveOptions` | field (with multi-select: "none/normal" options (exact option strings) that exclude all others) | 1.4.0 |
 | Starts as "not assessed" | `defaultExcluded` | field, container (Field or section starts as "not assessed" instead of "confirmed" and only appears in the output once the user deliberately switches it on. For content needed only in specific situations. On a container it also requires excludable; on a field it is mutually exclusive with required.) | 1.5.0 |
+| Starts without selection | `defaultEmpty` | field (with multi-select: no option is preselected (e.g. dispatch codes). Without it the default option (or the first one) applies. An empty selection outputs nothing; a required field stays open until something is chosen.) | 1.6.0 |
 
 **Gate rule:** a `functionKind` is available **only if its minimum version ≤ the user's version**. Otherwise do not offer it; if the user asks, say "that needs at least version X". **Never write** a `functionKind` into the JSON that the stated version does not know. Containers and fields work from version 1.0.0 onward. If the user states a version **before 1.0.0** (or none), assume the base — only `container` + `field`, no functions — and point out that functions and the template import itself need at least 1.0.0.
 
@@ -133,6 +134,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - `allowCustom` (boolean)
 - `multiple` (boolean)
 - `exclusiveOptions` (list of string)
+- `defaultEmpty` (boolean)
 - `multiline` (boolean)
 - `required` (boolean)
 - `defaultExcluded` (boolean)
@@ -373,6 +375,10 @@ Three node types: **Container** (section with children), **Field** (input field)
             "type": "string"
           },
           "description": "Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein „Keine/Normalbefund\" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv)."
+        },
+        "defaultEmpty": {
+          "type": "boolean",
+          "description": "Bei multiple: „startet ohne Auswahl\" - KEINE Option ist vorausgewaehlt (z. B. Einsatzcodes, wo eine Vorauswahl einen falschen Code dokumentieren wuerde). Ohne die Eigenschaft gilt wie bisher die Standard-Option (default, sonst die oberste). Eine leere Auswahl ist dann der Ausgangszustand (✓, nichts in der Ausgabe; ein Pflichtfeld bleibt „noch offen\"), nicht „nicht erhoben\". Nur mit multiple wirksam."
         },
         "multiline": {
           "type": "boolean",

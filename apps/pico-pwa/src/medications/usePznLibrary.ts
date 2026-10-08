@@ -67,6 +67,10 @@ function create() {
   async function search(query: string, opts: { offset: number; limit: number; missingStaerke?: boolean }): Promise<PznEntry[]> {
     return (await ready()).search(query, opts)
   }
+  /** Typeahead fuer das manuelle Medikamentenfeld (#275): Infix + `*`, Fragmente ab 3 Zeichen. */
+  async function suggest(query: string, limit: number): Promise<PznEntry[]> {
+    return (await ready()).suggest(query, limit)
+  }
   async function entry(pzn: string): Promise<PznEntry | null> {
     return (await ready()).getEntry(pzn)
   }
@@ -174,6 +178,7 @@ function create() {
     countMissingStaerke,
     page,
     search,
+    suggest,
     entry,
     addOne,
     upsert,

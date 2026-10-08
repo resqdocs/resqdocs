@@ -54,7 +54,16 @@ export function fillValue(field: Field, fill?: FieldFill): string | null {
   const f = fill ?? defaultFill(field)
   if (f.state === 'excluded' || f.state === 'function') return null // 'function' gehoert nicht ans Feld
   if (f.state === 'custom') return f.value // bei Multi ist value bereits der verkettete Fliesstext
+  // confirmed bei „startet ohne Auswahl": nichts gewaehlt -> nichts auszugeben (null, damit auch ein
+  // eingeschalteter Feldtitel keine leere Zeile erzeugt; isFilled bleibt false -> Pflichtfeld „noch offen").
+  if (startsEmpty(field)) return null
   return defaultOptionValue(field) // confirmed: Standardwert
+}
+
+/** Mehrfachauswahl mit `defaultEmpty`: keine Option vorausgewaehlt. Nur mit multiple + echten Optionen wirksam -
+ *  sonst bleibt alles beim Bestand (Standard-Option). */
+export function startsEmpty(field: Field): boolean {
+  return !!field.multiple && !!field.defaultEmpty && !!field.options?.some((o) => o !== '')
 }
 
 /** „confirmed"-Ausgabewert eines Felds: der Standardwert. Bei einem Select MUSS er eine (nicht-leere)
@@ -104,6 +113,7 @@ export function multiSelected(field: Field, fill?: FieldFill): string[] {
   const f = fill ?? defaultFill(field)
   if (f.state === 'excluded' || f.state === 'function') return []
   if (f.state === 'custom') return orderByOptions(field, f.values ?? (f.value ? [f.value] : []))
+  if (startsEmpty(field)) return [] // „startet ohne Auswahl": ✓ heisst hier keine Vorauswahl
   const d = defaultOptionValue(field)
   return d ? [d] : []
 }
@@ -118,9 +128,10 @@ export function multiFill(field: Field, selection: readonly string[]): FieldFill
   const chosenExcl = sel.filter((s) => (field.exclusiveOptions ?? []).includes(s))
   if (chosenExcl.length) sel = [chosenExcl[chosenExcl.length - 1]]
   const v = orderByOptions(field, sel)
-  if (v.length === 0) return { state: 'excluded' }
+  // „startet ohne Auswahl": die leere Auswahl IST der Ausgangszustand (✓), nicht „nicht erhoben".
+  if (v.length === 0) return startsEmpty(field) ? { state: 'confirmed' } : { state: 'excluded' }
   const d = defaultOptionValue(field)
-  if (v.length === 1 && v[0] === d) return { state: 'confirmed' }
+  if (!startsEmpty(field) && v.length === 1 && v[0] === d) return { state: 'confirmed' }
   return { state: 'custom', value: joinFieldValues(v), values: v }
 }
 

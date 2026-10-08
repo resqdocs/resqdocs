@@ -1,7 +1,9 @@
 <script setup lang="ts">
 /**
- * Einsatz-Komponente der Funktion „Ärzte". Spiegelt das Medikamentenplan-Muster (kompakte Summary-Zeile +
- * Edit-Karte, GENAU EINE offen) mit Arzt-Feldern (Name, Rolle, Ort, Telefon, Arztnummer). Eigener Zustand
+ * Einsatz-Komponente der Funktion „Kontakte/Ärzte". Spiegelt das Medikamentenplan-Muster (kompakte Summary-
+ * Zeile + Edit-Karte, GENAU EINE offen). Die Karte beginnt mit der Rolle (Maintainer-Entscheid 1.6.0): Jede
+ * Rolle hat ihren eigenen Feldsatz (Arzt: Name/Ort/Telefon/Arztnummer, Kontaktperson: Name/Telefon + zwei
+ * Häkchen) - stuende der Arzt-Name vorn, wirkte die Funktion wie eine reine Ärzte-Liste. Eigener Zustand
  * im selben Werte-Store (getRows/setRows) -> Entwurf-Persistenz + DSGVO-Reset gratis.
  *
  * Scan: derselbe BMP-Parser wie der Medikamentenplan (ein Parse liefert Arzt UND Medikamente). Hier ist der
@@ -28,7 +30,7 @@ const { einsatzRoot } = useProtocolTree()
 
 const rows = computed<ArztRow[]>(() => caseValues.getRows(props.node.id) as ArztRow[])
 const filledCount = computed(() => rows.value.filter((r) => r.name.trim()).length)
-const label = computed(() => (props.node.title && props.node.title.trim()) || 'Ärzte')
+const label = computed(() => (props.node.title && props.node.title.trim()) || 'Kontakte/Ärzte')
 // Pflicht-Funktion „noch offen": keine Zeilen/kein Freitext/kein Standardtext -> reiner visueller Hinweis.
 const isOpen = computed(() => // Funktionen fuehren ihren Status eigenstaendig (state:'function' mit status), nicht ueber den
 // Feld-Tri-State. UNO Reverse ist fuer sie deshalb NICHT entschieden - bewusst kein Knoten hier.
@@ -101,9 +103,9 @@ function requestRemoveAll(): void {
 }
 const confirmTitle = computed(() => {
   const p = pendingRemove.value
-  if (p === 'all') return 'Alle Ärzte zurücksetzen?'
+  if (p === 'all') return 'Alle Kontakte/Ärzte zurücksetzen?'
   const current = p ? formatArzt(p) : ''
-  return `„${current || editingLabel.value || 'Arzt'}“ entfernen?`
+  return `„${current || editingLabel.value || 'Eintrag'}“ entfernen?`
 })
 const confirmMessage = computed(() => {
   if (pendingRemove.value !== 'all') return 'Das lässt sich nicht rückgängig machen.'
@@ -226,7 +228,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
         type="button"
         class="flex min-h-11 w-full items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-left shadow-sm active:bg-base-200"
         :aria-expanded="false"
-        :aria-label="`Arzt ${i + 1}: ${summary(r)} — bearbeiten`"
+        :aria-label="`Eintrag ${i + 1}: ${summary(r)} — bearbeiten`"
         @click="openEdit(i)"
       >
         <span class="min-w-0 flex-1 truncate text-sm">{{ summary(r) }}</span>
@@ -242,27 +244,33 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
         @mousedown="onCardTap"
         @keydown.esc="closeEdit"
       >
+        <!-- Rolle zuerst: zeigt sofort, dass jede Rolle ihren eigenen Feldsatz hat. „Arzt" ist der Wert
+             OHNE Rolle (Datenmodell unveraendert: rolle bleibt leer, Ausgabe ohne Klammerzusatz) und damit
+             der Standard jeder neuen Zeile. -->
         <div class="flex items-center gap-2">
+          <label class="select select-sm min-w-0 flex-1">
+            <span class="label">Rolle</span>
+            <select :value="r.rolle ?? ''" aria-label="Rolle" @change="setRow(i, { rolle: (($event.target as HTMLSelectElement).value || undefined) as ArztRow['rolle'] })">
+              <option value="">Arzt</option>
+              <option value="Hausarzt">Hausarzt</option>
+              <option value="Facharzt">Facharzt</option>
+              <option value="Angehöriger">Angehöriger</option>
+              <option value="Betreuer">Betreuer</option>
+            </select>
+          </label>
+          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Eintrag ' + (i + 1)} entfernen`" @click="requestRemove(i)">✕</button>
+        </div>
+        <div class="flex gap-2">
           <input
             :ref="setEditName"
-            class="input input-sm flex-1 font-medium"
+            class="input input-sm min-w-0 flex-1 font-medium"
             :value="r.name"
             :placeholder="isKontakt(r) ? 'Name' : 'Arzt / Praxis'"
             :aria-label="`Eintrag ${i + 1} Name`"
             @input="setRow(i, { name: ($event.target as HTMLInputElement).value })"
           />
-          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Eintrag ' + (i + 1)} entfernen`" @click="requestRemove(i)">✕</button>
-        </div>
-        <div class="flex gap-2">
-          <select class="select select-sm w-32 shrink-0" :value="r.rolle ?? ''" aria-label="Rolle" @change="setRow(i, { rolle: (($event.target as HTMLSelectElement).value || undefined) as ArztRow['rolle'] })">
-            <option value="">Rolle —</option>
-            <option value="Hausarzt">Hausarzt</option>
-            <option value="Facharzt">Facharzt</option>
-            <option value="Angehöriger">Angehöriger</option>
-            <option value="Betreuer">Betreuer</option>
-          </select>
           <!-- Arzt: Ort; Kontaktperson: Ort entfällt (im Zweifel nicht relevant) -->
-          <input v-if="!isKontakt(r)" class="input input-sm min-w-0 flex-1" :value="r.ort ?? ''" placeholder="Ort" aria-label="Ort" @input="setRow(i, { ort: ($event.target as HTMLInputElement).value })" />
+          <input v-if="!isKontakt(r)" class="input input-sm w-32 shrink-0" :value="r.ort ?? ''" placeholder="Ort" aria-label="Ort" @input="setRow(i, { ort: ($event.target as HTMLInputElement).value })" />
         </div>
         <div class="flex gap-2">
           <input class="input input-sm min-w-0 flex-1" :value="r.telefon ?? ''" placeholder="Telefon" inputmode="tel" aria-label="Telefon" @input="setRow(i, { telefon: ($event.target as HTMLInputElement).value })" />

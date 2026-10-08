@@ -7,6 +7,12 @@ import type { HttpAdapter, OtaBeginResult, OtaManifest, PicoClient, PicoConfigRe
 
 const CONNECT_TIMEOUT = 5000
 const READ_TIMEOUT = 20000 // Tippen dauert (Per-Char-Delay) → großzügig (S2)
+// ACHTUNG CapacitorHttp-iOS (HttpRequestHandler.swift): das Plugin nimmt `connectTimeout ?? readTimeout`
+// als EINZIGES timeoutInterval - ist connectTimeout gesetzt, wird readTimeout IGNORIERT. Ein Aufruf mit
+// connectTimeout:5000 + readTimeout:20000 lief auf iOS also real mit 5 s statt 20 s. Fuer das Tippen
+// (#277: bei niedrigem Akku drosselt iOS Funk/CPU auch ohne Energiesparmodus -> traeger erster Kontakt)
+// braucht der Sendeweg das volle Budget. Darum als connectTimeout DAS gedachte Read-Budget uebergeben.
+const TYPE_TIMEOUT = READ_TIMEOUT
 const HEALTH_TIMEOUT = 3000
 const OTA_CHUNK_TIMEOUT = 10000 // LittleFS-Schreiben pro Chunk
 const OTA_COMMIT_TIMEOUT = 30000 // SHA-256 + Ed25519 über ~400 KB auf dem Pico
@@ -85,7 +91,7 @@ export function createPicoClient(http: HttpAdapter, baseUrl: string | (() => str
       const extra = typeof delayMs === 'number' ? { delayMs } : {}
       let typedTotal = 0
       for (const chunk of chunkByCodePoints(text, TYPE_CHUNK_LIMIT)) {
-        const res = await http.post(`${base()}/type`, { text: chunk, os, ...extra }, { connectTimeout: CONNECT_TIMEOUT, readTimeout: READ_TIMEOUT })
+        const res = await http.post(`${base()}/type`, { text: chunk, os, ...extra }, { connectTimeout: TYPE_TIMEOUT, readTimeout: TYPE_TIMEOUT })
         if (!isOk(res.status)) {
           const partial = typedTotal > 0 ? `, ${typedTotal} Zeichen bereits getippt` : ''
           throw new Error(`Senden fehlgeschlagen (HTTP ${res.status}${partial})`)

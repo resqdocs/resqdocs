@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.6.0] - 2026-10-08
+
+### Features
+
+- Manual medication entries get a PZN search field; suggestions are ranked by name and more of them are visible
+- The active-ingredient strength from a PZN lookup is only applied after a short confirmation dialog
+- Long option lists (16 options or more) can be searched while documenting
+- The editor can insert selection options as a pasted list
+- Multiple-choice fields can optionally start without a preselection
+
+### Changed
+
+- The doctors function is now labelled "Kontakte/Ärzte" (contacts/doctors), and its edit card starts with the role (default: doctor)
+- Updated app dependencies (Capacitor 8.5.2, Vue, Vite, Tailwind, daisyUI) and closed known vulnerabilities in build tools
+- Android: the build no longer bundles the Facebook SDK (the social-login plugin is limited to Google, used for the Google Drive backup), and the Gradle daemon is pinned to JDK 21
+
+### Bug Fixes
+
+- iOS: the app adopts the UIScene lifecycle, so builds with Xcode 27 no longer crash at startup
+- Typing via the bridge uses the full timeout budget, fixing send errors on low battery
+- The medication plan review list scrolls correctly, including with external scanners, and the issuing practice is part of the scroll area
+- Open dropdowns appear above the following sections and end above the tab bar and keyboard
+- Long template names are shortened instead of breaking the row, and the template import button uses an icon that renders on Android
+
 ## [1.5.0] - 2026-09-10
 
 ### Features

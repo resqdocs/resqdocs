@@ -22,7 +22,13 @@ App-ID: `com.example.resqdocs` (identisch zu iOS). App-Name: `ResQDocs`.
 
 ## Voraussetzungen
 
-- **JDK 21** (z. B. Temurin/OpenJDK 21).
+- **JDK 21** (z. B. Temurin/OpenJDK 21). Für Gradle ist das in
+  `android/gradle/gradle-daemon-jvm.properties` festgelegt: `./gradlew` sucht sich ein
+  installiertes JDK 21 selbst, unabhängig von `JAVA_HOME`. Neuere JDKs (25+) laufen mit
+  Gradle 8.14.3 nicht. Android Studio bringt inzwischen Java 25 mit; dort unter
+  *Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK* ein JDK 21
+  oder das Daemon-Kriterium wählen. Findet Gradle kein JDK 21, bricht es mit einem Hinweis
+  darauf ab. Auf dem Mac installiert z. B. `brew install --cask temurin@21` eines.
 - **Android SDK**: Platform `android-36`, Build-Tools `36.0.0`, Platform-Tools.
   Bequem über Android Studio (Giraffe+) oder die Command-line-Tools (`sdkmanager`).
 - Gradle wird vom Wrapper (`./gradlew`, Version 8.14.3) automatisch geladen.

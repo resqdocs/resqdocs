@@ -22,7 +22,7 @@ Grund: Manche Funktionen kommen erst mit App-Updates dazu. Eine **Funktion** (de
 | Funktion | im JSON (`functionKind`) | ab App-Version |
 |---|---|---|
 | Medikamentenplan | `medikamentenplan` | 1.0.0 |
-| Ärzte | `aerzte` | 1.0.0 |
+| Kontakte/Ärzte | `aerzte` | 1.0.0 |
 | Pack-Years | `packYears` | 1.1.0 |
 | NEWS2 | `news2` | 1.1.0 |
 
@@ -37,6 +37,7 @@ Zusätzlich sind einzelne **Eigenschaften** erst ab einer Mindestversion verfüg
 | Mehrfachauswahl | `multiple` | field (Options-Feld erlaubt mehrere Optionen gleichzeitig (Checkboxen ≤6 / Multiselect-Dropdown >6); Wert = Aufzählung „a, b und c“) | 1.4.0 |
 | Ausschließende Optionen | `exclusiveOptions` | field (Bei Mehrfachauswahl: „Keine/Normalbefund“-Optionen (exakte options-Strings), die alle anderen ausschließen) | 1.4.0 |
 | Startet auf „nicht erhoben" | `defaultExcluded` | field, container (Feld oder Abschnitt startet im Einsatz auf „nicht erhoben" statt auf „bestätigt" und erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Für Inhalte, die man nur in bestimmten Lagen braucht. Am Container zusätzlich excludable nötig; am Feld nicht zusammen mit required.) | 1.5.0 |
+| Startet ohne Auswahl | `defaultEmpty` | field (Bei Mehrfachauswahl: keine Option ist vorausgewählt (z. B. Einsatzcodes). Ohne die Eigenschaft gilt die Standard-Option bzw. die oberste. Eine leere Auswahl gibt nichts aus; ein Pflichtfeld bleibt bis zur Auswahl offen.) | 1.6.0 |
 
 **Gate-Regel:** Ein `functionKind` ist verfügbar **nur, wenn seine Mindestversion ≤ der Nutzer-Version** ist. Sonst biete ihn nicht an; fragt der Nutzer danach, sag „das braucht mindestens Version X". **Schreibe niemals** einen `functionKind` ins JSON, den die genannte Version nicht kennt. Container und Felder gehen ab Version 1.0.0 immer. Nennt der Nutzer eine Version **vor 1.0.0** (oder keine), nimm die Basis an — nur `container` + `field`, keine Funktionen — und weise darauf hin, dass Funktionen und der Vorlagen-Import selbst mindestens 1.0.0 brauchen.
 
@@ -133,6 +134,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `allowCustom` (boolean): Bei einem Select zusaetzlich „individuell" -> Freitext anbieten (Default aus).
 - `multiple` (boolean): Mehrfachauswahl: mehrere Optionen gleichzeitig waehlbar (Checkboxen bei ≤6, Multi-Dropdown bei >6). Nur mit options wirksam. Fehlt/false -> Einfachauswahl wie bisher. ADDITIV + rueckwaerts/vorwaerts- kompatibel: alte App-Versionen ignorieren das Feld und rendern normales Single-Select (kein Bump von BLOCK_VERSION/PROTOCOL_VERSION -> geteilte „Multi"-Bloecke werden von aelteren Apps akzeptiert).
 - `exclusiveOptions` (Liste von string): Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein „Keine/Normalbefund" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv).
+- `defaultEmpty` (boolean): Bei multiple: „startet ohne Auswahl" - KEINE Option ist vorausgewaehlt (z. B. Einsatzcodes, wo eine Vorauswahl einen falschen Code dokumentieren wuerde). Ohne die Eigenschaft gilt wie bisher die Standard-Option (default, sonst die oberste). Eine leere Auswahl ist dann der Ausgangszustand (✓, nichts in der Ausgabe; ein Pflichtfeld bleibt „noch offen"), nicht „nicht erhoben". Nur mit multiple wirksam.
 - `multiline` (boolean): Freitext mehrzeilig erfassen: im ✎-Modus ein grosses Textfeld (Sheet) statt einzeiligem <input> - fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert.
 - `required` (boolean): Pflichtfeld: das Feld „darf nicht still verschwinden". Im Einsatz entfaellt der −-Zustand (nicht erhoben); es bleiben ✓ (Auswahl/Standard) und ✎ (eigener Wert). „Nicht erhebbar" wird bei Bedarf sichtbar via ✎ dokumentiert, nicht per −. Rein additiv, kein Submit-Gate; der Renderer bleibt unveraendert. Ein leeres Pflichtfeld wird nur visuell als „noch offen" markiert.
 - `defaultExcluded` (boolean): UNO Reverse: das Feld startet im Einsatz auf „nicht erhoben" (−) statt auf „bestaetigt" (✓) und erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Fuer Felder, die man nur in bestimmten Lagen braucht. Schliesst sich mit `required` aus (ein Pflichtfeld darf nicht still entfallen); der Editor verhindert die Kombination. Aendert NUR den Ausgangszustand - die Vorlage bleibt vollstaendig, das Weglassen ist reiner Einsatz-Zustand.
@@ -373,6 +375,10 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
             "type": "string"
           },
           "description": "Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein „Keine/Normalbefund\" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv)."
+        },
+        "defaultEmpty": {
+          "type": "boolean",
+          "description": "Bei multiple: „startet ohne Auswahl\" - KEINE Option ist vorausgewaehlt (z. B. Einsatzcodes, wo eine Vorauswahl einen falschen Code dokumentieren wuerde). Ohne die Eigenschaft gilt wie bisher die Standard-Option (default, sonst die oberste). Eine leere Auswahl ist dann der Ausgangszustand (✓, nichts in der Ausgabe; ein Pflichtfeld bleibt „noch offen\"), nicht „nicht erhoben\". Nur mit multiple wirksam."
         },
         "multiline": {
           "type": "boolean",

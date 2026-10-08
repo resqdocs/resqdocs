@@ -215,7 +215,7 @@ onMounted(() => {
   <!-- Review-Sheet (Bottom-Sheet, teleported; bewusst KEIN daisyUI .modal wegen z-999 ueber der Kamera) -->
   <Teleport to="body">
     <div class="overlay-backdrop fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center" role="dialog" aria-modal="true">
-      <div class="overlay-surface flex max-h-[85vh] w-full flex-col gap-3 rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:mx-auto sm:max-w-lg sm:rounded-2xl">
+      <div class="overlay-surface flex max-h-[85vh] w-full flex-col gap-3 overflow-hidden rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:mx-auto sm:max-w-lg sm:rounded-2xl">
         <div class="flex items-center justify-between gap-2">
           <span class="text-base font-semibold">Medikationsplan scannen</span>
           <div class="flex items-center gap-2">
@@ -253,31 +253,38 @@ onMounted(() => {
 
         <p v-if="error" class="text-sm text-error" role="alert">{{ error }}</p>
 
-        <!-- Aussteller (Opt-in; Default „nicht dokumentieren") - NUR wenn das Protokoll eine Aerzte-Funktion hat;
-             ohne Aerzte-Funktion wird der Arzt aus dem Plan gar nicht gezeigt (und nie uebernommen). -->
-        <div v-if="hasAerzte && aussteller && structuredRows.length" class="flex flex-col gap-1 rounded-lg bg-base-200 p-2">
-          <span class="text-xs text-base-content/60">Ausstellende Praxis aus dem Plan:</span>
-          <span class="text-sm">{{ aussteller.name }}<template v-if="aussteller.ort">, {{ aussteller.ort }}</template><template v-if="aussteller.nummer">, {{ aussteller.nummer.typ }} {{ aussteller.nummer.wert }}</template><template v-if="aussteller.telefon">, Tel. {{ aussteller.telefon }}</template></span>
-          <div class="flex flex-wrap items-center gap-3 text-sm" role="radiogroup" aria-label="Aussteller dokumentieren">
-            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="" class="radio radio-sm" /> nicht dokumentieren</label>
-            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Hausarzt" class="radio radio-sm" /> als Hausarzt</label>
-            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Facharzt" class="radio radio-sm" /> als Facharzt</label>
-          </div>
-          <p v-if="ausstellerRolle" class="text-xs text-success">→ wird in die Ärzte-Liste übernommen</p>
-        </div>
-
-        <!-- Review-Liste: Name editierbar, PZN im Hintergrund (Transfer), entfernen -->
-        <ul v-if="structuredRows.length" class="flex flex-1 flex-col gap-1.5 overflow-y-auto">
-          <li v-for="(row, i) in structuredRows" :key="i" class="flex flex-col gap-0.5">
-            <div class="flex items-center gap-1">
-              <input :value="row.name" class="input input-sm flex-1" :aria-label="`Medikament ${i + 1} Name`" @input="updateRowName(i, ($event.target as HTMLInputElement).value)" />
-              <span v-if="row.staerke" class="badge badge-ghost badge-sm shrink-0" :aria-label="`Wirkstärke ${row.staerke}`">{{ row.staerke }}</span>
-              <button v-if="rowPzn(i)" type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11" :aria-label="`PZN ${rowPzn(i)} in die Bibliothek übernehmen`" :title="`PZN ${rowPzn(i)} in deine Bibliothek übernehmen`" @click="transferRow(i)">→</button>
-              <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 text-error" :aria-label="`Medikament ${i + 1} entfernen`" @click="requestRemoveRow(i)">✕</button>
+        <!-- EIN Scrollbereich fuer Ausstellende Praxis UND Medikamentenliste (#276). Vorher stand die Praxis
+             fest ueber der Liste: im externen-Scanner-Modus (Eingabefeld + Hinweis bleiben offen) blieb auf
+             kleinen Displays fuer die Liste keine Hoehe mehr - die Medikamente waren nicht zu sehen und damit
+             nicht zu scrollen. Jetzt scrollt die Praxis mit weg. min-h-0: sonst behaelt das flex-Kind
+             min-height:auto und schrumpft nicht unter seine Inhaltshoehe. -->
+        <div v-if="structuredRows.length" class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain">
+          <!-- Aussteller (Opt-in; Default „nicht dokumentieren") - NUR wenn das Protokoll eine Aerzte-Funktion hat;
+               ohne Aerzte-Funktion wird der Arzt aus dem Plan gar nicht gezeigt (und nie uebernommen). -->
+          <div v-if="hasAerzte && aussteller" class="flex shrink-0 flex-col gap-1 rounded-lg bg-base-200 p-2">
+            <span class="text-xs text-base-content/60">Ausstellende Praxis aus dem Plan:</span>
+            <span class="text-sm">{{ aussteller.name }}<template v-if="aussteller.ort">, {{ aussteller.ort }}</template><template v-if="aussteller.nummer">, {{ aussteller.nummer.typ }} {{ aussteller.nummer.wert }}</template><template v-if="aussteller.telefon">, Tel. {{ aussteller.telefon }}</template></span>
+            <div class="flex flex-wrap items-center gap-3 text-sm" role="radiogroup" aria-label="Aussteller dokumentieren">
+              <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="" class="radio radio-sm" /> nicht dokumentieren</label>
+              <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Hausarzt" class="radio radio-sm" /> als Hausarzt</label>
+              <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Facharzt" class="radio radio-sm" /> als Facharzt</label>
             </div>
-            <span v-if="transferState[i]" class="pl-1 text-xs text-success">{{ transferState[i] === 'added' ? 'PZN in Bibliothek übernommen.' : 'PZN war bereits in der Bibliothek.' }}</span>
-          </li>
-        </ul>
+            <p v-if="ausstellerRolle" class="text-xs text-success">→ wird in Kontakte/Ärzte übernommen</p>
+          </div>
+
+          <!-- Review-Liste: Name editierbar, PZN im Hintergrund (Transfer), entfernen -->
+          <ul class="flex shrink-0 flex-col gap-1.5">
+            <li v-for="(row, i) in structuredRows" :key="i" class="flex flex-col gap-0.5">
+              <div class="flex items-center gap-1">
+                <input :value="row.name" class="input input-sm flex-1" :aria-label="`Medikament ${i + 1} Name`" @input="updateRowName(i, ($event.target as HTMLInputElement).value)" />
+                <span v-if="row.staerke" class="badge badge-ghost badge-sm shrink-0" :aria-label="`Wirkstärke ${row.staerke}`">{{ row.staerke }}</span>
+                <button v-if="rowPzn(i)" type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11" :aria-label="`PZN ${rowPzn(i)} in die Bibliothek übernehmen`" :title="`PZN ${rowPzn(i)} in deine Bibliothek übernehmen`" @click="transferRow(i)">→</button>
+                <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 text-error" :aria-label="`Medikament ${i + 1} entfernen`" @click="requestRemoveRow(i)">✕</button>
+              </div>
+              <span v-if="transferState[i]" class="pl-1 text-xs text-success">{{ transferState[i] === 'added' ? 'PZN in Bibliothek übernommen.' : 'PZN war bereits in der Bibliothek.' }}</span>
+            </li>
+          </ul>
+        </div>
         <p v-else-if="!scanOpen" class="text-sm italic text-base-content/50">Noch nichts gescannt — „Code scannen" oder „Text einfügen".</p>
 
         <!-- Aktionen -->
