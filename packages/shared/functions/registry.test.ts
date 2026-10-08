@@ -11,7 +11,7 @@ const R: MedikamenteRow[] = [
   { name: 'Ramipril', dosierung: '1-0-1', kommentar: 'nüchtern' },
 ]
 
-test('formatMedikament (#262): "Name Staerke, Schema (Hinweis)" - Komma setzt das Schema IMMER ab', () => {
+test('formatMedikament: "Name Staerke, Schema (Hinweis)" - Komma setzt das Schema IMMER ab', () => {
   assert.equal(formatMedikament({ name: 'ASS', dosierung: '1-0-0' }), 'ASS, 1-0-0')
   assert.equal(formatMedikament({ name: 'Ibuprofen', staerke: '400 mg', dosierung: '1-0-1', kommentar: 'nüchtern' }), 'Ibuprofen 400 mg, 1-0-1 (nüchtern)')
   assert.equal(formatMedikament({ name: 'Metoprolol', staerke: '47,5 mg', dosierung: '1-0-1-0' }), 'Metoprolol 47,5 mg, 1-0-1-0')
@@ -24,14 +24,14 @@ test('formatMedikament (#262): "Name Staerke, Schema (Hinweis)" - Komma setzt da
   assert.equal(formatMedikament({ name: '', staerke: '  ' }), '')
 })
 
-test('staerkeOhneDuplikat (#262): unterdrueckt Doppel-Dokumentation', () => {
+test('staerkeOhneDuplikat: unterdrueckt Doppel-Dokumentation', () => {
   assert.equal(staerkeOhneDuplikat('Ibuflam 400 mg', '400 mg'), undefined)
   assert.equal(staerkeOhneDuplikat('Ibuflam', '400 mg'), '400 mg')
   assert.equal(staerkeOhneDuplikat('Ibuflam', undefined), undefined)
   assert.equal(staerkeOhneDuplikat('Ibuflam', '  '), undefined)
 })
 
-test('formatMedikament/formatArzt: namenlos ohne fuehrende Trenner (#260, UI-Summary)', () => {
+test('formatMedikament/formatArzt: namenlos ohne fuehrende Trenner (UI-Summary)', () => {
   assert.equal(formatMedikament({ name: '', dosierung: '1-0-1' }), '1-0-1')
   assert.equal(formatMedikament({ name: '', kommentar: 'k' }), '(k)')
   assert.equal(formatArzt({ name: '', ort: 'Kiel' }), 'Kiel')
@@ -50,9 +50,9 @@ test('renderBody block + Praefix/Suffix je Zeile', () => {
   )
 })
 
-test('renderBody inline + freier Trenner; ohne Trenner -> Mittelpunkt (#262)', () => {
+test('renderBody inline + freier Trenner; ohne Trenner -> Mittelpunkt', () => {
   assert.equal(def.renderBody(fill(R), { rowLayout: 'inline', rowSeparator: ' | ' }), 'ASS, 1-0-0 | Ramipril, 1-0-1 (nüchtern)')
-  // Inline-DEFAULT = Mittelpunkt (#262): das Komma ist die Grenze IN der Zeile - als Zeilen-Trenner ambig.
+  // Inline-DEFAULT = Mittelpunkt: das Komma ist die Grenze IN der Zeile - als Zeilen-Trenner ambig.
   assert.equal(def.renderBody(fill(R), { rowLayout: 'inline' }), 'ASS, 1-0-0 · Ramipril, 1-0-1 (nüchtern)')
 })
 
@@ -63,8 +63,8 @@ test('renderBody: namelose Zeilen gefiltert (beide Layouts); leer -> ""', () => 
   assert.equal(def.renderBody(fill([]), { rowLayout: 'block', rowPrefix: '- ' }), '')
 })
 
-// --- Funktion „Pack-Years" (#55-Rework) ---
-test('packYears (#55): kaufmännisch gerundete GANZE py, „ca." wenn gerundet; unvollständig -> leer', () => {
+// --- Funktion „Pack-Years" ---
+test('packYears: kaufmännisch gerundete GANZE py, „ca." wenn gerundet; unvollständig -> leer', () => {
   const def = FUNCTION_REGISTRY.packYears
   const fill = (rows: unknown[]): FieldFill => ({ state: 'function', rows } as FieldFill)
   assert.equal(def.label, 'Pack-Years')
@@ -72,7 +72,7 @@ test('packYears (#55): kaufmännisch gerundete GANZE py, „ca." wenn gerundet; 
   assert.equal(def.renderBody(fill([{ cigarettesPerDay: 30, years: 15 }])), 'ca. 23 py (30/Tag, 15 J.)')
   // glatt 10 -> ohne Zeichen
   assert.equal(def.renderBody(fill([{ cigarettesPerDay: 20, years: 10 }])), '10 py (20/Tag, 10 J.)')
-  // 15,5 -> 16 (Beispiel des Maintainers)
+  // 15,5 -> 16 (kaufmännisch aufgerundet)
   assert.equal(def.renderBody(fill([{ cigarettesPerDay: 31, years: 10 }])), 'ca. 16 py (31/Tag, 10 J.)')
   assert.equal(def.hasData(fill([{ cigarettesPerDay: 30, years: 15 }])), true)
   // unvollstaendig -> keine Ausgabe, keine Daten
@@ -87,7 +87,7 @@ test('packYears (#55): kaufmännisch gerundete GANZE py, „ca." wenn gerundet; 
   assert.equal(def.renderBody(def.sampleFill!()), 'ca. 23 py (30/Tag, 15 J.)')
 })
 
-test('sampleFill (#55): Listen-Funktionen liefern Muster-Zeilen fuer die Editor-Vorschau', () => {
+test('sampleFill: Listen-Funktionen liefern Muster-Zeilen fuer die Editor-Vorschau', () => {
   const med = FUNCTION_REGISTRY.medikamentenplan
   assert.ok(med.sampleFill)
   const medOut = med.renderBody(med.sampleFill!())
@@ -103,7 +103,7 @@ test('sampleFill (#55): Listen-Funktionen liefern Muster-Zeilen fuer die Editor-
   assert.match(arztOut, /\(Angehöriger\), Tel\. .*Patientenverfügung \+ Vollmacht\/Betreuung vorhanden/) // Muster-Kontaktperson
 })
 
-test('news2 (#55): „NEWS2 Score (Risiko …) - Kernwerte"; unvollständig -> leer; scale2 schaltet Skala 2', () => {
+test('news2: „NEWS2 Score (Risiko …) - Kernwerte"; unvollständig -> leer; scale2 schaltet Skala 2', () => {
   const def = FUNCTION_REGISTRY.news2
   const fill = (rows: unknown[]): FieldFill => ({ state: 'function', rows } as FieldFill)
   assert.equal(def.label, 'NEWS2')
@@ -178,7 +178,7 @@ test('aerzte.hasData: nur bei mindestens einem benannten Arzt', () => {
   assert.equal(aerzteDef.hasData(undefined), false)
 })
 
-test('medikamentRowHasData/arztRowHasData (#260): jede Eingabe zaehlt, Whitespace nicht', () => {
+test('medikamentRowHasData/arztRowHasData: jede Eingabe zaehlt, Whitespace nicht', () => {
   assert.equal(medikamentRowHasData({ name: '' }), false)
   assert.equal(medikamentRowHasData({ name: '  ', dosierung: ' ' }), false)
   assert.equal(medikamentRowHasData({ name: 'ASS' }), true)
@@ -197,7 +197,7 @@ test('medikamentRowHasData/arztRowHasData (#260): jede Eingabe zaehlt, Whitespac
   assert.equal(arztRowHasData({ name: '', vollmacht: true }), true)
 })
 
-test('singleLine-Vertrag (#55): jede einzeilige Score-Funktion rendert NIE einen Zeilenumbruch', () => {
+test('singleLine-Vertrag: jede einzeilige Score-Funktion rendert NIE einen Zeilenumbruch', () => {
   const fills: (FieldFill | undefined)[] = [
     undefined,
     { state: 'function', rows: [] } as FieldFill,
@@ -213,7 +213,7 @@ test('singleLine-Vertrag (#55): jede einzeilige Score-Funktion rendert NIE einen
   }
 })
 
-test('Funktionsname „Kontakte/Ärzte": der Kontakt steht vorn (Maintainer-Entscheid 1.6.0)', () => {
+test('Funktionsname „Kontakte/Ärzte": der Kontakt steht vorn (bewusste Entscheidung seit 1.6.0)', () => {
   // Die Funktion fuehrt Ärzte UND Kontaktpersonen (Angehörige/Betreuer). Der Name erscheint im Editor-Menü
   // und als Titel jeder neu eingefügten Funktion (createFunction) - beides liest diese eine Stelle.
   assert.equal(FUNCTION_REGISTRY.aerzte.label, 'Kontakte/Ärzte')

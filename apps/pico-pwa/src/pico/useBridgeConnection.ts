@@ -5,7 +5,7 @@ import { createPicoClient } from './picoClient'
 import { useFirmwareNotice } from './useFirmwareNotice'
 
 /**
- * Geteilter Verbindungszustand zur Pico-Bridge (#157). Singleton-Modul-State nach
+ * Geteilter Verbindungszustand zur Pico-Bridge. Singleton-Modul-State nach
  * dem Muster von firmwareNotice — EINE Quelle der Wahrheit für Header und Einsatz-
  * Tab, statt pro Komponente ein eigenes `reachable`. Spricht ausschließlich über
  * den gekapselten picoClient (keine HTTP-Logik in Komponenten, kein Logging).
@@ -49,7 +49,7 @@ export function useBridgeConnection() {
       const ok = await client.health()
       reachable.value = ok
       lastCheck = Date.now()
-      // Firmware-Check huckepack auf den erfolgreichen Kontakt (#134, gedrosselt).
+      // Firmware-Check huckepack auf den erfolgreichen Kontakt (gedrosselt).
       if (ok) void firmwareNotice.checkAfterContact()
       return ok
     } finally {

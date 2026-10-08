@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Einsatz-Komponente der Funktion „Kontakte/Ärzte". Spiegelt das Medikamentenplan-Muster (kompakte Summary-
- * Zeile + Edit-Karte, GENAU EINE offen). Die Karte beginnt mit der Rolle (Maintainer-Entscheid 1.6.0): Jede
+ * Zeile + Edit-Karte, GENAU EINE offen). Die Karte beginnt bewusst mit der Rolle: Jede
  * Rolle hat ihren eigenen Feldsatz (Arzt: Name/Ort/Telefon/Arztnummer, Kontaktperson: Name/Telefon + zwei
  * Häkchen) - stuende der Arzt-Name vorn, wirkte die Funktion wie eine reine Ärzte-Liste. Eigener Zustand
  * im selben Werte-Store (getRows/setRows) -> Entwurf-Persistenz + DSGVO-Reset gratis.
@@ -49,7 +49,7 @@ function setCustomText(v: string): void {
 }
 
 const editingIndex = ref<number | null>(null)
-// Zustand beim OEFFNEN der Karte (#260-Nachbefund, wie Medikamentenplan): eine leergeraeumte
+// Zustand beim OEFFNEN der Karte (wie Medikamentenplan): eine leergeraeumte
 // Bestandszeile bleibt rueckfragepflichtig; still loeschen nur die leer geborene ＋-Zeile.
 const editingHadData = ref(false)
 const editingLabel = ref('')
@@ -82,7 +82,7 @@ function removeRow(i: number): void {
   if (editingIndex.value === i) editingIndex.value = null
   else if (editingIndex.value !== null && i < editingIndex.value) editingIndex.value--
 }
-// Lösch-Schutz (#260): identisches Muster wie im Medikamentenplan — Rückfrage vor Datenverlust,
+// Lösch-Schutz: identisches Muster wie im Medikamentenplan — Rückfrage vor Datenverlust,
 // still nur die leer geborene Zeile; gemerkt wird das ZEILEN-OBJEKT (indexOf beim Bestätigen, fail-safe).
 const pendingRemove = ref<ArztRow | 'all' | null>(null)
 function requestRemove(i: number): void {
@@ -155,7 +155,7 @@ function onFocusOut(e: FocusEvent): void {
   closeEdit()
 }
 function addRow(): void {
-  const cleaned = rows.value.filter(arztRowHasData) // nur WIRKLICH leere Zeilen aufraeumen (#260)
+  const cleaned = rows.value.filter(arztRowHasData) // nur WIRKLICH leere Zeilen aufraeumen
   focusNext = true
   caseValues.setRows(props.node.id, [...cleaned, { name: '' }])
   editingIndex.value = cleaned.length
@@ -311,7 +311,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
     <!-- BMP-Scan + Review (teleportet sich selbst) -->
     <AerzteReviewSheet v-if="bmpOpen" @apply="onScanApply" @close="bmpOpen = false" />
 
-    <!-- Lösch-Rückfrage (#260): Einzelzeile mit Daten oder „alle zurücksetzen" (teleportet sich selbst) -->
+    <!-- Lösch-Rückfrage: Einzelzeile mit Daten oder „alle zurücksetzen" (teleportet sich selbst) -->
     <ConfirmDialog
       v-if="pendingRemove !== null"
       :title="confirmTitle"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Eingabe-Sheet der Score-Funktion „Pack-Years" (#55-Rework): Zigaretten/Tag + Raucherjahre → Live-
+ * Eingabe-Sheet der Score-Funktion „Pack-Years": Zigaretten/Tag + Raucherjahre → Live-
  * Vorschau der Packungsjahre; „Übernehmen" schreibt die EINE Score-Zeile zurück (ScoreFunction).
  * Rechenkern scores.packYears (dependency-frei, quellenbelegt: NCI Pack-Year-Definition, packs/Tag × Jahre).
  *

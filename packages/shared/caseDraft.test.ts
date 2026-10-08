@@ -70,7 +70,7 @@ test('parseDraft: roundtrip gueltig; nur bekannte Zustaende; ungueltig -> null',
   assert.equal(parseDraft(null), null)
 })
 
-test('sanitizeValues (via parseDraft): function-Variante - Allowlist {name,staerke,dosierung,kommentar,pzn}; leere Zeilen raus, namenlose MIT Daten bleiben (#260/#262)', () => {
+test('sanitizeValues (via parseDraft): function-Variante - Allowlist {name,staerke,dosierung,kommentar,pzn}; leere Zeilen raus, namenlose MIT Daten bleiben', () => {
   const raw = {
     protocolId: 'p',
     createdAt: T0,
@@ -157,7 +157,7 @@ test('Repository: unlesbar -> aufgeraeumt; remove loescht', async () => {
   assert.equal(a.store.has(REWORK_CASE_DRAFT_KEY), false)
 })
 
-test('sanitizeValues (via parseDraft): Score-Zeile (#55) - Pack-Years {cigarettesPerDay, years} überlebt, Fremdfeld raus', () => {
+test('sanitizeValues (via parseDraft): Score-Zeile - Pack-Years {cigarettesPerDay, years} überlebt, Fremdfeld raus', () => {
   const raw = {
     protocolId: 'p',
     createdAt: T0,

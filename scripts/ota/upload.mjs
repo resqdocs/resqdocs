@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// upload.mjs - Dev-Helfer: OTA-Update OHNE App auf die Bridge spielen (Issue #130).
+// upload.mjs - Dev-Helfer: OTA-Update OHNE App auf die Bridge spielen.
 //
 //   node scripts/ota/upload.mjs --bin <pfad.bin> --manifest <manifest.json> \
 //        [--url http://10.10.10.1]

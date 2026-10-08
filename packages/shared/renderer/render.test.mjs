@@ -84,7 +84,7 @@ test("render mutiert die Vorlage nicht und ist deterministisch", () => {
   assert.equal(JSON.stringify(template), snapshot);
 });
 
-// --- Neue Fähigkeiten (#12): Variablen, Platzhalter, de-gender, visibleIf, optionale Blöcke ---
+// --- Neue Fähigkeiten: Variablen, Platzhalter, de-gender, visibleIf, optionale Blöcke ---
 
 const demo = {
   schemaVersion: "0.1.0",
@@ -206,12 +206,12 @@ test("render mutiert das Demo-Protokoll nicht", () => {
   assert.equal(JSON.stringify(demo), snapshot);
 });
 
-test("excluded field (#43): KEINE Zeile, auch keine Label-Zeile", () => {
+test("excluded field: KEINE Zeile, auch keine Label-Zeile", () => {
   const out = render(template, { values: { einsatzmeldung: { excluded: true } } });
   assert.ok(!out.includes("Einsatzmeldung"));
 });
 
-test("excluded field (#43): filled-Prädikat ist false, andere Felder unberührt", () => {
+test("excluded field: filled-Prädikat ist false, andere Felder unberührt", () => {
   const t = {
     schemaVersion: "0.1.0", id: "x", title: "X", lang: "de", variables: [],
     blocks: [{ id: "b", title: "B", points: [
@@ -227,12 +227,12 @@ test("excluded field (#43): filled-Prädikat ist false, andere Felder unberührt
   assert.ok(!out.includes("Zwei"));
 });
 
-test("excluded field (#43): Haken wieder an (Override entfernt) stellt Standard her", () => {
+test("excluded field: Haken wieder an (Override entfernt) stellt Standard her", () => {
   const out = render(template, { values: {} });
   assert.ok(out.includes("- Einsatzmeldung:"));
 });
 
-test("Überschriftenmuster (#68): pattern/fill/width konfigurierbar, Default unverändert", () => {
+test("Überschriftenmuster: pattern/fill/width konfigurierbar, Default unverändert", () => {
   const t = { schemaVersion: "0.1.0", id: "h", title: "H", lang: "de", variables: [],
     blocks: [{ id: "b", title: "Anamnese", points: [{ type: "text", id: "tx", content: "Inhalt" }] }] };
   // Default: '# Titel ' + '='-Auffüllung auf 60
@@ -248,14 +248,14 @@ test("Überschriftenmuster (#68): pattern/fill/width konfigurierbar, Default unv
   assert.ok(render(t, {}, { heading: { pattern: "kaputt" } }).split("\n")[0].startsWith("# Anamnese ="));
 });
 
-test("nicht erhoben (#71): einzelner Befund in der Gruppe entfaellt aus dem Satz", () => {
-  // Maintainer-Beispiel: B ohne Auskultation - der Eintrag darf NIRGENDS erscheinen.
+test("nicht erhoben: einzelner Befund in der Gruppe entfaellt aus dem Satz", () => {
+  // Beispiel: B ohne Auskultation - der Eintrag darf NIRGENDS erscheinen.
   const out = render(template, { values: { b_auskultation: { excluded: true } } });
   assert.ok(!out.includes("Auskultation") && !out.includes("auskult"), "Auskultation muss komplett fehlen");
   assert.ok(out.includes("B:"), "Rest der B-Gruppe bleibt");
 });
 
-test("nicht erhoben (#71): ganze Gruppe nicht erhoben -> Key-Zeile entfaellt", () => {
+test("nicht erhoben: ganze Gruppe nicht erhoben -> Key-Zeile entfaellt", () => {
   const t = { schemaVersion: "0.1.0", id: "g", title: "G", lang: "de", variables: [],
     blocks: [{ id: "b", title: "ABCDE", points: [
       { type: "findingGroup", id: "ga", key: "A", findings: [
@@ -271,7 +271,7 @@ test("nicht erhoben (#71): ganze Gruppe nicht erhoben -> Key-Zeile entfaellt", (
   assert.ok(out2.includes("A: frei. keine Schwellung."));
 });
 
-test("nicht erhoben (#71): state-/filled-Praedikate matchen nicht", () => {
+test("nicht erhoben: state-/filled-Praedikate matchen nicht", () => {
   const t = { schemaVersion: "0.1.0", id: "v", title: "V", lang: "de", variables: [],
     blocks: [{ id: "b", title: "B", points: [
       { type: "finding", id: "f1", normal: "ok" },
@@ -281,7 +281,7 @@ test("nicht erhoben (#71): state-/filled-Praedikate matchen nicht", () => {
   assert.ok(!render(t, { values: { f1: { excluded: true } } }).includes("Achtung"));
 });
 
-test("Befund-Variante (#73): gewählte Variante = normaler Befund mit anderem Text", () => {
+test("Befund-Variante: gewählte Variante = normaler Befund mit anderem Text", () => {
   const t = { schemaVersion: "0.1.0", id: "v", title: "V", lang: "de", variables: [],
     blocks: [{ id: "b", title: "B", points: [
       { type: "finding", id: "ausk", label: "Auskultation", normal: "vesikulär ohne RGs",
@@ -298,7 +298,7 @@ test("Befund-Variante (#73): gewählte Variante = normaler Befund mit anderem Te
   assert.ok(ab.includes("Knisterrasseln basal"));
 });
 
-test("field.title (#70): rein Anzeige - taucht NICHT in der Ausgabe auf", () => {
+test("field.title: rein Anzeige - taucht NICHT in der Ausgabe auf", () => {
   const t = { schemaVersion: "0.1.0", id: "ti", title: "T", lang: "de", variables: [],
     blocks: [{ id: "b", title: "Risikofaktoren", points: [
       { type: "field", id: "f1", title: "Nikotin", label: "", default: "Nikotinabusus" },
@@ -308,7 +308,7 @@ test("field.title (#70): rein Anzeige - taucht NICHT in der Ausgabe auf", () => 
   assert.ok(out.includes("Nikotinabusus"), "der Standardinhalt (label leer) wird getippt");
 });
 
-test("Mehrzeiliger Feldwert (#144, BMP-Liste): Label-Zeile mit Bullet, Wertzeilen ohne '-'", () => {
+test("Mehrzeiliger Feldwert (BMP-Liste): Label-Zeile mit Bullet, Wertzeilen ohne '-'", () => {
   const t = { schemaVersion: "0.1.0", id: "mz", title: "M", lang: "de", variables: [],
     blocks: [{ id: "b", title: "Anamnese", points: [
       { type: "field", id: "med", label: "Dauermedikation" },
@@ -324,7 +324,7 @@ test("Mehrzeiliger Feldwert (#144, BMP-Liste): Label-Zeile mit Bullet, Wertzeile
   assert.ok(single.includes("- Dauermedikation: Ramipril 5 mg: 1-0-0-0"));
 });
 
-test("medikamente (#146): Label-Zeile mit Bullet, je Medikament eine Zeile ohne '-'", () => {
+test("medikamente: Label-Zeile mit Bullet, je Medikament eine Zeile ohne '-'", () => {
   const t = { schemaVersion: "0.2.0", id: "m", title: "M", lang: "de", variables: [],
     blocks: [{ id: "b", title: "Vorgeschichte", points: [
       { type: "medikamente", id: "meds", label: "Medikation" },

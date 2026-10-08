@@ -2,7 +2,7 @@
 //
 // Hält neutrale Protokoll-Vorlagen nur im Arbeitsspeicher. KEINE Persistenz
 // (kein LocalStorage/SessionStorage/IndexedDB/Preferences/SQLite/Cache/Cloud) —
-// die Storage-Technik ist ein späterer Entscheidungspunkt (#13, docs/protocol-creator-mvp.md).
+// die Storage-Technik ist ein späterer Entscheidungspunkt (docs/protocol-creator-mvp.md).
 //
 // Verarbeitet ausschließlich NEUTRALE Vorlagen — keine Einsatz-/Patientendaten,
 // kein caseState. Nutzt die bestehende Creator-Domainlogik (packages/shared/creator),
@@ -50,7 +50,7 @@ export interface CreatorSession {
 }
 
 export function initCreatorSession(seedProtocols: Protocol[]): CreatorSession {
-  // ensureProtocolPointIds (#66): Seeds koennen Punkte ohne id enthalten.
+  // ensureProtocolPointIds: Seeds koennen Punkte ohne id enthalten.
   const protocols = seedProtocols.map((p) => ensureProtocolPointIds(p))
   return { protocols, selectedProtocolId: protocols[0]?.id ?? null }
 }
@@ -200,7 +200,7 @@ export function importProtocolIntoSession(session: CreatorSession, jsonText: str
   }
   // id-Kollision in der Session vermeiden: importiertes Protokoll ggf. neu-id-en.
   const taken = new Set(session.protocols.map((p) => p.id))
-  const imported = ensureProtocolPointIds(result.protocol) // #66: fehlende Punkt-IDs nachruesten
+  const imported = ensureProtocolPointIds(result.protocol) // fehlende Punkt-IDs nachruesten
   if (imported.id == null || taken.has(imported.id)) {
     let n = 2
     const base = imported.id ?? 'import'
@@ -223,7 +223,7 @@ export interface ExportOutcome {
   errors: string[]
 }
 
-// --- Library-Anbindung (bewusst, kein Auto-Save) — #13-F2 ---
+// --- Library-Anbindung (bewusst, kein Auto-Save) ---
 // repo wird injiziert (LibraryRepository aus der gekapselten Storage-Schicht);
 // hier KEIN direkter Storage-/SQLite-/Preferences-Zugriff.
 
@@ -237,13 +237,13 @@ export async function loadLibraryIntoSession(session: CreatorSession, repo: Libr
   const fromLibrary = await repo.loadProtocols()
   const byId = new Map<string, Protocol>()
   for (const p of session.protocols) if (p.id != null) byId.set(p.id, p)
-  for (const p of fromLibrary) if (p.id != null) byId.set(p.id, ensureProtocolPointIds(p)) // #66
+  for (const p of fromLibrary) if (p.id != null) byId.set(p.id, ensureProtocolPointIds(p)) // fehlende Punkt-IDs nachruesten
   const protocols = [...byId.values()]
   const keepSelection = session.selectedProtocolId != null && protocols.some((p) => p.id === session.selectedProtocolId)
   return { protocols, selectedProtocolId: keepSelection ? session.selectedProtocolId : protocols[0]?.id ?? null }
 }
 
-// --- Einfügen aus der Library (Copy-on-insert, #13-F4) ---
+// --- Einfügen aus der Library (Copy-on-insert) ---
 // Rein: kein Storage-/Browser-Zugriff. Kopie statt Referenz; neue IDs +
 // internes visibleIf-Remap über die Creator-Domain (insertBlock/addPoint).
 // Validiert nach Einfügen; bei Ungültigkeit bleibt die Session unverändert.
@@ -310,7 +310,7 @@ export function exportSelectedProtocol(session: CreatorSession): ExportOutcome {
   }
 }
 
-// --- Voll-Backup (#108 Teil 2): alle eigenen Protokolle in EINE Datei ----------
+// --- Voll-Backup: alle eigenen Protokolle in EINE Datei ------------------------
 // Sicherungsnetz vor App-Neuinstallation/Gerätewechsel. NUR neutrale Vorlagen,
 // kein caseState/keine Patientendaten. Die schreibgeschützte Beispiel-Vorlage
 // (example) wird NICHT mitgesichert (beim Start ohnehin frisch geseedet).

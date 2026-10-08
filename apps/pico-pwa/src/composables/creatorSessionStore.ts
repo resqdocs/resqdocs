@@ -1,4 +1,4 @@
-// creatorSessionStore.ts - Auto-Persistenz der Editor-Session (#108).
+// creatorSessionStore.ts - Auto-Persistenz der Editor-Session.
 //
 // Sichert den gesamten Arbeitsstand des Protokoll-Editors (alle Vorlagen +
 // Auswahl) laufend lokal, damit nichts verloren geht - auch ohne explizites

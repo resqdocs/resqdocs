@@ -1,10 +1,10 @@
-# Decision Record 0003 — Protokoll-Kreator MVP-Scope (#13)
+# Decision Record 0003 — Protokoll-Kreator MVP-Scope
 
-Datum: 2026-06-09 · Status: angenommen (Maintainer-Entscheidungen via Frage-Tool) · Bezug:
+Datum: 2026-06-09 · Status: angenommen · Bezug:
 `docs/protocol-creator-mvp.md`, S1 (`protocols/SCHEMA.md`/`protocol.schema.json`), S4 (`docs/app-ia.md`),
 S3 (`docs/data-flow.md`), Runtime (`docs/app-runtime.md`).
 
-Maintainer-Entscheidungen, ohne Chat-Kontext nachvollziehbar festgehalten. Legt den MVP-Schnitt des
+Getroffene Entscheidungen, ohne weiteren Kontext nachvollziehbar festgehalten. Legt den MVP-Schnitt des
 Protokoll-Kreators fest, **bevor** Code gebaut wird.
 
 ## Entscheidungen

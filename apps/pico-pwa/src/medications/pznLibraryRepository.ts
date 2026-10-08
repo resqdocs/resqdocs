@@ -1,6 +1,6 @@
 // pznLibraryRepository.ts — Persistenz der nutzergepflegten PZN-Bibliothek.
 //
-// EIGENER Key, GETRENNT von Einsatzentwurf (#173, case.draft.temp), Protokoll/
+// EIGENER Key, GETRENNT von Einsatzentwurf (case.draft.temp), Protokoll/
 // Library und dem (deaktivierten) alten Wörterbuch (medications.dictionary). Keine
 // gemeinsame Transaktion. Speicherform = Export-Form (sortierte Menge), damit auch
 // im Storage keine Einfüge-Reihenfolge/Linkage liegt.

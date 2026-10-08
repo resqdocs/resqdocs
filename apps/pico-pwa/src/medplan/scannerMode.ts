@@ -1,4 +1,4 @@
-// Scanner-Modus (#170) - zentrale Auswahl der Scan-Strategie.
+// Scanner-Modus - zentrale Auswahl der Scan-Strategie.
 //
 // Vergleich WebView-Standard vs. WebView-optimiert in EINEM Build; der native Decoder
 // (Android: ZXing-C++, iOS: Apple Vision) ist als explizite Alternative waehlbar.

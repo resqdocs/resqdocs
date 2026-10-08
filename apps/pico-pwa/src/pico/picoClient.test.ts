@@ -72,7 +72,7 @@ test('typeText() sendet Body { text, os } und NICHT in der URL', async () => {
   assert.deepEqual(call.body, { text: 'Max Mustermann', os: 'ios' })
 })
 
-test('typeText() sendet mit vollem Timeout-Budget (nicht auf connectTimeout gekuerzt) (#277)', async () => {
+test('typeText() sendet mit vollem Timeout-Budget (nicht auf connectTimeout gekuerzt)', async () => {
   // CapacitorHttp-iOS nimmt connectTimeout ?? readTimeout als EINZIGES timeoutInterval -> ein kleiner
   // connectTimeout wuerde readTimeout aushebeln (real 5 s statt 20 s). Der Sendeweg muss beide gleich
   // und grosszuegig setzen, sonst reisst bei niedrigem Akku (traeger Funk) das Fenster.
@@ -106,7 +106,7 @@ test('typeText() Fehler ohne Payload (kein Text in der Fehlermeldung)', async ()
   )
 })
 
-// --- Chunking (#18): Firmware-Grenze 16384 Zeichen pro /type-Request ---
+// --- Chunking: Firmware-Grenze 16384 Zeichen pro /type-Request ---
 
 /** Antwortet pro Request mit typed = Code-Point-Anzahl des empfangenen Chunks. */
 function createCountingAdapter() {
@@ -221,7 +221,7 @@ test('setConfig() Fehler bei Nicht-2xx (ohne Payload in der Meldung)', async () 
   await assert.rejects(() => client.setConfig({ ssidId: 'RTW-1' }), /HTTP 400/)
 })
 
-// --- OTA (#130): Low-Level-Endpunkte (Orchestrierung: firmwareUpdate.test.ts) ---
+// --- OTA: Low-Level-Endpunkte (Orchestrierung: firmwareUpdate.test.ts) ---
 
 const otaManifest = { version: '0.3.0', size: 430152, sha256: 'ab'.repeat(32), sigB64: Buffer.alloc(64).toString('base64') }
 

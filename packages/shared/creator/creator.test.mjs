@@ -283,7 +283,7 @@ test("assertValidProtocolDraft: leerer Titel + doppelte ids + ungültiger Typ", 
   assert.ok(res.errors.some((e) => /Ungültiger Punkt-Typ/.test(e)));
 });
 
-// --- #2b: feldscharfe issues (additiv, errors/warnings unverändert) ---
+// --- feldscharfe issues (additiv, errors/warnings unverändert) ---
 
 test("issues: findingGroup ohne key trägt blockId+pointId+field='key'", () => {
   const p = {
@@ -424,7 +424,7 @@ test("keine caseState-Struktur in erzeugten Protokollen", () => {
   assert.ok(!/\"values\"|\"activeBlocks\"|\"variableValues\"|caseState/.test(json));
 });
 
-// --- #13-F4: insertBlock (Copy-on-insert eines externen Blocks) ---
+// --- insertBlock (Copy-on-insert eines externen Blocks) ---
 
 test("insertBlock fügt Kopie an, ohne Quelle/Protokoll zu mutieren", () => {
   let p = createProtocol({ title: "P" });
@@ -470,7 +470,7 @@ test("insertBlock remappt interne visibleIf-point-Referenzen, var-Refs bleiben",
   assert.equal(dep.visibleIf.all[1].var, "g", "var-Referenz bleibt erhalten");
 });
 
-test("moveBlock verschiebt rauf/runter; No-op an den Raendern (#46)", () => {
+test("moveBlock verschiebt rauf/runter; No-op an den Raendern", () => {
   let p = createProtocol({ title: "P" });
   p = addBlock(p, { title: "Eins" });
   p = addBlock(p, { title: "Zwei" });
@@ -488,7 +488,7 @@ test("moveBlock verschiebt rauf/runter; No-op an den Raendern (#46)", () => {
   assert.equal(JSON.stringify(p), before);
 });
 
-test("movePoint verschiebt innerhalb des Blocks; wirft bei unbekanntem Punkt (#46)", () => {
+test("movePoint verschiebt innerhalb des Blocks; wirft bei unbekanntem Punkt", () => {
   let p = createProtocol({ title: "P" });
   p = addBlock(p, { title: "B" });
   const blockId = p.blocks[0].id;
@@ -503,7 +503,7 @@ test("movePoint verschiebt innerhalb des Blocks; wirft bei unbekanntem Punkt (#4
   assert.throws(() => movePoint(p, "gibtsnicht", "up"), /nicht gefunden/);
 });
 
-test("medikamente (#146): anlegbar, validierbar, OHNE entries (keine Patientendaten in Vorlagen)", () => {
+test("medikamente: anlegbar, validierbar, OHNE entries (keine Patientendaten in Vorlagen)", () => {
   let p = createProtocol({ title: "T" });
   p = addBlock(p, { title: "B" });
   p = addPoint(p, p.blocks[0].id, { type: "medikamente", label: "Medikation" });

@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 
 /**
- * Hinweis "neue PZN-Datenbank verfuegbar" (#11-Folge), pure/testbare Logik.
+ * Hinweis "neue PZN-Datenbank verfuegbar", pure/testbare Logik.
  *
  * Zwei Modi - die Vite-/Singleton-Anbindung lebt in usePznNotice.ts:
  *  - STANDARD (kein Netz): lokaler Alters-Hinweis. Erscheint, wenn das lokal

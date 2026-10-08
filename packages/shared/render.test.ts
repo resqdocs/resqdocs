@@ -500,7 +500,7 @@ test('Funktion mit Titel-Banner: Block + Absatz davor (kein Inline-Klebe-Bug)', 
   assert.equal(render(tree, { mp: { state: 'function', rows: [{ name: 'ASS' }] } }), 'A\n\n## Medikamente\nASS')
 })
 
-test('Banner-Regeln fuer Funktion + Container konsistent (Verify #55): blankLineBefore nur bei Banner; Banner nie inline gejoint', () => {
+test('Banner-Regeln fuer Funktion + Container konsistent: blankLineBefore nur bei Banner; Banner nie inline gejoint', () => {
   const rows = { mp: { state: 'function' as const, rows: [{ name: 'ASS' }, { name: 'Ramipril' }] } }
   // (a) Nicht-Banner-Funktion (titleInline) mit blankLineBefore -> KEIN Absatz (wie ein Nicht-Banner-Feld, s. o.).
   const noBanner: Container = { type: 'container', id: 'r', children: [
@@ -522,7 +522,7 @@ test('Funktion titleInline: Titel inline vor den Zeilen (prefix+title+suffix+bod
     id: 'root',
     children: [{ type: 'function', id: 'mp', functionKind: 'medikamentenplan', title: 'Medikamente', showTitle: true, titleInline: true, heading: H({ prefix: '', suffix: ': ' }), config: { rowLayout: 'inline' } }],
   }
-  // Inline-Default ist seit #262 der Mittelpunkt (Komma = Grenze IN der Zeile 'Name Staerke, Schema').
+  // Inline-Default ist seit dem Zeilenformat 'Name Staerke, Schema' der Mittelpunkt (Komma = Grenze IN der Zeile).
   assert.equal(render(tree, { mp: { state: 'function', rows: [{ name: 'ASS' }, { name: 'Ramipril' }] } }), 'Medikamente: ASS · Ramipril')
   // titleInline aus -> Titel auf eigener Zeile (Regression)
   const own: Container = {
@@ -594,7 +594,7 @@ test('Feld titleInline=true erzwingt inline - auch mehrzeilig', () => {
   assert.equal(render(tree, { m: { state: 'custom', value: 'a\nb' } }), '# M: a\nb') // inline trotz multiline
 })
 
-test('#55: Funktion inline wie ein Feld (Score UND Liste); nur Titel-Banner bleibt Block', () => {
+test('Funktion inline wie ein Feld (Score UND Liste); nur Titel-Banner bleibt Block', () => {
   const H = (prefix: string, suffix: string) => ({ prefix, suffix, fill: '', width: 0, fillMode: 'inclusive' as const })
   const py = (extra: object) => ({ type: 'function' as const, id: 'py', functionKind: 'packYears' as const, title: 'Pack-Years', showTitle: true, titleInline: true, heading: H('', ': '), ...extra })
   const feld = { type: 'field' as const, id: 'a', title: 'A', showTitle: true, titleInline: true, heading: H('', ': '), default: 'x' }
@@ -620,7 +620,7 @@ test('#55: Funktion inline wie ein Feld (Score UND Liste); nur Titel-Banner blei
   const bannerList: Container = { type: 'container', id: 'r', separator: ', ', children: [feld, { type: 'function', id: 'mp', functionKind: 'medikamentenplan', title: 'Medikamente', showTitle: true, heading: H('', ''), inline: true }] }
   assert.equal(render(bannerList, { mp: { state: 'function', rows: [{ name: 'ASS' }, { name: 'Ramipril' }] } }), 'A: x\nMedikamente\nASS\nRamipril')
 
-  // NEU (Maintainer 2026-07-03): Listen-Funktion OHNE Titel-Banner (titleInline) + inline -> an die laufende
+  // NEU: Listen-Funktion OHNE Titel-Banner (titleInline) + inline -> an die laufende
   // Zeile geklebt (wie ein Feld), auch wenn sie mehrzeilig rendert. Block bleibt Default; inline ist explizit.
   const mpInline = (extra: object) => ({ type: 'function' as const, id: 'mp', functionKind: 'medikamentenplan' as const, title: 'Medikamente', showTitle: true, titleInline: true, heading: H('', ': '), inline: true, ...extra })
   const rows = { mp: { state: 'function' as const, rows: [{ name: 'ASS' }, { name: 'Ramipril' }] } }
@@ -631,7 +631,7 @@ test('#55: Funktion inline wie ein Feld (Score UND Liste); nur Titel-Banner blei
   assert.equal(render(inlineOneLine, rows), 'A: x, Medikamente: ASS · Ramipril')
 })
 
-test('blankLineBefore #3 Form b: Banner-Erstkind unter BETITELTEM Container -> Absatz zwischen Titel und erstem Kind', () => {
+test('blankLineBefore Form b: Banner-Erstkind unter BETITELTEM Container -> Absatz zwischen Titel und erstem Kind', () => {
   const tree: Container = {
     type: 'container', id: 'root', children: [
       { type: 'field', id: 'v', default: 'A' },
@@ -645,7 +645,7 @@ test('blankLineBefore #3 Form b: Banner-Erstkind unter BETITELTEM Container -> A
   assert.equal(render(tree), 'A\n\n## Gruppe\n\n> X:\nwert\n> Y:\nw2')
 })
 
-test('blankLineBefore #3 Form a: Banner-Erstkind unter TRANSPARENTEM Wrapper -> Absatz an der echten Naht', () => {
+test('blankLineBefore Form a: Banner-Erstkind unter TRANSPARENTEM Wrapper -> Absatz an der echten Naht', () => {
   const grp: Container = { type: 'container', id: 'g', showTitle: false, excludable: true, children: [
     { type: 'field', id: 'x', title: 'X', showTitle: true, titleInline: false, heading: H({ prefix: '> ', suffix: ':' }), blankLineBefore: true, default: 'wert' },
   ] }
@@ -657,7 +657,7 @@ test('blankLineBefore #3 Form a: Banner-Erstkind unter TRANSPARENTEM Wrapper -> 
   assert.equal(render(tree, { g: { state: 'excluded' } }), 'A')
 })
 
-test('blankLineBefore #3: doppelte transparente Verschachtelung -> genau EINE Leerzeile (kein doppelter Absatz)', () => {
+test('blankLineBefore: doppelte transparente Verschachtelung -> genau EINE Leerzeile (kein doppelter Absatz)', () => {
   const banner = { type: 'field' as const, id: 'x', title: 'X', showTitle: true, titleInline: false, heading: H({ prefix: '> ', suffix: ':' }), blankLineBefore: true, default: 'w' }
   const tree: Container = {
     type: 'container', id: 'root', children: [

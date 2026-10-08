@@ -19,7 +19,7 @@ Gewählt als bester Kompromiss aus sauberer Use-Case-Abdeckung und künftiger Wa
 
 Verworfen: CircuitPython/MicroPython (nur „lief zufällig"/HID unreifer), reines C-SDK & Zephyr
 (zu viel Aufwand/Overkill), Rust/Embassy (technisch top, aber Lernkurve), QMK/KMK/ZMK (für
-physische Tastaturen). Begründung je Stack: `../docs/sources.md` + Issue #2.
+physische Tastaturen). Begründung je Stack: `../docs/sources.md`.
 
 ## Sprachen
 
@@ -32,7 +32,7 @@ physische Tastaturen). Begründung je Stack: `../docs/sources.md` + Issue #2.
 ## ⭐ Akzeptanzkriterium #1: Umlaute & Sonderzeichen (oberste Priorität)
 
 Umlaute **und** Sonderzeichen müssen in der Ausgabe korrekt ankommen — das ist die
-Kernanforderung (Issue #1). Verbindlicher **Teststring**, der vor jedem „fertig" sauber
+Kernanforderung. Verbindlicher **Teststring**, der vor jedem „fertig" sauber
 ins Ziel getippt werden muss:
 
 ```
@@ -62,7 +62,7 @@ Technischer Weg (belegt, `../docs/sources.md`):
 - Sonderzeichen außerhalb des reinen Layouts (z. B. €, fremdsprachige Akzente auf DE-Host) →
   Unicode-Pfad (Arduino_KeyboardUTF8) prüfen.
 - **Jetzt sofort testbar:** Umlaut-Ausgabe auf dem vorhandenen **Pico 1 (RP2040)** via arduino-pico
-  + `KeyboardLayout_de_DE`, per USB-Kabel gegen NIDA/iPad (Issue #1).
+  + `KeyboardLayout_de_DE`, per USB-Kabel gegen NIDA/iPad.
 
 ## Referenz
 
@@ -80,7 +80,7 @@ Firmware-Code wird **nicht** übernommen.
   (arduino-pico Core LGPL-2.1-or-later, Keyboard/EEPROM/HID_Keyboard LGPL-2.1-or-later,
   pico-sdk/lwIP/LittleFS BSD, DHCP/Crypto MIT, **CYW43-WLAN-Blob separat/gerätegebunden**).
 - **Auslieferung:** Die kompilierte Binary `bridge_s2.bin` wird **mit der App ausgeliefert**
-  (`apps/pico-pwa/src/assets/firmware/`, OTA #130). Die **LGPL-§6-Pflichten** für die
+  (`apps/pico-pwa/src/assets/firmware/`, für OTA-Updates). Die **LGPL-§6-Pflichten** für die
   statisch gelinkten LGPL-Komponenten werden über den **vollständigen Firmware-Quellstand in
   diesem Repository** + die folgenden Build-Angaben (Relink-Möglichkeit) erfüllt; der
   arduino-pico-Core wird **unverändert** gelinkt.
@@ -120,7 +120,7 @@ arduino-cli compile --fqbn rp2040:rp2040:rpipico2w:flash=4194304_1048576 \
 Die `.uf2`-Dateien unter `dist/` sind der BOOTSEL-Weg (anderes Format, gleicher Quellstand);
 die ausgelieferte `.bin` ist das OTA-Format.
 
-### Pfad-neutraler, reproduzierbarer Supersede-Build (#6 Gate 2/3)
+### Pfad-neutraler, reproduzierbarer Supersede-Build
 
 Die historisch ausgelieferte `bridge_s2.bin` (0.3.2) bettet absolute Toolchain-Pfade
 ein (`<home>/Library/Arduino15/…` bzw. `/home/<name>/.arduino15/…`) und ist
@@ -130,7 +130,7 @@ daher nicht pfad-/maschinenneutral. Behebung über `firmware/bridge/build-reprod
 **Verifiziert (Container):** mit den Flags enthält die Binary **0** absolute Pfade
 (vorher 4), und zwei Builds aus **unterschiedlichen** Build-Verzeichnissen sind
 **bit-identisch** (gleiche sha256) → pfad-unabhängig reproduzierbar. Crypto/rweather
-**0.4.0** ist die belegte Build-Version (Gate 3 gilt damit für den neuen Build).
+**0.4.0** ist die belegte Build-Version (der offene Release-Check ist damit für den neuen Build erfüllt).
 
 **Signierter Supersede auf 0.3.3 (MUSS auf der Maschine mit dem privaten OTA-Key
 laufen — der Key liegt außerhalb des Repos):**

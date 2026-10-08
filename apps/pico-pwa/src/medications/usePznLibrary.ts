@@ -1,4 +1,4 @@
-// usePznLibrary.ts — Singleton der nutzergepflegten PZN-Bibliothek (#194/#195).
+// usePznLibrary.ts — Singleton der nutzergepflegten PZN-Bibliothek.
 //
 // Async, backend-gewählt: nativ → SQLite (skaliert auf ~317k), Web → Preferences-Blob.
 // list/page/search/entry/count laufen seitenweise (kein 317k im Speicher/DOM). Die
@@ -67,7 +67,7 @@ function create() {
   async function search(query: string, opts: { offset: number; limit: number; missingStaerke?: boolean }): Promise<PznEntry[]> {
     return (await ready()).search(query, opts)
   }
-  /** Typeahead fuer das manuelle Medikamentenfeld (#275): Infix + `*`, Fragmente ab 3 Zeichen. */
+  /** Typeahead fuer das manuelle Medikamentenfeld: Infix + `*`, Fragmente ab 3 Zeichen. */
   async function suggest(query: string, limit: number): Promise<PznEntry[]> {
     return (await ready()).suggest(query, limit)
   }
@@ -136,7 +136,7 @@ function create() {
   }
 
   /**
-   * Gestreamter Backup-Export (#197): seitenweise lesen → kompakt inkrementell in
+   * Gestreamter Backup-Export: seitenweise lesen → kompakt inkrementell in
    * einen gzip-Stream → chunkweise in eine Cache-Datei + Share. Hält nie die ganze
    * Bibliothek im Speicher (behebt den Hänger bei großen Datensätzen). onProgress
    * meldet Einträge gegen die Gesamtzahl. Liest nur (page/count) — keine Schreiblogik.

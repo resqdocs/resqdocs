@@ -43,7 +43,7 @@ async function resolveFromLibrary(): Promise<void> {
     const resolved = e ? e.wirkstoff || e.label : ''
     if (resolved && structuredRows.value[i]?.pzn === pzn) {
       updateRowName(i, resolved)
-      // Wirkstärke aus der EIGENEN Bibliothek mitziehen (#262) — nur leere Zeilen-Stärke füllen,
+      // Wirkstärke aus der EIGENEN Bibliothek mitziehen — nur leere Zeilen-Stärke füllen,
       // und nie doppelt dokumentieren, wenn der aufgelöste Name sie schon trägt.
       const st = staerkeOhneDuplikat(resolved, e?.staerke)
       if (st && !structuredRows.value[i]?.staerke) setRowStaerke(i, st)

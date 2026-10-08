@@ -5,7 +5,7 @@
  *   das Eingabefeld erscheint erst bei ✎ (Progressive Disclosure - korrekt, da kein Scan-Bedarf).
  * - SELECT (options gesetzt): Optionen IMMER sichtbar (quellenbasiert select-field-ux-critique:
  *   versteckte Optionen widersprechen der Select-Erwartung; NN/g Recognition-over-Recall + Baymard).
- *   Radios bei ≤6, Dropdown bei >6, ab OPTION_SEARCH_MIN (16) eine durchsuchbare Liste (#278, Einfach- und
+ *   Radios bei ≤6, Dropdown bei >6, ab OPTION_SEARCH_MIN (16) eine durchsuchbare Liste (Einfach- und
  *   Mehrfachauswahl gleich). Der Erhebungsstatus steckt in der Auswahl SELBST: Standard-Option
  *   = confirmed (default nie materialisiert), andere Option/„individuell" = custom, „nicht erhoben" =
  *   excluded. Ein Tap fuer alles, kein vorgeschalteter Modus-Tap.
@@ -35,7 +35,7 @@ const options = computed(() => [...new Set((props.node.options ?? []).filter((o)
 const isSelect = computed(() => options.value.length > 0)
 const useDropdown = computed(() => options.value.length > 6) // adaptiv: Radios wenige, Dropdown viele
 // Lange Listen (Alarmierungscodes, Vorerkrankungen …) zusaetzlich durchsuchbar - gleiche Regel fuer Einfach- und
-// Mehrfachauswahl. Unter der Schwelle bleibt die Darstellung exakt wie bisher (Maintainer-Entscheid, #278).
+// Mehrfachauswahl. Unter der Schwelle bleibt die Darstellung bewusst exakt wie bisher.
 const useSearch = computed(() => options.value.length >= OPTION_SEARCH_MIN)
 const def = computed(() => {
   const opts = options.value

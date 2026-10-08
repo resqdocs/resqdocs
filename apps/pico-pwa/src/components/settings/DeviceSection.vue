@@ -7,7 +7,7 @@ import { useFirmwareUpdate } from '@/pico/useFirmwareUpdate'
 import { isValidSsidId } from '@/pico/picoClient'
 
 /**
- * Gerät / Pico (#14-B, /config: #17, OTA: #130). Bindet die gekapselte
+ * Gerät / Pico. Bindet die gekapselte
  * Pico-Schicht (usePicoDevice/useFirmwareUpdate) an: Verbindung prüfen,
  * Status abrufen, Firmware aktualisieren, manueller Testtext über /type,
  * SSID-ID ändern über /config. KEINE HTTP-Logik hier (nur über die
@@ -146,7 +146,7 @@ async function onSetSsid(): Promise<void> {
 
       <div class="divider my-0" />
 
-      <!-- Firmware aktualisieren (OTA, #130) -->
+      <!-- Firmware aktualisieren (OTA) -->
       <div>
         <div class="mb-1 flex items-center justify-between">
           <span class="label-text">Firmware aktualisieren</span>
@@ -221,7 +221,7 @@ async function onSetSsid(): Promise<void> {
 
       <div class="divider my-0" />
 
-      <!-- SSID-ID ändern über /config (#17) -->
+      <!-- SSID-ID ändern über /config -->
       <label class="form-control">
         <span class="label-text mb-1">Geräte-ID (WLAN heißt "ResQDocs-&lt;ID&gt;")</span>
         <input

@@ -1,7 +1,7 @@
 # Decision Record 0004 — Storage-Architektur (`library` + App-Einstellungen)
 
-Datum: 2026-06-09 · Status: angenommen (Maintainer-Entscheidung via Frage-Tool) · Bezug:
-`docs/data-flow.md` (S3), `docs/app-ia.md` (S4), `docs/protocol-creator-mvp.md` (#13).
+Datum: 2026-06-09 · Status: angenommen · Bezug:
+`docs/data-flow.md` (S3), `docs/app-ia.md` (S4), `docs/protocol-creator-mvp.md` (Kreator).
 
 > **Architektur-/Spezifikationsentscheidung. In diesem Schritt wird KEIN Storage-Code gebaut.** Die
 > Umsetzung ist ein separater, ausdrücklich zu beauftragender Folgeschritt.
@@ -28,7 +28,7 @@ SQLite (strukturiert):
 
 ## Begründung
 
-- **Passt zu #13:** Der Protokoll-Kreator erzeugt viele Protokolle/Blöcke; Suche, Sortierung,
+- **Passt zum Kreator:** Der Protokoll-Kreator erzeugt viele Protokolle/Blöcke; Suche, Sortierung,
   Migration und später Sync sind absehbar → strukturierte DB (SQLite) ist dafür die tragfähige Basis
   (sqlite.org: klein, selbst-contained, gutes Application-File-Format; Android-Doku: SQLite für
   strukturierte/wiederholte Daten).
@@ -57,7 +57,7 @@ D (vertagen) — MVP bliebe nicht real nutzbar (nichts überlebt App-Neustart).
 - **Neue Dependency** (bei Umsetzung): `@capacitor-community/sqlite` (Community-Plugin) — bewusst und
   hier dokumentiert. `@capacitor/preferences` ist bereits vorhanden.
 - **Architektur:** gekapselte `useStorage()`/Repository-Schicht; `caseState` bleibt davon getrennt und
-  flüchtig. Die flüchtige Creator-Session (#13-B…E) wird später über diese Schicht aus `library` geladen
+  flüchtig. Die flüchtige Creator-Session wird später über diese Schicht aus `library` geladen
   bzw. (bewusst) dorthin übernommen.
 - **Tests:** müssen beide Backends abdecken; das Repository-Interface wird gegen ein In-Memory-/Fake-
   Backend pur testbar gehalten.
@@ -69,10 +69,10 @@ D (vertagen) — MVP bliebe nicht real nutzbar (nichts überlebt App-Neustart).
 - Anbindung der Creator-Session an `library` (Laden/Speichern als **bewusste** Nutzeraktion).
 - Bausteine- und Einstellungen-Tabs (S4) auf dieser Schicht.
 
-## Nachtrag (#173): begrenzter temporärer Einsatzentwurf
+## Nachtrag: begrenzter temporärer Einsatzentwurf
 
 Die ursprüngliche Regel „`caseState` wird NIE persistiert" gilt weiterhin für die
-**typisierte Repository-Schicht** (Settings, Library = nur neutrale Daten). #173 führt
+**typisierte Repository-Schicht** (Settings, Library = nur neutrale Daten). Dieser Nachtrag führt
 einen **bewusst eng begrenzten Ausnahmefall** ein: ein laufender Einsatzentwurf darf
 kurzfristig **lokal** fortgesetzt werden (auch über App-Neustart), wird aber per
 **Sliding-Idle-TTL** (1–5 h, Default 3 h) nach Inaktivität **automatisch gelöscht**.

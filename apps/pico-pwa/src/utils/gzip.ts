@@ -1,4 +1,4 @@
-// gzip.ts — gzip/gunzip über die eingebaute CompressionStream-API (#194/#197).
+// gzip.ts — gzip/gunzip über die eingebaute CompressionStream-API.
 //
 // Bordmittel, KEIN Dependency: CompressionStream/DecompressionStream sind auf
 // iOS 18 (WKWebView), Android-WebView und modernen Browsern verfügbar. Für die

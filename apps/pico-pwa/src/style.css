@@ -8,7 +8,7 @@
   themes: light --default, dark --prefersdark;
 }
 
-/* Theme-Familie "ResQDocs" (#78): Logofarben, WCAG-geprueft (design/colors.md).
+/* Theme-Familie "ResQDocs": Logofarben, WCAG-geprueft (design/colors.md).
    Zurueckhaltend gem. Serioes-Direktive: Koralle nur als Akzent.
    "Klassisch" = eingebaute light/dark-Themes (unveraendert). */
 @plugin "daisyui/theme" {
@@ -111,7 +111,7 @@
     0 20px 45px -12px rgb(0 0 0 / 0.28);
 }
 
-/* === Schwebende Dropdowns im Einsatz (#278): ein OFFENES Dropdown muss ueber die nachfolgenden Abschnitte
+/* === Schwebende Dropdowns im Einsatz: ein OFFENES Dropdown muss ueber die nachfolgenden Abschnitte
    ragen. Jeder Abschnitt ist ein daisyUI-collapse (isolation: isolate) und damit ein eigener Stapel-Kontext;
    das z-10 des Dropdowns wirkt nur INNERHALB seiner Karte - spaetere Karten und „nicht erhoben"-Zeilen
    (opacity) wurden darueber gemalt (Geraetetest). Deshalb hebt sich die Karte selbst an, solange darin ein
@@ -133,7 +133,7 @@ body {
   margin: 0;
 }
 
-/* App-Gefuehl statt Webseite (iOS/WKWebView, #29):
+/* App-Gefuehl statt Webseite (iOS/WKWebView):
    - keine Textselektion/Callout beim (Doppel-)Tippen auf Bedienelemente
      ("markiert alle"-Effekt in Befundgruppen),
    - kein Tap-Highlight, kein Doppeltipp-Zoom (touch-action),
@@ -152,7 +152,7 @@ textarea,
   user-select: text;
 }
 
-/* Touch-Tap-Targets (#38): daisyUI xs/sm-Bedienelemente sind auf Touch zu
+/* Touch-Tap-Targets: daisyUI xs/sm-Bedienelemente sind auf Touch zu
    klein (btn-xs ~24 px; Apple empfiehlt 44 pt). Auf Geraeten mit grobem
    Zeiger (Finger) anheben - Desktop/Maus bleibt kompakt. Unlayered CSS
    gewinnt gegen die daisyUI-@layer-Regeln. */

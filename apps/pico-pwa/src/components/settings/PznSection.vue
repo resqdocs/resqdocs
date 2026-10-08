@@ -4,7 +4,7 @@ import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { useStorage } from '@/storage/useStorage'
 
 /**
- * PZN-Wörterbuch (#11): Stand anzeigen + nutzerinitiierter Sync. Einzige
+ * PZN-Wörterbuch: Stand anzeigen + nutzerinitiierter Sync. Einzige
  * Remote-Verbindung der App neben der Bridge (SECURITY.md). Daten sind
  * neutrale CC0-Referenzdaten der Community - unverifiziert, daher werden
  * Auflösungen im Scan als "community/ungeprüft" markiert.

@@ -7,7 +7,7 @@ import { createMedicationLookup } from '../medications/useMedicationLookup.ts'
 import type { HttpAdapter, HttpResponse } from '../pico/picoTypes.ts'
 import type { KeyValueAdapter } from '../storage/types.ts'
 
-// Lokale Fakes (#164-Regression): KV mit vorgeladenem Woerterbuch, HTTP ungenutzt.
+// Lokale Fakes (E2E-Regression): KV mit vorgeladenem Woerterbuch, HTTP ungenutzt.
 function fakeKv(): KeyValueAdapter & { dump: Record<string, string> } {
   const dump: Record<string, string> = {}
   return { dump, async get(k) { return dump[k] ?? null }, async set(k, v) { dump[k] = v }, async remove(k) { delete dump[k] } }
@@ -35,7 +35,7 @@ test('ingest() übernimmt Medikationszeilen in den Entwurf', () => {
   assert.equal(s.ausstellerRolle.value, '')
 })
 
-test('#184: structuredRows trägt die Roh-PZN; Name-Overwrite behält die PZN', () => {
+test('structuredRows trägt die Roh-PZN; Name-Overwrite behält die PZN', () => {
   const s = useMedplanScan()
   s.ingest(EINSEITIG) // ein Medikament, nur PZN (2455874)
   assert.equal(s.structuredRows.value.length, 1)
@@ -48,7 +48,7 @@ test('#184: structuredRows trägt die Roh-PZN; Name-Overwrite behält die PZN', 
   assert.equal(s.draftRows.value[0].pzn, '2455874')
 })
 
-test('#262: setRowStaerke setzt die Wirkstärke; Name-Overwrite/Passthrough lässt sie stehen', () => {
+test('setRowStaerke setzt die Wirkstärke; Name-Overwrite/Passthrough lässt sie stehen', () => {
   const s = useMedplanScan()
   s.ingest(EINSEITIG)
   assert.equal(s.structuredRows.value[0].staerke, undefined)
@@ -103,7 +103,7 @@ test('Entwurf bearbeiten/entfernen; draftText: eine Zeile je Medikament, Leeres 
   s.ingest(SEITE_2)
   s.updateRow(1, '   ')
   assert.equal(s.draftText.value, 'Ramipril 5 mg: 1-0-0-0')
-  // Mehrere Medikamente -> je eigene Zeile (Lesbarkeit im Protokoll, #144)
+  // Mehrere Medikamente -> je eigene Zeile (Lesbarkeit im Protokoll)
   const m = useMedplanScan()
   m.ingest(SEITE_1)
   assert.equal(m.rows.value.length, 2)
@@ -111,7 +111,7 @@ test('Entwurf bearbeiten/entfernen; draftText: eine Zeile je Medikament, Leeres 
   assert.ok(!m.draftText.value.includes('; '), 'kein Semikolon-Join mehr')
 })
 
-// --- Aussteller (#144): Opt-in-Dokumentation Hausarzt/Facharzt ---
+// --- Aussteller: Opt-in-Dokumentation Hausarzt/Facharzt ---
 
 const MIT_ARZT =
   '<MP v="025" U="CC" l="de-DE"><P g="E" f="M"/>' +
@@ -157,7 +157,7 @@ test('NETZWERK-POLICY: keine Google-/Telemetrie-Dependencies (package.json)', ()
   }
 })
 
-test('draftRows (#146): strukturierte Zeilen, Aussteller bei Rolle als erste Zeile', () => {
+test('draftRows: strukturierte Zeilen, Aussteller bei Rolle als erste Zeile', () => {
   const s = useMedplanScan()
   s.ingest(MIT_ARZT)
   assert.equal(s.draftRows.value.length, 1)
@@ -179,8 +179,8 @@ test('draftRows: removeRow haelt Text- und Strukturpfad synchron; reset leert be
   assert.equal(s.draftRows.value.length, 0)
 })
 
-// --- #164: End-to-End-Regression - realer 14-Medikamente-Plan, anonymisiert
-// (kein P/A/C/O-Element, U auf Nullen) -> Parsen + PZN-Normalisierung (#162) +
+// --- End-to-End-Regression - realer 14-Medikamente-Plan, anonymisiert
+// (kein P/A/C/O-Element, U auf Nullen) -> Parsen + PZN-Normalisierung +
 // Aufloesung gegen ein synthetisches Test-Woerterbuch + Render-Ausgabe. ---
 const UKF_164 =
   '<MP v="026" U="00000000000000000000000000000000" l="de-DE"><S>' +
@@ -212,7 +212,7 @@ async function lookupWith(dict: Record<string, string>) {
   return l
 }
 
-test('#164 E2E: 14 Medikamente, alle PZN normalisiert + aufgeloest, keine Verluste', async () => {
+test('E2E: 14 Medikamente, alle PZN normalisiert + aufgeloest, keine Verluste', async () => {
   const lookup = await lookupWith(TEST_DICT)
   const s = useMedplanScan((pzn) => lookup.resolve(pzn))
   assert.equal(s.ingest(UKF_164), true)
@@ -221,7 +221,7 @@ test('#164 E2E: 14 Medikamente, alle PZN normalisiert + aufgeloest, keine Verlus
   for (const row of s.draftRows.value) {
     assert.match(row.name ?? '', /^Test-Medikament \d\d \(PZN /, `aufgeloest: ${row.name}`)
   }
-  // Sub-8-stellige PZN korrekt normalisiert aufgeloest (Kernfall #162/#164).
+  // Sub-8-stellige PZN korrekt normalisiert aufgeloest (Kernfall der Regression).
   assert.match(s.draftRows.value[1].name, /^Test-Medikament 02 \(PZN 2953075,/)
   assert.match(s.draftRows.value[6].name, /^Test-Medikament 07 \(PZN 524306,/)
   // Eintrag mit t/i bleibt erhalten + aufgeloest.
@@ -231,7 +231,7 @@ test('#164 E2E: 14 Medikamente, alle PZN normalisiert + aufgeloest, keine Verlus
   assert.equal(ti.kommentar, 'jeweils 1 Tablette')
 })
 
-test('#164 E2E: unbekannte PZN erzeugt keinen falschen Treffer', async () => {
+test('E2E: unbekannte PZN erzeugt keinen falschen Treffer', async () => {
   const lookup = await lookupWith({ '99999999': 'Darf-nicht-treffen' })
   const s = useMedplanScan((pzn) => lookup.resolve(pzn))
   s.ingest(UKF_164)
@@ -244,7 +244,7 @@ test('#164 E2E: unbekannte PZN erzeugt keinen falschen Treffer', async () => {
   assert.equal(lookup.resolve(''), null)
 })
 
-test('#164 E2E: Render-Ausgabe ohne fuehrende Striche, ohne leere Zeilen', async () => {
+test('E2E: Render-Ausgabe ohne fuehrende Striche, ohne leere Zeilen', async () => {
   const { render } = await import('@resqdocs/protocol-core/renderer/render.mjs')
   const lookup = await lookupWith(TEST_DICT)
   const s = useMedplanScan((pzn) => lookup.resolve(pzn))

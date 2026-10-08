@@ -1,16 +1,16 @@
-// medplan.mjs - BMP-UKF-Parser (#9): Bundeseinheitlicher Medikationsplan.
+// medplan.mjs - BMP-UKF-Parser: Bundeseinheitlicher Medikationsplan.
 //
 // Parst das XML-Ultrakurzformat (UKF) aus dem BMP-Data-Matrix-Code und liefert
 // die Medikationszeilen (S/M/W-Elemente), Seiteninfo sowie den AUSSTELLER
-// (A-Element, #144 - nur Name/Ort/Nummer/Telefon, Uebernahme ist Opt-in).
+// (A-Element, nur Name/Ort/Nummer/Telefon, Uebernahme ist Opt-in).
 //
-// DATENMINIMIERUNG BY DESIGN (Art. 9 DSGVO, siehe Issue #9 / docs/data-flow.md):
+// DATENMINIMIERUNG BY DESIGN (Art. 9 DSGVO, siehe docs/data-flow.md):
 // Die Elemente P (Patient), C (Custodian) und O (Observation, klinische
 // Patientenparameter) werden NIE gelesen - ihre Attribute werden nicht
 // extrahiert, nicht zurueckgegeben, nicht geloggt. Vom A-Element (Aussteller =
 // Praxis/Apotheke/Krankenhaus, KEIN Patientendatum) werden NUR n (Name),
 // c (Ort), lanr/idf/kik (Arzt-/Apotheken-/Krankenhaus-Nummer) und p (Telefon)
-// gelesen (Maintainer-Entscheidung #144); Strasse/PLZ/E-Mail/Zeitstempel nicht.
+// gelesen (bewusste Entscheidung); Strasse/PLZ/E-Mail/Zeitstempel nicht.
 // Der Aufrufer haelt Eingabe-String und Ergebnis nur fluechtig (kein Persistieren).
 //
 // Format-Referenz: KBV Anlage 3 "Spezifikation BMP" (XSD bmp_V2.x, oeffentliches
@@ -74,7 +74,7 @@ const SKIPPED_ELEMENTS = new Set(['P', 'C', 'O'])
 
 /**
  * Parst einen gescannten BMP-UKF-String: Medikation + Seiteninfo + Aussteller
- * (A-Element, nur Name/Ort/Nummer/Telefon, #144). Wirft, wenn die Eingabe kein
+ * (A-Element, nur Name/Ort/Nummer/Telefon). Wirft, wenn die Eingabe kein
  * BMP-UKF ist (keine MP-Wurzel).
  */
 export function parseMedplanMedications(ukf) {
@@ -85,7 +85,7 @@ export function parseMedplanMedications(ukf) {
   /** @type {{current:number,total:number}} */
   let page = { current: 1, total: 1 }
   const medications = []
-  let aussteller // { name, ort?, nummer?: {typ, wert}, telefon? } aus dem A-Element (#144)
+  let aussteller // { name, ort?, nummer?: {typ, wert}, telefon? } aus dem A-Element
 
   let sectionTitle // aktuelle Zwischenueberschrift (S t="...")
   let sectionCode // aktueller Zwischenueberschrift-Code (S c="...")
@@ -103,7 +103,7 @@ export function parseMedplanMedications(ukf) {
     if (SKIPPED_ELEMENTS.has(name)) continue
 
     if (name === 'A') {
-      // Aussteller (#144): bewusst NUR diese vier Angaben, Rest wird verworfen.
+      // Aussteller: bewusst NUR diese vier Angaben, Rest wird verworfen.
       const a = parseAttrs(attrBody)
       if (a.n) {
         aussteller = { name: a.n }
@@ -197,15 +197,15 @@ export function medicationToText(med) {
 }
 
 /**
- * Eine Medikationszeile als strukturierte Zeile fuer das medikamente-Element
- * (#146): { name, dosierung, kommentar } - gleiche Inhalte wie medicationToText,
+ * Eine Medikationszeile als strukturierte Zeile fuer das medikamente-Element:
+ * { name, dosierung, kommentar } - gleiche Inhalte wie medicationToText,
  * nur aufgeteilt (Name inkl. Wirkstoffstaerke/Form, Dosierung inkl. Einheit,
  * Kommentar = Hinweis/Grund/Zusatzzeile).
  */
 export function medicationToRow(med) {
   const { head, dosisVoll, extras } = medicationParts(med)
   const row = { name: head, dosierung: dosisVoll, kommentar: extras.join(' - ') }
-  // Roh-PZN „im Hintergrund" mitführen (#184): bleibt am Eintrag, auch wenn der
+  // Roh-PZN „im Hintergrund" mitführen: bleibt am Eintrag, auch wenn der
   // Name überschrieben wird; nur für den bewussten Einzel-Transfer in die Bibliothek.
   if (med.pzn) row.pzn = med.pzn
   return row
@@ -217,10 +217,10 @@ export function medplanToText(parsed) {
 }
 
 /**
- * Aussteller-Zeile fuers Protokoll (#144), z. B.
+ * Aussteller-Zeile fuers Protokoll, z. B.
  *   "Hausarzt: Praxis Dr. Beispiel, Berlin, LANR 123456789, Tel. 030-1234567"
  * @param {{name:string, ort?:string, nummer?:{typ:string,wert:string}, telefon?:string}} aussteller
- * @param {string} rolle z. B. "Hausarzt" oder "Facharzt" (waehlt der Nutzer, #144)
+ * @param {string} rolle z. B. "Hausarzt" oder "Facharzt" (waehlt der Nutzer)
  */
 export function ausstellerToText(aussteller, rolle) {
   const parts = [aussteller.name]

@@ -5,7 +5,7 @@ import { createFirmwareNotice, type FirmwareNotice } from './firmwareNotice'
 import { bundledManifest } from './firmwareAsset'
 
 /**
- * Singleton-Anbindung des Firmware-Aktualitaets-Checks (#134, Muster
+ * Singleton-Anbindung des Firmware-Aktualitaets-Checks (Muster
  * useDisclaimer): Einsatz, Header und Einstellungen teilen denselben
  * Hinweis-Zustand. Logik (testbar): firmwareNotice.ts.
  */

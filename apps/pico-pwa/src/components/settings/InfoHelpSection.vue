@@ -2,8 +2,8 @@
 import { useStorage } from '@/storage/useStorage'
 import { useUsageNotice } from '@/composables/useUsageNotice'
 
-/** Info & Hilfe (#14-A). Kurze, neutrale Hinweise — keine Rechtsberatung, keine Garantien.
- * Plus: Erklär-Hinweise zurücksetzen (#72) und „Hinweis zur Nutzung" erneut anzeigen. */
+/** Info & Hilfe. Kurze, neutrale Hinweise — keine Rechtsberatung, keine Garantien.
+ * Plus: Erklär-Hinweise zurücksetzen und „Hinweis zur Nutzung" erneut anzeigen. */
 const { settings, saveSettings } = useStorage()
 const usageNotice = useUsageNotice()
 function resetHints(): void {
@@ -19,7 +19,7 @@ function resetHints(): void {
         <strong>ResQDocs</strong> hilft, Einsatz-Dokumentation aus eigenen Vorlagen zusammenzustellen und
         an ein Zielgerät zu übertragen.
       </p>
-      <!-- Anleitung lebt bewusst auf der Landing-Page (#139); Öffnen ist nutzerinitiiert
+      <!-- Anleitung lebt bewusst auf der Landing-Page; Öffnen ist nutzerinitiiert
            (externer Browser) und damit konform zur No-Network-Policy der App. -->
       <p class="text-sm">
         <a href="https://resqdocs.app/anleitung" target="_blank" rel="noopener" class="link link-primary">

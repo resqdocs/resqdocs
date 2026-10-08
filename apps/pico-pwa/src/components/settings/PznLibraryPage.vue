@@ -5,7 +5,7 @@ import { usePznLibrary } from '@/medications/usePznLibrary'
 import { extractPznFromPackageCode, type PackageBarcodeFormat } from '@/medications/packageScan'
 import { normalizePzn, type ImportMode, type PznEntry } from '@/medications/pznLibrary'
 import { suggestStaerkeFromLabel } from '@/medications/staerkeSuggestion'
-// Generische Loesch-Rueckfrage (#260-Muster); liegt bei den Rebuild-Komponenten, ist aber bewusst
+// Generische Loesch-Rueckfrage; liegt bei den Rebuild-Komponenten, ist aber bewusst
 // wiederverwendbar (Teleport-Modal, Abbrechen-Fokus, Doppel-Tap-Sperre).
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 import { PZN_CATEGORIES } from '@/medications/pznCategories'
@@ -14,14 +14,14 @@ import { decodeMaybeGzip } from '@/utils/gzip'
 import { requestScreenWakeLock } from '@/utils/wakeLock'
 
 /**
- * PZN-Bibliothek als eigene Einstellungs-Seite (#190/#194/#195). Backend-agnostisch über
+ * PZN-Bibliothek als eigene Einstellungs-Seite. Backend-agnostisch über
  * das async usePznLibrary-Singleton (nativ SQLite, skaliert auf ~317k; Web Preferences).
  * Liste/Suche laufen SEITENWEISE aus dem Backend — nie die ganze Menge im DOM/Speicher.
  *
  * Pro Eintrag: Wirkstoff, Wirkstärke, Bezeichnung (frei), Kategorie (feste Admin-Auswahl),
  * Bemerkung (frei). „In der Bibliothek scannen" identifiziert eine bekannte PZN.
  *
- * Editieren (#264, quellenbasiert NN/g data-tables/mobile-tables, Apple HIG lists, Pencil&Paper,
+ * Editieren (quellenbasiert NN/g data-tables/mobile-tables, Apple HIG lists, Pencil&Paper,
  * PatternFly): kompakte zweizeilige Summary-Zeile, Antippen öffnet die Edit-Karte IN PLACE
  * (genau eine offen — dasselbe abgenommene Muster wie der Medikamentenplan im Einsatz); KEINE
  * Ghost-Inputs in Tabellenzellen, kein Modal (verdeckt Nachbar-Einträge als Referenz).
@@ -53,7 +53,7 @@ watch(queryInput, (v) => {
 onUnmounted(() => { if (queryTimer) clearTimeout(queryTimer) })
 
 const sortDir = ref<'asc' | 'desc'>('asc')
-// Nachpflege-Arbeitsvorrat (#264): nur Eintraege ohne Wirkstaerke; Zaehler = Fortschritt.
+// Nachpflege-Arbeitsvorrat: nur Eintraege ohne Wirkstaerke; Zaehler = Fortschritt.
 const missingOnly = ref(false)
 const missingCount = ref(0)
 
@@ -79,7 +79,7 @@ async function reload(): Promise<void> {
 async function loadMore(): Promise<void> {
   // Unter dem Nachpflege-Filter zaehlt als Offset nur, was NOCH in der SQL-Menge ist:
   // per Fertig/Chip gepflegte Eintraege bleiben lokal stehen, sind aber aus WHERE staerke=''
-  // gefallen - die Rohlaenge wuerde noch fehlende Datensaetze ueberspringen (Verify #264).
+  // gefallen - die Rohlaenge wuerde noch fehlende Datensaetze ueberspringen.
   const offset = missingOnly.value
     ? entries.value.filter((x) => x.staerke.trim() === '').length
     : entries.value.length
@@ -163,7 +163,7 @@ function patchLocal(pzn: string, patch: Partial<PznEntry>): void {
   entries.value = entries.value.map((e) => (e.pzn === pzn ? { ...e, ...patch } : e))
 }
 
-// --- Edit-Karte in place (#264): genau EINE offen; Feedback nah am Feld (Baymard) ---
+// --- Edit-Karte in place: genau EINE offen; Feedback nah am Feld (Baymard) ---
 const editingPzn = ref<string | null>(null)
 const savedField = ref<string | null>(null) // `${pzn}:${feld}` fuer das ✓-Feedback
 let savedTimer: ReturnType<typeof setTimeout> | undefined
@@ -177,7 +177,7 @@ onUnmounted(() => { if (savedTimer) clearTimeout(savedTimer) })
 // Autofokus ins Staerke-Feld beim Auto-Advance (Muster setEditName aus MedplanFunction).
 // NUR fuers Fokussieren - der WERT laeuft ueber staerkeDraft, nie ueber DOM-Reads: Vue ruft
 // Funktions-Refs in Patch-Reihenfolge, beim Advance nullt der Unmount der ALTEN Karte die Ref
-// NACH dem Mount der neuen (Verify #264: stiller ''-Commit ueber die stale Ref).
+// NACH dem Mount der neuen (Folge: stiller ''-Commit ueber die stale Ref).
 let focusStaerkeNext = false
 function setStaerkeEl(el: unknown): void {
   if (el && focusStaerkeNext) {
@@ -199,7 +199,7 @@ function closeEntry(): void {
   editingPzn.value = null
 }
 /** Staerke committen: Buchfuehrung OPTIMISTISCH vor dem DB-Write (idempotent - ein zweiter
- *  Aufruf sieht vorher===value und bucht nicht erneut; Verify #264: blur/click-Race). */
+ *  Aufruf sieht vorher===value und bucht nicht erneut; Anlass: blur/click-Race). */
 async function commitStaerke(pzn: string, value: string): Promise<void> {
   const vorher = entries.value.find((e) => e.pzn === pzn)?.staerke ?? ''
   if (vorher !== value) {
@@ -215,7 +215,7 @@ async function applyVorschlag(e: PznEntry, v: string): Promise<void> {
   staerkeDraft.value = v
   await commitStaerke(e.pzn, v)
 }
-/** "Speichern & Weiter" (#264): Entwurf committen, dann in place zum naechsten Eintrag —
+/** "Speichern & Weiter": Entwurf committen, dann in place zum naechsten Eintrag —
  *  bei aktivem Filter faellt der gepflegte Eintrag aus dem Arbeitsvorrat (Index bleibt).
  *  advancing-Guard gegen Doppel-Tap (sonst schloesse der zweite Lauf die Folgekarte). */
 let advancing = false
@@ -256,7 +256,7 @@ const offenerVorschlag = computed(() => {
   return e && !e.staerke && staerkeDraft.value.trim() === '' ? suggestStaerkeFromLabel(e.label) : null
 })
 
-// Loeschen mit Rueckfrage (#260-Muster: kuratierte Eintraege sind Arbeit).
+// Loeschen mit Rueckfrage (Loesch-Schutz-Muster: kuratierte Eintraege sind Arbeit).
 const pendingDelete = ref<PznEntry | null>(null)
 async function confirmDelete(): Promise<void> {
   const e = pendingDelete.value
@@ -298,7 +298,7 @@ async function onNoteEdit(pzn: string, e: Event): Promise<void> {
   markSaved(pzn, 'note')
 }
 
-// --- Backup (lokal): gezipptes JSON (.json.gz), gestreamt (#197) ---
+// --- Backup (lokal): gezipptes JSON (.json.gz), gestreamt ---
 const exporting = ref(false)
 const exportProgress = ref<{ done: number; total: number } | null>(null)
 const exportPercent = computed(() =>
@@ -335,7 +335,7 @@ const importChoosing = ref(false)
 const importMode = ref<ImportMode>('overwrite')
 const importing = ref(false)
 const importProgress = ref<{ done: number; total: number } | null>(null)
-// Prozent für die animierte Balkenanzeige (#218): die CSS-Transition glättet die
+// Prozent für die animierte Balkenanzeige: die CSS-Transition glättet die
 // (gröberen) Chunk-Schritte rein visuell — keine Verarbeitungs-/Logikänderung.
 const importPercent = computed(() =>
   importProgress.value && importProgress.value.total > 0
@@ -356,7 +356,7 @@ async function onImportFile(e: Event): Promise<void> {
   importProgress.value = null
   // Bildschirm während des (ggf. langen) Imports wachhalten; Hinweis greift zusätzlich.
   const wake = await requestScreenWakeLock()
-  // Fortschritt gedrosselt anzeigen (#218): höchstens ~alle 80 ms aktualisieren, das Ende
+  // Fortschritt gedrosselt anzeigen: höchstens ~alle 80 ms aktualisieren, das Ende
   // (done>=total) immer durchlassen. Die FLÜSSIGE Bewegung macht die CSS-Transition des
   // Balkens — der Import-/Decode-Pfad bleibt unangetastet.
   let lastProgressAt = 0
@@ -379,7 +379,7 @@ async function onImportFile(e: Event): Promise<void> {
       error.value = 'Import fehlgeschlagen (ungültige Datei).'
     }
   } catch (err) {
-    // Mitten im Import (Speicher/Platte/DB) - sonst bliebe die Rejection stumm (Audit #262).
+    // Mitten im Import (Speicher/Platte/DB) - sonst bliebe die Rejection stumm.
     error.value = `Import fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`
   } finally {
     await wake.release()
@@ -391,7 +391,7 @@ async function onImportFile(e: Event): Promise<void> {
 
 const sortIndicator = computed(() => (sortDir.value === 'asc' ? ' ▲' : ' ▼'))
 
-// Wirkstärke-Vorschlag aus dem Label (#262, nicht-destruktiv): nur Anzeige + bewusstes
+// Wirkstärke-Vorschlag aus dem Label (nicht-destruktiv): nur Anzeige + bewusstes
 // Übernehmen ins (leere) Stärke-Feld — das Label bleibt IMMER unangetastet, kein Bulk.
 const staerkeVorschlag = computed(() =>
   staerkeInput.value.trim() === '' ? suggestStaerkeFromLabel(labelInput.value) : null,
@@ -428,7 +428,7 @@ async function deleteAll(): Promise<void> {
       <div class="card-body gap-3 p-4">
         <!-- Erfassen/Bearbeiten: manuell oder per Packungs-Scan (Scan identifiziert bekannte PZN).
              Gleiches Feld-Muster wie die Edit-Karte der Liste (Label UEBER dem Feld, volle Breite) -
-             daisyUI 5: form-control stapelt schmale Inputs nicht mehr. -->
+             daisyUI-5-Falle: form-control stapelt schmale Inputs nicht mehr. -->
         <div class="flex flex-col gap-2">
           <label class="flex flex-col gap-1">
             <span class="text-xs text-base-content/60">PZN</span>
@@ -493,7 +493,7 @@ async function deleteAll(): Promise<void> {
           <input v-model="queryInput" type="search" placeholder="z. B. Ibu, Analgetikum oder 12345678"
                  class="input input-bordered input-sm w-full" aria-label="PZN-Bibliothek durchsuchen" />
         </label>
-        <!-- Arbeitsvorrat-Filter (#264): kombinierbar mit Suche; Zaehler = Fortschritt der Nachpflege -->
+        <!-- Arbeitsvorrat-Filter: kombinierbar mit Suche; Zaehler = Fortschritt der Nachpflege -->
         <div class="flex flex-wrap items-center gap-2">
           <button type="button" class="btn btn-xs min-h-11" :class="missingOnly ? 'btn-primary' : 'btn-outline'"
                   :aria-pressed="missingOnly" @click="missingOnly = !missingOnly">
@@ -590,7 +590,7 @@ async function deleteAll(): Promise<void> {
               {{ importing ? 'Importiere…' : 'Importieren' }}
             </button>
           </div>
-          <!-- Export-Fortschritt (#197): gestreamt, daher Anzeige bis 100 % -->
+          <!-- Export-Fortschritt: gestreamt, daher Anzeige bis 100 % -->
           <div v-if="exporting" role="status" class="flex flex-col gap-1 rounded-lg bg-base-200/60 p-2">
             <span class="text-xs font-medium text-warning">⚠ Bitte das Telefon anlassen und die App geöffnet halten, bis der Export fertig ist.</span>
             <div class="h-2 w-full overflow-hidden rounded-full bg-base-300" role="progressbar" :aria-valuenow="exportPercent" aria-valuemin="0" aria-valuemax="100">
@@ -613,7 +613,7 @@ async function deleteAll(): Promise<void> {
           <!-- Import-Fortschritt + Hinweis (großer Datensatz kann dauern) -->
           <div v-if="importing" role="status" class="flex flex-col gap-1 rounded-lg bg-base-200/60 p-2">
             <span class="text-xs font-medium text-warning">⚠ Bitte das Telefon anlassen und die App geöffnet halten, bis der Import fertig ist.</span>
-            <!-- Eigene Balkendarstellung mit CSS-Transition (#218): glättet die Chunk-Schritte visuell. -->
+            <!-- Eigene Balkendarstellung mit CSS-Transition: glättet die Chunk-Schritte visuell. -->
             <div v-if="importProgress" class="h-2 w-full overflow-hidden rounded-full bg-base-300" role="progressbar" :aria-valuenow="importPercent" aria-valuemin="0" aria-valuemax="100">
               <div class="h-full rounded-full bg-primary transition-[width] duration-200 ease-linear" :style="{ width: importPercent + '%' }" />
             </div>
@@ -651,7 +651,7 @@ async function deleteAll(): Promise<void> {
 
       <PackageScanOverlay v-if="scanning" @decoded="onScanDecoded" @cancel="scanning = false" />
 
-      <!-- Loesch-Rueckfrage (#260-Muster): kuratierte Eintraege nie rueckfragefrei entfernen -->
+      <!-- Loesch-Rueckfrage: kuratierte Eintraege nie rueckfragefrei entfernen -->
       <ConfirmDialog
         v-if="pendingDelete"
         :title="`PZN ${pendingDelete.pzn} entfernen?`"

@@ -1,4 +1,4 @@
-// pznLibraryNativeBackend.ts — natives SQLite-Backend der PZN-Bibliothek (#194/#195).
+// pznLibraryNativeBackend.ts — natives SQLite-Backend der PZN-Bibliothek.
 //
 // Wird vom Composable NUR auf nativen Plattformen DYNAMISCH importiert (Code-Split) —
 // zieht capacitorSqlClient (das native Plugin), das der Web-Build nicht lädt. Öffnet die

@@ -239,7 +239,7 @@ test("resolveText mutiert das Protokoll nicht", () => {
   assert.equal(JSON.stringify(textDemo), snapshot);
 });
 
-test("medikamente (#146): filled nur bei Zeilen mit Namen, Zeilen nur aus values", () => {
+test("medikamente: filled nur bei Zeilen mit Namen, Zeilen nur aus values", () => {
   const t = { schemaVersion: "0.2.0", id: "m", title: "M", variables: [], blocks: [
     { id: "b", title: "B", points: [{ type: "medikamente", id: "meds", label: "Medikation" }] },
   ] };

@@ -90,7 +90,7 @@ function create(opts: CreateSessionOptions = {}) {
   const session = reactive<CreatorSession>(initCreatorSession(opts.seed ?? [standardprotokoll]))
   // Mutationen/Transformationen bekommen den ROHEN Zustand (toRaw): die pure
   // Schicht klont via structuredClone, und das wirft auf reactive-Proxies
-  // DataCloneError (#40). Reads (computed) bleiben auf `session`
+  // DataCloneError. Reads (computed) bleiben auf `session`
   // fuers Reactivity-Tracking.
   const raw = (): CreatorSession => toRaw(session)
   const selectedBlockId = ref<string | null>(null)
@@ -168,7 +168,7 @@ function create(opts: CreateSessionOptions = {}) {
     return (currentBlock.value?.points ?? []).map((p) => p.id as string)
   }
   function addPoint(type: string): void {
-    // Nie stumm scheitern (#38): ohne Blockauswahl ersten Block waehlen,
+    // Nie stumm scheitern: ohne Blockauswahl ersten Block waehlen,
     // ohne Bloecke direkt einen anlegen (addBlock selektiert ihn).
     if (!selectedBlockId.value) {
       const first = selected.value?.blocks?.[0]?.id
@@ -248,7 +248,7 @@ function create(opts: CreateSessionOptions = {}) {
     return exportSelectedProtocol(raw())
   }
 
-  // --- Voll-Backup (#108 Teil 2): alle eigenen Protokolle exportieren/importieren ---
+  // --- Voll-Backup: alle eigenen Protokolle exportieren/importieren ---
   function exportBackup(): ExportOutcome {
     return exportAllProtocols(raw())
   }
@@ -263,7 +263,7 @@ function create(opts: CreateSessionOptions = {}) {
     return { ok: out.ok, imported: out.imported, errors: out.errors, warnings: out.warnings }
   }
 
-  // --- Library (#13-F2): bewusstes Laden/Speichern, KEIN Auto-Save ---
+  // --- Library: bewusstes Laden/Speichern, KEIN Auto-Save ---
   const storage = useStorage()
   async function loadFromLibrary(): Promise<void> {
     apply(await loadLibraryIntoSession(raw(), storage.getLibraryRepository()))
@@ -290,7 +290,7 @@ function create(opts: CreateSessionOptions = {}) {
     return { ok: r.ok, errors: r.errors }
   }
 
-  // --- Auto-Persistenz (#108): Editor-Stand laden + laufend sichern --------------
+  // --- Auto-Persistenz: Editor-Stand laden + laufend sichern ---------------------
   let restoring = true
   async function restore(): Promise<void> {
     try {
@@ -385,12 +385,12 @@ function create(opts: CreateSessionOptions = {}) {
     exportBackup,
     importBackup,
 
-    // Library (#13-F2)
+    // Library
     libraryMode: storage.libraryMode,
     loadFromLibrary,
     saveToLibrary,
 
-    // Aus Library einfügen (#13-F4)
+    // Aus Library einfügen
     insertLibraryBlock,
     insertLibrarySnippet,
   }

@@ -47,14 +47,14 @@ watchEffect(() => {
   if (usageNotice.ready.value) usageNotice.checkFirstStart()
 })
 
-// ?-Symbol im Header (#138): blendet die Tab-Erklaerung (TabGuide) wieder ein.
+// ?-Symbol im Header: blendet die Tab-Erklaerung (TabGuide) wieder ein.
 function reshowGuide(): void {
   storage.settings.dismissedHints = storage.settings.dismissedHints.filter((h) => h !== TAB_GUIDE_HINT_ID)
   void storage.saveSettings()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Theme (#51/#78): Familie (classic|resqdocs) x Erscheinung (hell|dunkel|system),
+// Theme: Familie (classic|resqdocs) x Erscheinung (hell|dunkel|system),
 // beim Start UND live. classic+system = Attribut entfernen (daisyUI prefersdark);
 // resqdocs+system folgt prefers-color-scheme via matchMedia (reaktiv).
 const prefersDark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -95,7 +95,7 @@ function selectTab(tab: Tab): void {
   void nextTick(() => window.scrollTo({ top: scrollPositions[tab] })) // Ziel-Tab wiederherstellen
 }
 
-// Geteilter Verbindungszustand (#157): EINE Quelle für den Header-Indikator. Beim
+// Geteilter Verbindungszustand: EINE Quelle für den Header-Indikator. Beim
 // App-Start und beim Öffnen des Einsatz-Tabs sparsam geprüft (kein Polling).
 const { reachable, checking, check, startPolling, stopPolling } = useBridgeConnection()
 onMounted(() => { void check(); startPolling() })
@@ -103,7 +103,7 @@ watch(activeTab, (t) => {
   if (t === 'einsatz') void check()
 })
 
-// Temporärer Einsatzentwurf (#173): Ablaufprüfung beim App-Resume und sparsam
+// Temporärer Einsatzentwurf: Ablaufprüfung beim App-Resume und sparsam
 // periodisch, solange die App offen ist. `visibilitychange` deckt iOS/Android-
 // WebView (Vorder-/Hintergrund) UND Web ab — ohne zusätzliche Capacitor-Plugins.
 // Der LIVE-Entwurf (Rework): ohne diese laufende Prüfung liefe die Ablaufzeit nie
@@ -128,12 +128,12 @@ onBeforeUnmount(() => {
   <DisclaimerGate />
   <UsageNoticeModal />
 
-  <!-- Welcome-Seite (#138/#142): vollflaechig, erscheint nach dem Disclaimer
+  <!-- Welcome-Seite: vollflaechig, erscheint nach dem Disclaimer
        (liegt unter dessen z-50); ueber das ?-Symbol im Header wieder abrufbar. -->
   <TabGuide />
 
   <div class="min-h-full bg-base-200 pb-24">
-    <!-- Safe-Area oben: Header weicht der iOS-Statusleiste aus (#27). max(4px, …)
+    <!-- Safe-Area oben: Header weicht der iOS-Statusleiste aus. max(4px, …)
          gibt mind. 4px Abstand, damit das Logo auf Android (env()=0) nicht oben
          klebt; auf iOS bleibt der größere Notch-Inset erhalten. Web: 4px. -->
     <header class="navbar sticky top-0 z-10 bg-base-100 pt-[max(4px,env(safe-area-inset-top))] shadow-sm">
@@ -143,7 +143,7 @@ onBeforeUnmount(() => {
         <img src="/brand-dark.svg" alt="ResQDocs" class="brand-logo brand-logo-dark h-[45px] w-auto" />
       </div>
       <div class="flex flex-none items-center gap-1 px-2">
-        <!-- Bridge-Indikator als WLAN-Icon (Maintainer): Farbe NUR nach Verbindungszustand (gruen verbunden /
+        <!-- Bridge-Indikator als WLAN-Icon: Farbe NUR nach Verbindungszustand (gruen verbunden /
              rot nicht) -> kein Grau-Flackern beim Poll; feste Groesse -> springt nicht. Icon: verbunden = WLAN,
              keine Bridge = WLAN durchgestrichen, waehrend der Pruefung = Spinner. -->
         <!-- 44pt-Touch-Target (min-h/w-11); der farbige 32px-Kreis bleibt optisch gleich (innerer Span). -->
@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <!-- Globaler Firmware-Update-Hinweis (#134): erscheint nach einem Bridge-Kontakt
+    <!-- Globaler Firmware-Update-Hinweis: erscheint nach einem Bridge-Kontakt
          mit veralteter Firmware, auf allen Tabs; Update direkt im Banner. -->
     <FirmwareNoticeBanner />
 
@@ -184,7 +184,7 @@ onBeforeUnmount(() => {
 
     <!-- Mobile-first. Haupt-Container voll breit + Padding; die MAX-BREITE liegt PRO ANSICHT (unten), damit der
          Vorlagen-Editor (Werkzeug, 3 Spalten) auf grossen Screens Breite bekommt, Lese-/Formular-Ansichten aber
-         komfortabel schmal bleiben. (frueher: eine geteilte max-w-5xl-Deckelung, #23) -->
+         komfortabel schmal bleiben. (frueher: eine geteilte max-w-5xl-Deckelung) -->
     <main class="flex w-full flex-col gap-4 p-4 md:p-6">
       <!-- Einsatz — Neuaufbau. Die fruehere Einsatz-Ansicht (ProtocolRuntimeView) wurde entfernt;
            bei Bedarf in der Git-Historie nachschlagbar. -->
@@ -211,9 +211,9 @@ onBeforeUnmount(() => {
       </div>
     </main>
 
-    <!-- Dock mit Icons (#52): inline-SVGs (stroke), kein Icon-Font/CDN (Netzwerk-Policy).
+    <!-- Dock mit Icons: inline-SVGs (stroke), kein Icon-Font/CDN (Netzwerk-Policy).
          z-10 wie die Kopfzeile: daisyUI setzt das Dock nur auf z-index 1 - eine Einsatz-Karte mit offenem
-         Dropdown (z-index 4, style.css) lag sonst ueber der Tab-Leiste (#278). -->
+         Dropdown (z-index 4, style.css) lag sonst ueber der Tab-Leiste. -->
     <nav class="dock z-10 border-t border-base-300 bg-base-100">
       <button type="button" :class="{ 'dock-active text-primary': activeTab === 'einsatz' }" @click="selectTab('einsatz')">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

@@ -111,7 +111,7 @@ function sanitizeValues(v: unknown): Record<string, FieldFill> {
  *  Namen-Feld). DSGVO: striktes Allowlisting - NUR diese Felder gelangen in den Entwurf, keine
  *  Scan-Rohdaten. Da der Entwurf den functionKind je Zeile nicht kennt, behalten wir die Union aller
  *  bekannten Felder (harmlos: jede Registry liest nur ihre eigenen). Behalten wird jede Zeile mit
- *  IRGENDEINER Eingabe (hasData-Semantik, #260: auch namenlos mit Daten = Nutzerarbeit) -
+ *  IRGENDEINER Eingabe (hasData-Semantik: auch namenlos mit Daten = Nutzerarbeit) -
  *  nur komplett leere Zeilen entfallen. */
 const STRING_FIELDS = ['name', 'staerke', 'dosierung', 'kommentar', 'pzn', 'ort', 'telefon', 'arztnummer'] as const
 const NUMBER_FIELDS = ['cigarettesPerDay', 'years', 'rr', 'spo2', 'systolic', 'pulse', 'temp'] as const

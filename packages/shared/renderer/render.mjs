@@ -29,7 +29,7 @@ import {
 
 const HEADER_WIDTH = 60;
 
-/** Default-Kopfzeile; per options.heading konfigurierbar (#68). */
+/** Default-Kopfzeile; per options.heading konfigurierbar. */
 export const DEFAULT_HEADING = Object.freeze({ pattern: "# {titel} ", fill: "=", width: HEADER_WIDTH });
 
 function header(title, heading = DEFAULT_HEADING) {
@@ -55,23 +55,23 @@ function findingLine(f, ctx) {
 function renderPoint(p, ctx) {
   switch (p.type) {
     case "field": {
-      if (ctx.points[p.id].excluded) return null; // dreistufig (#43): entfernt
+      if (ctx.points[p.id].excluded) return null; // dreistufig: entfernt
       const text = resolveText(ctx.points[p.id].value, ctx);
       if (!p.label) return text ? `- ${text}` : null;
       const lbl = resolveText(p.label, ctx);
       const sep = /[?:.!]$/.test(lbl) ? "" : ":";
-      // Mehrzeilige Werte (#144, z. B. BMP-Medikationsliste): Label-Zeile mit
+      // Mehrzeilige Werte (z. B. BMP-Medikationsliste): Label-Zeile mit
       // Bullet, die Wertzeilen darunter OHNE "-" voran (bessere Lesbarkeit).
       if (text && text.includes("\n")) return `- ${lbl}${sep}\n${text}`;
       return text ? `- ${lbl}${sep} ${text}` : `- ${lbl}${sep}`;
     }
     case "finding":
-      // Nicht erhoben (#71): Zeile entfaellt komplett.
+      // Nicht erhoben: Zeile entfaellt komplett.
       if (ctx.points[p.id].excluded) return null;
       return `- ${findingLine(p, ctx)}`;
     case "findingGroup": {
       // Nicht erhobene Befunde aus dem Gruppensatz nehmen; ist die ganze
-      // Gruppe nicht erhoben, entfaellt auch die "Key:"-Zeile (#71).
+      // Gruppe nicht erhoben, entfaellt auch die "Key:"-Zeile.
       const included = p.findings.filter((f) => !ctx.points[f.id].excluded);
       if (included.length === 0) return null;
       const body = included.map((f) => findingLine(f, ctx)).join(". ");
@@ -84,8 +84,8 @@ function renderPoint(p, ctx) {
     case "text":
       return `- ${resolveText(p.content, ctx)}`;
     case "medikamente": {
-      // #146: Zeilen kommen nur aus dem Einsatz; Format je Zeile
-      // "Name: Dosierung - Kommentar" OHNE "-" voran (wie #144).
+      // Zeilen kommen nur aus dem Einsatz; Format je Zeile
+      // "Name: Dosierung - Kommentar" OHNE "-" voran (wie mehrzeilige Feldwerte).
       const rows = medikamenteRows(p, ctx.values);
       if (!rows.length) return null;
       const lines = rows.map((r) => {

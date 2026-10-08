@@ -1,6 +1,6 @@
 // Laeuft mit:  node --test --experimental-strip-types
 //
-// „Liste einfuegen" (#278): viele Optionen auf einmal - ohne Bestehendes zu veraendern.
+// „Liste einfuegen": viele Optionen auf einmal - ohne Bestehendes zu veraendern.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { appendOptions } from './optionList.ts'

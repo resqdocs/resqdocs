@@ -1,13 +1,13 @@
 <script setup lang="ts">
 /**
- * Empfehlung im Vorlagen-Editor (#261): Die erste eigene Vorlage entsteht am besten mit dem
+ * Empfehlung im Vorlagen-Editor: Die erste eigene Vorlage entsteht am besten mit dem
  * KI-Tool (ai.resqdocs.app) — der eigene KI-Assistent fragt alles ab und liefert fertiges
  * Import-JSON; von Hand im Baum bauen bleibt möglich, ist aber der mühsamere Weg.
  *
  * Einmalig wegklickbar (Preferences-Flag, Muster useUsageNotice — nur ein Flag, keine Daten).
  * Externer Link = bewusste Nutzeraktion (Netzwerk-Policy-konform, wie InfoHelpSection).
  *
- * Der Link oeffnet den NATIVEN System-Browser (Maintainer-Vorgabe): Capacitor-Default fuer externe
+ * Der Link oeffnet bewusst den NATIVEN System-Browser: Capacitor-Default fuer externe
  * _blank-URLs — iOS UIApplication.shared.open (WebViewDelegationHandler), Android ACTION_VIEW-Intent
  * (Bridge.launchIntent); wir haben keine allowNavigation-Ausnahmen. NICHT auf @capacitor/browser
  * umstellen: das oeffnet trotz des Namens IN-APP (SFSafariViewController/Custom Tabs).

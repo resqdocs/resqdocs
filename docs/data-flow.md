@@ -18,10 +18,10 @@
 - **Lokaler persistenter Speicher (Handy):** **Hybrid (Decision-Record 0004):** App-Einstellungen über
   `@capacitor/preferences` (klein, flach); strukturierte `library`-Daten (Protokolle, Blöcke, Snippets)
   über **SQLite** (`@capacitor-community/sqlite`) — gekapselt hinter einer `useStorage()`/Repository-
-  Schicht. **Nur neutrale Daten**, nie Patientendaten. **Stand #13-F2:** Settings über Preferences;
+  Schicht. **Nur neutrale Daten**, nie Patientendaten. **Umgesetzt:** Settings über Preferences;
   `library.protocols` über **SQLite** auf nativen Plattformen (Web-Dev: In-Memory-Fallback). Protokolle
   werden **vor dem Speichern und nach dem Laden validiert**; Speichern ist eine **bewusste** Nutzeraktion
-  (**kein** Auto-Save). Schema versioniert über `PRAGMA user_version` (#13-F2.1). Seit #13-F3 auch
+  (**kein** Auto-Save). Schema versioniert über `PRAGMA user_version`. Außerdem
   `library.blocks` (neutrale Bausteine) + `library.snippets` (neutrale Texte) in eigenen SQLite-Tabellen
   (Migration v2). `caseState` ist **nicht** Teil des Storage. Nativer Persistenz-Smoke-Test:
   `docs/native-smoke.md`.
@@ -46,12 +46,12 @@ Verzeichnissen ohne bewusste Nutzeraktion.
 - `POST /type` überträgt den zu tippenden **Text** (kann Patientendaten enthalten) lokal über HTTP (CapacitorHttp).
   **Nur im Body**, nie in URL/Query. **Kein** Logging, **kein** Cache. Der Pico tippt und hält nichts vor — reine
   Durchleitung, transient. (`POST /config` enthält nur die neutrale SSID-`<id>`.)
-- **Gekapselt (#14-B):** über `apps/pico-pwa/src/pico/` (`picoClient`/`capacitorHttpAdapter`/`usePicoDevice`),
+- **Gekapselt:** über `apps/pico-pwa/src/pico/` (`picoClient`/`capacitorHttpAdapter`/`usePicoDevice`),
   keine HTTP-Logik in Komponenten. Base-URL = neutrale App-Einstellung `picoBaseUrl` (keine Patientendaten/
   Secrets). Fehler werden nur als HTTP-Status normalisiert (kein Payload-Logging). Der manuelle Testtext im
   Gerät/Pico-Bereich lebt **nur im RAM** und wird **nicht** persistiert.
 
-## Datenfluss BMP-Scan → Protokoll (#9)
+## Datenfluss BMP-Scan → Protokoll
 - Der BMP-Data-Matrix-Code enthält **Gesundheitsdaten (Art. 9 DSGVO)** inkl. Patient-/Arzt-Feldern.
   Verarbeitung ausschließlich **on-device und flüchtig**: Scan → Parser → prüfbarer Entwurf →
   ins Protokoll tippen → verwerfen. Kein Bild, kein Roh-String, kein Parser-Ergebnis wird
@@ -59,13 +59,13 @@ Verzeichnissen ohne bewusste Nutzeraktion.
 - **Datenminimierung im Parser erzwungen** (`packages/shared/medplan/medplan.mjs`): die Elemente
   `P` (Patient), `C` (Custodian) und `O` (Observation) werden **nie gelesen** - ihre Attribute
   werden nicht extrahiert. Extrahiert werden Medikationszeilen (PZN, Name, Wirkstoff/Stärke,
-  Darreichungsform, Dosierschema, Einheit, Hinweis, Grund) plus Seitenzahl sowie - seit #144 -
+  Darreichungsform, Dosierschema, Einheit, Hinweis, Grund) plus Seitenzahl sowie
   vom `A`-Element (**Aussteller** = Praxis/Apotheke/Krankenhaus, kein Patientendatum) NUR
   Name, Ort, Arzt-/Praxisnummer (lanr/idf/kik) und Telefon. Der Aussteller landet **nur durch
   aktive Nutzerwahl** im Protokoll (Hausarzt/Facharzt; Default: nicht dokumentieren).
   Per Test abgesichert (Ergebnis enthält nachweislich keine P/O-Inhalte und keine
   Straße/PLZ/E-Mail des Ausstellers).
-- Der Scanner ist ein **reiner JS-Decoder** (`@zxing/browser`, Data Matrix) im WebView (#36):
+- Der Scanner ist ein **reiner JS-Decoder** (`@zxing/browser`, Data Matrix) im WebView:
   dekodiert lokal, kein API-Key, kein Netz, keine Google-Dienste - läuft damit auch auf
   Huawei-Geräten ohne GMS und im Browser. Google ML Kit wurde wegen seiner Telemetrie
   (`GoogleDataTransport` → firelog.googleapis.com) bewusst entfernt.
@@ -81,14 +81,14 @@ Verzeichnissen ohne bewusste Nutzeraktion.
 ## Trennung `caseState` ↔ `library`
 - Technisch getrennte Stores. Aus `caseState` fließt **nichts** automatisch nach `library` oder Cloud.
 - Übernahme neutraler Inhalte in die `library` nur durch **bewusste Nutzeraktion**.
-- **Aus `library` in ein Protokoll einfügen (#13-F4)** ist **Copy-on-insert**: Baustein/Snippet werden
+- **Aus `library` in ein Protokoll einfügen** ist **Copy-on-insert**: Baustein/Snippet werden
   kopiert (frische IDs), **nicht** referenziert; die `library` bleibt unverändert und spätere Library-
   Änderungen wirken **nicht** auf eingefügte Protokoll-Kopien. Kein Live-Link, kein Auto-Save.
 
 ## Lösch-/Reset-Verhalten
 - Funktion „Sitzung zurücksetzen" (Einsatz-Tab) verwirft `caseState` vollständig.
 - App-Schließen/Neuladen verwirft `caseState`. Temporäre Scan-/OCR-Daten werden nach Verarbeitung verworfen.
-- **Einstellungen-Tab (#14-A):** „Library löschen" entfernt **nur** neutrale Library-Inhalte (Protokolle,
+- **Einstellungen-Tab:** „Library löschen" entfernt **nur** neutrale Library-Inhalte (Protokolle,
   Bausteine, Snippets) über `LibraryRepository.resetLibrary()` — **nicht** die App-Einstellungen.
   „App-Einstellungen zurücksetzen" setzt **nur** die Einstellungen zurück. „Alles lokal zurücksetzen"
   kombiniert beide. Alle Aktionen mit Bestätigung, über die gekapselte `useStorage`-Schicht; `caseState`

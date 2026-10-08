@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// keygen.mjs - EINMALIG: Ed25519-Schluesselpaar fuer OTA-Signaturen (Issue #130).
+// keygen.mjs - EINMALIG: Ed25519-Schluesselpaar fuer OTA-Signaturen.
 //
 //   node scripts/ota/keygen.mjs [--out <pfad-zum-privaten-key.pem>] [--force]
 //

@@ -3,7 +3,7 @@ import { compareVersions } from './firmwareUpdate.ts'
 import type { OtaManifest, PicoStatus } from './picoTypes'
 
 /**
- * Firmware-Aktualitaets-Check (#134), pure/testbare Logik: huckepack auf
+ * Firmware-Aktualitaets-Check, pure/testbare Logik: huckepack auf
  * ohnehin erfolgreiche Bridge-Kontakte (KEIN Auto-Connect). Die Vite-/
  * Singleton-Anbindung lebt in useFirmwareNotice.ts (import.meta.glob ist
  * in node-Tests nicht ladbar - gleiche Trennung wie firmwareUpdate/
@@ -28,7 +28,7 @@ export function createFirmwareNotice(deps: Deps) {
   let lastCheck = 0
   let checking = false
 
-  /** Update nur anbieten, wenn die Bridge OTA kann UND aelter ist (#134). */
+  /** Update nur anbieten, wenn die Bridge OTA kann UND aelter ist. */
   const updateAvailable = computed(() => {
     if (!deps.manifest || !otaSupported.value || !bridgeVersion.value) return false
     return compareVersions(deps.manifest.version, bridgeVersion.value) > 0

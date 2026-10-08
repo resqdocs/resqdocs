@@ -3,12 +3,12 @@ import { ref, watch } from 'vue'
 
 /**
  * Grosses Freitext-Feld (Rework) fuer lange Eingaben - Anamnese, Verlauf etc. Spiegelt das bewaehrte
- * dev-Muster (LongTextModal.vue, #91): der sichtbare Trigger ist eine textarea-gestylte Flaeche mit
+ * dev-Muster (LongTextModal.vue): der sichtbare Trigger ist eine textarea-gestylte Flaeche mit
  * Vorschau (line-clamp-2); Tap oeffnet ein Bottom-Sheet mit grossem Textbereich (h-[85vh], intern
  * scrollend) - bewusst KEINE inline-auto-grow-Textarea (Mobile-Safari-Bugs + Layout-Schub) und KEIN
  * Zeichen-Limit (medizinische Doku darf nicht abgeschnitten werden).
  *
- * Eingabe wird LIVE nach aussen gespiegelt (Maintainer-Entscheidung): jeder Tastendruck schreibt
+ * Eingabe wird LIVE nach aussen gespiegelt (bewusste Entscheidung): jeder Tastendruck schreibt
  * sofort in den Einsatz (+ persistenten Entwurf) -> App-Schliessen/Akku-Tod verliert nichts. „Fertig"
  * / Backdrop schliesst nur. Ans Geraet geht NICHTS - das passiert erst bei „An Geraet senden".
  */

@@ -1,4 +1,4 @@
-// otaLib.mjs - gemeinsame Logik fuer keygen/sign/upload (Issue #130).
+// otaLib.mjs - gemeinsame Logik fuer keygen/sign/upload.
 // Signatur-Modell: Ed25519 ueber den SHA-256-Digest des Firmware-Binaries.
 // Die Firmware verifiziert mit demselben Schema (OtaUpdate.h): erst Digest
 // streamend berechnen, dann Ed25519::verify(sig, OTA_PUBLIC_KEY, digest, 32).

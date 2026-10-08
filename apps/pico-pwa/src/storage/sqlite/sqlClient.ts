@@ -1,4 +1,4 @@
-// sqlClient.ts — minimale SQL-Client-Abstraktion (DR-0004, #13-F2).
+// sqlClient.ts — minimale SQL-Client-Abstraktion (DR-0004).
 //
 // Migrationen und das Library-Repository sprechen NUR gegen dieses Interface.
 // So sind sie gegen einen Fake-SQL-Client (node:test) prüfbar, während das echte

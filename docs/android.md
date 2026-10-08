@@ -57,7 +57,7 @@ Dann entweder in Android Studio öffnen:
 ```bash
 npx cap open android      # öffnet das Projekt in Android Studio → Run ▶
 
-# ODER alles in einem (empfohlen, #136): install + build + sync + öffnen
+# ODER alles in einem (empfohlen): install + build + sync + öffnen
 npm run android
 ```
 

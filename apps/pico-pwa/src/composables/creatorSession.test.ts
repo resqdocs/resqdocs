@@ -127,7 +127,7 @@ test('creatorSession nutzt KEINE Persistenz-API (Quelltext-Check, nur echte Aufr
   assert.ok(!/localStorage\.|sessionStorage\.|indexedDB\.|\.setItem\(|Preferences\.|caches\.|fetch\(/.test(src))
 })
 
-// --- #13-C: Block-/Punkt-Bearbeitung des ausgewählten Protokolls ---
+// --- Block-/Punkt-Bearbeitung des ausgewählten Protokolls ---
 
 function fresh() {
   // leeres, gültiges Arbeitsprotokoll als Session
@@ -213,7 +213,7 @@ test('Block-/Punkt-Aktionen mutieren die Eingabe-Session nicht', () => {
   assert.equal(JSON.stringify(s), snap)
 })
 
-// --- #13-D: Variablen ---
+// --- Variablen ---
 
 test('Variable hinzufügen für alle 4 Typen', () => {
   let s = fresh()
@@ -252,7 +252,7 @@ test('Variable mit Referenz: selectedVariableReferences findet sie (UI blockiert
   assert.ok(refs.some((r) => r.kind === 'visibleIf'))
 })
 
-// --- #13-D: einfaches visibleIf an Block/Punkt ---
+// --- Einfaches visibleIf an Block/Punkt ---
 
 test('einfache visibleIf-Regel für Block setzen und entfernen', () => {
   let s = addBlockToSelected(fresh(), { title: 'B' })
@@ -297,7 +297,7 @@ test('Validierung aktualisiert sich nach Variablen-/visibleIf-Änderung', () => 
   assert.ok(v.errors.some((e) => /ungültiges visibleIf/.test(e)))
 })
 
-// --- #13-E: Import / Export ---
+// --- Import / Export ---
 
 test('gültiges Protokoll importieren wird aufgenommen und ausgewählt', () => {
   const s = fresh()
@@ -364,7 +364,7 @@ test('importiertes Protokoll enthält keine caseState-Struktur', () => {
   assert.ok(!/\"values\"|\"activeBlocks\"|\"variableValues\"|caseState/.test(JSON.stringify(out.session)))
 })
 
-// --- #13-F2: Session <-> Library (gegen Memory-Repo) ---
+// --- Session <-> Library (gegen Memory-Repo) ---
 
 /** zählt saveProtocol-Aufrufe, um „kein Auto-Save" zu prüfen. */
 function countingRepo() {
@@ -415,7 +415,7 @@ test('kein Auto-Save: Editier-Aktionen speichern NICHT in die Library', async ()
   assert.equal(repo.saves(), 1, 'nur die bewusste Aktion speichert')
 })
 
-// --- #13-F4: Library-Bausteine/Snippets in Protokoll einfügen (copy-on-insert) ---
+// --- Library-Bausteine/Snippets in Protokoll einfügen (copy-on-insert) ---
 
 const libBlockF4 = (id, title) => ({
   id, title,
@@ -500,7 +500,7 @@ test('REGRESSION: Transformationen vertragen Vue-reactive-Sessions (DataCloneErr
   assert.ok(getSelected(out2).blocks[0].points.length >= 1)
 })
 
-test('REGRESSION #66: Seeds ohne Punkt-IDs (findingGroups) bekommen eindeutige IDs', () => {
+test('REGRESSION: Seeds ohne Punkt-IDs (findingGroups) bekommen eindeutige IDs', () => {
   const seed = {
     schemaVersion: '0.1.0', id: 'seed', title: 'Seed', lang: 'de', variables: [],
     blocks: [{ id: 'xabcde', title: 'xABCDE', points: [
@@ -512,14 +512,14 @@ test('REGRESSION #66: Seeds ohne Punkt-IDs (findingGroups) bekommen eindeutige I
   const pts = getSelected(session)!.blocks[0].points
   assert.ok(pts[0].id && pts[1].id, 'beide Gruppen haben IDs')
   assert.notEqual(pts[0].id, pts[1].id, 'IDs sind eindeutig')
-  // Vorher unmoeglich: gezielte Bearbeitung einer Gruppe (z. B. collapsible, #42)
+  // Vorher unmoeglich: gezielte Bearbeitung einer Gruppe (z. B. collapsible)
   const out = updatePointInSelected(session, pts[1].id as string, { collapsible: true } as never)
   const updated = getSelected(out)!.blocks[0].points
   assert.equal((updated[1] as { collapsible?: boolean }).collapsible, true)
   assert.equal((updated[0] as { collapsible?: boolean }).collapsible, undefined)
 })
 
-// --- Voll-Backup (#108 Teil 2) ------------------------------------------------
+// --- Voll-Backup --------------------------------------------------------------
 
 test('Voll-Backup: exportiert nur eigene Protokolle (ohne Beispiel-Vorlage)', () => {
   let s = initCreatorSession([seed]) // enthaelt die Beispiel-Vorlage (example: true)
