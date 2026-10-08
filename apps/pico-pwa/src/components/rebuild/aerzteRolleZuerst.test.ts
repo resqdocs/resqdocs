@@ -1,4 +1,4 @@
-// Struktur-Test auf dem Template von AerzteFunction.vue (Funktion „Kontakte/Ärzte"), Maintainer-Entscheid 1.6.0:
+// Struktur-Test auf dem Template von AerzteFunction.vue (Funktion „Kontakte/Ärzte"), bewusste Entscheidung:
 // Die Bearbeiten-Karte beginnt mit der ROLLE, vorausgewaehlt „Arzt", erst danach kommt „Arzt / Praxis".
 // Jede Rolle hat ihren eigenen Feldsatz; stand der Arzt-Name vorn (Rolle als „Rolle —" weiter unten), wirkte
 // die Funktion wie eine reine Ärzte-Liste.

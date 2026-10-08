@@ -8,8 +8,8 @@ import { DEFAULT_SETTINGS, type AppSettings, type LibraryRepository } from './ty
 /**
  * Gekapselte Storage-Schicht (DR-0004).
  *
- * - **Settings:** Capacitor Preferences (über preferencesAdapter) — #13-F1.
- * - **Library:** auf nativen Plattformen **SQLite** (#13-F2, dynamisch geladen),
+ * - **Settings:** Capacitor Preferences (über preferencesAdapter).
+ * - **Library:** auf nativen Plattformen **SQLite** (dynamisch geladen),
  *   im Web-Dev **In-Memory-Fallback** — beide hinter demselben
  *   LibraryRepository-Interface (kein UI-/Session-Code ändert sich).
  *
@@ -22,7 +22,7 @@ let shared: ReturnType<typeof create> | null = null
 
 function create() {
   const settings = reactive<AppSettings>({ ...DEFAULT_SETTINGS })
-  /** true, sobald loadSettings() durch ist (#147): UI, die von persistierten
+  /** true, sobald loadSettings() durch ist: UI, die von persistierten
    *  Settings abhaengt (z. B. Onboarding-Tour), wartet darauf - sonst rendert
    *  sie kurz auf Basis der Defaults und verschwindet wieder. */
   const settingsLoaded = ref(false)
@@ -82,7 +82,7 @@ function create() {
     saveSettings,
     resetSettings,
     settingsRepo,
-    // Library (#13-F2): Backend gekapselt, Modus für UI-Anzeige.
+    // Library: Backend gekapselt, Modus für UI-Anzeige.
     libraryMode,
     initLibrary,
     getLibraryRepository,

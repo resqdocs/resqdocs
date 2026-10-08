@@ -1,4 +1,4 @@
-// „Liste einfuegen" im Editor (#278): viele Auswahl-Optionen auf einmal anlegen - etwa mehrere hundert
+// „Liste einfuegen" im Editor: viele Auswahl-Optionen auf einmal anlegen - etwa mehrere hundert
 // Alarmierungscodes „Zahl: Einsatzmeldung" oder eine lange Vorerkrankungen-Liste.
 //
 // Regeln:

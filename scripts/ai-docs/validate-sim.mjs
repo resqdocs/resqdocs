@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// validate-sim.mjs — Schiedsrichter fuer das LLM-Simulations-Gate (#261, nur lokal/Session-Werkzeug):
+// validate-sim.mjs — Schiedsrichter fuer das LLM-Simulations-Gate (nur lokal/Session-Werkzeug):
 // prueft KI-erzeugte Vorlagen-JSONs mit dem ECHTEN App-Import (parseTemplate), dem echten Renderer
 // und ajv gegen das veroeffentlichte Schema. Aufruf: node scripts/ai-docs/validate-sim.mjs <datei...>
 import Ajv2020 from 'ajv/dist/2020.js'

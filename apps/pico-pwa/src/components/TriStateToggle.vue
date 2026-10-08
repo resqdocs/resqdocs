@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * 3-Zustands-Schalter (#71): Tippen rotiert ✓ (bestätigt/Standard) →
+ * 3-Zustands-Schalter: Tippen rotiert ✓ (bestätigt/Standard) →
  * ✎ (abweichend/eigen) → − (nicht erhoben) → ✓. Bei required entfällt −.
- * Maintainer-UX-Entscheidung; Ersterklärung kommt über den Erklär-Flow (#72).
+ * Bewusste UX-Entscheidung; Ersterklärung kommt über den Erklär-Flow.
  */
 export type TriState = 'confirmed' | 'custom' | 'excluded'
 

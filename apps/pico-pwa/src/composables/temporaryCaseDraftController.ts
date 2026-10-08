@@ -1,7 +1,7 @@
 // temporaryCaseDraftController.ts — die Vue-nahe, aber von Capacitor/Storage
-// ENTKOPPELTE Logik des temporären Einsatzentwurfs (#173). Abhängigkeiten
+// ENTKOPPELTE Logik des temporären Einsatzentwurfs. Abhängigkeiten
 // (Repository, TTL-Quelle, Uhr, Debounce) werden injiziert → mit `node --test`
-// prüfbar (inkl. der Persist-vs-Verwerfen-Race, bug-#173-review).
+// prüfbar (inkl. der Persist-vs-Verwerfen-Race).
 //
 // Die Capacitor-/Settings-Bindung + das Singleton liegen in useTemporaryCaseDraft.ts.
 import { ref } from 'vue'

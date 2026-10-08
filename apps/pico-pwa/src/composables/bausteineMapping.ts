@@ -4,7 +4,7 @@ import type { LibraryBlock } from '@/storage/types'
 
 /**
  * Reine Abbildung GEFÜLLTER Protokoll-Block → LibraryBlock-Baustein (Variante B,
- * #13-F4-Authoring). Ohne Vue/Storage, damit in node:test prüfbar.
+ * Baustein-Authoring). Ohne Vue/Storage, damit in node:test prüfbar.
  *
  * - **Tiefe Kopie** via JSON: proxy-sicher (currentBlock ist ein Vue-reactive-
  *   Proxy, auf dem structuredClone DataCloneError wirft). Blöcke sind

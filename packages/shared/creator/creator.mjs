@@ -1,4 +1,4 @@
-// creator.mjs — pure, Vue-freie Domainlogik des Protokoll-Kreators (#13-A).
+// creator.mjs — pure, Vue-freie Domainlogik des Protokoll-Kreators.
 //
 // Erzeugt/bearbeitet NEUTRALE S1-Protokollvorlagen (blocks → points, variables,
 // visibleIf, optionale Blöcke). KEINE UI, KEINE Persistenz, KEINE Einsatz-/
@@ -13,7 +13,7 @@
 // Struktur-/Draft-Check für die Editier-Schleife.
 
 /** Aktuelle Entwicklungs-Schemaversion (0.x). 1.0/MVP deklariert der Maintainer. */
-export const SCHEMA_VERSION = "0.2.0"; // 0.2.0: Punkt-Typ medikamente (#146)
+export const SCHEMA_VERSION = "0.2.0"; // 0.2.0: Punkt-Typ medikamente
 
 export const POINT_TYPES = ["field", "finding", "findingGroup", "list", "text", "medikamente"];
 export const VARIABLE_TYPES = ["select", "boolean", "text", "number"];
@@ -52,7 +52,7 @@ export function createUniqueId(base, existingIds) {
 }
 
 /**
- * Fehlende Punkt-IDs nachruesten (#66): Seed-/Import-Protokolle koennen
+ * Fehlende Punkt-IDs nachruesten: Seed-/Import-Protokolle koennen
  * findingGroups OHNE Punkt-id enthalten (Schema verlangte dort nur `key`) -
  * Auswahl und updatePoint arbeiten aber ueber p.id. Liefert eine Kopie, in
  * der JEDER Punkt eine kollisionsfreie id hat; vorhandene ids bleiben.
@@ -183,7 +183,7 @@ function moveInArray(arr, index, direction) {
   return true;
 }
 
-/** Block um eine Position verschieben (#46). direction: "up" | "down". No-op am Rand. */
+/** Block um eine Position verschieben. direction: "up" | "down". No-op am Rand. */
 export function moveBlock(protocol, blockId, direction) {
   const copy = clone(protocol);
   const blocks = copy.blocks ?? [];
@@ -191,7 +191,7 @@ export function moveBlock(protocol, blockId, direction) {
   return copy;
 }
 
-/** Punkt innerhalb seines Blocks verschieben (#46). direction: "up" | "down". No-op am Rand. */
+/** Punkt innerhalb seines Blocks verschieben. direction: "up" | "down". No-op am Rand. */
 export function movePoint(protocol, pointId, direction) {
   const copy = clone(protocol);
   const { block, index } = findPoint(copy, pointId);
@@ -294,7 +294,7 @@ function buildPoint(type, input, ids) {
       p.content = input.content ?? "";
       break;
     case "medikamente":
-      // #146: nur id/label/visibleIf - die Zeilen entstehen im Einsatz
+      // nur id/label/visibleIf - die Zeilen entstehen im Einsatz
       // (Vorlagen enthalten nie Patientendaten, also auch keine Medikamente).
       break;
     default:
@@ -504,7 +504,7 @@ function isValidPredicate(pred) {
 export function assertValidProtocolDraft(protocol) {
   const errors = [];
   const warnings = [];
-  // issues: feldscharfe Parallel-Spur zu errors/warnings (#2b). Trägt zusätzlich
+  // issues: feldscharfe Parallel-Spur zu errors/warnings. Trägt zusätzlich
   // den bekannten Ort (blockId/pointId/findingId/field) mit. Die String-Listen
   // errors/warnings bleiben UNVERÄNDERT (gleiche Texte, gleiche Reihenfolge) —
   // additiv, damit kein bestehender Konsument bricht.

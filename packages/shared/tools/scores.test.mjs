@@ -1,6 +1,6 @@
 // Läuft mit:  node --test
 // Erwartungswerte aus den publizierten Tabellen (RCP NEWS2 2017; LAMS nach
-// Llanes 2004; BMI WHO). Vom Maintainer fachlich gegenzuprüfen (#55).
+// Llanes 2004; BMI WHO). Fachlich gegenzuprüfen.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { packYears, bmi, lams, news2, ekgAxisTable, signatureBlock } from './scores.mjs'
@@ -89,7 +89,7 @@ test('news2: SpO2-Skala 2 (Hyperkapnie) inkl. O2-Sonderfälle', () => {
 test('news2: Risiko-Einstufung rein nach Aggregat-Score (0-4 niedrig, 5-6 mittel, >=7 hoch)', () => {
   const base = { rr: 16, spo2: 98, scale2: false, onOxygen: false, systolic: 120, pulse: 70, temp: 36.8, consciousness: 'A' }
   assert.equal(news2({ ...base, pulse: 100 }).risk, 'niedrig') // 1 Punkt
-  // Ein Einzelparameter mit 3 Punkten eskaliert die Einstufung NICHT mehr (Maintainer 2026-07-03):
+  // Ein Einzelparameter mit 3 Punkten eskaliert die Einstufung bewusst NICHT mehr:
   // Aggregat 3 -> 'niedrig'; anySingle3 bleibt aber informativ true.
   assert.equal(news2({ ...base, systolic: 90 }).risk, 'niedrig')
   assert.equal(news2({ ...base, systolic: 90 }).anySingle3, true)
@@ -101,7 +101,7 @@ test('news2: Risiko-Einstufung rein nach Aggregat-Score (0-4 niedrig, 5-6 mittel
   assert.ok(hoch.text.includes('NEWS2 9'))
 })
 
-test('ekgAxisTable: Lagetyp aus I/II/III + R-Vergleich (#85, Tabelle vom Maintainer zu bestätigen)', () => {
+test('ekgAxisTable: Lagetyp aus I/II/III + R-Vergleich (Tabelle fachlich zu bestätigen)', () => {
   assert.equal(ekgAxisTable({ leadI: 'pos', leadII: 'neg', leadIII: 'neg' }).typ, 'überdrehter Linkstyp')
   assert.equal(ekgAxisTable({ leadI: 'pos', leadII: 'pos', leadIII: 'neg' }).typ, 'Linkstyp')
   assert.equal(ekgAxisTable({ leadI: 'pos', leadII: 'pos', leadIII: 'pos', rLarger: 'I' }).typ, 'Indifferenztyp')
@@ -117,7 +117,7 @@ test('ekgAxisTable: Lagetyp aus I/II/III + R-Vergleich (#85, Tabelle vom Maintai
   assert.throws(() => ekgAxisTable({ leadI: 'x', leadII: 'pos', leadIII: 'pos' }))
 })
 
-test('signatureBlock (#97): Rollen-Zeile + Abstand + Unterschriftslinie', () => {
+test('signatureBlock: Rollen-Zeile + Abstand + Unterschriftslinie', () => {
   const out = signatureBlock({ roles: ['Patient', 'Angehöriger/Zeuge'], lineLength: 30, gap: 2 })
   const parts = out.split('\n\n\n')
   assert.equal(parts.length, 2)

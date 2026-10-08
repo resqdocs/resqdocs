@@ -1,4 +1,4 @@
-// medicationStore.ts - lokaler Cache des PZN→Name-Wörterbuchs (#11).
+// medicationStore.ts - lokaler Cache des PZN→Name-Wörterbuchs.
 //
 // NUR neutrale Referenzdaten (CC0-Community-Wörterbuch) - keine Patientendaten.
 // MVP-Persistenz: EIN JSON-Blob über den KeyValue-Adapter (Preferences).

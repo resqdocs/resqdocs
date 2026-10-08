@@ -1,4 +1,4 @@
-// Typen des BMP-UKF-Parsers (#9, #144). Siehe medplan.mjs fuer die Datenschutz-
+// Typen des BMP-UKF-Parsers. Siehe medplan.mjs fuer die Datenschutz-
 // Garantien: P/C/O-Elemente (Patient/Custodian/Observation) werden NIE
 // extrahiert; vom A-Element (Aussteller) nur Name/Ort/Nummer/Telefon.
 
@@ -41,7 +41,7 @@ export interface MedplanMedication {
   abschnittCode?: string
 }
 
-/** Aussteller des Plans (A-Element, #144) - Praxis/Apotheke/Krankenhaus, kein Patientendatum. */
+/** Aussteller des Plans (A-Element) - Praxis/Apotheke/Krankenhaus, kein Patientendatum. */
 export interface MedplanAussteller {
   name: string
   ort?: string
@@ -69,10 +69,10 @@ export function parseMedplanMedications(ukf: string): MedplanParseResult
 export function dosierungToText(d: MedplanDosierung | undefined): string
 /** Eine Medikationszeile als tippbarer Klartext. */
 export function medicationToText(med: MedplanMedication): string
-/** Eine Medikationszeile strukturiert fuers medikamente-Element (#146); fuehrt die
- *  Roh-PZN „im Hintergrund" mit (#184), falls vorhanden. */
+/** Eine Medikationszeile strukturiert fuers medikamente-Element; fuehrt die
+ *  Roh-PZN „im Hintergrund" mit, falls vorhanden. */
 export function medicationToRow(med: MedplanMedication): { name: string; dosierung: string; kommentar: string; pzn?: string }
 /** Alle Zeilen als Textblock (eine Zeile pro Medikament). */
 export function medplanToText(parsed: MedplanParseResult): string
-/** Aussteller-Zeile fuers Protokoll, Rolle waehlt der Nutzer (#144). */
+/** Aussteller-Zeile fuers Protokoll, Rolle waehlt der Nutzer. */
 export function ausstellerToText(aussteller: MedplanAussteller, rolle: string): string

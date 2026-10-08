@@ -1,6 +1,6 @@
 // memoryLibraryRepository.ts — In-Memory-Fake des LibraryRepository.
 //
-// Zweck: Tests + Web-Dev-Fallback (nativ → SQLite, #13-F2). Explizit NICHT
+// Zweck: Tests + Web-Dev-Fallback (nativ → SQLite). Explizit NICHT
 // persistent (lebt im Closure), keine Browser-/Native-APIs. NUR neutrale Inhalte
 // — Protokolle, Bausteine, Snippets. Keine Patientendaten, kein caseState.
 import type { Protocol } from '@resqdocs/protocol-core/creator/creator.mjs'

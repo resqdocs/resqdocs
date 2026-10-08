@@ -1,4 +1,4 @@
-// ota.test.mjs - Tests fuer das OTA-Signatur-Tooling (Issue #130).
+// ota.test.mjs - Tests fuer das OTA-Signatur-Tooling.
 // Laeuft mit:  node --test scripts/ota/ota.test.mjs
 
 import test from 'node:test'

@@ -5,7 +5,7 @@
 //    KEIN externer/automatischer PZN→Name-Lookup. Bezeichnung/Kategorie/Bemerkung
 //    vergibt NUR der Nutzer selbst (Erfassung eines Primärfaktums).
 //  - Art. 9 DSGVO: die Bibliothek ist eine **Menge** eindeutiger PZN, vollständig
-//    ENTKOPPELT vom Einsatz/Protokoll (#173). Sie darf zu KEINEM Zeitpunkt
+//    ENTKOPPELT vom Einsatz/Protokoll. Sie darf zu KEINEM Zeitpunkt
 //    rekonstruieren, welche PZN zusammen auf einem Plan standen — daher KEIN
 //    Zeitstempel, KEINE Sitzungs-/Scan-ID, KEINE Reihenfolge/Gruppierung/Quelle.
 //
@@ -13,7 +13,7 @@
 // Eine Map ist inhärent eine Menge (Dedup über den Schlüssel); Auflistung/Export
 // werden nach PZN SORTIERT, damit auch die Einfüge-Reihenfolge nicht nach außen
 // dringt. Abwärtskompatibel: ältere Bibliotheken (pzn -> Bezeichnung als String)
-// werden beim Parsen transparent in die Objektform migriert (#190 Kategorie/Bemerkung).
+// werden beim Parsen transparent in die Objektform migriert (Kategorie/Bemerkung).
 //
 // Kategorie = FIXE, admin-gepflegte Auswahl (pznCategories.ts), gegen die Liste
 // validiert (unbekannt → ""); Bemerkung = freier Nutzer-Text.
@@ -23,7 +23,7 @@ import { isPznCategory } from './pznCategories.ts'
 export interface PznEntryData {
   /** Wirkstoff (z. B. „Ibuprofen") — wichtiger als die Bezeichnung; "" wenn keiner. */
   wirkstoff: string
-  /** Wirkstärke des Präparats (z. B. „400 mg") — eigenes Sachfeld, nutzergepflegt (#262); "" wenn keine. */
+  /** Wirkstärke des Präparats (z. B. „400 mg") — eigenes Sachfeld, nutzergepflegt; "" wenn keine. */
   staerke: string
   /** Selbst vergebene Bezeichnung/Handelsname ("" wenn keine). */
   label: string
@@ -249,7 +249,7 @@ export function count(lib: PznLibrary): number {
 }
 
 /**
- * Freie Suche über eine (bereits sortierte) Eintragsliste (#190): leerer/Whitespace-
+ * Freie Suche über eine (bereits sortierte) Eintragsliste: leerer/Whitespace-
  * Query → unverändert; sonst case-insensitiver Teilstring-Match auf PZN, Bezeichnung,
  * Kategorie ODER Bemerkung. Rein/Vue-frei (node --test).
  */
@@ -266,7 +266,7 @@ export function filterEntries(entries: PznEntry[], query: string): PznEntry[] {
   )
 }
 
-/** Sortierfeld (#190): nach PZN, Wirkstoff, Bezeichnung oder Kategorie/Gruppe. */
+/** Sortierfeld: nach PZN, Wirkstoff, Bezeichnung oder Kategorie/Gruppe. */
 export type PznSortKey = 'pzn' | 'wirkstoff' | 'label' | 'category'
 /** Sortierrichtung. */
 export type SortDirection = 'asc' | 'desc'
@@ -285,8 +285,8 @@ function compareText(av: string, bv: string, tieBreak: (a: PznEntry, b: PznEntry
 }
 
 /**
- * Sortiert eine Eintragsliste nach PZN, Bezeichnung oder Kategorie, auf-/absteigend
- * (#190). Bei Text-Schlüsseln stehen Einträge OHNE den Wert IMMER am Ende
+ * Sortiert eine Eintragsliste nach PZN, Bezeichnung oder Kategorie, auf-/absteigend.
+ * Bei Text-Schlüsseln stehen Einträge OHNE den Wert IMMER am Ende
  * (richtungsunabhängig), damit benannte/kategorisierte Einträge nicht unter leeren
  * verschwinden; PZN ist der stabile Zweitschlüssel. Nicht-mutierend (kopiert vor sort).
  */
@@ -343,7 +343,7 @@ export type ExportedEntry = string | { wirkstoff: string; staerke: string; label
 /**
  * Export-Wert eines EINZELNEN Eintrags (kompakt als String, wenn nur Bezeichnung;
  * sonst Objekt). Gemeinsame Quelle für exportLibrary UND den gestreamten Export
- * (#197) — beide MÜSSEN identische Werte erzeugen (kein Format-Drift).
+ * — beide MÜSSEN identische Werte erzeugen (kein Format-Drift).
  */
 export function exportValue(e: PznEntry): ExportedEntry {
   // WICHTIG: JEDES Sachfeld haelt die Objektform am Leben - sonst verliert der

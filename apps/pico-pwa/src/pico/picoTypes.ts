@@ -5,7 +5,7 @@
 
 export type OsMode = 'win_de' | 'mac_de' | 'ios'
 
-/** GET /status (S2; otaSupported ab Firmware 0.3.0, #130). */
+/** GET /status (S2; otaSupported ab Firmware 0.3.0). */
 export interface PicoStatus {
   name: string
   fwVersion: string
@@ -16,7 +16,7 @@ export interface PicoStatus {
   otaSupported?: boolean
 }
 
-/** Signiertes Firmware-Manifest (scripts/ota/sign.mjs, #130). */
+/** Signiertes Firmware-Manifest (scripts/ota/sign.mjs). */
 export interface OtaManifest {
   version: string
   size: number
@@ -47,11 +47,11 @@ export interface PicoClient {
   typeText(input: { text: string; os: string; delayMs?: number }): Promise<{ typed: number }>
   /** POST /config { ssidId } → { ok, restartRequired }. Wirft bei ungültiger ID OHNE Request. */
   setConfig(input: { ssidId: string }): Promise<PicoConfigResult>
-  /** POST /ota/begin { size, sha256, sig } → { ok, chunkMax } (#130). */
+  /** POST /ota/begin { size, sha256, sig } → { ok, chunkMax }. */
   otaBegin(manifest: OtaManifest): Promise<OtaBeginResult>
-  /** POST /ota/chunk { offset, dataB64 } → empfangene Gesamtbytes (#130). */
+  /** POST /ota/chunk { offset, dataB64 } → empfangene Gesamtbytes. */
   otaChunk(input: { offset: number; dataB64: string }): Promise<{ received: number }>
-  /** POST /ota/commit {} → { rebooting } nach erfolgreicher Verifikation (#130). */
+  /** POST /ota/commit {} → { rebooting } nach erfolgreicher Verifikation. */
   otaCommit(): Promise<{ rebooting: boolean }>
 }
 
@@ -69,7 +69,7 @@ export interface HttpRequestOptions {
   /**
    * Erzwingt das Antwortformat. 'json' (Default) parst automatisch; 'text'
    * liefert den ROHTEXT unveraendert - noetig, wenn ueber die exakten Bytes
-   * eine Pruefsumme (SHA256) gebildet werden muss (#160, Supply-Chain).
+   * eine Pruefsumme (SHA256) gebildet werden muss (Supply-Chain).
    */
   responseType?: 'json' | 'text'
 }

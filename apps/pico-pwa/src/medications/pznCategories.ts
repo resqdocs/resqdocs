@@ -1,4 +1,4 @@
-// pznCategories.ts — FIXE, admin-gepflegte Kategorienliste der PZN-Bibliothek (#190).
+// pznCategories.ts — FIXE, admin-gepflegte Kategorienliste der PZN-Bibliothek.
 //
 // Bewusst zentral und unveränderlich für den Nutzer: Kategorien werden NICHT vom
 // Nutzer angelegt/umbenannt, sondern hier vom Maintainer ("Admin") gepflegt und in

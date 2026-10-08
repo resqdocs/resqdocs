@@ -1,7 +1,7 @@
 # firmware/bridge — arduino-pico Bridge-Firmware
 
 Bridge-Firmware (USB-HID-Typer) auf dem Pico 2 W: zwei Test-Slices, die
-produktive S2-Bridge (`bridge_s2/`, Issue #14) und ein geteiltes Typer-Modul.
+produktive S2-Bridge (`bridge_s2/`) und ein geteiltes Typer-Modul.
 Entwickelt im Linux-Container (nur Build/Compile-Check), **geflasht und auf
 echter Hardware getestet am Mac** (Pico → NIDA via USB-A, Pico → iPad via USB-C).
 
@@ -10,15 +10,15 @@ echter Hardware getestet am Mac** (Pico → NIDA via USB-A, Pico → iPad via US
 ```
 libraries/Typer/        geteilte Tipp-Engine (UTF-8 -> de_DE-Keystrokes)
   src/OsMode.h          win_de / mac_de / ios (Seam; mac/ios aliasen aktuell win_de)
-  src/TestString.h      kanonischer Issue-#1-Teststring (UTF-8, mit Encoding-Guard)
+  src/TestString.h      kanonischer Akzeptanz-Teststring (UTF-8, mit Encoding-Guard)
   src/Typer.{h,cpp}     Routing: ASCII -> de_DE-Layout; Sonderzeichen -> eigene Tabelle
 slice_a_umlaut/         Slice A: Umlaut-Typer standalone (kein WLAN), 3 Trigger
 slice_b_bridge/         Slice B: WLAN-AP + Web-Form -> tippt empfangenen Text
-bridge_s2/              PRODUKTIV: S2-Bridge — REST-API (docs/pico-api.md), #14
+bridge_s2/              PRODUKTIV: S2-Bridge — REST-API (docs/pico-api.md)
   bridge_s2.ino         GET /health|/status, POST /type|/config|/ota/*, Serial-Recovery
   ConfigStore.h         SSID-<id>: Chip-ID-Default, EEPROM-persistiert, validiert
   JsonMini.h            dependency-freier JSON-Extraktor (String + UInt) + UTF-8-Zaehler
-  OtaUpdate.h           OTA-Session + Verifikation (SHA-256 + Ed25519), #130
+  OtaUpdate.h           OTA-Session + Verifikation (SHA-256 + Ed25519)
   OtaPublicKey.h        Ed25519-Public-Key (von scripts/ota/keygen.mjs generiert)
 build/                  .uf2/.bin-Output (compile-check)
 dist/                   versionierte .uf2 (BOOTSEL) + signierte .bin/.manifest (OTA)
@@ -75,7 +75,7 @@ BOOTSEL gedrückt halten + USB einstecken → Laufwerk `RPI-RP2` mountet → `.u
 drauf ziehen → Pico rebootet als USB-HID-Tastatur. Serial-Monitor optional
 (`arduino-cli monitor -p <port>`), 115200 Baud.
 
-## OTA-Release-Workflow (#130)
+## OTA-Release-Workflow
 
 Update ueber WLAN, signiert (Ed25519 ueber den SHA-256-Digest). Details:
 `docs/pico-api.md` (Endpoints), `SECURITY.md` (Signatur-Modell).
@@ -129,7 +129,7 @@ OS-Umschalten ohne Recompile: Serial `w` (win_de) / `m` (mac_de) / `i` (ios).
 `ResQDocs-<id>` (Pass `resqdocs2026`), REST-API nach `docs/pico-api.md`
 (`GET /health`, `GET /status`, `POST /type` mit JSON `{text, os?}`,
 `POST /config` mit `{ssidId}` → EEPROM → AP-Neustart, `POST /ota/*` für
-signierte Firmware-Updates, #130). Kein Logging des `/type`-Inhalts.
+signierte Firmware-Updates). Kein Logging des `/type`-Inhalts.
 `<id>`-Recovery über Serial: `id?` zeigt sie, `id NEUEID` setzt sie.
 Client ist die PWA (`apps/pico-pwa`).
 
@@ -150,7 +150,7 @@ Slice A am echten NIDA getippt (Feld „Anamnese / Einsatzauftrag"): **voller Pa
 - ✅ ASCII inkl. `@ \ { } [ ] | ~`, Umlaute `ä ö ü Ä Ö Ü ß`, `€ § ° µ` — alle korrekt.
 - ✅ Deadkey-Akzente `é è ê à â î ô û á í ó ú` — alle korrekt.
 - ⚠️ `ç` und `ñ` → `[?]` (auf DE-Layout nicht direkt erzeugbar) — bewusster, ehrlicher
-  Gap, kein Bug. **Bewusst NICHT nachgerüstet** [User-Entscheidung 2026-06-08]: für
+  Gap, kein Bug. **Bewusst NICHT nachgerüstet** [2026-06-08]: für
   Einsatzdaten irrelevant (stehen nicht mal auf der Tastatur). Später ggf. im Composer
   sanfter Fallback auf den Grundbuchstaben — kein Alt-Code-Pfad in der Firmware.
 

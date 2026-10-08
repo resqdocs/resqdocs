@@ -1,8 +1,8 @@
 version = 1
 
-# REUSE-Annotationen für nicht-kommentierbare Firmware-Artefakte (#6-Folge,
+# REUSE-Annotationen für nicht-kommentierbare Firmware-Artefakte (für die
 # License-Compliance-CI). Eigene Firmware-QUELLEN tragen bereits SPDX-/Copyright-
-# Header (#178) und werden NICHT hier annotiert (REUSE liest die Header direkt).
+# Header und werden NICHT hier annotiert (REUSE liest die Header direkt).
 # Diese Datei deckt nur die kompilierten Binär-Artefakte ab, die keine Header
 # tragen können. Belege: FIRMWARE_THIRD_PARTY_NOTICES.md, firmware/bridge/README.md.
 #
@@ -49,7 +49,7 @@ SPDX-License-Identifier = "GPL-3.0-or-later"
 
 # Eigene Firmware-Metadaten ohne (sinnvollen) Header: generierter Public-Key-Header,
 # Arduino-Metadaten (library.properties / sketch.yaml). Eigener Code → GPL-3.0-or-later.
-# (Die kompilierbaren Firmware-Quellen tragen bereits SPDX-Header aus #178.)
+# (Die kompilierbaren Firmware-Quellen tragen bereits eigene SPDX-Header.)
 [[annotations]]
 path = [
   "firmware/bridge/bridge_s2/OtaPublicKey.h",

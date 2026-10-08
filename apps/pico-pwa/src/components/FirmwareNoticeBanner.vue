@@ -4,7 +4,7 @@ import { useFirmwareNotice } from '@/pico/useFirmwareNotice'
 import { useFirmwareUpdate } from '@/pico/useFirmwareUpdate'
 
 /**
- * Globaler Update-Hinweis (#134): erscheint unter dem Header auf allen Tabs,
+ * Globaler Update-Hinweis: erscheint unter dem Header auf allen Tabs,
  * sobald ein Bridge-Kontakt eine veraltete Firmware gemeldet hat. "Jetzt
  * aktualisieren" fuehrt das OTA-Update direkt hier aus (gleicher Flow wie in
  * den Einstellungen, useFirmwareUpdate); "Spaeter" blendet den Hinweis fuer

@@ -7,7 +7,7 @@ import { useBridgeConnection } from './useBridgeConnection'
 import type { OsMode, PicoStatus } from './picoTypes'
 
 /**
- * Composable für den Gerät/Pico-Bereich (#14-B). Kapselt die Pico-Kommunikation
+ * Composable für den Gerät/Pico-Bereich. Kapselt die Pico-Kommunikation
  * über picoClient — KEINE HTTP-Logik in Komponenten. Kein Auto-Connect, kein
  * Auto-Send. Der Testtext lebt NUR im RAM (wird nicht persistiert).
  */
@@ -30,7 +30,7 @@ export function usePicoDevice() {
   }
 
   const firmwareNotice = useFirmwareNotice()
-  // Geteilter Verbindungszustand (#157): Einstellungen-Prüfungen halten auch den
+  // Geteilter Verbindungszustand: Einstellungen-Prüfungen halten auch den
   // Header-Indikator aktuell, damit beide nicht auseinanderlaufen.
   const bridge = useBridgeConnection()
 
@@ -40,7 +40,7 @@ export function usePicoDevice() {
     try {
       reachable.value = await client.health()
       bridge.markReachable(reachable.value)
-      // Firmware-Check huckepack auf den erfolgreichen Kontakt (#134, gedrosselt).
+      // Firmware-Check huckepack auf den erfolgreichen Kontakt (gedrosselt).
       if (reachable.value) void firmwareNotice.checkAfterContact()
     } finally {
       busy.value = false
@@ -54,7 +54,7 @@ export function usePicoDevice() {
       status.value = await client.status()
       reachable.value = true
       bridge.markReachable(true)
-      firmwareNotice.reportStatus(status.value) // bereits geladen - kein Extra-Request (#134)
+      firmwareNotice.reportStatus(status.value) // bereits geladen - kein Extra-Request
     } catch (e) {
       status.value = null
       reachable.value = false
@@ -88,7 +88,7 @@ export function usePicoDevice() {
     }
   }
 
-  /** POST /config (#17): setzt die SSID-ID. Bei Erfolg startet der AP neu. */
+  /** POST /config: setzt die SSID-ID. Bei Erfolg startet der AP neu. */
   async function setSsidId(ssidId: string): Promise<{ ok: boolean; restartRequired?: boolean; error?: string }> {
     busy.value = true
     error.value = null

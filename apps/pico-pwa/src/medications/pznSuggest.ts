@@ -1,6 +1,6 @@
-// Query-Aufbereitung fuer das Medikamenten-Suchfeld (#275).
+// Query-Aufbereitung fuer das Medikamenten-Suchfeld.
 //
-// Zwei Anforderungen des Maintainers bei unleserlichen Plaenen:
+// Zwei Anforderungen bei unleserlichen Plaenen:
 //  - Fragmente ab 3 Zeichen genuegen, auch aus der Wortmitte (Infix), nicht nur als Praefix.
 //  - `*` als Platzhalter fuer beliebige Zeichen nutzbar (meto* / *sartan / me*for*).
 //
@@ -12,7 +12,7 @@
 // 500". Die 3-Zeichen-Schwelle zaehlt die BEDEUTUNGSTRAGENDEN Zeichen (ohne * und Leerraum) - sonst
 // wuerde „**" oder „a b" eine Volltabellensuche ausloesen.
 //
-// Der Kern dieser Semantik (Infix, Platzhalter, Kopf-Fragment) liegt seit #278 im gemeinsamen
+// Der Kern dieser Semantik (Infix, Platzhalter, Kopf-Fragment) liegt inzwischen im gemeinsamen
 // Such-Kern packages/shared/textSearch.ts - dieselbe Suche nutzen die langen Optionslisten im Einsatz.
 // Hier bleibt nur, was die Medikamentensuche zusaetzlich braucht: die 3-Zeichen-Schwelle, SQL-LIKE
 // fuer den nativen Pfad und die PZN-Ziffern.

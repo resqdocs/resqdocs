@@ -7,7 +7,7 @@ import BlockLibrarySection from './BlockLibrarySection.vue'
 import BausteineReceive from './BausteineReceive.vue'
 
 /**
- * Bausteine-Tab (#13-F3). Verwaltet neutrale, wiederverwendbare Inhalte in der lokalen Library.
+ * Bausteine-Tab. Verwaltet neutrale, wiederverwendbare Inhalte in der lokalen Library.
  * Aktuell: Snippets (Textbausteine) — eingefügt über „Snippet einfügen" im Vorlagen-Editor (als
  * Feld-Vorgabe) oder im Einsatz (als Feldwert). Wiederverwendbare Blöcke folgen in einem späteren
  * Update (Slice 2). Keine Patientendaten, kein caseState.

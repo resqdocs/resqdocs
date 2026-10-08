@@ -2,7 +2,7 @@
 
 > **Fundament-Spezifikation (S1).** Datenmodell eines **nutzerdefinierten** Protokolls: **Blöcke → Punkte**,
 > mit **Variablen**, **Platzhaltern**, **Bedingungen (`visibleIf`)** und **optionalen Blöcken**. Grundlage für
-> den Protokoll-Kreator (#13), den erweiterten Renderer (#12), den Composer und das spätere Teilen via JSON.
+> den Protokoll-Kreator, den erweiterten Renderer, den Composer und das spätere Teilen via JSON.
 > Format ist **JSON**. Validierung: [`protocol.schema.json`](protocol.schema.json).
 > Renderer: [`../packages/shared/renderer/render.mjs`](../packages/shared/renderer/render.mjs).
 
@@ -109,19 +109,19 @@ Rendert als Kopfzeile `# <title> ` + `=`-Auffüllung auf Breite 60, dann je sich
 | `findingGroup` | `key, label?, collapsible?, findings:[finding], visibleIf?` | `Key: f1. f2. …` | xABCDE-Buchstabe, granular |
 | `list` | `id, entries:[…], visibleIf?` | je Eintrag `- Eintrag` | Aufzählung |
 | `text` | `id, content, visibleIf?` | `- Inhalt` | fixer Block (z. B. Aufklärung) |
-| `medikamente` | `id, label?, visibleIf?` | `- Label:` + je Med. `Name: Dosierung - Kommentar` (ohne `-` voran) | Medikationsliste (#146): Zeilen `{name, dosierung, kommentar}` entstehen NUR im Einsatz (Vorlagen enthalten keine Patientendaten); BMP-Scan füllt vor; keine Zeile = weglassen |
+| `medikamente` | `id, label?, visibleIf?` | `- Label:` + je Med. `Name: Dosierung - Kommentar` (ohne `-` voran) | Medikationsliste: Zeilen `{name, dosierung, kommentar}` entstehen NUR im Einsatz (Vorlagen enthalten keine Patientendaten); BMP-Scan füllt vor; keine Zeile = weglassen |
 
 - `finding.state` ∈ `{"normal","abnormal"}`.
-- **Nicht erhoben (#71):** Einsatz-Override `{ "excluded": true }` an Feldern und Befunden nimmt den
+- **Nicht erhoben:** Einsatz-Override `{ "excluded": true }` an Feldern und Befunden nimmt den
   Punkt komplett aus der Ausgabe (Befund: auch aus dem Gruppensatz; ganze Gruppe leer ⇒ Key-Zeile
   entfällt). `filled`/`state`-Prädikate matchen dann nicht. Vorlage bleibt vollständig.
 - `required` (alle Punkt-Typen, Default false): Pflichtpunkt - der Einsatz bietet „nicht erhoben"
   nicht an.
 - **Alle Textfelder** (`default`, `value`, `normal`, `content`, `entries`) dürfen **Platzhalter** enthalten.
-- `field.title` (#70): Anzeige-Titel für Editor/Einsatz - **wird nicht getippt**; das (ggf. leere) `label` ist der getippte Teil.
-- `field.multiline` (#91): langer Freitext - im Einsatz Tap öffnet einen Modal-Editor. Optional.
-- `field.options` (#74): Auswahlwerte; im Einsatz als **Combobox** (antippen oder frei tippen). Optional, abwärtskompatibel.
-- `field.tool` (#54): id eines **Feld-Tools** aus der App-Registry (z. B. `medplanScan`; geplant:
+- `field.title`: Anzeige-Titel für Editor/Einsatz - **wird nicht getippt**; das (ggf. leere) `label` ist der getippte Teil.
+- `field.multiline`: langer Freitext - im Einsatz Tap öffnet einen Modal-Editor. Optional.
+- `field.options`: Auswahlwerte; im Einsatz als **Combobox** (antippen oder frei tippen). Optional, abwärtskompatibel.
+- `field.tool`: id eines **Feld-Tools** aus der App-Registry (z. B. `medplanScan`; geplant:
   `packYears`, `bmi`, `lams`, `news2`). Die Einsatzansicht rendert das Tool unter dem Feld; das
   Ergebnis wird an den Feldinhalt angehängt. **Reines UI-Feature** - Renderer und Ausgabe sind
   unberührt; unbekannte ids werden ignoriert (abwärtskompatibel).
@@ -139,10 +139,10 @@ Patientendaten** bleiben.
 
 Beim Verwenden liefert der Nutzer (alles **flüchtig**, nicht Teil der Vorlage):
 - `variableValues`: `{ "geschlecht": "w", ... }` — Defaults aus den Variablen, überschreibbar.
-- `values`: Punkt-Übersteuerungen — `"Freitext"` (bei `finding` ⇒ `state:"abnormal"`) · `{ value, state }` · `["a","b"]` (ersetzt `list.entries`) · `[{name, dosierung?, kommentar?}]` (Zeilen eines `medikamente`-Punkts, #146).
+- `values`: Punkt-Übersteuerungen — `"Freitext"` (bei `finding` ⇒ `state:"abnormal"`) · `{ value, state }` · `["a","b"]` (ersetzt `list.entries`) · `[{name, dosierung?, kommentar?}]` (Zeilen eines `medikamente`-Punkts).
 - `activeBlocks`: `string[]` — Ids der **aktivierten optionalen Blöcke**.
 
-## Render-Pipeline (Vertrag für #12)
+## Render-Pipeline (Vertrag für den erweiterten Renderer)
 
 ```js
 render(protocol, { variableValues, values, activeBlocks }) -> string
@@ -156,12 +156,12 @@ render(protocol, { variableValues, values, activeBlocks }) -> string
 ## Versionierung
 
 - `schemaVersion` (SemVer). **Noch ist nichts finalisiert** → **`0.x` (in Entwicklung)**. Aktuell: `0.1.0`.
-- **`1.0.0` markiert den MVP / die erste stabile Version. Diesen Zeitpunkt legt der Maintainer (User) fest.**
+- **`1.0.0` markiert den MVP / die erste stabile Version. Diesen Zeitpunkt legt der Maintainer fest.**
 - **Import/Teilen** prüft `schemaVersion`; Format-Migrationen werden dokumentiert.
 
 ## Validierung
 
-[`protocol.schema.json`](protocol.schema.json) (JSON Schema draft 2020-12). Wird im Editor (#13) **und** im CI geprüft.
+[`protocol.schema.json`](protocol.schema.json) (JSON Schema draft 2020-12). Wird im Editor **und** im CI geprüft.
 
 ## Beispiel (Variablen + Punkt-Bedingung + optionaler Block)
 
@@ -191,5 +191,5 @@ render(protocol, { variableValues, values, activeBlocks }) -> string
 ```
 node --test packages/shared/renderer/render.test.mjs
 ```
-Deckt (geplant für #12): Variablen (alle Typen), Platzhalter + `de-gender`, `visibleIf` über Variablen & Punkte,
+Deckt (geplant für den erweiterten Renderer): Variablen (alle Typen), Platzhalter + `de-gender`, `visibleIf` über Variablen & Punkte,
 optionale Blöcke via `activeBlocks`, Nicht-Mutation.

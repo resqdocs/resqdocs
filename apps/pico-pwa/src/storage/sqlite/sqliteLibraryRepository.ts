@@ -1,4 +1,4 @@
-// sqliteLibraryRepository.ts — LibraryRepository über einen SqlClient (#13-F2).
+// sqliteLibraryRepository.ts — LibraryRepository über einen SqlClient.
 //
 // Reine Logik (kein Capacitor-Import) → gegen einen Fake-SQL-Client testbar.
 // Speichert NUR neutrale Protokollvorlagen: validiert VOR dem Speichern und NACH

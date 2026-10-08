@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// sign.mjs - Firmware-Binary signieren und als Release ablegen (Issue #130).
+// sign.mjs - Firmware-Binary signieren und als Release ablegen.
 //
 //   node scripts/ota/sign.mjs --bin firmware/bridge/build/bridge_s2/bridge_s2.ino.bin \
 //        --version 0.3.0 [--key ~/.resqdocs/ota-ed25519-private.pem]

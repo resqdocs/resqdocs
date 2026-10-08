@@ -1,6 +1,6 @@
 <script lang="ts">
-/** Hint-ID der Tour - 'v2' (#147): die mehrseitige Tour soll auch erscheinen,
- *  wenn nur die alte Inline-Karte (#140, id 'tab-guide') weggeklickt wurde. */
+/** Hint-ID der Tour - 'v2': die mehrseitige Tour soll auch erscheinen,
+ *  wenn nur die alte Inline-Karte (id 'tab-guide') weggeklickt wurde. */
 export const TAB_GUIDE_HINT_ID = 'tab-guide-v2'
 </script>
 
@@ -11,7 +11,7 @@ import { useDisclaimer } from '@/composables/useDisclaimer'
 import { useAppVersion } from '@/composables/useAppVersion'
 
 /**
- * Mehrseitige Onboarding-Tour (#142, #72-Mechanik): erscheint NACH dem
+ * Mehrseitige Onboarding-Tour (Mechanik der Erklaer-Hinweise): erscheint NACH dem
  * Haftungsausschluss (DisclaimerGate deckt mit z-50). Nach Best Practices
  * (NN/g Mobile-App Onboarding, Apple HIG Onboarding - Links in docs/sources.md):
  * wenige Seiten, EINE Idee pro Seite, fokussiert aufs Neuartige (Bridge-Konzept,
@@ -23,13 +23,13 @@ const HINT_ID = TAB_GUIDE_HINT_ID
 const storage = useStorage()
 const disclaimer = useDisclaimer()
 
-// KI-Empfehlung (#261): dauerhaft auffindbar im Guide (über „?"), auch wenn der Vorlagen-Hinweis
+// KI-Empfehlung: dauerhaft auffindbar im Guide (über „?"), auch wenn der Vorlagen-Hinweis
 // weggeklickt wurde. ?v=<echte App-Version> -> die KI-Seite stempelt sie in den Prompt (kein Rückfragen).
 const { version } = useAppVersion()
 const aiUrl = computed(() => `https://ai.resqdocs.app?v=${encodeURIComponent(version.value)}`)
 
-// Erst zeigen, wenn (a) die persistierten Einstellungen geladen sind (#147:
-// sonst rendert die Tour kurz auf Defaults und verschwindet) und (b) der
+// Erst zeigen, wenn (a) die persistierten Einstellungen geladen sind (sonst
+// rendert die Tour kurz auf Defaults und verschwindet) und (b) der
 // Haftungsausschluss bestaetigt ist (kein Durchschimmern hinter dem Gate).
 const visible = computed(
   () =>
@@ -174,7 +174,7 @@ function onTouchEnd(e: TouchEvent): void {
                 </p>
               </div>
             </div>
-            <!-- KI-Empfehlung (#261): der einfachste Weg zur ersten Vorlage; jederzeit hier im Guide auffindbar. -->
+            <!-- KI-Empfehlung: der einfachste Weg zur ersten Vorlage; jederzeit hier im Guide auffindbar. -->
             <a :href="aiUrl" target="_blank" rel="noopener" class="card border border-primary/30 bg-primary/5 shadow-sm transition hover:bg-primary/10">
               <div class="card-body flex-row items-start gap-3 p-4">
                 <span class="rounded-lg bg-primary/15 p-2 text-primary">

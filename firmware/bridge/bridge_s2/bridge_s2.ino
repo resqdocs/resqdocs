@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 The ResQDocs project contributors
 /*
-  ResQDocs — S2-Bridge (Issue #14): die produktive Bridge-Firmware nach dem
+  ResQDocs — S2-Bridge: die produktive Bridge-Firmware nach dem
   S2-API-Vertrag (docs/pico-api.md). Ersetzt das Slice-B-HTML-Formular durch
   eine reine JSON-HTTP-API; getippt wird weiter AUSSCHLIESSLICH ueber die
   geteilte Typer-Lib (hardware-verifizierter Pfad, Slice A/B bleiben als Rigs).
@@ -19,7 +19,7 @@
   Setup), ueberschreibbar via POST /config ODER Serial (Recovery: `id NEUEID`),
   persistiert in EEPROM (ConfigStore.h). Passwort fix/oeffentlich (S2: die <id>
   dient der Unterscheidung, nicht dem Zugriffsschutz). Kein Auth auf
-  /type//config (S2); OTA ist signaturpflichtig (Ed25519, OtaUpdate.h #130):
+  /type//config (S2); OTA ist signaturpflichtig (Ed25519, OtaUpdate.h):
   nur vom Maintainer signierte Firmware wird angewendet.
 
   Datenschutz (S2/S3): /type-Text kann Patientendaten enthalten -> nur im Body,
@@ -68,7 +68,7 @@ static String fullSsid() { return String(AP_PREFIX) + ssidId; }
 static void startAp() {
   // AP-Gateway fest auf 10.10.10.1 (/24). Der Pico macht ein eigenes WLAN auf,
   // das Handy ist darin isoliert — Subnetz frei waehlbar, hier bewusst distinkt.
-  // WICHTIG (#132): mode(WIFI_AP) MUSS vor softAPConfig() stehen — der Core
+  // WICHTIG: mode(WIFI_AP) MUSS vor softAPConfig() stehen — der Core
   // speichert _apIP nur im AP-Modus (WiFiClass.h:143), sonst landet die IP im
   // Station-Pfad und beginAP() nutzt den Default 192.168.4.1.
   WiFi.mode(WIFI_AP);
@@ -166,7 +166,7 @@ static void handleNotFound() {
   sendJson(404, "{\"error\":\"not_found\"}");
 }
 
-// --- OTA (Issue #130, Logik in OtaUpdate.h) ---------------------------------------
+// --- OTA (Logik in OtaUpdate.h) ---------------------------------------------------
 
 static void handleOtaBegin() {
   if (!otaAvailable) {

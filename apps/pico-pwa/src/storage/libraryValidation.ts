@@ -1,4 +1,4 @@
-// libraryValidation.ts — reine Validierung neutraler Library-Einträge (#13-F3).
+// libraryValidation.ts — reine Validierung neutraler Library-Einträge.
 //
 // Wiederverwendet die Domain-Validierung (assertValidProtocolDraft) für den Block
 // eines Bausteins — keine eigene Block-Struktur-Logik. Frei von Storage/Vue → in

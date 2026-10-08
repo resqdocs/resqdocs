@@ -111,13 +111,13 @@
 - CircuitPython:
   <https://github.com/adafruit/circuitpython>
 
-## Onboarding-Tour der App (#142)
+## Onboarding-Tour der App
 
 - NN/g - Mobile-App Onboarding: An Analysis of Components and Techniques
   (Carousel/"Deck of Cards": sichtbarer Skip, wenige Karten, EIN Konzept pro Karte,
   nur fuers Neuartige): <https://www.nngroup.com/articles/mobile-app-onboarding/>
 - NN/g - Onboarding Tutorials vs. Contextual Help (kontextuelle Hilfe bevorzugen;
-  in ResQDocs ergaenzen die InlineHints (#72) die Tour):
+  in ResQDocs ergaenzen die InlineHints die Tour):
   <https://www.nngroup.com/articles/onboarding-tutorials/>
 - Apple Human Interface Guidelines - Onboarding ("fast, fun, and optional"):
   <https://developer.apple.com/design/human-interface-guidelines/onboarding>

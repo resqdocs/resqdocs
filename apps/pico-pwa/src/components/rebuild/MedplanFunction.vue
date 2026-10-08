@@ -4,7 +4,7 @@
  * Werte-Store (useCaseValues.getRows/setRows) -> erbt Entwurf-Persistenz + DSGVO-Reset gratis.
  *
  * Mode-in-place (quellenbasiert NN/g/Baymard): fertige Medikamente erscheinen kompakt als Summary-Zeile,
- * Antippen oeffnet die Edit-Karte. GENAU EINE Karte offen (Maintainer-Entscheid) -> bei vielen Medikamenten
+ * Antippen oeffnet die Edit-Karte. GENAU EINE Karte offen (bewusste Entscheidung) -> bei vielen Medikamenten
  * bleibt die Liste als Inhaltsverzeichnis lesbar. „fertig/raustippen": Fertig-Button ODER Fokus verlaesst
  * die Karte (focusout). v1 manuelle Erfassung; Packung-/BMP-Scan folgt.
  */
@@ -58,7 +58,7 @@ function setCustomText(v: string): void {
 }
 
 const editingIndex = ref<number | null>(null)
-// Zustand der Zeile beim OEFFNEN der Karte (#260-Nachbefund): Wer eine BEFUELLTE Zeile beim
+// Zustand der Zeile beim OEFFNEN der Karte: Wer eine BEFUELLTE Zeile beim
 // Bearbeiten leert (iOS-Backspace loescht gern das ganze markierte Wort), darf sie nicht ploetzlich
 // als "leere Zeile" rueckfragefrei loeschen koennen. Still loeschen nur, wenn die Zeile leer
 // GEOEFFNET wurde und leer ist (frische ＋-Zeile). editingLabel = Dialog-Text, falls leergeraeumt.
@@ -90,7 +90,7 @@ function removeRow(i: number): void {
   if (editingIndex.value === i) editingIndex.value = null
   else if (editingIndex.value !== null && i < editingIndex.value) editingIndex.value--
 }
-// Lösch-Schutz (#260): Rückfrage vor Datenverlust — Einzelzeile ODER „alle zurücksetzen" (Buttons
+// Lösch-Schutz: Rückfrage vor Datenverlust — Einzelzeile ODER „alle zurücksetzen" (Buttons
 // oben+unten an der Liste). Ohne Rückfrage nur die frisch angelegte, nie befüllte Zeile (siehe
 // editingHadData; Rückfragen nur bei destruktiven Aktionen, sonst stumpfen sie ab — NN/g
 // confirmation-dialog). Gemerkt wird das ZEILEN-OBJEKT, nicht der Index: async Pfade (Packung-Scan)
@@ -173,7 +173,7 @@ function onFocusOut(e: FocusEvent): void {
   closeEdit()
 }
 function addRow(): void {
-  const cleaned = rows.value.filter(medikamentRowHasData) // nur WIRKLICH leere Zeilen aufraeumen (#260: Eingaben nie stumm verwerfen)
+  const cleaned = rows.value.filter(medikamentRowHasData) // nur WIRKLICH leere Zeilen aufraeumen (Eingaben nie stumm verwerfen)
   focusNext = true // der Funktions-Ref der neuen Karte fokussiert beim Mount
   closeSuggest() // frische Karte startet ohne Vorschlagsreste der vorigen Zeile
   pendingStaerke.value = null
@@ -183,7 +183,7 @@ function addRow(): void {
   editingLabel.value = ''
 }
 
-// --- Packung-Scan: EINE Zeile, direkt anhaengen (Maintainer-Entscheid: kompakt, kein Auto-Open) ---
+// --- Packung-Scan: EINE Zeile, direkt anhaengen (bewusst kompakt, kein Auto-Open) ---
 const pkgScanOpen = ref(false)
 const pkgScanMsg = ref<string | null>(null)
 function startPackageScan(): void {
@@ -197,7 +197,7 @@ async function onPackageDecoded(p: { text: string; format: PackageBarcodeFormat 
     pkgScanMsg.value = 'Keine PZN auf der Packung erkannt — näher heranführen oder manuell eintippen.'
     return
   }
-  // Strukturiert aus der EIGENEN Bibliothek (#262): Wirkstoff (wichtiger als Bezeichnung,
+  // Strukturiert aus der EIGENEN Bibliothek: Wirkstoff (wichtiger als Bezeichnung,
   // konsistent zu resolveFromLibrary der Review-Sheets) + Wirkstärke als eigenes Feld —
   // ausser der Name (z. B. Label "Ibuflam 400 mg") trägt sie schon (keine Doppel-Doku).
   const e = await pznLibrary.entry(pzn)
@@ -207,10 +207,10 @@ async function onPackageDecoded(p: { text: string; format: PackageBarcodeFormat 
   caseValues.setRows(props.node.id, [...cleaned, { name, staerke, pzn }]) // anhaengen, kompakt (kein Edit-Open)
 }
 
-// --- Typeahead: das manuelle Namensfeld sucht in der PZN-Bibliothek (#275) -------------------------
+// --- Typeahead: das manuelle Namensfeld sucht in der PZN-Bibliothek --------------------------------
 // Ab 3 Zeichen, entprellt. Auswahl fuellt Name/Staerke/PZN mit DERSELBEN Abbildung wie der Packung-Scan
 // (Wirkstoff vor Bezeichnung, Staerke ohne Namens-Dublette). Leere oder nicht lesbare Bibliothek ->
-// keine Vorschlaege, das Feld bleibt schlichtes Freitext-Input (vgl. #263-Finding 2). Nur EINE Karte
+// keine Vorschlaege, das Feld bleibt schlichtes Freitext-Input. Nur EINE Karte
 // ist offen -> eine gemeinsame Vorschlagsliste, an editingIndex gebunden.
 const suggestions = ref<PznEntry[]>([])
 const suggestForRow = ref<number | null>(null)
@@ -220,7 +220,7 @@ let suggestTimer: ReturnType<typeof setTimeout> | null = null
 const SUGGEST_LIMIT = 30
 const suggestCapped = computed(() => suggestions.value.length >= SUGGEST_LIMIT)
 
-// Nach der Auswahl gefragte Wirkstoffstaerke (#275, Maintainer-Wunsch): der Name ist sicher zu
+// Nach der Auswahl gefragte Wirkstoffstaerke: der Name ist sicher zu
 // uebernehmen, die Bibliotheks-Staerke passt aber nicht zwingend zur konkreten Verordnung (dasselbe
 // Praeparat gibt es in mehreren Staerken). Darum wird sie NICHT automatisch gesetzt, sondern kurz
 // abgefragt. Gilt genau fuer die zuletzt gewaehlte Zeile.
@@ -323,7 +323,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
       <FunctionFillToggle :node="node" />
       <span class="text-sm font-semibold">{{ label }}<RequiredMark v-if="node.required" :open="isOpen" /></span>
       <span v-if="!excluded && !custom && filledCount" class="badge badge-neutral badge-sm">{{ filledCount }}</span>
-      <!-- „Alle zurücksetzen" oben+unten (Maintainer-Vorgabe #260). Sekundär-destruktiv (ghost+error, nie Primary) + Rückfrage. -->
+      <!-- „Alle zurücksetzen" oben+unten. Sekundär-destruktiv (ghost+error, nie Primary) + Rückfrage. -->
       <button v-if="!excluded && !custom && rows.length" type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
     </div>
 
@@ -390,7 +390,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
           />
           <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Medikament ' + (i + 1)} entfernen`" @click="requestRemove(i)">✕</button>
         </div>
-        <!-- Vorschlaege aus der PZN-Bibliothek (#275): INNERHALB der Karte, damit der Tap-Guard
+        <!-- Vorschlaege aus der PZN-Bibliothek: INNERHALB der Karte, damit der Tap-Guard
              (onCardTap/focusout) den Tap nicht als „Karte verlassen" wertet. Auswahl fuellt die Zeile. -->
         <div
           v-if="suggestForRow === i && suggestions.length"
@@ -434,7 +434,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
     <p v-if="pkgScanMsg" class="text-xs text-warning" role="status">{{ pkgScanMsg }}</p>
     </template>
 
-    <!-- Scan-Art waehlen: komfortable Tiles (Maintainer-Wahl, sourced scan-sheet-beauty). daisyUI .modal
+    <!-- Scan-Art waehlen: komfortable Tiles (bewusste Wahl, sourced scan-sheet-beauty). daisyUI .modal
          modal-bottom wie MoveToPicker; 56px-Zeilen mit gefasstem Icon-Chip (Theme-Akzent). Teleport, weil ein
          backdrop-blur-Vorfahr des Einsatz-Shells fixed/Modal sonst einsperrt; schliesst VOR der Kamera -> kein z-Konflikt. -->
     <Teleport to="body">
@@ -485,7 +485,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
     <!-- BMP-Plan-Scan + Review (teleportet sich selbst) -->
     <MedplanReviewSheet v-if="bmpOpen" :mode="bmpMode" @apply="onBmpApply" @close="bmpOpen = false" />
 
-    <!-- Lösch-Rückfrage (#260): Einzelzeile mit Daten oder „alle zurücksetzen" (teleportet sich selbst) -->
+    <!-- Lösch-Rückfrage: Einzelzeile mit Daten oder „alle zurücksetzen" (teleportet sich selbst) -->
     <ConfirmDialog
       v-if="pendingRemove !== null"
       :title="confirmTitle"
@@ -495,7 +495,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
       @cancel="pendingRemove = null"
     />
 
-    <!-- Rückfrage Wirkstoffstärke (#275): kleines BENIGNES Modal (primär „Übernehmen", kein Destruktiv-
+    <!-- Rückfrage Wirkstoffstärke: kleines BENIGNES Modal (primär „Übernehmen", kein Destruktiv-
          Stil, keine Scharfschalt-Sperre). ESC/Backdrop/„Nein" = nicht übernehmen. -->
     <Teleport to="body">
       <div

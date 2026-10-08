@@ -9,7 +9,7 @@
 //    mitgelieferter/öffentlicher Datenbestand, KEINE automatische Auflösung gegen
 //    IFA-abgeleitete Quellen, kein Crawl.
 //  - Art. 9 DSGVO: die dauerhafte, fallübergreifende Eigenhaltung von Medikations-
-//    daten ist eine Zweckänderung ggü. der flüchtigen Einsatzverarbeitung (#173).
+//    daten ist eine Zweckänderung ggü. der flüchtigen Einsatzverarbeitung.
 //
 // Der Code des alten Pfades bleibt erhalten (hinter diesem Flag), wird aber nicht
 // mehr angezeigt und macht KEINEN Netzzugriff. Ersatz: nutzergepflegte, lokale

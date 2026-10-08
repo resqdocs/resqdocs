@@ -38,7 +38,7 @@ const UKF_MIT_NAME =
 // Mehrseitig wie bmp-0005a/b: a="2" z="2".
 const UKF_SEITE_2 = '<MP v="025" U="BB" a="2" z="2" l="de-DE"><P g="R" f="T"/><S><M p="9900751" v="1" du="1"/></S></MP>'
 
-test('medicationToRow führt die Roh-PZN „im Hintergrund" mit (#184)', () => {
+test('medicationToRow führt die Roh-PZN „im Hintergrund" mit', () => {
   const r = parseMedplanMedications(UKF_NUR_PZN)
   const row = medicationToRow(r.medications[0])
   assert.equal(row.pzn, '230272') // PZN bleibt am strukturierten Eintrag hinterlegt
@@ -65,13 +65,13 @@ test('DATENMINIMIERUNG: P/O-Inhalte und nicht-gelesene A-Attribute tauchen NIRGE
   const r = parseMedplanMedications(UKF_NUR_PZN)
   const json = JSON.stringify(r)
   // Patient (P) + Observation (O) komplett verboten; vom Aussteller (A) duerfen
-  // Strasse/PLZ/E-Mail/Zeitstempel NICHT auftauchen (#144: nur n/c/Nummer/p).
+  // Strasse/PLZ/E-Mail/Zeitstempel NICHT auftauchen (nur n/c/Nummer/p).
   for (const verboten of ['Erika', 'Musterfrau', '19400324', 'X123456789', 'Teststr', '10555', 'dr@example.org', '2026-01-01', '"74"', '1.2']) {
     assert.ok(!json.includes(verboten), `Verbotenes Datum im Ergebnis: ${verboten}`)
   }
 })
 
-test('Aussteller (#144): nur Name/Ort/Nummer/Telefon werden gelesen', () => {
+test('Aussteller: nur Name/Ort/Nummer/Telefon werden gelesen', () => {
   const r = parseMedplanMedications(UKF_NUR_PZN)
   assert.deepEqual(r.aussteller, {
     name: 'Praxis Dr. Beispiel',
@@ -83,7 +83,7 @@ test('Aussteller (#144): nur Name/Ort/Nummer/Telefon werden gelesen', () => {
   assert.equal(parseMedplanMedications(UKF_MIT_NAME).aussteller, undefined)
 })
 
-test('ausstellerToText (#144): Rolle waehlt der Nutzer, fehlende Teile entfallen', () => {
+test('ausstellerToText: Rolle waehlt der Nutzer, fehlende Teile entfallen', () => {
   const r = parseMedplanMedications(UKF_NUR_PZN)
   assert.equal(
     ausstellerToText(r.aussteller, 'Hausarzt'),
@@ -150,7 +150,7 @@ test('medplanToText: eine Zeile pro Medikament', () => {
   assert.ok(!/Erika|Musterfrau/.test(text))
 })
 
-// --- #164: realer 14-Medikamente-Plan, anonymisiert (kein P/A/C/O-Element,
+// --- realer 14-Medikamente-Plan, anonymisiert (kein P/A/C/O-Element,
 // U auf Nullen gesetzt) - sichert vollstaendige Extraktion + Erhalt ab. ---
 const UKF_164 =
   '<MP v="026" U="00000000000000000000000000000000" l="de-DE"><S>' +
@@ -163,10 +163,10 @@ const UKF_164 =
   '<M p="1038950" m="1" v="1" /><M p="6444040" m="1" d="1" v="1" h="1" dud="bei Bed." />' +
   '</S></MP>'
 
-test('#164: 14-Medikamente-Plan wird vollstaendig geparst (kein Verlust)', () => {
+test('14-Medikamente-Plan wird vollstaendig geparst (kein Verlust)', () => {
   const { medications } = parseMedplanMedications(UKF_164)
   assert.equal(medications.length, 14, 'alle 14 <M>-Eintraege erkannt')
-  // PZN exakt wie im BMP (Roh-Wert; Normalisierung passiert erst beim Lookup, #162).
+  // PZN exakt wie im BMP (Roh-Wert; Normalisierung passiert erst beim Lookup).
   assert.deepEqual(
     medications.map((m) => m.pzn),
     ['18827585', '2953075', '2227825', '3028737', '12482636', '11851965', '524306',
@@ -182,7 +182,7 @@ test('#164: 14-Medikamente-Plan wird vollstaendig geparst (kein Verlust)', () =>
   assert.equal(medications[6].dosierung.abends, '1')
 })
 
-test('#164: medicationToText/Row - keine fuehrenden Striche, keine leeren Zeilen', () => {
+test('14-Medikamente-Plan: medicationToText/Row - keine fuehrenden Striche, keine leeren Zeilen', () => {
   const { medications } = parseMedplanMedications(UKF_164)
   const text = medplanToText({ medications })
   const lines = text.split('\n')

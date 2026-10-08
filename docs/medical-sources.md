@@ -72,7 +72,7 @@
   Richtung und die manifeste Größe der Potentialschwankungen im menschlichen
   Herzen.* Pflügers Arch. 1913;150:275-315. → bei uns: "Angaben kontrollieren".
 
-## EKG-Referenz / Spickzettel (#86)
+## EKG-Referenz / Spickzettel
 
 Nachschlage-Hilfe (Normzeiten + Erinnerungs-Kennzeichen), keine Diagnose. Werte
 vom Maintainer kuratiert/freigegeben.

@@ -1,4 +1,4 @@
-// useMedicationLookup.ts - PZN→Name-Aufloesung, offline-first (#11).
+// useMedicationLookup.ts - PZN→Name-Aufloesung, offline-first.
 //
 // Quelle: das CC0-Community-Woerterbuch, ausgeliefert als statisches, versioniertes
 // Artefakt ueber die offizielle Webseite (manifest.json + Daten-Datei). Der Lookup
@@ -26,7 +26,7 @@ interface PznManifest {
   count: number
   updated: string
   file: string
-  /** Hex-SHA256 ueber die EXAKTEN Bytes der Daten-Datei (Integritaet, #160). */
+  /** Hex-SHA256 ueber die EXAKTEN Bytes der Daten-Datei (Integritaet). */
   sha256: string
 }
 
@@ -43,7 +43,7 @@ function isNonEmptyString(v: unknown): v is string {
 }
 
 /**
- * Strikte Manifest-Validierung (#160): alle Pflichtfelder mit korrektem Typ,
+ * Strikte Manifest-Validierung: alle Pflichtfelder mit korrektem Typ,
  * inkl. des sha256-Felds. Liefert null statt einer Type-Assertion blind zu
  * vertrauen — sonst koennten fehlende Felder als 'undefined/0 Eintraege' in der
  * Statusanzeige landen.
@@ -56,7 +56,7 @@ function parseManifest(raw: unknown): PznManifest | null {
   return { version: m.version, count: m.count, updated: m.updated, file: m.file, sha256: m.sha256 }
 }
 
-/** Strikte Artefakt-Validierung (#160): Pflichtfelder + entries als Objekt. */
+/** Strikte Artefakt-Validierung: Pflichtfelder + entries als Objekt. */
 function parseArtifact(raw: unknown): PznArtifact | null {
   if (!raw || typeof raw !== 'object') return null
   const a = raw as Record<string, unknown>
@@ -197,7 +197,7 @@ export function createMedicationLookup(
         return `Bereits aktuell (Version ${state.version}, ${state.count} Einträge).`
       }
       // Daten-Artefakt als ROHTEXT laden — nur ueber die exakten gelieferten Bytes
-      // ist der SHA256-Abgleich (Supply-Chain-Haertung, #160) verlaesslich.
+      // ist der SHA256-Abgleich (Supply-Chain-Haertung) verlaesslich.
       const dataRes = await http.get(resolveDataUrl(manifest.file), {
         connectTimeout: 8000, readTimeout: 30000, responseType: 'text',
       })

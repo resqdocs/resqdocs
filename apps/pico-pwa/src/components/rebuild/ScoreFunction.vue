@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /**
- * Einsatz-Shell für SCORE-/Rechner-Funktionen (#55-Rework). Gemeinsames Muster für Pack-Years (und
+ * Einsatz-Shell für SCORE-/Rechner-Funktionen. Gemeinsames Muster für Pack-Years (und
  * später NEWS2): eine kompakte Ergebnis-Zeile (gerendert über DENSELBEN render()/registry wie die
- * Ausgabe) + Antippen öffnet ein Eingabe-Sheet (Modal, Maintainer-Entscheid 2026-07-03: die Funktion
+ * Ausgabe) + Antippen öffnet ein Eingabe-Sheet (Modal, bewusste Entscheidung: die Funktion
  * darf im Modal sein, die Einbindung im Editor fühlt sich an wie jedes Feld). Genau EINE Score-Zeile
  * im selben Werte-Store (getRows/setRows) -> Entwurf-Persistenz + DSGVO-Reset gratis.
  *
- * Destruktives Zurücksetzen mit Rückfrage (#260-Muster: erfasste Werte sind Arbeit).
+ * Destruktives Zurücksetzen mit Rückfrage (Lösch-Schutz-Muster: erfasste Werte sind Arbeit).
  */
 import { computed, ref } from 'vue'
 import type { FunctionNode, FunctionRow, PackYearsRow, NEWS2Row } from '@resqdocs/protocol-core/model'
@@ -59,7 +59,7 @@ const packYearsRow = computed<PackYearsRow | undefined>(() => row.value as PackY
 const news2Row = computed<NEWS2Row | undefined>(() => row.value as NEWS2Row | undefined)
 // Welche Score-Typen haben ein Eingabe-Sheet? Ein Knoten ohne Sheet ODER ohne Registry-Def
 // (unbekannter functionKind, z. B. Fremd-Import) darf KEIN aktives Tap-Ziel bekommen
-// (Verify #55: sonst stiller toter Button) - stattdessen read-only.
+// (sonst stiller toter Button) - stattdessen read-only.
 const hasSheet = computed(() => props.node.functionKind === 'packYears' || props.node.functionKind === 'news2')
 const supported = computed(() => !!def.value && hasSheet.value)
 

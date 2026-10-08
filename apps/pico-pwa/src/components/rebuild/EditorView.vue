@@ -140,7 +140,7 @@ provide(snippetPickerKey, SnippetPicker)
     <!-- Vorlagen-Bibliothek: auswaehlen/anlegen/umbenennen/duplizieren/loeschen + Save-Status -->
     <LibraryBar />
 
-    <!-- KI-Empfehlung fuer die erste Vorlage (#261, einmalig wegklickbar) -->
+    <!-- KI-Empfehlung fuer die erste Vorlage (einmalig wegklickbar) -->
     <AiToolNotice />
 
     <p class="text-sm text-base-content/60">

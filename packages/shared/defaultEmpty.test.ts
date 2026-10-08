@@ -1,7 +1,7 @@
 // Laeuft mit:  node --test --experimental-strip-types
 //
-// Mehrfachauswahl „startet ohne Auswahl" (Feld.defaultEmpty, #278). Anlass: Einsatzcodes - eine Vorauswahl
-// der obersten Option wuerde einen falschen Code dokumentieren. Maintainer-Entscheid: OPTIONAL; in der Regel
+// Mehrfachauswahl „startet ohne Auswahl" (Feld.defaultEmpty). Anlass: Einsatzcodes - eine Vorauswahl
+// der obersten Option wuerde einen falschen Code dokumentieren. Bewusste Entscheidung: OPTIONAL; in der Regel
 // bleibt die oberste Option der Standard (Bestand), deshalb pruefen die ersten Tests den Bestand mit.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

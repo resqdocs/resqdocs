@@ -1,4 +1,4 @@
-// Tests fuer den App-lokalen Anzeige-Namen-Fallback (#70). node:test, keine Vue-Abhaengigkeit.
+// Tests fuer den App-lokalen Anzeige-Namen-Fallback. node:test, keine Vue-Abhaengigkeit.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { displayName, humanize } from './displayName.ts'

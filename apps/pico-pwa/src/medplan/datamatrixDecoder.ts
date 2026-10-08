@@ -1,4 +1,4 @@
-// datamatrixDecoder.ts (#170) — Bruecke zum nativen ZXing-C++-Decoder (Android-only).
+// datamatrixDecoder.ts — Bruecke zum nativen ZXing-C++-Decoder (Android-only).
 //
 // Hintergrund: Der WebView-Kamera-Pfad (getUserMedia/<video>) crasht auf Adreno-Geraeten
 // im Chrome_InProcGpuThread (belegt: crbug 40133902 u. a.). Der native Pfad dekodiert ein

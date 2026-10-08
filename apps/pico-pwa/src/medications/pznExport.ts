@@ -1,4 +1,4 @@
-// pznExport.ts — gestreamter PZN-Bibliothek-Export (#197). Seitenweise lesen →
+// pznExport.ts — gestreamter PZN-Bibliothek-Export. Seitenweise lesen →
 // kompakt inkrementell in einen CompressionStream('gzip') schreiben, statt
 // allSorted()+Pretty-JSON+Riesen-Base64 (das hing am Gerät schon bei ~65k).
 //

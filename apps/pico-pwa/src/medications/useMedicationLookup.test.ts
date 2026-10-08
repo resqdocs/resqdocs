@@ -24,7 +24,7 @@ function sha256(text: string): string {
 }
 
 // Das Daten-Artefakt wird als ROHTEXT ausgeliefert (responseType 'text'), damit
-// der SHA256-Abgleich ueber die exakten Bytes laeuft (#160). Das Manifest fuehrt
+// der SHA256-Abgleich ueber die exakten Bytes laeuft. Das Manifest fuehrt
 // daher die Pruefsumme genau dieses Textes.
 const ARTIFACT = { version: 2, count: 2, updated: '2026-06-10T00:00:00Z', entries: { '04527098': 'Ibuflam 600 mg', '17260627': 'Ramipril 5 mg' } }
 const ARTIFACT_TEXT = JSON.stringify(ARTIFACT)
@@ -116,7 +116,7 @@ test('resolve normalisiert PZN auf 8 Stellen (BMP ohne fuehrende Null)', async (
   assert.equal(l.resolve('045270989'), null, '9-stelliger Wert wird nicht gekuerzt -> null')
 })
 
-// --- Negativtests (#160 Punkt 3): Manifest/Artefakt-Härtung -------------------
+// --- Negativtests: Manifest/Artefakt-Härtung ----------------------------------
 
 test('Negativ: Manifest-HTTP-500 → Fehlermeldung, error gesetzt, keine Daten', async () => {
   const http = fakeHttp({ [MANIFEST_URL]: { status: 500, data: null }, [DATA_URL]: { status: 200, data: ARTIFACT_TEXT } })

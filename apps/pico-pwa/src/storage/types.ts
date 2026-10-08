@@ -1,7 +1,7 @@
 // storage/types.ts — Verträge der gekapselten Storage-/Repository-Schicht (DR-0004).
 //
 // UI und Creator-Session kennen NUR diese Interfaces — nicht, ob die Daten aus
-// Memory, Capacitor Preferences oder (später, #13-F2) SQLite kommen.
+// Memory, Capacitor Preferences oder SQLite kommen.
 //
 // Datenschutz (S3 / DR-0004): NUR neutrale Daten. Keine Patientendaten, keine
 // Einsatzdaten, kein caseState im Storage.
@@ -20,11 +20,11 @@ export interface AppSettings {
   privacyNoticeAccepted: boolean
   /** Basis-URL der lokalen Pico-Bridge (S2-Default 10.10.10.1). Keine Patientendaten/Secrets. */
   picoBaseUrl: string
-  /** Theme-Familie (#78): 'classic' = bisherige daisyUI-Themes, 'resqdocs' = Logofarben. */
+  /** Theme-Familie: 'classic' = bisherige daisyUI-Themes, 'resqdocs' = Logofarben. */
   themeFamily: 'classic' | 'resqdocs'
-  /** Gesehene/verstandene Erklär-Hinweise (#72), ids. */
+  /** Gesehene/verstandene Erklär-Hinweise, ids. */
   dismissedHints: string[]
-  /** Überschriftenmuster der Ausgabe (#68): '{titel}'-Platzhalter. */
+  /** Überschriftenmuster der Ausgabe: '{titel}'-Platzhalter. */
   headingPattern: string
   /** Füllzeichen der Kopfzeile (1 Zeichen; leer = keine Auffüllung). */
   headingFill: string
@@ -37,14 +37,14 @@ export interface AppSettings {
    */
   pznAutoCheck: boolean
   /**
-   * Scanner-Strategie fuer den BMP-Data-Matrix-Scan (#170). Zentrale Quelle;
+   * Scanner-Strategie fuer den BMP-Data-Matrix-Scan. Zentrale Quelle;
    * der Kamera-Schnellumschalter aendert genau diese Einstellung. Default
    * 'webview_standard' (schlanker ZXing-JS-WebView-Scanner; bewusste Erststart-
    * Voreinstellung fuer iOS wie Android).
    */
   scannerMode: ScannerMode
   /**
-   * TTL des temporaeren Einsatzentwurfs (#173) in STUNDEN. Sliding-Idle: ein
+   * TTL des temporaeren Einsatzentwurfs in STUNDEN. Sliding-Idle: ein
    * laufender Entwurf wird nach so vielen Stunden Inaktivitaet automatisch
    * lokal geloescht. Bereich 1–5 h, Default 3 h.
    */

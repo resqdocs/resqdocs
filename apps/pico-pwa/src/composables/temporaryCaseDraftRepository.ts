@@ -1,5 +1,5 @@
 // temporaryCaseDraftRepository.ts — gekapselte Persistenz des temporären
-// Einsatzentwurfs (#173) über einen KeyValue-Adapter (Capacitor Preferences;
+// Einsatzentwurfs über einen KeyValue-Adapter (Capacitor Preferences;
 // Web-Fallback intern, KEIN direkter localStorage/IndexedDB-Zugriff).
 //
 // Spiegelt das Muster von creatorSessionStore.ts: EIN JSON-Blob unter einem

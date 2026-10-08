@@ -1,5 +1,5 @@
 apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'   // #170: natives ZXing-C++-Decoder-Plugin (Kotlin)
+apply plugin: 'kotlin-android'   // natives ZXing-C++-Decoder-Plugin (Kotlin)
 
 // Release-Signierung: liest die Keystore-Daten aus einer NICHT eingecheckten
 // key.properties (rootProject = android/, also apps/pico-pwa/android/key.properties).
@@ -50,7 +50,7 @@ android {
             if (hasKeystore) {
                 signingConfig signingConfigs.release
             }
-            // #208: native Debug-Symbole (libzxingcpp_android.so, libsqlcipher.so, Bildverarbeitung)
+            // Native Debug-Symbole (libzxingcpp_android.so, libsqlcipher.so, Bildverarbeitung)
             // ins AAB aufnehmen, damit die Play Console native Crashes/ANRs symbolisiert. Die Symbole
             // liegen in einer SEPARATEN Metadaten-Datei (NICHT an Geraete ausgeliefert, kein
             // Installations-Groessenzuwachs); Play-Limit 300 MB -> bei Ueberschreitung auf
@@ -89,7 +89,7 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
-    implementation 'io.github.zxing-cpp:android:3.0.2'   // #170 (Apache-2.0, GMS-frei, Data-Matrix-Decoder)
+    implementation 'io.github.zxing-cpp:android:3.0.2'   // Data-Matrix-Decoder (Apache-2.0, GMS-frei)
 }
 
 apply from: 'capacitor.build.gradle'

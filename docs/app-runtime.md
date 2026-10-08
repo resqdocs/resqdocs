@@ -5,7 +5,7 @@
 > App+Package: [`docs/rework/`](rework/README.md).
 >
 > Status: Entwurf (0.x). Bezug: SCHEMA.md (S1), docs/app-ia.md (S4), docs/data-flow.md (S3).
-> Renderer: `packages/shared/renderer/render.mjs` (#12).
+> Renderer: `packages/shared/renderer/render.mjs`.
 
 ## Was das ist — und was nicht
 
@@ -15,7 +15,7 @@ Diese Ansicht ist die **Laufzeit-/Einsatzansicht**: ein nutzerdefiniertes Protok
 > Protokoll laden → Variablen setzen → Punkte ausfüllen/aktivieren → optionale Blöcke aktivieren
 > → Renderer-Vorschau erzeugen → (optional) an die Bridge senden.
 
-**Dies ist nicht der Protokoll-Kreator (#13).** Kein Schema-Editor, kein Drag-and-drop, keine
+**Dies ist nicht der Protokoll-Kreator.** Kein Schema-Editor, kein Drag-and-drop, keine
 Block-Bibliothek, keine Cloud. Hier wird die Vorlage nur **gelesen**; es werden keine Blöcke/Punkte
 verändert. Ziel dieses Schritts: beweisen, dass das neue S1-Modell im echten App-Runtime-Flow trägt.
 
@@ -27,12 +27,12 @@ verändert. Ziel dieses Schritts: beweisen, dass das neue S1-Modell im echten Ap
 - **„Sitzung zurücksetzen"** verwirft `caseState` vollständig (Variablen zurück auf Defaults).
 - Die Renderer-Ausgabe kann Patientendaten enthalten → wird nur angezeigt und (bewusst) an die Bridge
   gesendet; nicht gespeichert/gecacht.
-- **Abgrenzung zur Bibliothek (#13-F2/F3):** Die persistente `library` (Protokoll-**Vorlagen** sowie
+- **Abgrenzung zur Bibliothek:** Die persistente `library` (Protokoll-**Vorlagen** sowie
   neutrale **Bausteine/Snippets** in SQLite, nativ; Web-Dev In-Memory) speichert **nur neutrale**
   Strukturen und ist strikt vom flüchtigen
   `caseState` getrennt. **`caseState` wird nie in die Bibliothek/Storage geschrieben**, Speichern in die
   Bibliothek ist eine **bewusste** Nutzeraktion im Protokolle-Tab (kein Auto-Save). Das **Einfügen** aus
-  der Bibliothek ins Protokoll (#13-F4) ist **Copy-on-insert** (kein Live-Link). Native Persistenz
+  der Bibliothek ins Protokoll ist **Copy-on-insert** (kein Live-Link). Native Persistenz
   wird manuell per `docs/native-smoke.md` geprüft (Web-Dev = In-Memory, beweist keine Persistenz).
 
 ## Architektur
@@ -104,7 +104,7 @@ werden).
 | `list` | Textarea, eine Zeile pro Eintrag |
 | `text` | feste Anzeige (nicht editierbar) |
 
-## Offene Punkte (Folge / #13)
+## Offene Punkte (Folge / Kreator)
 
 - **Input-seitige `visibleIf` und Platzhalter:** erledigt — Maske und Vorschau nutzen dieselbe
   Runtime-API für Sichtbarkeit (`isBlockVisible`/`getVisiblePoints`) **und** Textauflösung
@@ -112,15 +112,15 @@ werden).
 - **Mehrere Protokolle / Auswahl:** aktuell fest der Standard-Seed; Protokoll-Liste/-Auswahl folgt mit
   dem Kreator/`library`.
 - **`number`-Variable:** leeres Feld → `undefined`; Validierung/Bereich offen.
-- **`text`-Punkt editierbar?** derzeit fix; ob Einsatz-Override sinnvoll ist, mit #13 klären.
+- **`text`-Punkt editierbar?** derzeit fix; ob Einsatz-Override sinnvoll ist, mit dem Kreator klären.
 - **Bottom-Tabs-IA (S4):** umgesetzt als 4 Tabs (Einsatz · Protokolle · Bausteine · Einstellungen,
   DaisyUI `dock`). Diese Runtime-Ansicht ist der **Einsatz**-Tab; **Protokolle** ist die Kreator-Shell
-  (#13-B, `docs/protocol-creator-mvp.md`); **Bausteine** (#13-F3) und **Einstellungen** (#14-A:
-  App-Einstellungen, Gerät/Pico, Datenschutz/Reset, Info/Hilfe, Open Source) sind umgesetzt. Der
-  **Gerät/Pico**-Bereich ist seit **#14-B** interaktiv (Verbindung prüfen / Status / Testtext über die
+  (`docs/protocol-creator-mvp.md`); **Bausteine** und **Einstellungen**
+  (App-Einstellungen, Gerät/Pico, Datenschutz/Reset, Info/Hilfe, Open Source) sind umgesetzt. Der
+  **Gerät/Pico**-Bereich ist interaktiv (Verbindung prüfen / Status / Testtext über die
   gekapselte `src/pico/`-Schicht; `/config` folgt).
 - **„Sitzung zurücksetzen"** bleibt prominent im Einsatz-Tab (verwirft `caseState`); die Lösch-Funktionen
-  für die persistente Library liegen in den Einstellungen (#14-A) — strikt getrennt.
+  für die persistente Library liegen in den Einstellungen — strikt getrennt.
 
 ## Tests
 

@@ -8,7 +8,7 @@ import { Capacitor } from '@capacitor/core'
 import { bytesToBase64 } from './gzip'
 
 /**
- * Teilt JSON über den nativen System-Dialog (#76): temporäre Datei im
+ * Teilt JSON über den nativen System-Dialog: temporäre Datei im
  * Cache-Verzeichnis schreiben, iOS-/Android-Share-Sheet öffnen ("In Dateien
  * sichern", AirDrop, …), Temp-Datei danach aufräumen. Im Web (kein nativer
  * Layer) Fallback auf den Blob-Download.
@@ -49,7 +49,7 @@ export function downloadJson(filename: string, json: string): void {
 
 /**
  * Streamt gzip-Bytes (z. B. aus CompressionStream) CHUNKWEISE in eine Cache-Datei
- * und teilt sie danach (#197). Nativ: leere Datei anlegen, dann pro Chunk ein
+ * und teilt sie danach. Nativ: leere Datei anlegen, dann pro Chunk ein
  * kleiner Base64-`appendFile` — KEIN Riesen-Base64 in einem Bridge-Call (das hing
  * bei großen Bibliotheken). Web (Dev): Chunks sammeln → Blob-Download. shareBinary
  * bleibt für andere Aufrufer unangetastet.

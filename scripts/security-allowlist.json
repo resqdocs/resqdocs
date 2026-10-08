@@ -246,6 +246,12 @@
     },
     {
       "file": "CHANGELOG.md",
+      "term": "private",
+      "contains": "app-private folder",
+      "reason": "Fachbegriff im 1.3.0-Eintrag: verborgener, nur der App zugaenglicher Ordner in iCloud/Google Drive; kein Hinweis auf private Quellen"
+    },
+    {
+      "file": "CHANGELOG.md",
       "term": "internal",
       "reason": "git-cliff-Changelog spiegelt die bereits oeffentliche Commit-Message 'remove internal app store listing doc'; neutrale Cleanup-Beschreibung, kein internes Material"
     },

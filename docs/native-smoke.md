@@ -1,4 +1,4 @@
-# Native Smoke-Test — SQLite-Library-Persistenz (#13-F2.1)
+# Native Smoke-Test — SQLite-Library-Persistenz
 
 > **Ziel:** manuell prüfen, dass die lokale Bibliothek (`library.protocols`) auf einer **nativen**
 > Plattform (iOS/Android) über App-Neustarts **persistent** ist — und dass der flüchtige Einsatz-Zustand
@@ -13,13 +13,13 @@
 - Node-Toolchain + `npm install` im `apps/pico-pwa`.
 - Capacitor-CLI ist vorhanden (`@capacitor/cli`, devDependency). App-Config: `capacitor.config.ts`
   (`appId: app.resqdocs`, `webDir: dist`).
-- **iOS:** macOS + Xcode (CocoaPods erforderlich: `brew install cocoapods` (ML-Kit-Plugin hat kein SPM, #31)).
+- **iOS:** macOS + Xcode (CocoaPods erforderlich: `brew install cocoapods` (ML-Kit-Plugin hat kein SPM)).
 - **Android:** Android Studio + SDK.
 
 ## Native Projekte
 
-**iOS ist im Repo** (`apps/pico-pwa/ios/`, seit #25) - inkl. konfigurierter `Info.plist`:
-`NSCameraUsageDescription` (BMP-Scan #9), `NSLocalNetworkUsageDescription` und
+**iOS ist im Repo** (`apps/pico-pwa/ios/`) - inkl. konfigurierter `Info.plist`:
+`NSCameraUsageDescription` (BMP-Scan), `NSLocalNetworkUsageDescription` und
 `NSAllowsLocalNetworking` (lokale Pico-Bridge, bewusst kein `NSAllowsArbitraryLoads`).
 **Android** wird bei Bedarf analog erzeugt (`npx cap add android`) und eingecheckt.
 
@@ -81,7 +81,7 @@ npx cap run ios               # bzw.: npx cap run android   (oder in Xcode/Andro
 - Es werden **nur neutrale Protokollvorlagen** gespeichert — **keine** Patientendaten, **kein**
   `caseState`, **keine** Protokolle in Preferences.
 
-## Pico-Verbindung (#14-B, optionaler Zusatz-Smoke)
+## Pico-Verbindung (optionaler Zusatz-Smoke)
 
 Der Gerät/Pico-Bereich (Einstellungen) kann gegen eine laufende Bridge geprüft werden: Base-URL setzen
 (Default `http://10.10.10.1`), „Verbindung prüfen" (`GET /health`), „Status abrufen" (`GET /status`),

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 The ResQDocs project contributors
 /*
-  ConfigStore.h — persistente Geraete-Konfiguration der S2-Bridge (Issue #14).
+  ConfigStore.h — persistente Geraete-Konfiguration der S2-Bridge.
 
   Haelt genau EINEN Wert: die SSID-<id> (S2, docs/pico-api.md). Persistenz ueber
   die arduino-pico EEPROM-Emulation (flash-backed). Default-<id> = 6 Hex aus der

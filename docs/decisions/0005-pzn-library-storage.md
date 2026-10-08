@@ -1,11 +1,11 @@
 # Decision Record 0005 — PZN-Bibliothek: Speicher-Architektur & Skalierung
 
-Datum: 2026-06-16 · Status: angenommen (Maintainer-Entscheidung via Frage-Tool) · Bezug:
+Datum: 2026-06-16 · Status: angenommen · Bezug:
 `docs/decisions/0004-storage-architecture.md`, `apps/pico-pwa/src/medications/pznLibrary.ts`,
-`apps/pico-pwa/src/storage/sqlite/*`. **Umsetzung/Arbeitsplan: Issue #194.**
+`apps/pico-pwa/src/storage/sqlite/*`.
 
-> Entscheidungs-Record (kurz). Der ausführliche, abarbeitbare Plan (Phasen, Checklisten,
-> Akzeptanzkriterien) liegt im Issue #194 — hier steht nur die Entscheidung + Begründung.
+> Entscheidungs-Record (kurz). Hier steht nur die Entscheidung + Begründung, nicht der ausführliche,
+> abarbeitbare Plan (Phasen, Checklisten, Akzeptanzkriterien).
 
 ## Entscheidung
 

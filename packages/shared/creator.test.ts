@@ -151,7 +151,7 @@ test('indentChild: wird letztes Kind des Container-Vorgaengers; sonst No-Op', ()
   assert.equal(indentChild(r2, 'x'), r2) // Vorgaenger ist ein Feld -> No-Op
 })
 
-test('previewValues (#55): feste Beispielwerte fuer JEDE Funktion mit sampleFill (Editor-Vorschau)', () => {
+test('previewValues: feste Beispielwerte fuer JEDE Funktion mit sampleFill (Editor-Vorschau)', () => {
   // Baum: reines Feld (kein sampleFill) + Score + Listen-Funktion.
   let root = createContainer('root')
   root = addChild(root, 'root', createField('feld'))
@@ -181,7 +181,7 @@ test('outdentChild: wird Geschwister hinter dem Eltern-Container; Wurzel-Ebene -
   assert.equal(outdentChild(r, 'z'), r) // schon auf Wurzel-Ebene
 })
 
-test('moveUp/moveDown: lineares Outliner-Modell (Maintainer-Beispiel 3.2 -> 2.4)', () => {
+test('moveUp/moveDown: lineares Outliner-Modell (Beispiel 3.2 -> 2.4)', () => {
   // Container[ sub1[1.1], sub2[2.1,2.2,2.3], sub3[3.1,3.2] ]
   let r = createContainer('root')
   r = addChild(r, 'root', createContainer('sub1'))

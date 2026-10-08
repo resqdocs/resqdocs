@@ -1,6 +1,6 @@
 // Laeuft mit:  node --test --experimental-strip-types
 //
-// Gemeinsamer Such-Kern (#278). Medikamentensuche und Optionslisten leiten ihr Verhalten hieraus ab -
+// Gemeinsamer Such-Kern. Medikamentensuche und Optionslisten leiten ihr Verhalten hieraus ab -
 // die Bedeutung ist deshalb HIER festgenagelt, nicht in den Aufrufern.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

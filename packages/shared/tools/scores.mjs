@@ -1,8 +1,8 @@
-// scores.mjs - pure Rechenmodule der Feld-Tools (#55). Dependency-frei.
+// scores.mjs - pure Rechenmodule der Feld-Tools. Dependency-frei.
 //
 // MEDIZINISCHE SCHWELLENWERTE: nach den publizierten Originalquellen
 // implementiert. PRIMÄRQUELLEN mit konkreten Fundstellen: docs/medical-sources.md
-// (RCP NEWS2 2017, Llanes/Saver LAMS, WHO TRS 894, DocCheck/Einthoven). Vor Release vom Maintainer
+// (RCP NEWS2 2017, Llanes/Saver LAMS, WHO TRS 894, DocCheck/Einthoven). Vor Release fachlich
 // (Rettungsdienst) gegen die offiziellen Tabellen gegenzuprüfen - die App
 // bleibt Hilfsmittel, keine Bewertung (docs/disclaimer.md).
 //
@@ -27,7 +27,7 @@ export function packYears({ cigarettesPerDay, years }) {
   return { value: rounded, raw: value, text: `Nikotinabusus ${fmt(rounded)} py (${c} Zig./Tag, ${y} J.)` };
 }
 
-// Rework-Kurzform der Packungsjahre (#55): kaufmaennisch auf eine GANZE Zahl gerundet (round half up;
+// Rework-Kurzform der Packungsjahre: kaufmaennisch auf eine GANZE Zahl gerundet (round half up;
 // Pack-Years sind stets >= 0); „ca. " davor, WENN gerundet wurde (exakte glatte Werte ohne Praefix).
 // BEWUSST „ca." statt „≈": das Ungefaehr-Zeichen tippt die Bridge auf dem NIDA-Windows-Layout nicht
 // sauber (nicht in der de_DE-Keystroke-Tabelle der Firmware).
@@ -161,7 +161,7 @@ export function news2(v) {
   };
   const score = Object.values(items).reduce((a, b) => a + b, 0);
   const anySingle3 = Object.values(items).some((s) => s === 3);
-  // Risiko-Einstufung rein nach dem AGGREGAT-Score (Maintainer 2026-07-03): 0-4 niedrig, 5-6 mittel, >=7 hoch.
+  // Risiko-Einstufung rein nach dem AGGREGAT-Score: 0-4 niedrig, 5-6 mittel, >=7 hoch.
   // Bewusst OHNE die RCP-Einzelparameter-Eskalation (ein einzelner Wert = 3 -> niedrig-mittel): die einzelnen
   // Vitalwerte stehen im Protokoll ohnehin separat, entscheidend ist, was der Gesamtscore ergibt.
   // anySingle3 bleibt informativ im Rueckgabewert, fliesst aber nicht mehr in risk ein.
@@ -170,13 +170,13 @@ export function news2(v) {
     score >= 5 ? 'mittel' :
     'niedrig';
 
-  // Rework-Ausgabe (body): NUR Score + Risiko (Maintainer 2026-07-03) - die Vitalwerte stehen im Protokoll
+  // Rework-Ausgabe (body): NUR Score + Risiko - die Vitalwerte stehen im Protokoll
   // ohnehin separat, daher hier keine Wiederholung. Alt-Tool (text): voll, mit „NEWS2"-Praefix + Kernwerten.
   const risikoTeil = `Risiko ${risk}${v.scale2 ? ', SpO2-Skala 2' : ''}`;
   const kernwerte =
     `AF ${v.rr}/min, SpO2 ${v.spo2}%${v.onOxygen ? ' unter O2' : ''}, ` +
     `RR ${v.systolic} mmHg syst., HF ${v.pulse}/min, Temp ${fmt(v.temp)} °C, ${acvpu} (ACVPU)`;
-  // body (Rework): Score + ausgeschriebene Risikostufe (Maintainer 2026-07-03: im Protokoll deutlich
+  // body (Rework): Score + ausgeschriebene Risikostufe (im Protokoll deutlich
   // lesbar, da reiner Text keine Farbe tragen kann). text (Alt-Tool): unveraendert, mit Kernwerten.
   const risikoLang = { niedrig: 'niedriges Risiko', mittel: 'mittleres Risiko', hoch: 'hohes Risiko' }[risk] ?? `Risiko ${risk}`;
   const body = `${score} — ${risikoLang}${v.scale2 ? ' (SpO2-Skala 2)' : ''}`;
@@ -229,7 +229,7 @@ export function ekgAxisTable({ leadI, leadII, leadIII, rLarger }) {
   function done(typ) { return { typ, text: `Lagetyp: ${typ}` }; }
 }
 
-// --- Unterschriftsblock (#97) ---------------------------------------------------
+// --- Unterschriftsblock ---------------------------------------------------------
 // Erzeugt einen tippbaren Block: je Rolle eine Zeile, etwas Abstand, dann eine
 // Unterschriftslinie aus '_'. Fuer Mitfahrt-/Transportverweigerung etc.
 // Reiner Text fuers Zielsystem - KEINE digitale Signatur.
