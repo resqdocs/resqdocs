@@ -64,6 +64,15 @@
       "note_de": "Feld oder Abschnitt startet im Einsatz auf „nicht erhoben\" statt auf „bestätigt\" und erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Für Inhalte, die man nur in bestimmten Lagen braucht. Am Container zusätzlich excludable nötig; am Feld nicht zusammen mit required.",
       "note_en": "Field or section starts as \"not assessed\" instead of \"confirmed\" and only appears in the output once the user deliberately switches it on. For content needed only in specific situations. On a container it also requires excludable; on a field it is mutually exclusive with required.",
       "minVersion": "1.5.0"
+    },
+    {
+      "prop": "defaultEmpty",
+      "on": "field",
+      "de": "Startet ohne Auswahl",
+      "en": "Starts without selection",
+      "note_de": "Bei Mehrfachauswahl: keine Option ist vorausgewählt (z. B. Einsatzcodes). Ohne die Eigenschaft gilt die Standard-Option bzw. die oberste. Eine leere Auswahl gibt nichts aus; ein Pflichtfeld bleibt bis zur Auswahl offen.",
+      "note_en": "with multi-select: no option is preselected (e.g. dispatch codes). Without it the default option (or the first one) applies. An empty selection outputs nothing; a required field stays open until something is chosen.",
+      "minVersion": "1.6.0"
     }
   ],
   "functions": [
@@ -75,8 +84,8 @@
     },
     {
       "kind": "aerzte",
-      "de": "Ärzte",
-      "en": "Doctors",
+      "de": "Kontakte/Ärzte",
+      "en": "Contacts/Doctors",
       "minVersion": "1.0.0"
     },
     {

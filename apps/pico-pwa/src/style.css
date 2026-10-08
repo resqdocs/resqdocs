@@ -111,6 +111,18 @@
     0 20px 45px -12px rgb(0 0 0 / 0.28);
 }
 
+/* === Schwebende Dropdowns im Einsatz (#278): ein OFFENES Dropdown muss ueber die nachfolgenden Abschnitte
+   ragen. Jeder Abschnitt ist ein daisyUI-collapse (isolation: isolate) und damit ein eigener Stapel-Kontext;
+   das z-10 des Dropdowns wirkt nur INNERHALB seiner Karte - spaetere Karten und „nicht erhoben"-Zeilen
+   (opacity) wurden darueber gemalt (Geraetetest). Deshalb hebt sich die Karte selbst an, solange darin ein
+   Dropdown offen ist: ueber die Geschwister-Karten (z auto), aber UNTER die Sticky-Leiste Ausfuellen/Vorschau
+   (z-[5]), Kopfzeile und Modals - beim Scrollen ragt nichts ueber die Tabs. Gilt fuer die Suchliste und das
+   bestehende Dropdown (7-15 Optionen) gleich. */
+.collapse:has(.dropdown[open]) {
+  position: relative;
+  z-index: 4;
+}
+
 /* Mobile-first base: full-height app, comfortable touch defaults. */
 html,
 body,

@@ -1,27 +1,27 @@
 PODS:
-  - Capacitor (8.4.1):
+  - Capacitor (8.5.2):
     - CapacitorCordova
-  - CapacitorApp (8.1.0):
+  - CapacitorApp (8.1.2):
     - Capacitor
-  - CapacitorCamera (8.2.1):
+  - CapacitorCamera (8.2.5):
     - Capacitor
-    - IONCameraLib (~> 1.0.4)
-  - CapacitorCommunitySqlite (8.1.0):
+    - IONCameraLib (~> 2.0.0)
+  - CapacitorCommunitySqlite (8.1.1):
     - Capacitor
     - SQLCipher
     - ZIPFoundation
-  - CapacitorCordova (8.4.1)
-  - CapacitorFilesystem (8.1.2):
+  - CapacitorCordova (8.5.2)
+  - CapacitorFilesystem (8.1.4):
     - Capacitor
-    - IONFilesystemLib (~> 1.1.1)
-  - CapacitorNativeSettings (8.1.0):
+    - IONFilesystemLib (~> 2.0.0)
+  - CapacitorNativeSettings (8.2.0):
     - Capacitor
   - CapacitorPreferences (8.0.1):
     - Capacitor
-  - CapacitorShare (8.0.1):
+  - CapacitorShare (8.0.3):
     - Capacitor
-  - IONCameraLib (1.0.4)
-  - IONFilesystemLib (1.1.2)
+  - IONCameraLib (2.0.0)
+  - IONFilesystemLib (2.0.0)
   - SQLCipher (4.10.0):
     - SQLCipher/standard (= 4.10.0)
   - SQLCipher/common (4.10.0)
@@ -68,17 +68,17 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/share"
 
 SPEC CHECKSUMS:
-  Capacitor: 35242afe195b1e53c58ca1b827d1b444c5e6602b
-  CapacitorApp: 449ffe26375e96f8aaaee625ac6e01e5c57c8650
-  CapacitorCamera: 1b9dde3aaffbd1f051486f4cee2b4cdd962662ae
-  CapacitorCommunitySqlite: eac6acfb852f46e7988fc59604d7f900498d354e
-  CapacitorCordova: eebe6bcf807b1b06f3f48237650f96bbcd0eef09
-  CapacitorFilesystem: 2db285a1ac6e475cc27cae2e1bea999000f9e2be
-  CapacitorNativeSettings: d512b84fdcc04948c32f267621079a0d7c0d452f
+  Capacitor: 89067779e14fb7ea56af07b4817f45d1f0c2a269
+  CapacitorApp: 7b7e43debe505bc61beedb83796aa1368c86078b
+  CapacitorCamera: 2366a2b6d44417406ab33f8545d5c7b7b233028f
+  CapacitorCommunitySqlite: 785553c54e52da62d058238d4571db5692c022c4
+  CapacitorCordova: 5bec5648cbd09a176ce34ce5e7b6cdabb2c8a327
+  CapacitorFilesystem: 17ee1862a45ef2e5012311a87e18de1d45a6811b
+  CapacitorNativeSettings: 3f12e9700e0a10cb5d0e22aec00de29d72589a12
   CapacitorPreferences: cca2021f386efb75947c850334447d9ff22b14f1
-  CapacitorShare: 0c58305114538568059bfc07111f22dcb9cb2a82
-  IONCameraLib: f2349804460bd9e3f892e42109b8d996ab3fa19d
-  IONFilesystemLib: 21a63377696b2d8fab5632ecfb7d2ac67bddb68a
+  CapacitorShare: 5b5e53347556bee89ae6163ed20b5b3c25fe75f1
+  IONCameraLib: 729cae576e1a952602ce750a9790b6dc7d7e2e95
+  IONFilesystemLib: 0a001124dedc317c03032d138aaefbf4c18adb09
   SQLCipher: eb79c64049cb002b4e9fcb30edb7979bf4706dfc
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 

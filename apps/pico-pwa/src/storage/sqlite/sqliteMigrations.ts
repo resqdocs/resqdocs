@@ -150,6 +150,30 @@ export const MIGRATIONS: Migration[] = [
        );`,
     ],
   },
+  {
+    // #275: zweiter FTS5-Index mit tokenize='trigram' fuer INFIX-/Wildcard-Suche im
+    // Medikamenten-Suchfeld (Fragmente ab 3 Zeichen aus der Wortmitte, `*` als Platzhalter).
+    // Der bestehende pzn_fts (unicode61) kann NUR Praefix (meto*) — Trigram indiziert
+    // 3-Gramme und beschleunigt `col LIKE '%frag%'`, genau das hier Gebrauchte.
+    //
+    // BEWUSST content-tragend (kein content='pzn_entries'): die LIKE-Beschleunigung greift nur
+    // auf den EIGENEN Spalten der Trigram-Tabelle. Nur wirkstoff+label werden gespiegelt (die
+    // Suchziele des Suchfelds; category/note sind fuer die Auswahl irrelevant) — die Verdopplung
+    // bleibt klein. rowid = pzn_entries.rowid dient nur dem Join, wird NIE ausgegeben/sortiert;
+    // kanonische Ordnung bleibt ORDER BY pzn. Ein regulaerer (nicht-external) FTS5 laesst
+    // DELETE FROM ... WHERE rowid=? zu -> einfachere Trigger als bei pzn_fts.
+    //
+    // Trigram ist Teil des FTS5-Kerns (ab SQLite 3.34) — verfuegbar, da pzn_fts bereits FTS5 nutzt.
+    // Alle Statements EINZEILIG (Android-Splitter schneidet an ";\n"; vgl. v5). IF NOT EXISTS -> idempotent.
+    version: 10,
+    statements: [
+      `CREATE VIRTUAL TABLE IF NOT EXISTS pzn_tri USING fts5(wirkstoff, label, tokenize='trigram');`,
+      `CREATE TRIGGER IF NOT EXISTS pzn_tri_ai AFTER INSERT ON pzn_entries BEGIN INSERT INTO pzn_tri(rowid, wirkstoff, label) VALUES (new.rowid, new.wirkstoff, new.label); END;`,
+      `CREATE TRIGGER IF NOT EXISTS pzn_tri_ad AFTER DELETE ON pzn_entries BEGIN DELETE FROM pzn_tri WHERE rowid = old.rowid; END;`,
+      `CREATE TRIGGER IF NOT EXISTS pzn_tri_au AFTER UPDATE ON pzn_entries BEGIN DELETE FROM pzn_tri WHERE rowid = old.rowid; INSERT INTO pzn_tri(rowid, wirkstoff, label) VALUES (new.rowid, new.wirkstoff, new.label); END;`,
+      `INSERT INTO pzn_tri(rowid, wirkstoff, label) SELECT rowid, wirkstoff, label FROM pzn_entries WHERE (SELECT count(*) FROM pzn_tri) = 0;`,
+    ],
+  },
 ]
 
 /** Höchste definierte Schema-Version. */

@@ -5,20 +5,20 @@ import { readFileSync } from 'node:fs'
 import { createPicoClient, isValidSsidId, TYPE_CHUNK_LIMIT, OTA_CHUNK_FALLBACK } from './picoClient.ts'
 import type { HttpAdapter, HttpResponse } from './picoTypes.ts'
 
-interface Call { method: string; url: string; body?: unknown }
+interface Call { method: string; url: string; body?: unknown; opts?: { connectTimeout?: number; readTimeout?: number } }
 
 /** Fake-HTTP-Adapter: zeichnet Aufrufe auf, antwortet über einen Handler. Keine Netzwerkaufrufe. */
 function createFakeHttpAdapter(handler: (c: Call) => HttpResponse): HttpAdapter & { calls: Call[] } {
   const calls: Call[] = []
   return {
     calls,
-    async get(url) {
-      const c = { method: 'GET', url }
+    async get(url, opts) {
+      const c = { method: 'GET', url, opts }
       calls.push(c)
       return handler(c)
     },
-    async post(url, body) {
-      const c = { method: 'POST', url, body }
+    async post(url, body, opts) {
+      const c = { method: 'POST', url, body, opts }
       calls.push(c)
       return handler(c)
     },
@@ -70,6 +70,18 @@ test('typeText() sendet Body { text, os } und NICHT in der URL', async () => {
   assert.equal(call.url, `${BASE}/type`)
   assert.ok(!call.url.includes('Mustermann'), 'Text darf nicht in der URL stehen')
   assert.deepEqual(call.body, { text: 'Max Mustermann', os: 'ios' })
+})
+
+test('typeText() sendet mit vollem Timeout-Budget (nicht auf connectTimeout gekuerzt) (#277)', async () => {
+  // CapacitorHttp-iOS nimmt connectTimeout ?? readTimeout als EINZIGES timeoutInterval -> ein kleiner
+  // connectTimeout wuerde readTimeout aushebeln (real 5 s statt 20 s). Der Sendeweg muss beide gleich
+  // und grosszuegig setzen, sonst reisst bei niedrigem Akku (traeger Funk) das Fenster.
+  const adapter = createFakeHttpAdapter(() => ({ status: 200, data: { typed: 3 } }))
+  await createPicoClient(adapter, BASE).typeText({ text: 'abc', os: 'win_de' })
+  const o = adapter.calls[0].opts
+  assert.ok(o && o.connectTimeout && o.readTimeout, 'Timeouts gesetzt')
+  assert.equal(o!.connectTimeout, o!.readTimeout, 'connectTimeout darf readTimeout nicht unterbieten')
+  assert.ok(o!.connectTimeout! >= 20000, 'volles Sendebudget (>= 20 s)')
 })
 
 test('typeText() schickt delayMs im Body mit, wenn gesetzt (Tippgeschwindigkeit)', async () => {

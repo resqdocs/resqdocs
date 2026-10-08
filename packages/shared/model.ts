@@ -87,6 +87,11 @@ export interface Field {
   /** Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein
    *  „Keine/Normalbefund" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv). */
   exclusiveOptions?: string[]
+  /** Bei multiple: „startet ohne Auswahl" - KEINE Option ist vorausgewaehlt (z. B. Einsatzcodes, wo eine
+   *  Vorauswahl einen falschen Code dokumentieren wuerde). Ohne die Eigenschaft gilt wie bisher die
+   *  Standard-Option (default, sonst die oberste). Eine leere Auswahl ist dann der Ausgangszustand (✓, nichts
+   *  in der Ausgabe; ein Pflichtfeld bleibt „noch offen"), nicht „nicht erhoben". Nur mit multiple wirksam. */
+  defaultEmpty?: boolean
   /** Freitext mehrzeilig erfassen: im ✎-Modus ein grosses Textfeld (Sheet) statt einzeiligem <input>
    *  - fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine
    *  Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert. */
@@ -170,7 +175,7 @@ export interface MedikamenteRow {
   pzn?: string
 }
 
-/** Eine Zeile der Funktion „Ärzte & Kontaktpersonen". name pflicht (wie MedikamenteRow), Rest optional
+/** Eine Zeile der Funktion „Kontakte/Ärzte". name pflicht (wie MedikamenteRow), Rest optional
  *  -> ein gescannter Arzt kommt immer in die Liste, auch ohne Rolle. arztnummer = ein freies Feld
  *  (LANR/IK/IDF gemischt). Angehörige/Betreuer = Kontaktperson-Feldsatz (Name/Telefon + zwei Flags,
  *  KEIN Arztnummer/Ort); der BMP-Cross-Scan liefert immer nur Hausarzt/Facharzt (nie eine Kontakt-Rolle). */

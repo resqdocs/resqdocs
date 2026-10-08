@@ -5,7 +5,8 @@
  *   das Eingabefeld erscheint erst bei ✎ (Progressive Disclosure - korrekt, da kein Scan-Bedarf).
  * - SELECT (options gesetzt): Optionen IMMER sichtbar (quellenbasiert select-field-ux-critique:
  *   versteckte Optionen widersprechen der Select-Erwartung; NN/g Recognition-over-Recall + Baymard).
- *   Radios bei ≤6, Dropdown bei >6. Der Erhebungsstatus steckt in der Auswahl SELBST: Standard-Option
+ *   Radios bei ≤6, Dropdown bei >6, ab OPTION_SEARCH_MIN (16) eine durchsuchbare Liste (#278, Einfach- und
+ *   Mehrfachauswahl gleich). Der Erhebungsstatus steckt in der Auswahl SELBST: Standard-Option
  *   = confirmed (default nie materialisiert), andere Option/„individuell" = custom, „nicht erhoben" =
  *   excluded. Ein Tap fuer alles, kein vorgeschalteter Modus-Tap.
  * Modell/Renderer unveraendert - der Renderer rendert nur den String.
@@ -19,6 +20,8 @@ import TriStateToggle from '@/components/TriStateToggle.vue'
 import RequiredMark from '@/components/RequiredMark.vue'
 import LongTextField from '@resqdocs/protocol-core-ui/components/LongTextField.vue'
 import SnippetPicker from './SnippetPicker.vue'
+import OptionSearchList from './OptionSearchList.vue'
+import { OPTION_SEARCH_MIN } from '@resqdocs/protocol-core/textSearch'
 
 const props = defineProps<{ node: Field }>()
 const caseValues = useCaseValues()
@@ -31,6 +34,9 @@ const triState = computed<'confirmed' | 'custom' | 'excluded'>(() => (fill.value
 const options = computed(() => [...new Set((props.node.options ?? []).filter((o) => o !== ''))])
 const isSelect = computed(() => options.value.length > 0)
 const useDropdown = computed(() => options.value.length > 6) // adaptiv: Radios wenige, Dropdown viele
+// Lange Listen (Alarmierungscodes, Vorerkrankungen …) zusaetzlich durchsuchbar - gleiche Regel fuer Einfach- und
+// Mehrfachauswahl. Unter der Schwelle bleibt die Darstellung exakt wie bisher (Maintainer-Entscheid, #278).
+const useSearch = computed(() => options.value.length >= OPTION_SEARCH_MIN)
 const def = computed(() => {
   const opts = options.value
   const d = props.node.default
@@ -225,6 +231,16 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
             <span>{{ opt }}</span>
           </label>
         </div>
+        <OptionSearchList
+          v-else-if="useSearch"
+          multiple
+          :options="options"
+          :label="label"
+          :selected="selectedOptions"
+          :summary="selectedOptions.length ? joinFieldValues(selectedOptions) : 'auswählen …'"
+          :required="node.required"
+          @toggle="toggleMulti"
+        />
         <details v-else class="dropdown w-full">
           <summary class="select select-sm flex w-full items-center" :aria-label="label">
             <span class="truncate">{{ selectedOptions.length ? joinFieldValues(selectedOptions) : 'auswählen …' }}</span>
@@ -267,6 +283,15 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
             <span>{{ opt }}</span>
           </label>
         </div>
+        <OptionSearchList
+          v-else-if="useSearch"
+          :options="options"
+          :label="label"
+          :selected-option="selectedOption"
+          :summary="selectedOption ?? 'auswählen …'"
+          :required="node.required"
+          @pick="pickOption"
+        />
         <select v-else class="select select-sm w-full" :value="String(options.indexOf(selectedOption ?? ''))" :aria-label="label" :aria-required="node.required || undefined" @change="onSelectChange">
           <option v-for="(opt, i) in options" :key="i" :value="i">{{ opt }}</option>
         </select>
