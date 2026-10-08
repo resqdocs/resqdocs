@@ -1,5 +1,5 @@
 // Struktur-Test auf dem Template von MedplanReviewSheet.vue - fuer einen Layout-Fehler, der nur auf dem
-// Geraet sichtbar wurde (#276): es gibt kein DOM-Testsetup, .vue-Dateien laufen in keinem Verhaltens-Test.
+// Geraet sichtbar wurde: es gibt kein DOM-Testsetup, .vue-Dateien laufen in keinem Verhaltens-Test.
 //
 // Der Anlass: Beim BMP-Scan mit externem Scanner bleiben Eingabefeld und Hinweis offen. Stand die
 // „Ausstellende Praxis aus dem Plan" FEST ueber der Medikamentenliste, blieb auf kleinen Displays fuer die
@@ -61,7 +61,7 @@ const isMedikamentenSchleife = (n: Node): boolean =>
   n.type === ELEMENT &&
   (n.props ?? []).some((p: Node) => p.type === DIRECTIVE && p.name === 'for' && /\bstructuredRows\b/.test(p.exp?.content ?? ''))
 
-test('Praxis-Block und Medikamentenliste liegen im SELBEN Scrollbereich (#276)', () => {
+test('Praxis-Block und Medikamentenliste liegen im SELBEN Scrollbereich', () => {
   const ast = templateAst()
   const praxis = pathTo(ast, isPraxisText)
   const liste = pathTo(ast, isMedikamentenSchleife)
@@ -74,7 +74,7 @@ test('Praxis-Block und Medikamentenliste liegen im SELBEN Scrollbereich (#276)',
   assert.ok(
     scrollPraxis,
     'Die Ausstellende Praxis steht AUSSERHALB des Scrollbereichs - im Scanner-Modus verdeckt sie auf ' +
-      'kleinen Displays die Liste (#276).',
+      'kleinen Displays die Liste.',
   )
   assert.equal(scrollPraxis, scrollListe, 'Praxis und Liste muessen denselben Scrollbereich teilen.')
 })

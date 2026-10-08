@@ -18,7 +18,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: apps/pico-pwa/package-lock.json
+          cache-dependency-path: |
+            apps/pico-pwa/package-lock.json
+            packages/protocol-core-ui/package-lock.json
       - run: npm ci
+      # Die gemeinsamen Editor-Bausteine haben eigene Abhaengigkeiten (vue, @resqdocs/protocol-core);
+      # npm test fuehrt auch deren Tests aus.
+      - run: npm ci
+        working-directory: packages/protocol-core-ui
       - run: npm run build
       - run: npm test

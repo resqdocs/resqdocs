@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ein-Befehl-iOS-Build (#136, robust): macht ALLE Schritte in der
+# Ein-Befehl-iOS-Build (robust): macht ALLE Schritte in der
 # richtigen Reihenfolge und oeffnet garantiert die .xcworkspace - nie das
 # .xcodeproj (Root Cause von "Unable to resolve module dependency: Capacitor").
 #

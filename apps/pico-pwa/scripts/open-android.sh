@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ein-Befehl-Android-Build (#136, Pendant zu open-ios.sh):
+# Ein-Befehl-Android-Build (Pendant zu open-ios.sh):
 #
 #   npm run android      # aus apps/pico-pwa
 #

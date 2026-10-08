@@ -1,4 +1,4 @@
-// pznLibraryBackend.ts — async Persistenz-Abstraktion der PZN-Bibliothek (#194/#195).
+// pznLibraryBackend.ts — async Persistenz-Abstraktion der PZN-Bibliothek.
 //
 // EINE async Schnittstelle, zwei Implementierungen:
 //  - nativ (iOS/Android): SQLite (pznLibraryNativeBackend.ts) — skaliert auf ~317k,
@@ -43,7 +43,7 @@ export interface PznPageOpts {
   offset: number
   limit: number
   dir?: 'asc' | 'desc'
-  /** Nur Eintraege OHNE Wirkstaerke (Nachpflege-Arbeitsvorrat, #264). */
+  /** Nur Eintraege OHNE Wirkstaerke (Nachpflege-Arbeitsvorrat). */
   missingStaerke?: boolean
 }
 
@@ -55,7 +55,7 @@ export interface PznLibraryBackend {
   getEntry(pzn: string): Promise<PznEntry | null>
   page(opts: PznPageOpts): Promise<PznEntry[]>
   search(query: string, opts: { offset: number; limit: number; missingStaerke?: boolean }): Promise<PznEntry[]>
-  /** Typeahead fuer das manuelle Medikamentenfeld (#275): Infix + `*`, Fragmente ab 3 Zeichen. */
+  /** Typeahead fuer das manuelle Medikamentenfeld: Infix + `*`, Fragmente ab 3 Zeichen. */
   suggest(query: string, limit: number): Promise<PznEntry[]>
   allSorted(): Promise<PznEntry[]>
   setEntry(pzn: string, data: PznEntryData): Promise<void>

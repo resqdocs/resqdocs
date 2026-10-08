@@ -1,4 +1,4 @@
-// nativeDatamatrixScan.ts (#170) — nativer BMP-Data-Matrix-Scan (nur Android; iOS-Plugin nicht
+// nativeDatamatrixScan.ts — nativer BMP-Data-Matrix-Scan (nur Android; iOS-Plugin nicht
 // registriert -> iOS/Web nutzen den WebView-Scanner, siehe nativeDatamatrixScanAvailable()).
 //
 // Architektur (belegt durch Crash-Research, siehe datamatrixDecoder.ts):
@@ -49,7 +49,7 @@ export async function scanDatamatrixNative(): Promise<NativeScanResult> {
     const msg = (e as Error)?.message ?? String(e)
     // @capacitor/camera meldet Nutzer-Abbruch ueber die Fehlermeldung.
     if (/cancel/i.test(msg)) return { status: 'cancelled' }
-    // Diagnose (#170): den ECHTEN Plugin-Grund zeigen (z. B. fehlende Usage-Description,
+    // Diagnose: den ECHTEN Plugin-Grund zeigen (z. B. fehlende Usage-Description,
     // 'denied', 'not available') statt einer generischen Meldung.
     return { status: 'error', message: msg ? `Kamera-/Scan-Fehler: ${msg}` : 'Kamera nicht verfügbar oder Zugriff verweigert.' }
   }

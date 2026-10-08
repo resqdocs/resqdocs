@@ -1,4 +1,4 @@
-// pznLibrarySqliteRepository.ts — SQLite-Backend der PZN-Bibliothek (#194/#195).
+// pznLibrarySqliteRepository.ts — SQLite-Backend der PZN-Bibliothek.
 //
 // Reine Logik gegen den SqlClient (KEIN Capacitor-Import) → gegen echtes
 // In-Memory-SQLite (node:sqlite) testbar. Granulare Einzelzeilen-Writes statt
@@ -41,18 +41,18 @@ export interface PznPageOpts {
   offset: number
   limit: number
   dir?: 'asc' | 'desc'
-  /** Nur Eintraege OHNE Wirkstaerke (Nachpflege-Arbeitsvorrat, #264). */
+  /** Nur Eintraege OHNE Wirkstaerke (Nachpflege-Arbeitsvorrat). */
   missingStaerke?: boolean
 }
 
 export interface PznSqliteRepository {
   count(): Promise<number>
-  /** Anzahl Eintraege ohne Wirkstaerke (Fortschritts-Zaehler der Nachpflege, #264). */
+  /** Anzahl Eintraege ohne Wirkstaerke (Fortschritts-Zaehler der Nachpflege). */
   countMissingStaerke(): Promise<number>
   getEntry(pzn: string): Promise<PznEntry | null>
   page(opts: PznPageOpts): Promise<PznEntry[]>
   search(query: string, opts: { offset: number; limit: number; missingStaerke?: boolean }): Promise<PznEntry[]>
-  /** Typeahead fuer das manuelle Medikamentenfeld (#275): Infix + `*`, Fragmente ab 3 Zeichen. */
+  /** Typeahead fuer das manuelle Medikamentenfeld: Infix + `*`, Fragmente ab 3 Zeichen. */
   suggest(query: string, limit: number): Promise<PznEntry[]>
   allSorted(): Promise<PznEntry[]>
   setEntry(pzn: string, data: PznEntryData): Promise<void>
@@ -77,8 +77,8 @@ export interface PznSqliteRepository {
 }
 
 /**
- * Gibt dem Renderer einen Frame, damit die Import-Progressbar tatsächlich neu zeichnet
- * (#218). Im WebView via requestAnimationFrame; sonst (node:test) Fallback setTimeout(0) —
+ * Gibt dem Renderer einen Frame, damit die Import-Progressbar tatsächlich neu zeichnet.
+ * Im WebView via requestAnimationFrame; sonst (node:test) Fallback setTimeout(0) —
  * beide nur ein kurzer Macrotask-Yield. Wird in bulkPut NUR ZWISCHEN committeten Chunk-
  * Transaktionen aufgerufen (nach dem awaiteten client.transaction → Verbindung idle),
  * nie innerhalb einer offenen Transaktion.
@@ -166,7 +166,7 @@ export function createPznLibrarySqliteRepository(client: SqlClient): PznSqliteRe
     },
 
     async suggest(query, limit) {
-      // Infix + `*` ueber wirkstoff/label (Trigram-Index, #275), zusaetzlich PZN per Ziffern-LIKE.
+      // Infix + `*` ueber wirkstoff/label (Trigram-Index), zusaetzlich PZN per Ziffern-LIKE.
       // Beide Zweige mit UNION vereint. Reihung fuer die AUSWAHL (nicht die kanonische pzn-Ordnung
       // der Bibliotheksliste): Namen, deren Anfang zur Query passt, zuerst - sonst versinkt das
       // gesuchte Medikament unter zufaellig niedrigen PZN. Danach alphabetisch nach Name, dann pzn.
@@ -257,7 +257,7 @@ export function createPznLibrarySqliteRepository(client: SqlClient): PznSqliteRe
       // In Blöcken à chunkSize, jeder Block in EINER Transaktion (über client.transaction
       // — kein manuelles BEGIN, das mit der Plugin-Auto-Transaktion kollidieren würde):
       // bei 317k entscheidend, sonst committet SQLite jede Zeile einzeln (fsync pro Zeile).
-      // chunkSize 1000 (statt 5000): feinere Fortschritts-Schritte (#218) ohne Transaktions-
+      // chunkSize 1000 (statt 5000): feinere Fortschritts-Schritte ohne Transaktions-
       // strukturänderung — je Block weiterhin eine eigene, vollständig committete Transaktion.
       // mode: overwrite = Upsert (ON CONFLICT DO UPDATE, FTS-Trigger-konsistent, Import
       // gewinnt) / skip = INSERT OR IGNORE (Duplikate überspringen). KEIN INSERT OR REPLACE
@@ -285,7 +285,7 @@ export function createPznLibrarySqliteRepository(client: SqlClient): PznSqliteRe
           }
         })
         onProgress?.(Math.min(i + chunkSize, entries.length), entries.length)
-        // Paint-Yield ZWISCHEN den Chunks (#218): nach dem COMMIT, Verbindung idle — lässt die
+        // Paint-Yield ZWISCHEN den Chunks: nach dem COMMIT, Verbindung idle — lässt die
         // Progressbar zeichnen, statt erst am Import-Ende. Insert-/Transaktion/FTS unverändert.
         await yieldToPaint()
       }

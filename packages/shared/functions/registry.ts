@@ -6,7 +6,7 @@ import type { FunctionKind, FieldFill, MedikamenteRow, ArztRow, PackYearsRow, NE
 import { packYears, packYearsShort, news2 } from '../tools/scores.mjs'
 
 /** Inline-Default fuer FUNKTIONS-Zeilen: Mittelpunkt statt DEFAULT_SEPARATOR ", " - das Komma ist
- *  seit dem Zeilenformat "Name Staerke, Schema" (#262) die Grenze INNERHALB einer Zeile; als
+ *  seit dem Zeilenformat "Name Staerke, Schema" die Grenze INNERHALB einer Zeile; als
  *  Zeilen-Trenner waere es ambig (genau das ISMP-Fehlermuster, das das Format vermeidet). */
 export const FUNCTION_ROW_INLINE_SEPARATOR = ' · '
 
@@ -19,9 +19,9 @@ export interface FunctionDef {
   /** Hat die Funktion erfasste Daten? (Abweichungs-Zaehlung, Ausgabe-Filter.) */
   hasData(fill: FieldFill | undefined): boolean
   /** Einzeilige Funktion? Scores (Pack-Years/NEWS2) geben GENAU EINE Zeile aus -> inline-faehig wie ein
-   *  Feld (#55). Listen-Funktionen (Medikamentenplan/Aerzte) sind mehrzeilig -> fehlt/false -> immer Block. */
+   *  Feld. Listen-Funktionen (Medikamentenplan/Aerzte) sind mehrzeilig -> fehlt/false -> immer Block. */
   singleLine?: boolean
-  /** Feste Beispiel-Eingabe NUR fuer die Editor-Vorschau (#55): der Nutzer gibt im Editor nichts ein,
+  /** Feste Beispiel-Eingabe NUR fuer die Editor-Vorschau: der Nutzer gibt im Editor nichts ein,
    *  darum zeigt die Vorschau mit diesem Demo-Fill, WIE der Score mit Werten aussieht. Im Einsatz / der
    *  echten Ausgabe ungenutzt. Fehlt -> die Funktion erscheint in der Vorschau leer (wie ein Feld ohne
    *  Default). */
@@ -48,12 +48,12 @@ function layoutRows(texts: string[], config?: FunctionConfig): string {
   return texts.map((t) => `${pre}${t}${suf}`).join('\n')
 }
 
-/** Eine Medikamenten-Zeile als Klartext: "Name Staerke, Schema (Hinweis)". Quellenbelegt (#262):
+/** Eine Medikamenten-Zeile als Klartext: "Name Staerke, Schema (Hinweis)". Quellenbelegt:
  *  Reihenfolge = BMP-Spaltenfolge (KBV Anlage 3 zur BMP-Vereinbarung); Name+Staerke bilden eine
  *  feste Einheit (Leerzeichen); das Komma setzt das Dosierschema IMMER sichtbar ab - auch ohne
  *  Staerke ("Ramipril 5, 1-0-0"): die KBV-Rezept-FAQ verlangt eine sichtbare Abtrennung der
  *  Dosierung, und zwei nackte Zahlengruppen nebeneinander sind ein belegtes Fehlermuster (ISMP).
- *  Namenlos-robust (#260): keine fuehrenden Trenner; die AUSGABE filtert namenlose weiterhin. */
+ *  Namenlos-robust: keine fuehrenden Trenner; die AUSGABE filtert namenlose weiterhin. */
 export function formatMedikament(r: MedikamenteRow): string {
   const kopf = [r.name.trim(), r.staerke?.trim()].filter(Boolean).join(' ')
   const dos = r.dosierung?.trim()
@@ -101,7 +101,7 @@ export function formatArzt(r: ArztRow): string {
   return s
 }
 
-/** Traegt die Zeile IRGENDEINE Nutzereingabe? Basis fuer Loesch-Schutz (#260) UND Aufraeum-Filter der
+/** Traegt die Zeile IRGENDEINE Nutzereingabe? Basis fuer Loesch-Schutz UND Aufraeum-Filter der
  *  Einsatz-Komponenten: Zeilen mit Eingaben nie stumm verwerfen. Bewusst breiter als hasData/renderBody
  *  (die auf den Namen filtern): eine namenlose Zeile mit Dosierung ist in der AUSGABE unsichtbar,
  *  in UI/Entwurf aber vorhandene Nutzerarbeit. */
@@ -110,7 +110,7 @@ export function medikamentRowHasData(r: MedikamenteRow): boolean {
 }
 
 /** Staerke-Vorschlag aus der Bibliothek nur uebernehmen, wenn der Name sie nicht schon traegt
- *  (Label "Ibuflam 400 mg" + staerke "400 mg" wuerde sonst doppelt dokumentiert, #262). */
+ *  (Label "Ibuflam 400 mg" + staerke "400 mg" wuerde sonst doppelt dokumentiert). */
 export function staerkeOhneDuplikat(name: string, staerke: string | undefined): string | undefined {
   const st = staerke?.trim()
   if (!st) return undefined
@@ -171,8 +171,8 @@ function packYearsComplete(r: PackYearsRow | undefined): r is Required<PackYears
   return !!r && Number.isFinite(r.cigarettesPerDay) && r.cigarettesPerDay! >= 0 && Number.isFinite(r.years) && r.years! >= 0
 }
 
-/** Pack-Years (#55-Rework): Eingaben Zigaretten/Tag + Jahre -> abgeleitete Packungsjahre. Ausgabe „mit
- *  Kernwerten" (Maintainer 2026-07-03): „22,5 py (30/Tag, 15 J.)"; der Titel kommt wie bei jedem Knoten
+/** Pack-Years: Eingaben Zigaretten/Tag + Jahre -> abgeleitete Packungsjahre. Ausgabe „mit
+ *  Kernwerten": „22,5 py (30/Tag, 15 J.)"; der Titel kommt wie bei jedem Knoten
  *  aus dem FunctionNode (renderFunction). Rechenkern scores.packYears bleibt unveraendert. */
 const packYearsFn: FunctionDef = {
   label: 'Pack-Years',
@@ -198,8 +198,8 @@ function news2Complete(r: NEWS2Row | undefined): r is NEWS2Row & Required<Pick<N
   return !!r.consciousness && ['A', 'C', 'V', 'P', 'U'].includes(r.consciousness)
 }
 
-/** NEWS2 (#55-Rework): die RCP-2017-Parameter -> Aggregat-Score + Risiko. Ausgabe NUR Score + Risiko
- *  (Maintainer 2026-07-03): die Vitalwerte stehen im Protokoll ohnehin separat, daher keine Wiederholung.
+/** NEWS2: die RCP-2017-Parameter -> Aggregat-Score + Risiko. Ausgabe NUR Score + Risiko:
+ *  die Vitalwerte stehen im Protokoll ohnehin separat, daher keine Wiederholung.
  *  Rechenkern + Schwellen sind quellenbelegt (docs/medical-sources.md, RCP 2017) und bleiben unveraendert;
  *  scale2 = SpO2-Skala 2 (aerztlich dokumentiertes Ziel 88-92 %, z. B. COPD; als Risiko-Zusatz vermerkt).
  *  Der Titel kommt wie bei jedem Knoten aus dem FunctionNode (renderFunction). */

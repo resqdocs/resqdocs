@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" role="img" aria-label="EKG: ein Sinusschlag (PQRST)">
   <!--
-    Kanonische EKG-Kurve (#80) - EIN Sinusschlag, Ableitung II.
+    Kanonische EKG-Kurve - EIN Sinusschlag, Ableitung II.
     Massstab: 1 ms = 0,8 px (x) · 1 mV = 160 px (y) · Nulllinie y=260.
 
     Konstruiert aus Lehrbuch-Normwerten (Quellen: LITFL ECG Library
@@ -15,7 +15,7 @@
                     asymmetrisch (langsamer Anstieg, steilerer Abfall)
     Verhaeltnisse: R dominiert; T (0,35 mV) > P (0,15 mV); T ≈ 0,3 x R
     (Norm: 1/8 bis 2/3 der R-Amplitude).
-    FACHLICHE ABNAHME: Maintainer (Rettungsdienst) - siehe Issue #80.
+    FACHLICHE ABNAHME: durch die Projektpflege (Rettungsdienst).
   -->
   <path fill="none" stroke="#F0503C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"
         d="M0 260

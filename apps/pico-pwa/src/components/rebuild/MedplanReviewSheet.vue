@@ -4,7 +4,7 @@
  * (useMedplanScan, PZN-Lookup, Aussteller-Opt-in, Einzel-Transfer, Datenschutz) im Bottom-Sheet
  * des Rework-Stils. Dies ist die LIVE-Komponente des BMP-Scans.
  *
- * Maintainer-Entscheid: bei mehreren Medikamenten auf einmal ein editierbarer Review-Schritt vor der
+ * Bewusste Entscheidung: bei mehreren Medikamenten auf einmal ein editierbarer Review-Schritt vor der
  * Uebernahme. DSGVO: Roh-Scan + Entwurf nur im RAM (useMedplanScan), reset() verwirft alles; erst
  * „Uebernehmen" macht die GEPRUEFTEN Zeilen zu Einsatz-Werten.
  */
@@ -49,14 +49,14 @@ function onRemoveRow(i: number): void {
   }
   transferState.value = next
 }
-// Lösch-Schutz auch im Scan-Review (#260, Maintainer-Nachforderung): geprüfte Zeilen sind Arbeit —
+// Lösch-Schutz auch im Scan-Review: geprüfte Zeilen sind Arbeit —
 // Einzel-✕ und Verwerfen/Schließen fragen nach, solange erfasste Zeilen da sind. Index-basiert ist
 // hier sicher: hinter dem Modal wird nie eingefügt/entfernt (resolveFromLibrary ändert nur FELDER
 // bestehender Zeilen: Name/Stärke); beim Bestätigen wird die Zeile defensiv gegengeprüft.
 const pendingRemove = ref<number | 'discard' | null>(null)
 function requestRemoveRow(i: number): void {
   // IMMER nachfragen: hier gibt es keine "leer geborenen" Zeilen - jede stammt aus einem Parse
-  // (auch mit leergeraeumtem Namen bleibt sie gescannte Arbeit, #260-Nachbefund).
+  // (auch mit leergeraeumtem Namen bleibt sie gescannte Arbeit).
   if (structuredRows.value[i]) pendingRemove.value = i
 }
 function requestDiscard(): void {
@@ -102,7 +102,7 @@ function rowLabel(i: number): string {
 async function transferRow(i: number): Promise<void> {
   const pzn = rowPzn(i)
   if (!pzn) return
-  // Stärke als eigener Vorschlag mit (Bibliothek hat seit #262 ein eigenes Feld; Konfliktregel:
+  // Stärke als eigener Vorschlag mit (Bibliothek hat inzwischen ein eigenes Stärke-Feld; Konfliktregel:
   // vorhandene nicht-leere Stärke gewinnt) — NICHT mehr ins Label mischen.
   const result = await pznLibrary.addOne(pzn, rowLabel(i), structuredRows.value[i]?.staerke) // genau EINE PZN
   // Gegenprobe wie in resolveFromLibrary: waehrend des awaits kann eine Zeile davor entfernt worden
@@ -120,7 +120,7 @@ async function resolveFromLibrary(): Promise<void> {
     const resolved = e ? e.wirkstoff || e.label : ''
     if (resolved && structuredRows.value[i]?.pzn === pzn) {
       updateRowName(i, resolved)
-      // Wirkstärke aus der EIGENEN Bibliothek mitziehen (#262) — nur leere Zeilen-Stärke füllen,
+      // Wirkstärke aus der EIGENEN Bibliothek mitziehen — nur leere Zeilen-Stärke füllen,
       // und nie doppelt dokumentieren, wenn der aufgelöste Name sie schon trägt.
       const st = staerkeOhneDuplikat(resolved, e?.staerke)
       if (st && !structuredRows.value[i]?.staerke) setRowStaerke(i, st)
@@ -253,7 +253,7 @@ onMounted(() => {
 
         <p v-if="error" class="text-sm text-error" role="alert">{{ error }}</p>
 
-        <!-- EIN Scrollbereich fuer Ausstellende Praxis UND Medikamentenliste (#276). Vorher stand die Praxis
+        <!-- EIN Scrollbereich fuer Ausstellende Praxis UND Medikamentenliste. Vorher stand die Praxis
              fest ueber der Liste: im externen-Scanner-Modus (Eingabefeld + Hinweis bleiben offen) blieb auf
              kleinen Displays fuer die Liste keine Hoehe mehr - die Medikamente waren nicht zu sehen und damit
              nicht zu scrollen. Jetzt scrollt die Praxis mit weg. min-h-0: sonst behaelt das flex-Kind
@@ -298,7 +298,7 @@ onMounted(() => {
     </div>
   </Teleport>
 
-  <!-- Lösch-Rückfrage (#260): Einzelzeile oder ganze Scan-Liste; daisyUI-Modal (z-999) liegt über dem Sheet (z-40) -->
+  <!-- Lösch-Rückfrage: Einzelzeile oder ganze Scan-Liste; daisyUI-Modal (z-999) liegt über dem Sheet (z-40) -->
   <ConfirmDialog
     v-if="pendingRemove !== null"
     :title="confirmTitle"

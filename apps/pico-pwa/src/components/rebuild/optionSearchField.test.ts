@@ -1,4 +1,4 @@
-// Struktur-Test auf EinsatzField.vue (#278): haelt den Maintainer-Entscheid fest, dass lange Optionslisten
+// Struktur-Test auf EinsatzField.vue: haelt die bewusste Entscheidung fest, dass lange Optionslisten
 // fuer Einfach- UND Mehrfachauswahl gleich durchsuchbar sind und die Schwelle EINMAL zentral definiert ist.
 // Kein DOM-Testsetup im Projekt - deshalb wie templateRefs.test.ts ueber den echten Vue-Compiler.
 import { test } from 'node:test'
@@ -29,7 +29,7 @@ const hasAttr = (el: Node, name: string): boolean => (el.props ?? []).some((p: N
 const guard = (el: Node): string =>
   (el.props ?? []).find((p: Node) => p.type === DIRECTIVE && p.name === 'else-if')?.exp?.content ?? ''
 
-test('die durchsuchbare Liste gibt es fuer Einfach- UND Mehrfachauswahl (#278)', () => {
+test('die durchsuchbare Liste gibt es fuer Einfach- UND Mehrfachauswahl', () => {
   const lists = collect(descriptor.template.ast)
   assert.equal(lists.length, 2, 'je eine OptionSearchList im Multi- und im Single-Zweig')
   assert.equal(lists.filter((l) => hasAttr(l, 'multiple')).length, 1, 'genau eine davon im Mehrfachauswahl-Zweig')
@@ -41,8 +41,8 @@ test('die Schwelle kommt aus dem gemeinsamen Kern, nicht als feste Zahl im Feld'
   assert.match(script, /useSearch\s*=\s*computed\(\(\)\s*=>\s*options\.value\.length\s*>=\s*OPTION_SEARCH_MIN\)/)
 })
 
-test('ein offenes Dropdown hebt seine Karte ueber die folgenden Abschnitte - unter die Sticky-Leiste (#278)', () => {
-  // Maintainer-Entscheid: schwebend statt aufklappen. Ohne diese Regel malen spaetere Karten (collapse =
+test('ein offenes Dropdown hebt seine Karte ueber die folgenden Abschnitte - unter die Sticky-Leiste', () => {
+  // Bewusste Entscheidung: schwebend statt aufklappen. Ohne diese Regel malen spaetere Karten (collapse =
   // eigener Stapel-Kontext) und „nicht erhoben"-Zeilen ueber die offene Liste (Geraetetest).
   const css = readFileSync(fileURLToPath(new URL('../../style.css', import.meta.url)), 'utf8')
   const rule = css.match(/\.collapse:has\(\.dropdown\[open\]\)\s*\{([^}]*)\}/)

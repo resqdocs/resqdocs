@@ -1,22 +1,22 @@
 # App-Informationsarchitektur (S4)
 
-> **Umbenennung (#138, 2026-06-12):** Die Tabs heißen in der App jetzt **Einsatz, Vorlagen
+> **Umbenennung (2026-06-12):** Die Tabs heißen in der App jetzt **Einsatz, Vorlagen
 > (vorher „Protokolle"), Textbausteine (vorher „Bausteine"), Einstellungen**. Dieses Dokument
 > verwendet teils noch die alten Namen; gemeint sind dieselben Bereiche.
 
 
 > **Fundament-Spezifikation S4** — wie die App fachlich und strukturell aufgebaut ist, *bevor* weitere
-> UI-Features oder der Protokoll-Kreator (#13) gebaut werden. Mobile-first, lokal-first, Usability als
+> UI-Features oder der Protokoll-Kreator gebaut werden. Mobile-first, lokal-first, Usability als
 > Top-Priorität. Status: **Entwurf (0.x)** — `1.0`/MVP-Zeitpunkt deklariert der Maintainer.
 > Bezug: `protocols/SCHEMA.md` (S1), `docs/pico-api.md` (S2), `docs/data-flow.md` (S3),
 > `docs/app-runtime.md` (Runtime), `docs/decisions/0002-spec-s4-app-ia.md`.
 
-## Maintainer-Entscheidungen (S4, via Frage-Tool)
+## Grundsatzentscheidungen (S4)
 
 - **Navigation:** **4 Bottom-Tabs** — *Einsatz · Protokolle · Bausteine · Einstellungen*. **Gerät/Pico**
   ist ein Unterbereich von *Einstellungen* (kein eigener Tab); der **Verbindungs-Indikator** bleibt global
   im Header.
-- **Protokoll-Kreator (#13):** **Teil des MVP** (Erstellen/Bearbeiten eigener Protokolle).
+- **Protokoll-Kreator:** **Teil des MVP** (Erstellen/Bearbeiten eigener Protokolle).
 - **Info/Hilfe:** **Unterbereich von *Einstellungen*** (kein eigener Tab).
 - **Datenschutz/Reset:** **„Sitzung zurücksetzen" prominent im *Einsatz***; Lösch-Funktionen
   (Bausteine / alle lokalen Daten) in *Einstellungen*.
@@ -53,13 +53,13 @@ Sechs fachliche Bereiche, abgebildet auf **4 Tabs** (Gerät + Info/Hilfe als Unt
 - **Live-Vorschau** des Klartexts (`render(...)`), konsistent zur Eingabemaske (geteilte Runtime).
 - **Kopieren / „An Bridge senden"** (`POST /type`, App chunkt > 16384 Zeichen; OS aus App-Einstellung).
 - **„Sitzung zurücksetzen"** — **prominent**, verwirft `caseState` vollständig.
-- **Medplan-Scan** (on-device, nur Medikament+Dosierung → transient): **eigener Track #9–#11**, nicht
+- **Medplan-Scan** (on-device, nur Medikament+Dosierung → transient): **eigener Track**, nicht
   Teil dieses S4-Schnitts.
 - **Fall-Zustand (`caseState`) ist flüchtig** — keine Persistenz (S3).
 
 ### 2.2 Protokolle (Tab) — Auswahl + Kreator
 - **Liste** der eigenen Protokolle (persistent, neutral); **aktives** Protokoll wählen.
-- **Kreator (#13, MVP):** Blöcke → Punkte, Standardinhalt, **Variablen**, **`visibleIf`**, **optionale
+- **Kreator (MVP):** Blöcke → Punkte, Standardinhalt, **Variablen**, **`visibleIf`**, **optionale
   Blöcke** ohne Code zusammenklicken (S1-Modell).
 - **Import/Export** als JSON (Teilen opt-in). **Seed-Muster** kopierbar — **kein** kanonisches
   Maintainer-Protokoll; jeder baut sein eigenes Standardprotokoll.
@@ -68,10 +68,10 @@ Sechs fachliche Bereiche, abgebildet auf **4 Tabs** (Gerät + Info/Hilfe als Unt
 ### 2.3 Bausteine (Tab) — neutrale Block-Bibliothek
 - Verwaltung **nutzer-globaler, wiederverwendbarer Blöcke** (z. B. „Mitfahrtverweigerung") + **Snippets**
   (neutrale Texte): anlegen, bearbeiten, löschen. **Neutral, persistent** (`library`).
-- **Umgesetzt (#13-F3):** MVP-Shell + Persistenz über `library.blocks`/`library.snippets` (SQLite nativ /
+- **Umgesetzt:** MVP-Shell + Persistenz über `library.blocks`/`library.snippets` (SQLite nativ /
   In-Memory im Web-Dev), gekapselt über `useStorage`/`LibraryRepository`.
 - Einsetzen in ein Protokoll = **Kopie** (neue Block-`id`), **nicht** Referenz → Protokolle bleiben
-  portabel/selbst-enthalten (S1). **Umgesetzt (#13-F4):** „Aus Library einfügen" im Protokolle-Tab
+  portabel/selbst-enthalten (S1). **Umgesetzt:** „Aus Library einfügen" im Protokolle-Tab
   (Baustein → neuer Block, Snippet → `text`-Punkt; frische IDs + `visibleIf`-Remap, kein Live-Link).
 - **Später:** optionale Cloud-Sync-Schicht — **nur** für diese neutralen Bausteine, opt-in.
 
@@ -90,8 +90,8 @@ Sechs fachliche Bereiche, abgebildet auf **4 Tabs** (Gerät + Info/Hilfe als Unt
 - **Datenschutz/Reset:** „Library löschen", „App-Einstellungen zurücksetzen", „Alles lokal zurücksetzen",
   Hinweistexte (keine dauerhafte Speicherung von Patientendaten), Nutzerverantwortung.
 - **Info/Hilfe** (2.6).
-- **Umgesetzt (#14-A):** strukturierte Shell — App-Einstellungen · Gerät/Pico (**Vorschau**, echte
-  Kommunikation in #14-B) · Datenschutz & lokale Daten · Info/Hilfe · Open Source. Lösch-Aktionen über
+- **Umgesetzt:** strukturierte Shell — App-Einstellungen · Gerät/Pico (**Vorschau**, echte
+  Kommunikation in einem Folgeschritt) · Datenschutz & lokale Daten · Info/Hilfe · Open Source. Lösch-Aktionen über
   `useStorage` (`resetLibrary`/`resetSettings`) mit Bestätigung; **keine** direkte SQLite-/Preferences-
   Nutzung in Komponenten. `caseState`-Reset bleibt im Einsatz-Tab.
 
@@ -171,7 +171,7 @@ Bausteine, opt-in. Der `POST /type`-Body kann Patientendaten enthalten → nur i
 - **Navigation:** 4 Tabs (Einsatz · Protokolle · Bausteine · Einstellungen).
 - **Einsatz:** Composer auf S1-Modell, Variablen/Punkte/optionale Blöcke, Live-Vorschau, „An Bridge
   senden", „Sitzung zurücksetzen". `caseState` flüchtig.
-- **Protokolle:** Liste + **Protokoll-Kreator (#13)** (Blöcke/Punkte/Variablen/`visibleIf`/optionale
+- **Protokolle:** Liste + **Protokoll-Kreator** (Blöcke/Punkte/Variablen/`visibleIf`/optionale
   Blöcke), Import/Export JSON, Seed-Muster kopieren.
 - **Bausteine:** neutrale Block-Bibliothek (anlegen/bearbeiten/löschen, copy-on-insert).
 - **Einstellungen:** Default-OS, **Gerät/Pico** (Status, SSID-`<id>` via `/config`), Datenschutz/Reset,
@@ -179,7 +179,7 @@ Bausteine, opt-in. Der `POST /type`-Body kann Patientendaten enthalten → nur i
 
 **Nach MVP (eigene Tracks):**
 - Optionale **Cloud-Sync** neutraler Bausteine (opt-in, nie Patientendaten).
-- **Medplan-Scan** (#9–#11, on-device).
+- **Medplan-Scan** (on-device).
 - Teilen von Protokollen über reine Datei-Weitergabe hinaus.
 
 **Ausdrücklich nicht Ziel:**
@@ -190,7 +190,7 @@ Bausteine, opt-in. Der `POST /type`-Body kann Patientendaten enthalten → nur i
 
 ## 8. Offene Entscheidungen
 
-**Entschieden (Abschnitt „Maintainer-Entscheidungen"):** Navigation (4 Tabs), Kreator im MVP,
+**Entschieden (Abschnitt „Grundsatzentscheidungen"):** Navigation (4 Tabs), Kreator im MVP,
 Info/Hilfe in Einstellungen, Reset prominent im Einsatz.
 
 **Noch offen (eigene spätere Frage-Runden, nicht in S4):**
@@ -199,7 +199,7 @@ Info/Hilfe in Einstellungen, Reset prominent im Einsatz.
   App-Einstellungen, **SQLite** (`@capacitor-community/sqlite`) für strukturierte `library`-Daten,
   hinter gekapselter `useStorage()`-Schicht. Umsetzung ist ein separater Folgeschritt.
 - Sync-/Konfliktmodell der optionalen Cloud-Bausteine.
-- Genauer MVP-Umfang des Kreators (welche Punkt-/Variablentypen zuerst editierbar) → mit #13.
+- Genauer MVP-Umfang des Kreators (welche Punkt-/Variablentypen zuerst editierbar) → mit der Kreator-Umsetzung.
 
 ## Querschnitt (verbindlich)
 

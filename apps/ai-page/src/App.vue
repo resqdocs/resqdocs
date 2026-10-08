@@ -2,7 +2,7 @@
 /**
  * ai.resqdocs.app — „Bring dein eigenes LLM": Nutzer kopiert den (kurzen) Prompt, fuegt ihn in SEIN
  * LLM ein, das die Doku laedt (oder via Paste-Fallback) und ein Protokoll-JSON erzeugt -> Import in
- * der ResQDocs-App (Vorlagen -> ⋮ -> Daten -> Importieren; #261 — der Web-Editor ist kein Ziel mehr).
+ * der ResQDocs-App (Vorlagen -> ⋮ -> Daten -> Importieren; der Web-Editor ist kein Ziel mehr).
  * Prompt-primaer; Doku ist nur eine rohe Datei fuers LLM. Artefakte kommen aus public/ (aus ai-docs/).
  */
 import { ref, computed, onMounted, watch } from 'vue'

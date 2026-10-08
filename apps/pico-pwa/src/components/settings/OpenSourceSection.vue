@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** Open Source / Lizenz (#14-A). Faktische Hinweise, keine Rechtsberatung. */
+/** Open Source / Lizenz. Faktische Hinweise, keine Rechtsberatung. */
 </script>
 
 <template>

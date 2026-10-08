@@ -120,7 +120,7 @@ export interface FunctionConfig {
   /** untereinander (block, je Zeile eigene Zeile) vs hintereinander (inline, mit Separator). Default 'block'. */
   rowLayout?: 'block' | 'inline'
   /** Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> " · " (Mittelpunkt:
-   *  hebt die Zeilengrenze vom Komma im Zeilenformat "Name Staerke, Schema" ab, #262). */
+   *  hebt die Zeilengrenze vom Komma im Zeilenformat "Name Staerke, Schema" ab). */
   rowSeparator?: string
   /** Praefix je Zeile bei rowLayout='block'. */
   rowPrefix?: string
@@ -140,7 +140,7 @@ export interface FunctionNode {
   /** Titel-Format (prefix/suffix + Banner Fuellzeichen/Breite wie beim Container). */
   heading?: Heading
   /** Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen).
-   *  Wirkt wie beim Feld (Maintainer 2026-07-03): auch mehrzeilige Listen-Funktionen (Medikamentenplan/
+   *  Wirkt wie beim Feld: auch mehrzeilige Listen-Funktionen (Medikamentenplan/
    *  Aerzte) koennen inline an die laufende Zeile - nur ein Titel-Banner (Titel auf eigener Zeile) bleibt Block. */
   inline?: boolean
   /** Kein Feld-Trenner VOR dieser Funktion (klebt ans vorherige inline-Element). */
@@ -166,7 +166,7 @@ export type Node = Container | Field | FunctionNode
 /** Eine Medikamenten-Zeile (Funktion Medikamentenplan). Bewusst NUR patientenrelevante Felder. */
 export interface MedikamenteRow {
   name: string
-  /** Wirkstaerke des Praeparats (z. B. "400 mg") - eigenes Feld statt im Namen (#262).
+  /** Wirkstaerke des Praeparats (z. B. "400 mg") - eigenes Feld statt im Namen.
    *  Quelle der Wahrheit: eigene Pflege (PZN-Bibliothek/manuell), NICHT der BMP-Scan. */
   staerke?: string
   dosierung?: string
@@ -194,7 +194,7 @@ export interface ArztRow {
   vollmacht?: boolean
 }
 
-/** Eingabe der Funktion „Pack-Years" (#55-Rework): genau EINE Zeile pro Score-Knoten, reine Zahlen.
+/** Eingabe der Funktion „Pack-Years": genau EINE Zeile pro Score-Knoten, reine Zahlen.
  *  Das ERGEBNIS (Packungsjahre) wird abgeleitet (Registry ruft scores.packYears), nie gespeichert -
  *  wie ein berechnetes/read-only Feld (vgl. FHIR calculatedExpression, SurveyJS calculatedValue). */
 export interface PackYearsRow {
@@ -202,7 +202,7 @@ export interface PackYearsRow {
   years?: number
 }
 
-/** Eingabe der Funktion „NEWS2" (#55-Rework): genau EINE Zeile pro Score-Knoten. Die RCP-Parameter
+/** Eingabe der Funktion „NEWS2": genau EINE Zeile pro Score-Knoten. Die RCP-Parameter
  *  Atemfrequenz (rr), SpO2, RR systolisch, Herzfrequenz (pulse), Temperatur, Bewusstsein (ACVPU) + O2-Gabe
  *  (onOxygen). scale2 schaltet die SpO2-Skala 2 (aerztlich dokumentierte Ziel-Saettigung 88-92 %, z. B.
  *  COPD). Score/Risiko werden abgeleitet (Registry ruft scores.news2), nie gespeichert - read-only-Feld. */

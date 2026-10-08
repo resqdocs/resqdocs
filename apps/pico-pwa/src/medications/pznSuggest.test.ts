@@ -1,6 +1,6 @@
 // Laeuft mit:  node --test --experimental-strip-types
 //
-// Reine Query-Semantik des Medikamenten-Suchfelds (#275). Beide Backends (SQL-LIKE, In-Memory-RegExp)
+// Reine Query-Semantik des Medikamenten-Suchfelds. Beide Backends (SQL-LIKE, In-Memory-RegExp)
 // leiten ihre Muster hierher ab - deshalb ist die Bedeutung hier festgenagelt, nicht in den Backends.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

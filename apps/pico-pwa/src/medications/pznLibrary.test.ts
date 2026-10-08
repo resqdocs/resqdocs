@@ -253,7 +253,7 @@ test('exportLibrary: kompakt (String) nur bei reiner Bezeichnung, sonst Objekt (
   assert.deepEqual(ex.entries['00524306'], { wirkstoff: 'Naloxon', staerke: '', label: 'Narcanti', category: 'Antidot', note: 'Opioid-Antagonist' })
 })
 
-test('Wirkstärke (#262): upsert/setStaerke/getEntry, addPzn-Konflikt, Export-Roundtrip', () => {
+test('Wirkstärke: upsert/setStaerke/getEntry, addPzn-Konflikt, Export-Roundtrip', () => {
   let lib = upsertEntry(emptyLibrary(), '12345678', { staerke: '400 mg', label: 'Ibuflam' })
   assert.equal(getEntry(lib, '12345678')!.staerke, '400 mg')
   lib = setStaerke(lib, '12345678', '600 mg')

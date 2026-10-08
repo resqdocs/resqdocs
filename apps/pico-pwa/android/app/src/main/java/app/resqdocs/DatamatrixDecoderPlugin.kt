@@ -10,7 +10,7 @@ import com.getcapacitor.annotation.CapacitorPlugin
 import zxingcpp.BarcodeReader
 
 /**
- * Nativer Data-Matrix-Decoder (#170) — ZXing-C++ (io.github.zxing-cpp:android, Apache-2.0, GMS-frei).
+ * Nativer Data-Matrix-Decoder — ZXing-C++ (io.github.zxing-cpp:android, Apache-2.0, GMS-frei).
  *
  * decode({ data: base64 }) -> { found, text, format }. Dekodiert NUR Data Matrix, rein lokal/offline.
  * Wird vom Web-Code NUR auf Android und nur bei scannerMode 'native_zxingcpp' aufgerufen; das Still

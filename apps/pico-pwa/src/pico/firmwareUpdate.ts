@@ -1,4 +1,4 @@
-// firmwareUpdate.ts — pure OTA-Orchestrierung (#130): Chunk-Upload, Commit,
+// firmwareUpdate.ts — pure OTA-Orchestrierung: Chunk-Upload, Commit,
 // Reboot-Polling. KEIN Vue, KEIN Vite — vollstaendig gegen einen Fake-Client
 // testbar (node --test). Die Vite-Asset-Seite lebt in firmwareAsset.ts, die
 // Vue-Anbindung in useFirmwareUpdate.ts.

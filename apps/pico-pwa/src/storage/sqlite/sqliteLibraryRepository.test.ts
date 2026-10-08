@@ -26,10 +26,10 @@ test('user_version: frisch 0, nach Migration LATEST (=10), idempotent; alle Tabe
   assert.ok(client.hasTable('library_protocols'))
   assert.ok(client.hasTable('library_blocks'))
   assert.ok(client.hasTable('library_snippets'))
-  assert.ok(client.hasTable('pzn_entries')) // #194/#195: PZN-Bibliothek (Migration v3)
+  assert.ok(client.hasTable('pzn_entries')) // PZN-Bibliothek (Migration v3)
   assert.ok(client.hasTable('rework_protocols')) // Rework-Bibliothek (Migration v6)
   assert.ok(client.hasTable('rework_blocks')) // Rework-Baustein-Bibliothek (Migration v9)
-  // pzn_tri (Migration v10, #275) ist eine VIRTUAL TABLE (fts5) - der Regex-Fake erfasst die nicht;
+  // pzn_tri (Migration v10) ist eine VIRTUAL TABLE (fts5) - der Regex-Fake erfasst die nicht;
   // ihre reale Existenz belegen die node:sqlite-Repo-Tests (suggest joint auf pzn_tri).
   // erneuter Lauf ändert nichts (keine DDL, Version bleibt)
   assert.equal(await runMigrations(client), LATEST_VERSION)

@@ -43,7 +43,7 @@ firmware/bridge/build/
 # flashing artifacts (a deliberate project exception, documented in the
 # firmware README). General dist/ output elsewhere stays ignored.
 
-# Capacitor native projects: SIND versioniert (Capacitor-Standardpraxis, #25) -
+# Capacitor native projects: SIND versioniert (Capacitor-Standardpraxis) -
 # sie tragen echte Konfiguration (Info.plist-Berechtigungen, ATS, Signing).
 # Build-/Pod-Artefakte filtert das jeweilige ios|android/.gitignore.
 

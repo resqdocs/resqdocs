@@ -17,13 +17,13 @@ import LegalSection from './LegalSection.vue'
 import OpenSourceSection from './OpenSourceSection.vue'
 
 /**
- * Einstellungen-Tab (#14-A). Strukturierte Shell: App-Einstellungen · Gerät/Pico
+ * Einstellungen-Tab. Strukturierte Shell: App-Einstellungen · Gerät/Pico
  * (Vorschau) · Datenschutz & lokale Daten · Info/Hilfe · Open Source. Alle
  * Storage-/Reset-Aktionen laufen über die gekapselte Schicht (useStorage) — keine
  * Komponente greift direkt auf SQLite/Preferences zu. Keine Patientendaten, kein
  * persistenter caseState.
  *
- * Die PZN-Bibliothek (#190) ist ein eigener Unterpunkt: aus der Übersicht öffnet
+ * Die PZN-Bibliothek ist ein eigener Unterpunkt: aus der Übersicht öffnet
  * eine Navi-Zeile die dedizierte Seite (eigene Suche/Liste für bis zu ~1000
  * Einträge); „Zurück" kehrt in die Übersicht zurück. Reiner Sub-Seiten-State,
  * kein Router (App ist tab-basiert).
@@ -55,7 +55,7 @@ watch(page, (p) => {
 </script>
 
 <template>
-  <!-- Eigene Unterseite: PZN-Bibliothek (#190) -->
+  <!-- Eigene Unterseite: PZN-Bibliothek -->
   <PznLibraryPage v-if="page === 'pznLibrary'" @back="page = 'overview'" />
 
   <!-- Eigene Unterseite: Bridge/Gerät (großer Bereich, aus der Übersicht ausgelagert — Muster wie PZN). -->
@@ -76,7 +76,7 @@ watch(page, (p) => {
     <AppSettingsSection />
     <ScannerSection />
 
-    <!-- Große/tiefe Bereiche als eigene Unterseiten (Navi-Zeilen, Muster #190). Wert/Status direkt auf der Zeile. -->
+    <!-- Große/tiefe Bereiche als eigene Unterseiten (Navi-Zeilen, Muster wie PZN-Bibliothek). Wert/Status direkt auf der Zeile. -->
     <button
       type="button"
       class="card bg-base-100 text-left shadow transition hover:bg-base-200"
@@ -100,7 +100,7 @@ watch(page, (p) => {
       </div>
     </button>
 
-    <!-- Navi-Zeile zur eigenen PZN-Bibliothek-Seite (#190): nutzergepflegt, lokal, protokollentkoppelt. -->
+    <!-- Navi-Zeile zur eigenen PZN-Bibliothek-Seite: nutzergepflegt, lokal, protokollentkoppelt. -->
     <button
       type="button"
       class="card bg-base-100 text-left shadow transition hover:bg-base-200"

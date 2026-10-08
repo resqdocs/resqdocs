@@ -164,7 +164,7 @@ test('allSorted: vollständige Liste nach pzn (für Export)', async () => {
   assert.deepEqual((await repo.allSorted()).map((e) => e.pzn), ['00000001', '00000002'])
 })
 
-test('Wirkstärke (#262, Migration v8): setEntry/getEntry/setStaerke/search/bulkPut-Roundtrip', async () => {
+test('Wirkstärke (Migration v8): setEntry/getEntry/setStaerke/search/bulkPut-Roundtrip', async () => {
   const repo = await freshRepo()
   await repo.setEntry('12345678', { wirkstoff: 'Ibuprofen', staerke: '400 mg', label: 'Ibuflam', category: '', note: '' })
   assert.equal((await repo.getEntry('12345678'))!.staerke, '400 mg')
@@ -180,7 +180,7 @@ test('Wirkstärke (#262, Migration v8): setEntry/getEntry/setStaerke/search/bulk
   assert.equal((await repo.getEntry('12345678'))!.staerke, '800 mg', 'overwrite uebernimmt den Import')
 })
 
-test('Nachpflege-Filter (#264): page/search mit missingStaerke + countMissingStaerke', async () => {
+test('Nachpflege-Filter: page/search mit missingStaerke + countMissingStaerke', async () => {
   const repo = await freshRepo()
   await repo.setEntry('00000001', { wirkstoff: 'Ibuprofen', staerke: '400 mg', label: 'Ibuflam', category: '', note: '' })
   await repo.setEntry('00000002', { wirkstoff: 'Ibuprofen', staerke: '', label: 'Ibu akut', category: '', note: '' })
@@ -200,7 +200,7 @@ test('Nachpflege-Filter (#264): page/search mit missingStaerke + countMissingSta
   assert.equal(await repo.countMissingStaerke(), 1)
 })
 
-// --- #275: Typeahead-Suche (Infix + Wildcard, Fragmente ab 3) ---------------------------------------
+// --- Typeahead-Suche (Infix + Wildcard, Fragmente ab 3) ---------------------------------------------
 // Prueft zugleich Migration v10: das CREATE VIRTUAL TABLE ... tokenize='trigram' muss durchlaufen
 // (node:sqlite bringt ein Trigram-faehiges SQLite). suggest matcht ueber den Trigram-Index.
 
@@ -240,7 +240,7 @@ test('suggest: Label wird mitgesucht, Ausgabe nach Name (nicht nach pzn)', async
 })
 
 test('suggest: Namen mit passendem Wortanfang stehen ueber blossen Infix-Treffern', async () => {
-  // Der Kern des Reihungs-Fix (#275): sonst versinkt das gesuchte Medikament unter zufaellig
+  // Der Kern des Reihungs-Fix: sonst versinkt das gesuchte Medikament unter zufaellig
   // niedrigen PZN. 'Comet' enthaelt 'met' nur mittig und stuende alphabetisch VOR 'Metformin' -
   // trotzdem gehoert der Praefix-Treffer nach oben.
   const repo = await repoMit(

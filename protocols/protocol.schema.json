@@ -219,7 +219,7 @@
         },
         "required": {
           "type": "boolean",
-          "description": "Pflichtpunkt (#71): 'immer dokumentieren' - der Einsatz bietet den Zustand 'nicht erhoben' NICHT an. Default false (alles abwaehlbar)."
+          "description": "Pflichtpunkt: 'immer dokumentieren' - der Einsatz bietet den Zustand 'nicht erhoben' NICHT an. Default false (alles abwaehlbar)."
         },
         "visibleIf": {
           "$ref": "#/$defs/predicate"
@@ -233,7 +233,7 @@
             },
             "title": {
               "type": "string",
-              "description": "Anzeige-Titel fuer Editor/Einsatz (#70). Taucht NICHT in der getippten Ausgabe auf; das (ggf. leere) label wird getippt."
+              "description": "Anzeige-Titel fuer Editor/Einsatz. Taucht NICHT in der getippten Ausgabe auf; das (ggf. leere) label wird getippt."
             },
             "default": {
               "type": "string"
@@ -249,11 +249,11 @@
             },
             "multiline": {
               "type": "boolean",
-              "description": "Langer Freitext (#91): im Einsatz Tap -> Modal-Editor mit grossem Textbereich. Default false."
+              "description": "Langer Freitext: im Einsatz Tap -> Modal-Editor mit grossem Textbereich. Default false."
             },
             "tool": {
               "type": "string",
-              "description": "Optionales Feld-Tool (#54): id aus der App-Tool-Registry (z. B. medplanScan, packYears, bmi, lams, news2). Reines UI-Feature ohne Renderer-Wirkung."
+              "description": "Optionales Feld-Tool: id aus der App-Tool-Registry (z. B. medplanScan, packYears, bmi, lams, news2). Reines UI-Feature ohne Renderer-Wirkung."
             }
           },
           "required": [
@@ -273,7 +273,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Alternative Normalbefund-Texte (#73); im Einsatz waehlbar. Default bleibt 'normal'."
+              "description": "Alternative Normalbefund-Texte; im Einsatz waehlbar. Default bleibt 'normal'."
             },
             "value": {
               "type": "string"
@@ -300,7 +300,7 @@
             },
             "collapsible": {
               "type": "boolean",
-              "description": "Einsatzansicht rendert die Gruppe einklappbar (#42). Reines UI-Flag ohne Renderer-Wirkung."
+              "description": "Einsatzansicht rendert die Gruppe einklappbar. Reines UI-Flag ohne Renderer-Wirkung."
             },
             "findings": {
               "type": "array",
@@ -384,7 +384,7 @@
           "required": [
             "id"
           ],
-          "description": "Medikamente (#146): Zeilen {name, dosierung, kommentar} entstehen NUR im Einsatz - Vorlagen enthalten keine Patientendaten."
+          "description": "Medikamente: Zeilen {name, dosierung, kommentar} entstehen NUR im Einsatz - Vorlagen enthalten keine Patientendaten."
         }
       ]
     }

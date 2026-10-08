@@ -1,4 +1,4 @@
-# Protokoll-Kreator — MVP-Spezifikation (#13)
+# Protokoll-Kreator — MVP-Spezifikation
 
 > ⚠️ **Beschreibt den Pre-Rework-Stand** (altes Modell). Der In-App-Editor wurde reworked;
 > aktuelle Wahrheit für App+Package: [`docs/rework/`](rework/README.md). Historischer Stand in
@@ -10,7 +10,7 @@
 > `docs/data-flow.md` (S3), `docs/app-runtime.md` + `packages/shared/renderer/runtime.mjs` (Runtime),
 > `docs/decisions/0003-protocol-creator-mvp.md`.
 
-## Maintainer-Entscheidungen (via Frage-Tool)
+## Grundsatzentscheidungen
 
 - **`visibleIf` im MVP:** **einfacher Regel-Editor** — eine Bedingung „Element sichtbar, wenn
   Variable/Punkt X `eq`/`in`/`truthy` Wert Z". Komplexe (verschachtelte `all`/`any`/`not`) Regeln aus
@@ -181,7 +181,7 @@ Protokolle (Tab)
 - **Gekapselte Schichten:** Editor schreibt über eine `useStorage()`/`library`-Schicht; **kein**
   direkter Storage-Zugriff in Komponenten; Rendern nur über die Runtime.
 
-## 10. Pflicht-Tests für die spätere Umsetzung (#13)
+## 10. Pflicht-Tests für die spätere Umsetzung
 
 - Protokoll **anlegen** (gültige Minimalstruktur, system-IDs eindeutig).
 - Protokoll **duplizieren** (neue `protocol.id`, Inhalt identisch, unabhängig editierbar).
@@ -197,7 +197,7 @@ Protokolle (Tab)
   propagiert nicht).
 - **Protokoll wird nicht mutiert**, wo Lese-Operationen erwartet werden (Vorschau/Validierung).
 
-## Implementierung — Slice #13-A: Creator-Domainlogik (umgesetzt)
+## Implementierung — Slice A: Creator-Domainlogik (umgesetzt)
 
 > Dieser Slice ist **reine Domainlogik**, **keine UI**. Sie ist die Vue-unabhängige Grundlage für die
 > spätere „Protokolle"-Tab-UI.
@@ -227,10 +227,10 @@ Protokolle (Tab)
   `protocol.schema.json` (CI/Export). Export serialisiert nur valide Protokolle; Import parst + prüft und
   lehnt ungültiges JSON/Schema ab.
 
-## Implementierung — Slice #13-B: Protokolle-Tab-Shell (umgesetzt)
+## Implementierung — Slice B: Protokolle-Tab-Shell (umgesetzt)
 
 > Dieser Slice ist eine **UI-Shell**, **kein** vollständiger Editor. Er beweist den Lese-/Auswahl-/
-> Validierungs-/Vorschau-Fluss auf der #13-A-Domainlogik.
+> Validierungs-/Vorschau-Fluss auf der Domainlogik aus Slice A.
 
 - **Navigation (S4):** App-Shell auf **4 Bottom-Tabs** umgestellt (`App.vue`, DaisyUI `dock`):
   *Einsatz · Protokolle · Bausteine · Einstellungen*. Tabwechsel via `v-show` → der Einsatz-`caseState`
@@ -250,7 +250,7 @@ Protokolle (Tab)
   Patientendaten, **kein** `caseState`, **keine** Auto-Übernahme. Creator-Domainfunktionen werden
   **wiederverwendet**, nicht dupliziert; Vorschau nutzt **Renderer/Runtime**, nicht nachgebaut.
 
-## Implementierung — Slice #13-C: Geführter Block-/Punkt-Editor (umgesetzt)
+## Implementierung — Slice C: Geführter Block-/Punkt-Editor (umgesetzt)
 
 > Dieser Slice ist der erste **geführte Editor** im Protokolle-Tab: Blöcke und Punkte des ausgewählten
 > Protokolls strukturiert bearbeiten. **Variablen-UI und `visibleIf`-Editor sind bewusst Folge-Slices.**
@@ -270,12 +270,12 @@ Protokolle (Tab)
   App-Laufzeit) und verwaltet zusätzlich die **Editor-Auswahl** (aktiver Block/Punkt) — so teilen sich
   Liste, Editor, Validierung und Vorschau denselben Zustand. **Keine Persistenz.**
 - **UX-Details:** Blocktitel über lokalen State (leerer Titel wird nicht committet → kein Abbruch durch
-  `updateBlock`); Typwechsel nach Anlage **nicht** angeboten (durch #13-A abgelehnt); Löschen mit
+  `updateBlock`); Typwechsel nach Anlage **nicht** angeboten (durch Slice A abgelehnt); Löschen mit
   Bestätigung; mobile-first (kompakte Formulare, kein Drag-and-drop).
 - **Trennung gewahrt:** nur neutrale Vorlagen; **kein** `caseState`, **keine** Auto-Übernahme, **keine**
   Patientendaten.
 
-## Implementierung — Slice #13-D: Variablen-Editor + einfacher `visibleIf`-Editor (umgesetzt)
+## Implementierung — Slice D: Variablen-Editor + einfacher `visibleIf`-Editor (umgesetzt)
 
 > Ergänzt den geführten Editor um **Variablen** und einen **einfachen `visibleIf`-Editor**. Komplexe
 > Regeln bleiben **read-only**.
@@ -283,10 +283,10 @@ Protokolle (Tab)
 - **Variablen-Bereich** (`components/protocols/editor/Variable{Editor,List,Form}.vue`): Variable anlegen
   (Typwahl select/boolean/text/number), bearbeiten (Label, Standardwert, **select-Optionen** mit Wert/
   Anzeige, `de-gender`-Flag), löschen. **ID system-generiert/stabil**, Typ nur angezeigt (kein Typwechsel,
-  #13-A).
+  Slice A).
 - **Variable löschen mit Referenzschutz:** vor dem Löschen prüft die UI `findVariableReferences`. Solange
   Referenzen (visibleIf / `{{var:id}}`) bestehen, ist Löschen **blockiert** (konservativer Default laut
-  #13-Spec) und die betroffenen Stellen werden angezeigt.
+  Kreator-Spec) und die betroffenen Stellen werden angezeigt.
 - **Einfacher `visibleIf`-Editor** (`VisibleIfEditor.vue`, an Block **und** Punkt): genau **eine**
   Bedingung — Quelle **Variable**/**Punkt** (datengetriebene Auswahl), Operatoren **eq/filled/truthy/
   state**; Bedingung setzen/bearbeiten/entfernen. Prädikat-Bau über `createSimpleVisibleIf` (Domain).
@@ -300,7 +300,7 @@ Protokolle (Tab)
   `updateBlock`/`updatePoint`); `useCreatorSession` verwaltet zusätzlich die Variablen-Auswahl. **Keine
   Persistenz, kein `caseState`, keine Patientendaten.**
 
-## Implementierung — Slice #13-E: Import-/Export-UX (umgesetzt)
+## Implementierung — Slice E: Import-/Export-UX (umgesetzt)
 
 > Import und Export sind **bewusste Nutzeraktionen**. Import ist **validiert**; Export gibt **nur valide**
 > Protokolle aus. Beides bleibt **flüchtig** (keine Persistenz).
@@ -321,10 +321,10 @@ Protokolle (Tab)
 - **Keine Persistenz:** Import schreibt **nicht** in LocalStorage/Preferences/IndexedDB/Cloud — nur in die
   flüchtige Session; nach App-Neustart weg, bis eine Storage-Entscheidung getroffen/gebaut ist.
 
-## Implementierung — Slice #13-F1: Storage-Schicht (Verträge + Fake + Preferences-Settings, umgesetzt)
+## Implementierung — Slice F1: Storage-Schicht (Verträge + Fake + Preferences-Settings, umgesetzt)
 
 > Führt **nur** die gekapselte Storage-Schicht ein: Verträge, In-Memory-Library-Fake und
-> Preferences-Settings. **SQLite folgt in #13-F2.** Protokolle werden hier **noch nicht** dauerhaft
+> Preferences-Settings. **SQLite folgt in Slice F2.** Protokolle werden hier **noch nicht** dauerhaft
 > gespeichert (Library ist In-Memory). Keine `caseState`-Persistenz, keine Patientendaten.
 
 - **Verträge** (`src/storage/types.ts`): `AppSettings`, `LibraryState`, `KeyValueAdapter`,
@@ -335,16 +335,16 @@ Protokolle (Tab)
 - **Settings:** `createSettingsRepository(adapter)` — lädt/speichert/resettet `AppSettings`; **Sanitize**
   übernimmt **nur** die vier bekannten Felder → keine Protokolle/Patientendaten in Preferences.
 - **Library (vorerst):** `createMemoryLibraryRepository()` (In-Memory-Fake; load/save/delete/reset; gibt
-  Kopien zurück, nicht persistent). **SQLite (#13-F2) wird hinter demselben `LibraryRepository`-Interface
+  Kopien zurück, nicht persistent). **SQLite (Slice F2) wird hinter demselben `LibraryRepository`-Interface
   eingehängt** — kein UI-/Session-Code ändert sich.
 - **Composable:** `useStorage()` bündelt Settings (Preferences) + Library (Memory-Fake). **Kein**
   direkter `localStorage`/`sessionStorage`/`IndexedDB`-Zugriff im App-Code (Preferences kapselt das).
 - **Minimale Integration:** `components/settings/SettingsTab.vue` (Default-OS, Theme, Reset) im
   Einstellungen-Tab. Die Creator-Session bleibt **bewusst flüchtig** (keine Auto-Persistenz).
 - **Keine neue Dependency:** `@capacitor/preferences` war bereits vorhanden; SQLite-Plugin folgt erst mit
-  #13-F2.
+  Slice F2.
 
-## Implementierung — Slice #13-F2: SQLite-Library + bewusste Session-Anbindung (umgesetzt)
+## Implementierung — Slice F2: SQLite-Library + bewusste Session-Anbindung (umgesetzt)
 
 > Ergänzt **SQLite für `library.protocols`** hinter dem F1-Interface; F1 bleibt unverändert. Protokolle
 > werden **vor dem Speichern und nach dem Laden validiert**. **Kein Auto-Save.** `caseState` bleibt
@@ -353,7 +353,7 @@ Protokolle (Tab)
 - **Dependency:** **eine** neue — `@capacitor-community/sqlite@^8.1.0` (DR-0004). **Kein** jeep-sqlite/
   Web-Plugin; Web-Dev nutzt den vorhandenen In-Memory-Fake.
 - **Schicht** (`src/storage/sqlite/`): `sqlClient.ts` (Interface) · `sqliteMigrations.ts`
-  (`library_protocols`, **versioniert über `PRAGMA user_version`**, idempotent — #13-F2.1) · `sqliteLibraryRepository.ts`
+  (`library_protocols`, **versioniert über `PRAGMA user_version`**, idempotent — Slice F2.1) · `sqliteLibraryRepository.ts`
   (`createLibraryRepositoryOnClient`, **rein**, gegen Fake-SQL-Client getestet) · `capacitorSqlClient.ts`
   (nativer Client + `createSqliteLibraryRepository`, **dynamisch** importiert) · `fakeSqlClient.ts` (Test).
 - **Tabelle:** `library_protocols(id, title, schema_version, protocol_json, created_at, updated_at)` —
@@ -368,7 +368,7 @@ Protokolle (Tab)
   speichern", Erfolg/Fehler, Modus-Badge (persistent/In-Memory), Neutralitätshinweis. **Keine** Komponente
   berührt SQLite direkt. **Kein** Auto-Save.
 
-## Härtung — Slice #13-F2.1 (umgesetzt)
+## Härtung — Slice F2.1 (umgesetzt)
 
 - **Migrationen versioniert** über `PRAGMA user_version` (Migration 1 → `user_version=1`); `runMigrations`
   wendet nur Versionen > aktuell an → idempotent, gegen Fake-SQL-Client getestet. Kein Framework, keine
@@ -381,7 +381,7 @@ Protokolle (Tab)
 - **Native-Smoke-Doku:** `docs/native-smoke.md` (manueller Persistenz-Test; TODO: `ios/`/`android/` noch
   hinzuzufügen).
 
-## Implementierung — Slice #13-F3: Bausteine + Snippets (umgesetzt)
+## Implementierung — Slice F3: Bausteine + Snippets (umgesetzt)
 
 > Erweitert die Library um **neutrale Bausteine** (`library.blocks`) und **Snippets**
 > (`library.snippets`) und bindet den **Bausteine-Tab** als MVP-Shell an. SQLite nativ / In-Memory im
@@ -402,7 +402,7 @@ Protokolle (Tab)
   Neutralitäts- + Modus-Hinweis (persistent/In-Memory).
 - **Einfügen in Protokolle (Copy-on-insert):** bewusst **Folge-Slice**.
 
-## Implementierung — Slice #13-F4: Aus Library einfügen (Copy-on-insert, umgesetzt)
+## Implementierung — Slice F4: Aus Library einfügen (Copy-on-insert, umgesetzt)
 
 > Library-Bausteine/Snippets werden beim Einfügen **kopiert, nicht referenziert** → Protokolle bleiben
 > portabel; spätere Library-Änderungen verändern eingefügte Kopien **nicht**. Bewusste Nutzeraktion,
@@ -426,6 +426,6 @@ Protokolle (Tab)
 - **Folge-Slices:** Gerät/Pico + Info/Hilfe in Einstellungen (S4).
 - Drag-and-drop-Umsortierung; Typwechsel nach Anlage; verschachtelter `visibleIf`-Editor; editierbares
   Raw-JSON/Expert-Modus; Patientendaten-Muster-Warnungen; `schemaVersion`-Migrationsassistent — Post-MVP.
-- **#13-F (nächster Slice):** `library`-**Persistenz** gemäß DR-0004 (`useStorage()`/Repository +
+- **Nächster Slice (F):** `library`-**Persistenz** gemäß DR-0004 (`useStorage()`/Repository +
   In-Memory-Fake für Tests; Preferences für Settings, SQLite für `library.*`) sowie **Bausteine**- und
   **Einstellungen**-Tabs.

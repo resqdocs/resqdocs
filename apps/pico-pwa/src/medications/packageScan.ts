@@ -1,4 +1,4 @@
-// Packungs-Scan (#167) - PZN aus dem Code EINER Medikamentenpackung extrahieren.
+// Packungs-Scan - PZN aus dem Code EINER Medikamentenpackung extrahieren.
 //
 // STRIKT datensparsam: es wird AUSSCHLIESSLICH die PZN extrahiert. Zusatzinhalte
 // (Seriennummer, Charge/Lot, Verfalldatum, GTIN) werden IGNORIERT - nie

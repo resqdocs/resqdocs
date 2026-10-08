@@ -1,6 +1,6 @@
-// temporaryCaseDraft.ts — reine, Vue-freie TTL-Logik des temporären Einsatzentwurfs (#173).
+// temporaryCaseDraft.ts — reine, Vue-freie TTL-Logik des temporären Einsatzentwurfs.
 //
-// #173 ist ein BEWUSST begrenzter Ausnahmefall zur DR-0004-Regel „kein caseState im
+// Der Entwurf ist ein BEWUSST begrenzter Ausnahmefall zur DR-0004-Regel „kein caseState im
 // Storage": ein laufender Einsatzentwurf darf kurzfristig LOKAL fortgesetzt werden
 // (auch nach App-Neustart), wird aber per Sliding-Idle-TTL automatisch nach
 // Inaktivität gelöscht. KEIN Archiv, KEIN Sync, KEINE Cloud.

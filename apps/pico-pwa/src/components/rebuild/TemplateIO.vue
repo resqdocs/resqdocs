@@ -318,7 +318,7 @@ function onFile(e: Event): void {
           QR-Code scannen
         </button>
       </div>
-      <!-- Erfolgskette rueckwaerts (#261): Vorlagen entstehen auch per eigenem LLM auf ai.resqdocs.app. -->
+      <!-- Erfolgskette rueckwaerts: Vorlagen entstehen auch per eigenem LLM auf ai.resqdocs.app. -->
       <p class="text-xs text-base-content/50">
         Tipp: Auf
         <a :href="aiUrl" target="_blank" rel="noopener" class="link link-primary">ai.resqdocs.app</a>

@@ -11,7 +11,7 @@ export type SaveBausteinOutcome =
   | { ok: false; error: string }
 
 /**
- * Bausteine-/Snippet-Bibliothek (#13-F3). Geteilter Singleton-Zustand, geladen
+ * Bausteine-/Snippet-Bibliothek. Geteilter Singleton-Zustand, geladen
  * über die gekapselte Storage-Schicht (SQLite nativ / Memory im Web-Dev) — die
  * UI kennt das Backend NICHT. NUR neutrale Vorlagen; keine Patientendaten, kein
  * caseState, kein Auto-Save aus der Einsatzansicht.
@@ -45,7 +45,7 @@ function create() {
     await reload()
   }
   /**
-   * Variante B (#13-F4-Authoring): einen GEFÜLLTEN Protokoll-Block (mit Punkten)
+   * Variante B: einen GEFÜLLTEN Protokoll-Block (mit Punkten)
    * als Baustein ablegen. Tiefe Kopie über buildLibraryBlock; repo.saveBlock
    * validiert (isValidLibraryBlock → wirft bei ungültigem Block, z. B.
    * findingGroup ohne key) — der Fehler wird als Outcome zurückgegeben, nie still.

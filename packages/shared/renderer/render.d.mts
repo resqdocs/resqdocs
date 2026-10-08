@@ -5,13 +5,13 @@
 export type FindingState = 'normal' | 'abnormal'
 export type VariableType = 'select' | 'boolean' | 'text' | 'number'
 
-/** Eine Medikations-Zeile des medikamente-Elements (#146) - nur Einsatz-Zustand. */
+/** Eine Medikations-Zeile des medikamente-Elements - nur Einsatz-Zustand. */
 export interface MedikamenteRow {
   name: string
   dosierung?: string
   kommentar?: string
   /**
-   * Optionale Roh-PZN „im Hintergrund" (#184): bleibt am Eintrag hinterlegt, auch
+   * Optionale Roh-PZN „im Hintergrund": bleibt am Eintrag hinterlegt, auch
    * wenn der Nutzer den Namen überschreibt. NUR für den bewussten Einzel-Transfer
    * in die PZN-Bibliothek; rein additiv, vom Renderer ignoriert (keine Linkage,
    * verlässt das Einsatz-/Protokoll-Datenmodell nur durch eine Nutzerhandlung).
@@ -25,7 +25,7 @@ export type Override =
   | string[]
   | MedikamenteRow[]
   | { value?: string; state?: FindingState }
-  | { excluded: true } // dreistufig (#43 Felder, #71 Befunde): nicht erhoben
+  | { excluded: true } // dreistufig (Felder und Befunde): nicht erhoben
 
 export type ProtocolValues = Record<string, Override>
 export type VariableValues = Record<string, unknown>
@@ -74,7 +74,7 @@ export interface ProtocolTemplate {
   schemaVersion?: string
   id?: string
   title?: string
-  /** Schreibgeschützte Beispiel-Vorlage (#example): nicht editierbar, nur duplizierbar. */
+  /** Schreibgeschützte Beispiel-Vorlage: nicht editierbar, nur duplizierbar. */
   example?: boolean
   lang?: string
   meta?: { source?: string }
@@ -89,7 +89,7 @@ export interface RenderCase {
   activeBlocks?: string[]
 }
 
-/** Überschriftenmuster der Blockkopfzeilen (#68); Teilangaben werden mit Defaults ergänzt. */
+/** Überschriftenmuster der Blockkopfzeilen; Teilangaben werden mit Defaults ergänzt. */
 export interface HeadingOptions {
   pattern?: string
   fill?: string

@@ -1,4 +1,4 @@
-// Typen der Feld-Tool-Rechenmodule (#55). Quellen siehe scores.mjs.
+// Typen der Feld-Tool-Rechenmodule. Quellen siehe scores.mjs.
 
 export function packYears(input: { cigarettesPerDay: number | string; years: number | string }): {
   value: number
@@ -6,7 +6,7 @@ export function packYears(input: { cigarettesPerDay: number | string; years: num
   text: string
 }
 
-/** Rework-Kurzform: kaufmaennisch gerundete GANZE Packungsjahre, „≈" wenn gerundet (#55). */
+/** Rework-Kurzform: kaufmaennisch gerundete GANZE Packungsjahre, „≈" wenn gerundet. */
 export function packYearsShort(raw: number): string
 
 export function bmi(input: { weightKg: number | string; heightCm: number | string }): {

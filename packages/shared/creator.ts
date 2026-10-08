@@ -288,7 +288,7 @@ export function moveTargets(root: Container, id: string): { id: string; label: s
 }
 
 /**
- * „Hoch" als FLIESSENDE LINEARE Bewegung (OmniOutliner-Modell; Maintainer-Wunsch mit Beispiel 3.2 -> 2.4):
+ * „Hoch" als FLIESSENDE LINEARE Bewegung (OmniOutliner-Modell; Beispiel 3.2 -> 2.4):
  * EIN Schritt in der sichtbaren Reihenfolge nach oben, ueber Container-Grenzen hinweg.
  * - Vorgaenger-Geschwister ist ein Container -> HINEIN, ans ENDE (in den Container absteigen);
  * - Vorgaenger-Geschwister ist ein Blatt -> Swap;

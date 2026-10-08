@@ -18,13 +18,13 @@ const tree = useTreeEditor()
 const node = computed<Node | null>(() => (tree.selectedId.value ? findNode(props.root, tree.selectedId.value) : null))
 const heading = computed<Heading>(() => ({ ...DEFAULT_HEADING, ...(node.value?.heading ?? {}) }))
 const isRoot = computed(() => !!node.value && node.value.id === props.root.id)
-// Grundvoraussetzung fuer ALLE Titel-Format-Optionen (#1): ein nicht-leerer Titel. Ohne Titel gibt es keine
+// Grundvoraussetzung fuer ALLE Titel-Format-Optionen: ein nicht-leerer Titel. Ohne Titel gibt es keine
 // Ueberschrift zu gestalten -> die Optionen werden AUSGEBLENDET (v-if), NICHT geleert. Die gesetzten Werte
 // bleiben im Modell und sind wieder editierbar, sobald ein Titel da ist. Nur-Whitespace zaehlt als leer.
 const hasTitle = computed(() => !!node.value?.title?.trim())
 // Listen-Funktion (Medikamentenplan/Aerzte) = mehrzeilige Zeilen-Liste -> bekommt das Zeilen-Format.
 // Quelle: Registry-Marker singleLine (Score wie Pack-Years/NEWS2 = einzeilig -> keine Liste; unbekannt ->
-// keine Liste). Titel/inline/Banner sind bei ALLEN Knoten identisch (Wiedererkennung, Maintainer 2026-07-03):
+// keine Liste). Titel/inline/Banner sind bei ALLEN Knoten identisch (bewusst, fuer die Wiedererkennung):
 // inline verhaelt sich wie beim Feld - Default Block, explizit waehlbar (auch fuer Listen, 2026-07-03).
 const isListFunction = computed(() => {
   const n = node.value
@@ -71,7 +71,7 @@ function setTitleOwnLine(on: boolean): void {
   if (!n) return
   if (n.type === 'container' || n.type === 'function') {
     // Banner an = Titel auf eigener Zeile = strukturell Block -> inline-Flags raeumen (wie beim Feld,
-    // sonst reaktiviert sich ein stale inline still beim spaeteren Banner-Aus, Verify #55).
+    // sonst reaktiviert sich ein stale inline still beim spaeteren Banner-Aus).
     if (on) set({ titleInline: false, inline: false, noSeparatorBefore: false })
     else set({ titleInline: true })
     return
@@ -99,7 +99,7 @@ function addOption(): void {
   // Banner-Zustand einfrieren, falls er nur ueber den mehrzeilig-Default kam (sonst springt er still aus).
   set({ options: [...fieldOptions(), ''], multiline: undefined, titleInline: titleOwnLine.value ? false : node.value?.type === 'field' ? node.value.titleInline : undefined })
 }
-// „Liste einfuegen" (#278): viele Optionen auf einmal anlegen (z. B. Alarmierungscodes, eine pro Zeile).
+// „Liste einfuegen": viele Optionen auf einmal anlegen (z. B. Alarmierungscodes, eine pro Zeile).
 // Bestehende Optionen bleiben unangetastet; Doppeltes wird uebersprungen (Regeln: optionList.ts).
 const pasteOpen = ref(false)
 const pasteText = ref('')
@@ -276,7 +276,7 @@ async function saveAsBaustein(): Promise<void> {
           <button type="button" class="btn btn-ghost btn-xs" @click="addOption">＋ Eintrag hinzufügen</button>
           <button type="button" class="btn btn-ghost btn-xs" :aria-expanded="pasteOpen" @click="pasteOpen = !pasteOpen; pasteInfo = ''">Liste einfügen</button>
         </div>
-        <!-- „Liste einfuegen" (#278): z. B. mehrere hundert Codes „Zahl: Einsatzmeldung" auf einmal -->
+        <!-- „Liste einfuegen": z. B. mehrere hundert Codes „Zahl: Einsatzmeldung" auf einmal -->
         <div v-if="pasteOpen" class="flex flex-col gap-1">
           <textarea
             v-model="pasteText"
@@ -303,7 +303,7 @@ async function saveAsBaustein(): Promise<void> {
           <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.multiple === true" @change="set(($event.target as HTMLInputElement).checked ? { multiple: true } : { multiple: undefined, exclusiveOptions: undefined, defaultEmpty: undefined })" />
           <span class="text-sm">Mehrfachauswahl erlauben</span>
         </label>
-        <!-- #278: optional OHNE Vorauswahl starten (z. B. Einsatzcodes). Ohne den Schalter bleibt die
+        <!-- Optional OHNE Vorauswahl starten (z. B. Einsatzcodes). Ohne den Schalter bleibt die
              Standard-Option wie bisher vorausgewaehlt. Beim Einschalten den (dann bedeutungslosen) Standard raeumen. -->
         <label v-if="node.multiple" class="flex w-full cursor-pointer items-center gap-2 py-0">
           <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.defaultEmpty === true" @change="set(($event.target as HTMLInputElement).checked ? { defaultEmpty: true, default: undefined } : { defaultEmpty: undefined })" />
@@ -320,7 +320,7 @@ async function saveAsBaustein(): Promise<void> {
       </fieldset>
 
       <!-- BASIS: Ueberschrift/Titel in der Ausgabe (showTitle). Beim Feld = „Abschnitt mit Ueberschrift".
-           Nur bei vorhandenem Titel (#1): ohne Titel gibt es nichts zu zeigen -> Option ausgeblendet. -->
+           Nur bei vorhandenem Titel: ohne Titel gibt es nichts zu zeigen -> Option ausgeblendet. -->
       <label v-if="hasTitle" class="flex w-full cursor-pointer items-center gap-2 py-0">
         <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.showTitle === true" @change="set({ showTitle: ($event.target as HTMLInputElement).checked })" />
         <span class="text-sm">{{ node.type === 'field' ? 'Als Abschnitt mit Überschrift ausgeben' : 'Titel in der Ausgabe zeigen' }}</span>
@@ -361,7 +361,7 @@ async function saveAsBaustein(): Promise<void> {
       </label>
 
       <!-- CONTAINER: einklappbar + als „nicht erhoben" markierbar (Basis).
-           NICHT am Wurzel-Container (#2): die Wurzel wird im Einsatz nie als Sektion gerendert (EinsatzView zeigt nur
+           NICHT am Wurzel-Container: die Wurzel wird im Einsatz nie als Sektion gerendert (EinsatzView zeigt nur
            die Kinder), also greift weder Einklappen (EinsatzSection) noch „nicht erhoben" (Zustand nur pro Sektion
            setzbar) — beide waeren an der ersten Ebene wirkungslos. -->
       <label v-if="node.type === 'container' && !isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
@@ -459,7 +459,7 @@ async function saveAsBaustein(): Promise<void> {
                 </select>
               </fieldset>
               <!-- Absatz davor: optische Leerzeile vor dem Banner, wirkt nur wenn etwas darueber steht.
-                   NICHT am Wurzel-Container (#2): dort steht nie etwas darueber -> Grundvoraussetzung unerfuellbar. -->
+                   NICHT am Wurzel-Container: dort steht nie etwas darueber -> Grundvoraussetzung unerfuellbar. -->
               <label v-if="!isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
                 <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.blankLineBefore === true" @change="set({ blankLineBefore: ($event.target as HTMLInputElement).checked })" />
                 <span class="text-sm">Absatz davor (Leerzeile, wenn etwas darüber steht)</span>
@@ -488,7 +488,7 @@ async function saveAsBaustein(): Promise<void> {
               <p v-if="isRoot" class="text-xs text-base-content/50">Standard fürs ganze Protokoll · leer = „, "</p>
               <p v-else class="text-xs text-base-content/50">leer = erbt · aktuell wirksam: „{{ effectiveSeparator }}"</p>
             </fieldset>
-            <!-- „Text wenn leer" NICHT am Wurzel-Container (#2): greift nur, wenn das GANZE Protokoll leer
+            <!-- „Text wenn leer" NICHT am Wurzel-Container: greift nur, wenn das GANZE Protokoll leer
                  rendert (render.ts:137-139) — ein komplett leeres Protokoll braucht ohnehin keine Ausgabe.
                  Am Root also sinnlos; Feld-Trenner (Protokoll-Standard) bleibt dagegen. -->
             <fieldset v-if="!isRoot" class="fieldset">

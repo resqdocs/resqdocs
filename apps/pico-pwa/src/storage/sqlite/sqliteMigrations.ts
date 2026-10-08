@@ -1,4 +1,4 @@
-// sqliteMigrations.ts — versionierte, idempotente Migrationsschicht (#13-F2.1).
+// sqliteMigrations.ts — versionierte, idempotente Migrationsschicht.
 //
 // Nutzt SQLite `PRAGMA user_version` als Schema-Versionsmarker (kein
 // Migrationsframework, keine Dependency). `runMigrations` wendet nur Migrationen
@@ -35,7 +35,7 @@ export const MIGRATIONS: Migration[] = [
     ],
   },
   {
-    // #13-F3: neutrale Bausteine + Snippets.
+    // Neutrale Bausteine + Snippets.
     version: 2,
     statements: [
       `CREATE TABLE IF NOT EXISTS library_blocks (
@@ -55,7 +55,7 @@ export const MIGRATIONS: Migration[] = [
     ],
   },
   {
-    // #194/#195: PZN-Bibliothek als DSGVO-entkoppelte Menge eindeutiger PZN.
+    // PZN-Bibliothek als DSGVO-entkoppelte Menge eindeutiger PZN.
     // BEWUSST OHNE created_at/updated_at und ohne jede Reihenfolge-/Quelle-Spalte:
     // die Tabelle darf NICHT rekonstruieren, welche PZN zusammen erfasst wurden.
     // pzn ist der natürliche Schlüssel (Set/Dedup); sortiert/paginiert wird NUR nach pzn,
@@ -71,7 +71,7 @@ export const MIGRATIONS: Migration[] = [
     ],
   },
   {
-    // #194: PZN-Bibliothek um den Wirkstoff erweitern (wichtiger als die Bezeichnung).
+    // PZN-Bibliothek um den Wirkstoff erweitern (wichtiger als die Bezeichnung).
     // Additiv via ALTER (frische DBs aus v3 wie bestehende Dev-DBs erhalten die Spalte);
     // bestehende Zeilen bekommen den Default ''.
     version: 4,
@@ -80,7 +80,7 @@ export const MIGRATIONS: Migration[] = [
     ],
   },
   {
-    // #195: FTS5-Volltextindex für flüssige Suche bei ~317k. External-content über
+    // FTS5-Volltextindex für flüssige Suche bei ~317k. External-content über
     // pzn_entries (keine Datenverdopplung), gehalten durch AFTER-Trigger; `rebuild`
     // indiziert vorhandene Zeilen einmalig. DSGVO: pzn_fts.rowid dient NUR dem Join,
     // wird NIE ausgegeben/sortiert — kanonische Ordnung bleibt ORDER BY pzn. Alles
@@ -124,7 +124,7 @@ export const MIGRATIONS: Migration[] = [
     ],
   },
   {
-    // #262: PZN-Bibliothek um die Wirkstärke erweitern (eigenes nutzergepflegtes Sachfeld
+    // PZN-Bibliothek um die Wirkstärke erweitern (eigenes nutzergepflegtes Sachfeld
     // statt im Namen/Label vermischt). Additiv via ALTER wie v4 (wirkstoff); bestehende
     // Zeilen bekommen den Default ''. BEWUSST OHNE FTS-Anpassung: FTS5 kennt kein
     // ALTER ADD COLUMN, ein Drop+Rebuild lohnt für ein kurzes Zahlenfeld nicht —
@@ -151,7 +151,7 @@ export const MIGRATIONS: Migration[] = [
     ],
   },
   {
-    // #275: zweiter FTS5-Index mit tokenize='trigram' fuer INFIX-/Wildcard-Suche im
+    // Zweiter FTS5-Index mit tokenize='trigram' fuer INFIX-/Wildcard-Suche im
     // Medikamenten-Suchfeld (Fragmente ab 3 Zeichen aus der Wortmitte, `*` als Platzhalter).
     // Der bestehende pzn_fts (unicode61) kann NUR Praefix (meto*) — Trigram indiziert
     // 3-Gramme und beschleunigt `col LIKE '%frag%'`, genau das hier Gebrauchte.

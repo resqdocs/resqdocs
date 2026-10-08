@@ -1,4 +1,4 @@
-// useMedplanScan.ts - Composable fuer den BMP-Scan-Entwurf (#9, #36).
+// useMedplanScan.ts - Composable fuer den BMP-Scan-Entwurf.
 //
 // Sammelt die Seiten eines (ggf. mehrseitigen) Medikationsplans, parst sie
 // ueber den gekapselten Parser (@resqdocs/protocol-core/medplan) und haelt die Medikations-
@@ -12,7 +12,7 @@
 // Datenschutz (docs/data-flow.md "BMP-Scan"): Roh-Scan und Entwurf werden NIE
 // persistiert/geloggt; reset() verwirft alles. Der Parser extrahiert
 // nachweislich keine Patientenfelder (P/C/O werden nie gelesen). Der
-// AUSSTELLER (A-Element: Name/Ort/Nummer/Telefon, #144) wird angeboten,
+// AUSSTELLER (A-Element: Name/Ort/Nummer/Telefon) wird angeboten,
 // aber NUR uebernommen, wenn der Nutzer aktiv eine Rolle waehlt
 // (Hausarzt/Facharzt; Default = nicht dokumentieren).
 import { computed, ref } from 'vue'
@@ -20,7 +20,7 @@ import type { MedplanAussteller } from '@resqdocs/protocol-core/medplan/medplan.
 // MedikamenteRow aus dem NEUEN Kern (SSOT); strukturgleich zum alten render.mjs-Typ, den medplan.mjs liefert.
 import type { MedikamenteRow } from '@resqdocs/protocol-core/model'
 
-/** Rollen-Auswahl fuer den Aussteller (#144): '' = nicht dokumentieren (Default). */
+/** Rollen-Auswahl fuer den Aussteller: '' = nicht dokumentieren (Default). */
 export type AusstellerRolle = '' | 'Hausarzt' | 'Facharzt'
 // Import ueber den Paketnamen @resqdocs/protocol-core (file:-Dependency, in
 // node_modules verlinkt) — aufloesbar sowohl unter `node --test
@@ -28,20 +28,20 @@ export type AusstellerRolle = '' | 'Hausarzt' | 'Facharzt'
 import { parseMedplanMedications, medicationToText, medicationToRow, ausstellerToText } from '@resqdocs/protocol-core/medplan/medplan.mjs'
 
 /**
- * @param resolvePzn optionale PZN→Name-Aufloesung (#11, community-Woerterbuch).
+ * @param resolvePzn optionale PZN→Name-Aufloesung (community-Woerterbuch).
  *                   Treffer werden sichtbar als 'community, ungeprueft' markiert.
  */
 export function useMedplanScan(resolvePzn?: (pzn: string) => string | null) {
   const error = ref<string | null>(null)
   /** Editierbare Entwurfszeilen (eine pro Medikament) - nur im RAM. */
   const rows = ref<string[]>([])
-  /** Strukturierte Zwillinge der rows (#146, gleiche Reihenfolge/Laenge):
+  /** Strukturierte Zwillinge der rows (gleiche Reihenfolge/Laenge):
    *  fuer das medikamente-Element. removeRow haelt beide synchron;
    *  Text-Edits (updateRow) betreffen nur den Text-Pfad. */
   const structuredRows = ref<MedikamenteRow[]>([])
   const totalPages = ref(0) // 0 = noch nichts gescannt
   const scannedPages = ref<number[]>([])
-  /** Aussteller aus dem Scan (#144) - nur im RAM, Uebernahme ist Opt-in. */
+  /** Aussteller aus dem Scan - nur im RAM, Uebernahme ist Opt-in. */
   const aussteller = ref<MedplanAussteller | null>(null)
   const ausstellerRolle = ref<AusstellerRolle>('')
 
@@ -80,7 +80,7 @@ export function useMedplanScan(resolvePzn?: (pzn: string) => string | null) {
   }
 
   /**
-   * Nur den NAMEN einer strukturierten Zeile überschreiben (#184). Die Roh-PZN
+   * Nur den NAMEN einer strukturierten Zeile überschreiben. Die Roh-PZN
    * (`pzn`) bleibt am Eintrag „im Hintergrund" hinterlegt — Dosierung/Kommentar
    * unverändert. So kann der Nutzer den Namen anpassen, ohne die PZN zu verlieren
    * (für den späteren Einzel-Transfer in die Bibliothek).
@@ -91,7 +91,7 @@ export function useMedplanScan(resolvePzn?: (pzn: string) => string | null) {
     )
   }
 
-  /** Wirkstärke einer Zeile setzen (#262) — z. B. aus der eigenen Bibliothek aufgelöst.
+  /** Wirkstärke einer Zeile setzen — z. B. aus der eigenen Bibliothek aufgelöst.
    *  Gating (nur leere Stärke füllen, nie überschreiben) liegt beim Aufrufer. */
   function setRowStaerke(index: number, staerke: string): void {
     structuredRows.value = structuredRows.value.map((r, i) =>
@@ -128,7 +128,7 @@ export function useMedplanScan(resolvePzn?: (pzn: string) => string | null) {
   /**
    * Entwurf als EIN Feldwert: jedes Medikament auf eigener Zeile (bessere
    * Lesbarkeit im Protokoll, der Renderer rueckt mehrzeilige Werte unter das
-   * Label - ohne "-" voran). Bei gewaehlter Rolle (#144) steht der Aussteller
+   * Label - ohne "-" voran). Bei gewaehlter Rolle steht der Aussteller
    * als erste Zeile davor.
    */
   const draftText = computed(() => {
@@ -139,7 +139,7 @@ export function useMedplanScan(resolvePzn?: (pzn: string) => string | null) {
     return lines.join('\n')
   })
 
-  /** Entwurf als strukturierte Zeilen fuers medikamente-Element (#146);
+  /** Entwurf als strukturierte Zeilen fuers medikamente-Element;
    *  gewaehlter Aussteller steht als erste Zeile (nur Name). */
   const draftRows = computed<MedikamenteRow[]>(() => {
     const meds = structuredRows.value.filter((r) => r.name.trim())

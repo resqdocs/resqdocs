@@ -23,13 +23,13 @@ export function override(values, id) {
 }
 
 // Roh-Auflösung eines Befunds (vor Platzhalter-Ersetzung): { state, body, excluded }.
-// "Nicht erhoben = weglassen" (#71): Override { excluded: true } nimmt den Befund
+// "Nicht erhoben = weglassen": Override { excluded: true } nimmt den Befund
 // komplett aus der Ausgabe; state ist dann undefined (state-Praedikate matchen nicht).
 export function findingState(f, values) {
   const ov = override(values, f.id) || {};
   if (ov.excluded === true) return { state: undefined, body: "", excluded: true };
   const state = ov.state ?? (ov.value != null ? "abnormal" : f.state ?? "normal");
-  // Bei state "normal" kann ov.value eine gewaehlte VARIANTE sein (#73) - sonst f.normal.
+  // Bei state "normal" kann ov.value eine gewaehlte VARIANTE sein - sonst f.normal.
   const body = state === "normal" ? (ov.value ?? f.normal) : (ov.value ?? f.value ?? f.normal);
   return { state, body, excluded: false };
 }
@@ -40,7 +40,7 @@ export function listEntries(p, values) {
 }
 
 /**
- * Medikations-Zeilen eines medikamente-Punkts (#146): kommen AUSSCHLIESSLICH
+ * Medikations-Zeilen eines medikamente-Punkts: kommen AUSSCHLIESSLICH
  * aus dem Einsatz (values) - die Vorlage definiert nur das Element und enthaelt
  * nie Patientendaten. Zeilen ohne Namen zaehlen nicht.
  */
@@ -76,7 +76,7 @@ function registerPoint(points, p, values) {
   switch (p.type) {
     case "field": {
       const ov = override(values, p.id) || {};
-      // Dreistufig (#43): { excluded: true } nimmt das Feld fuer diesen Einsatz
+      // Dreistufig: { excluded: true } nimmt das Feld fuer diesen Einsatz
       // KOMPLETT aus der Ausgabe (auch keine Label-Zeile); `filled` ist false.
       if (ov.excluded === true) {
         points[p.id] = { value: "", state: undefined, filled: false, excluded: true };
@@ -107,7 +107,7 @@ function registerPoint(points, p, values) {
       break;
     }
     case "medikamente": {
-      // Keine Zeile erfasst = nicht erhoben = weglassen (#71-Grundsatz).
+      // Keine Zeile erfasst = nicht erhoben = weglassen (Grundsatz wie bei Befunden).
       points[p.id] = { value: undefined, state: undefined, filled: medikamenteRows(p, values).length > 0 };
       break;
     }

@@ -5,7 +5,7 @@ import { speedFromDelay, delayFromSpeed, typingSpeedLabel, DELAY_MIN_MS, DELAY_M
 
 /** App-Einstellungen (Zielgerät, Design, Erscheinung). Über die
  * gekapselte Storage-Schicht — kein Backend-Wissen.
- * Das Überschriftenmuster (#68/#88) wurde hier entfernt; es wird beim
+ * Das Überschriftenmuster wurde hier entfernt; es wird beim
  * Vorlagen-/Protokoll-Rework auf der Vorlagen-Ebene neu verortet. Die
  * gespeicherten Werte + die Renderer-Default-Logik bleiben unberührt. */
 const { settings, saveSettings } = useStorage()

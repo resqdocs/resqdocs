@@ -1,4 +1,4 @@
-// Gemeinsamer Such-Kern (#278): EINE Suchsemantik fuer die ganze App.
+// Gemeinsamer Such-Kern: EINE Suchsemantik fuer die ganze App.
 //
 // Genutzt von der Medikamentensuche (apps/pico-pwa/src/medications/pznSuggest.ts) und von der Suche in
 // langen Optionslisten im Einsatz (EinsatzField). Damit verhalten sich beide garantiert gleich - so wie
@@ -33,7 +33,7 @@ export function queryHead(query: string): string {
   return query.trim().toLowerCase().split(/[*\s]/)[0] ?? ''
 }
 
-/** Ab so vielen Optionen bekommt eine Optionsliste im Einsatz ein Suchfeld (#278, Maintainer-Entscheid:
+/** Ab so vielen Optionen bekommt eine Optionsliste im Einsatz ein Suchfeld (bewusste Entscheidung:
  *  Felder bis 15 Optionen bleiben exakt wie bisher). */
 export const OPTION_SEARCH_MIN = 16
 

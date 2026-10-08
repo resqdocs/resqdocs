@@ -5,12 +5,12 @@ import { SCANNER_MODE_LABELS, type ScannerMode } from '@/medplan/scannerMode'
 import { nativeDatamatrixScanAvailable } from '@/medplan/nativeDatamatrixScan'
 
 /**
- * Scanner-Modus (#170) - Auswahl der Scan-Strategie fuer den BMP-Data-Matrix-Scan.
+ * Scanner-Modus - Auswahl der Scan-Strategie fuer den BMP-Data-Matrix-Scan.
  * Zentrale Quelle der Strategie; der Kamera-Schnellumschalter aendert genau diesen Wert.
  * Datenschutz: rein lokale Auswahl, kein Netz/Telemetrie.
  */
 const storage = useStorage()
-// #170: 'Nativ' nutzt in der App den kameranativen Scanner (nur Android: ZXing-C++). Web + iOS nutzen
+// 'Nativ' nutzt in der App den kameranativen Scanner (nur Android: ZXing-C++). Web + iOS nutzen
 // den WebView-Scanner. Erststart-Default ist 'WebView Standard' (stabiler); der native Pfad bleibt
 // auf Android als explizite Alternative waehlbar. 'Automatisch' wurde entfernt.
 const nativeAvailable = nativeDatamatrixScanAvailable()

@@ -2,7 +2,7 @@
 // je Container = eine Vorlage (Wurzel-id = Vorlagen-id, root.title = Name). Reine, immutable
 // Bibliotheks-/Creator-Ops; das ref-Array wird als Ganzes neu zugewiesen -> Reaktivitaet ueber beide Tabs.
 //
-// GETRENNTE aktive Vorlage je Tab (Maintainer-Entscheidung): editorActiveId (Editor SCHREIBT) und
+// GETRENNTE aktive Vorlage je Tab (bewusste Entscheidung): editorActiveId (Editor SCHREIBT) und
 // einsatzActiveId (Einsatz LIEST) - ein Editor-Wechsel schaltet den Einsatz nicht ungewollt um.
 //
 // Die DEFINITIONEN leben hier; die im Einsatz eingegebenen WERTE sind separat + fluechtig

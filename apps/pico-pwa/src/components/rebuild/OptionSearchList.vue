@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * Durchsuchbare Optionsliste fuer LANGE Auswahlfelder im Einsatz (#278) - ab OPTION_SEARCH_MIN Optionen,
- * fuer Einfach- UND Mehrfachauswahl gleich (Maintainer-Entscheid). Gleiche Huelle wie das bestehende
+ * Durchsuchbare Optionsliste fuer LANGE Auswahlfelder im Einsatz - ab OPTION_SEARCH_MIN Optionen,
+ * fuer Einfach- UND Mehrfachauswahl gleich (bewusste Entscheidung). Gleiche Huelle wie das bestehende
  * Multi-Dropdown (details.dropdown), ergaenzt um ein Suchfeld. Die Suche filtert nur die Anzeige; der Wert
  * aendert sich ausschliesslich durch Antippen einer Option.
  *
@@ -31,7 +31,7 @@ const listEl = ref<HTMLUListElement | null>(null)
 const listMaxPx = ref<number | null>(null)
 const query = ref('')
 
-// Die Liste SCHWEBT (Maintainer-Wunsch) und darf weder unter der Tab-Leiste (dock) noch unter der Tastatur
+// Die Liste SCHWEBT bewusst und darf weder unter der Tab-Leiste (dock) noch unter der Tastatur
 // enden - sonst waeren die untersten Treffer nicht antippbar. Hoehe = Platz bis zur Oberkante von Dock bzw.
 // sichtbarem Bereich, begrenzt auf 3 Zeilen .. 16rem. Neu gemessen beim Oeffnen und bei jeder Groessen-/
 // Scroll-Aenderung (Tastatur faehrt ein/aus, Seite scrollt).

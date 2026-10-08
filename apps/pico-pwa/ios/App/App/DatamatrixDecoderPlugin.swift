@@ -4,7 +4,7 @@ import Vision
 import UIKit
 
 /**
- * Nativer Data-Matrix-Decoder fuer iOS (#170) — Apple Vision (VNDetectBarcodesRequest, .dataMatrix).
+ * Nativer Data-Matrix-Decoder fuer iOS — Apple Vision (VNDetectBarcodesRequest, .dataMatrix).
  *
  * decode({ data: base64 }) -> { found, text, format }. Dekodiert NUR Data Matrix, lokal/offline,
  * Apple-eingebaut (kein Pod/SPM, keine GMS). Gleicher Capacitor-Plugin-Name wie das Android-Plugin

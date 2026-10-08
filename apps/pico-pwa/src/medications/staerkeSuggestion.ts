@@ -1,8 +1,8 @@
-// staerkeSuggestion.ts — nicht-destruktiver Wirkstärke-VORSCHLAG aus einem Freitext-Label (#262).
+// staerkeSuggestion.ts — nicht-destruktiver Wirkstärke-VORSCHLAG aus einem Freitext-Label.
 //
 // NUR eine Tipp-Hilfe für die Pflege-Maske: Der Vorschlag wird angezeigt und erst durch
 // bewusstes Übernehmen + Speichern Teil des Eintrags; das Label bleibt IMMER unangetastet
-// (Maintainer-Entscheidung: kein Bulk, kein automatisches Herausschneiden — falsche Stärke
+// (Bewusste Entscheidung: kein Bulk, kein automatisches Herausschneiden — falsche Stärke
 // wäre schlimmer als keine). Deshalb bewusst konservativ:
 //  - nur Zahl+Einheit-Muster (mg, g, µg/ug/mcg, ml, %, I.E.), optional Kombi (500/125 mg)
 //    und Bezug (1,5 mg/ml, 40 mg/0,4 ml)

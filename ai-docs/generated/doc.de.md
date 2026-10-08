@@ -146,7 +146,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `showTitle` (boolean): Titel in der AUSGABE zeigen? Fehlt/false -> kein Titel (wie bei allen Knoten). Der Editor setzt es beim Anlegen einer Funktion standardmaessig auf true (createFunction).
 - `titleInline` (boolean): Titel inline vor dem Inhalt (kein Banner) statt eigener Zeile - analog Container.
 - `heading` (Heading): Titel-Format (prefix/suffix + Banner Fuellzeichen/Breite wie beim Container).
-- `inline` (boolean): Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen). Wirkt wie beim Feld (Maintainer 2026-07-03): auch mehrzeilige Listen-Funktionen (Medikamentenplan/ Aerzte) koennen inline an die laufende Zeile - nur ein Titel-Banner (Titel auf eigener Zeile) bleibt Block.
+- `inline` (boolean): Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen). Wirkt wie beim Feld: auch mehrzeilige Listen-Funktionen (Medikamentenplan/ Aerzte) koennen inline an die laufende Zeile - nur ein Titel-Banner (Titel auf eigener Zeile) bleibt Block.
 - `noSeparatorBefore` (boolean): Kein Feld-Trenner VOR dieser Funktion (klebt ans vorherige inline-Element).
 - `blankLineBefore` (boolean): Optische Leerzeile (Absatz) VOR der Funktion - nur bei Titel-Banner der Funktion und wenn darueber etwas ausgegeben wird (Basis-Regel oben; ohne Banner still ohne Wirkung, wie beim Feld).
 - `functionKind` (eines von "medikamentenplan", "aerzte", "packYears", "news2") — Pflicht
@@ -163,7 +163,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 
 #### FunctionConfig — Ausgabe-Format einer Funktion (optional, fuer das Feld "config")
 - `rowLayout` (eines von "block", "inline"): untereinander (block, je Zeile eigene Zeile) vs hintereinander (inline, mit Separator). Default 'block'.
-- `rowSeparator` (string): Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> " · " (Mittelpunkt: hebt die Zeilengrenze vom Komma im Zeilenformat "Name Staerke, Schema" ab, #262).
+- `rowSeparator` (string): Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> " · " (Mittelpunkt: hebt die Zeilengrenze vom Komma im Zeilenformat "Name Staerke, Schema" ab).
 - `rowPrefix` (string): Praefix je Zeile bei rowLayout='block'.
 - `rowSuffix` (string): Suffix je Zeile bei rowLayout='block'.
 
@@ -426,7 +426,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
         },
         "inline": {
           "type": "boolean",
-          "description": "Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen). Wirkt wie beim Feld (Maintainer 2026-07-03): auch mehrzeilige Listen-Funktionen (Medikamentenplan/ Aerzte) koennen inline an die laufende Zeile - nur ein Titel-Banner (Titel auf eigener Zeile) bleibt Block."
+          "description": "Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen). Wirkt wie beim Feld: auch mehrzeilige Listen-Funktionen (Medikamentenplan/ Aerzte) koennen inline an die laufende Zeile - nur ein Titel-Banner (Titel auf eigener Zeile) bleibt Block."
         },
         "noSeparatorBefore": {
           "type": "boolean",
@@ -482,7 +482,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
         },
         "rowSeparator": {
           "type": "string",
-          "description": "Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> \" · \" (Mittelpunkt: hebt die Zeilengrenze vom Komma im Zeilenformat \"Name Staerke, Schema\" ab, #262)."
+          "description": "Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> \" · \" (Mittelpunkt: hebt die Zeilengrenze vom Komma im Zeilenformat \"Name Staerke, Schema\" ab)."
         },
         "rowPrefix": {
           "type": "string",

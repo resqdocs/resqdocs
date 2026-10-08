@@ -1,5 +1,5 @@
 // Laeuft mit:  node --test --experimental-strip-types
-// Roundtrip-Gate (#261): JEDES Doku-Beispiel (+ Worked Example) muss den ECHTEN App-Import bestehen
+// Roundtrip-Gate: JEDES Doku-Beispiel (+ Worked Example) muss den ECHTEN App-Import bestehen
 // (parseTemplate) und mit dem echten Renderer eine nicht-leere Ausgabe liefern — Schema-Validitaet
 // allein (verify-ai-docs.mjs) beweist noch keine Importierbarkeit.
 import { test } from 'node:test'

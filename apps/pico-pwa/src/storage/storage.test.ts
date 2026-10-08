@@ -56,7 +56,7 @@ test('Update-Szenario: fehlender neuer Key bekommt Default, vorhandene bleiben',
   assert.equal(s.themeFamily, 'classic')
 })
 
-test('caseDraftTtlHours (#173): Default 3, gueltig 1–5, sonst geklemmt/gerundet', async () => {
+test('caseDraftTtlHours: Default 3, gueltig 1–5, sonst geklemmt/gerundet', async () => {
   const repo = createSettingsRepository(createFakeKeyValueAdapter())
   assert.equal((await repo.loadSettings()).caseDraftTtlHours, 3, 'Default 3 h')
 
@@ -68,7 +68,7 @@ test('caseDraftTtlHours (#173): Default 3, gueltig 1–5, sonst geklemmt/gerunde
   }
 })
 
-test('caseDraftTtlHours (#173): Update laesst bestehende Settings unberuehrt, fehlender Key -> 3', async () => {
+test('caseDraftTtlHours: Update laesst bestehende Settings unberuehrt, fehlender Key -> 3', async () => {
   const stored: Record<string, unknown> = { ...DEFAULT_SETTINGS, defaultOs: 'mac_de' }
   delete stored.caseDraftTtlHours
   const adapter = createFakeKeyValueAdapter({ [SETTINGS_KEY]: JSON.stringify(stored) })
@@ -77,7 +77,7 @@ test('caseDraftTtlHours (#173): Update laesst bestehende Settings unberuehrt, fe
   assert.equal(s.defaultOs, 'mac_de', 'bestehende Settings bleiben')
 })
 
-test('caseDraftTtlHours (#173): Reset setzt auf 3 h zurueck', async () => {
+test('caseDraftTtlHours: Reset setzt auf 3 h zurueck', async () => {
   const adapter = createFakeKeyValueAdapter()
   const repo = createSettingsRepository(adapter)
   await repo.saveSettings({ ...DEFAULT_SETTINGS, caseDraftTtlHours: 5 })
@@ -181,7 +181,7 @@ test('Library-Fake: reset', async () => {
   assert.deepEqual(await repo.loadProtocols(), [])
 })
 
-// --- #13-F3: Bausteine + Snippets im Memory-Fake ---
+// --- Bausteine + Snippets im Memory-Fake ---
 
 const libBlock = (id: string, title = id) => ({
   id, title, block: { id: `blk-${id}`, title, points: [] }, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
@@ -222,7 +222,7 @@ test('Library-Fake: resetLibrary löscht Protokolle, Blöcke UND Snippets', asyn
   assert.deepEqual(await repo.loadSnippets(), [])
 })
 
-// --- #14-A: Reset-Trennung (Library vs. Settings) ---
+// --- Reset-Trennung (Library vs. Settings) ---
 
 test('Library-Reset lässt Settings unberührt; Settings-Reset lässt Library unberührt', async () => {
   const adapter = createFakeKeyValueAdapter()

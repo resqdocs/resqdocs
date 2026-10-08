@@ -426,7 +426,7 @@ Three node types: **Container** (section with children), **Field** (input field)
         },
         "inline": {
           "type": "boolean",
-          "description": "Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen). Wirkt wie beim Feld (Maintainer 2026-07-03): auch mehrzeilige Listen-Funktionen (Medikamentenplan/ Aerzte) koennen inline an die laufende Zeile - nur ein Titel-Banner (Titel auf eigener Zeile) bleibt Block."
+          "description": "Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen). Wirkt wie beim Feld: auch mehrzeilige Listen-Funktionen (Medikamentenplan/ Aerzte) koennen inline an die laufende Zeile - nur ein Titel-Banner (Titel auf eigener Zeile) bleibt Block."
         },
         "noSeparatorBefore": {
           "type": "boolean",
@@ -482,7 +482,7 @@ Three node types: **Container** (section with children), **Field** (input field)
         },
         "rowSeparator": {
           "type": "string",
-          "description": "Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> \" · \" (Mittelpunkt: hebt die Zeilengrenze vom Komma im Zeilenformat \"Name Staerke, Schema\" ab, #262)."
+          "description": "Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> \" · \" (Mittelpunkt: hebt die Zeilengrenze vom Komma im Zeilenformat \"Name Staerke, Schema\" ab)."
         },
         "rowPrefix": {
           "type": "string",

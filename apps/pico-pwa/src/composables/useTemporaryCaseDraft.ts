@@ -1,5 +1,5 @@
 // useTemporaryCaseDraft.ts — Capacitor-/Settings-Bindung + Singleton des
-// temporären Einsatzentwurfs (#173). Die eigentliche Logik (inkl. Race-Schutz
+// temporären Einsatzentwurfs. Die eigentliche Logik (inkl. Race-Schutz
 // und TTL) liegt entkoppelt + testbar in temporaryCaseDraftController.ts.
 //
 // Ablaufprüfung erfolgt: beim Start (restore), beim Resume/periodisch (checkExpiry),

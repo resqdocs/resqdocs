@@ -25,7 +25,7 @@ export const VARIABLE_TYPES: VariableType[]
 export const SIMPLE_OPS: SimpleOp[]
 
 /**
- * Feldscharfer Validierungs-Befund (#2b): trägt zusätzlich zum Text den
+ * Feldscharfer Validierungs-Befund: trägt zusätzlich zum Text den
  * bekannten Ort (Block/Punkt/Finding/Feld). Optionale Parallel-Spur zu
  * errors/warnings — diese Strings bleiben unverändert.
  */
@@ -42,7 +42,7 @@ export interface ValidationResult {
   valid: boolean
   errors: string[]
   warnings: string[]
-  /** Additiv (#2b): feldscharfe Befunde parallel zu errors/warnings. */
+  /** Additiv: feldscharfe Befunde parallel zu errors/warnings. */
   issues?: ValidationIssue[]
 }
 
@@ -77,12 +77,12 @@ export function addBlock(protocol: Protocol, input?: Partial<Block>): Protocol
 export function updateBlock(protocol: Protocol, blockId: string, patch: Partial<Block>): Protocol
 export function removeBlock(protocol: Protocol, blockId: string): Protocol
 export function duplicateBlock(protocol: Protocol, blockId: string): Protocol
-/** Block bzw. Punkt um eine Position verschieben (#46); No-op an den Raendern. */
+/** Block bzw. Punkt um eine Position verschieben; No-op an den Raendern. */
 export function moveBlock(protocol: Protocol, blockId: string, direction: 'up' | 'down'): Protocol
 export function movePoint(protocol: Protocol, pointId: string, direction: 'up' | 'down'): Protocol
 /** Externen Block als Kopie anhängen (frische IDs, internes visibleIf-Remap). */
 export function insertBlock(protocol: Protocol, block: Block): Protocol
-/** Fehlende Punkt-IDs nachruesten (#66); vorhandene bleiben stabil. */
+/** Fehlende Punkt-IDs nachruesten; vorhandene bleiben stabil. */
 export function ensureProtocolPointIds(protocol: Protocol): Protocol
 
 // Point

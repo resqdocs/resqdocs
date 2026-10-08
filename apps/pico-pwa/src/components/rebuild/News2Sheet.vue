@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Eingabe-Sheet der Score-Funktion „NEWS2" (#55-Rework): die RCP-2017-Parameter (Atemfrequenz, SpO₂,
+ * Eingabe-Sheet der Score-Funktion „NEWS2": die RCP-2017-Parameter (Atemfrequenz, SpO₂,
  * RR systolisch, Herzfrequenz, Temperatur, Bewusstsein ACVPU) + O₂-Gabe. `scale2` schaltet die SpO₂-Skala 2
  * (ärztlich dokumentiertes Ziel 88–92 %, z. B. COPD). Live-Vorschau: Aggregat-Score + Risiko (Rechenkern
  * scores.news2, quellenbelegt RCP 2017 in docs/medical-sources.md). „Übernehmen" schreibt die EINE

@@ -8,10 +8,10 @@ import { effectiveScannerMode } from '@/medplan/scannerMode'
 import type { PackageBarcodeFormat } from '@/medications/packageScan'
 
 /**
- * Packungs-Scan-Overlay (#167): EINE Medikamentenpackung scannen. Getrennt vom
+ * Packungs-Scan-Overlay: EINE Medikamentenpackung scannen. Getrennt vom
  * BMP-Scanner (MedplanScanOverlay), damit der BMP-Pfad unangetastet bleibt.
  * Multi-Format-Reader, aber bewusst NUR Code 39 + Data Matrix (POSSIBLE_FORMATS).
- * Optik/Steuerung identisch zu #172 (Rahmen, X, Standard/Optimiert, Torch, theme-treu).
+ * Optik/Steuerung identisch zum BMP-Scanner (Rahmen, X, Standard/Optimiert, Torch, theme-treu).
  * Netzwerk-Policy: ZXing dekodiert lokal; der Roh-String wird nur emittiert, nie
  * geloggt/gespeichert. Die PZN-Extraktion (datensparsam) passiert beim Aufrufer.
  */
@@ -126,7 +126,7 @@ onBeforeUnmount(() => {
     <div class="relative min-h-0 w-full flex-1 bg-black">
       <video ref="video" class="h-full w-full object-cover" autoplay playsinline muted />
       <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <!-- Packungs-Scan (#167): barcode-orientierter, rechteckiger Rahmen (breiter als hoch)
+        <!-- Packungs-Scan: barcode-orientierter, rechteckiger Rahmen (breiter als hoch)
              - unterscheidet sich bewusst vom grossen quadratischen BMP-Rahmen, passt fuer
              Code 39 (1D) und noch fuer Data Matrix auf Packungen. BMP-Overlay bleibt unveraendert. -->
         <div class="aspect-[3/2] w-[min(82vw,90vh)] max-w-sm rounded-xl border-2 border-white/90 shadow-[0_0_0_100vmax_rgba(0,0,0,0.45)]" />

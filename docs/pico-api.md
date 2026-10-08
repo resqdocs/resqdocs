@@ -21,7 +21,7 @@
 - **`/type`, `/health`, `/status`, `/config` ohne Auth.** Begründung: Zugriff via WLAN (physische Nähe); die
   Bridge **tippt nur** (liest/exfiltriert nichts); Umbenennen via `/config` ist harmlos (kein Zugriffsschutz,
   keine Patientendaten). Rest-Risiko bewusst als **minimal** akzeptiert (siehe `SECURITY.md`).
-- **OTA-Firmware-Updates** (`/ota/*`, #130) sind **signaturpflichtig**: die Bridge wendet nur Firmware an,
+- **OTA-Firmware-Updates** (`/ota/*`) sind **signaturpflichtig**: die Bridge wendet nur Firmware an,
   deren SHA-256-Digest eine gültige **Ed25519-Signatur** des Maintainers trägt (Public Key in der Firmware).
   Die Signierungspflicht aus `SECURITY.md` ist damit erfüllt — ein zusätzliches API-Auth ist nicht nötig
   (Fremd-Uploads scheitern an der Verifikation; DoS durch sinnlose Uploads = akzeptiertes Restrisiko).
@@ -75,7 +75,7 @@ Request:  application/json  { "ssidId":"RTW1" }
 - Validierung `^[A-Za-z0-9_-]{1,23}$`; persistiert im Flash; **AP-Neustart** zum Übernehmen (Verbindung bricht
   erwartbar ab). Alternativer Setz-Weg: **Serial** (Erst-/Recovery-Konfiguration ohne App).
 
-### OTA-Update (`/ota/begin` → `/ota/chunk`* → `/ota/commit`, #130)
+### OTA-Update (`/ota/begin` → `/ota/chunk`* → `/ota/commit`)
 
 Signiertes Firmware-Update über WLAN (ab fw 0.3.0). Ablauf: die App (oder `scripts/ota/upload.mjs`)
 öffnet eine Session mit den Manifest-Daten, lädt das Binary in sequenziellen Base64-Chunks hoch und
@@ -146,7 +146,7 @@ POST /ota/commit {}                    -> 200 { ok, rebooting } | 409/422/500 { 
 überschreibbar + Validierung + Flash-Persistenz); `POST /type` als **JSON-Body** (Limit 16384); `GET /status` +
 `POST /config` ergänzen; HTML-Formular entfällt. Als eigenes Firmware-Issue geführt.
 
-## App-Anbindung (#14-B)
+## App-Anbindung
 
 Die App spricht die Bridge über eine **gekapselte Schicht** `apps/pico-pwa/src/pico/` an:
 `picoClient` (reine HTTP-Logik gegen einen `HttpAdapter`) + `capacitorHttpAdapter` (einzige
@@ -154,8 +154,8 @@ Die App spricht die Bridge über eine **gekapselte Schicht** `apps/pico-pwa/src/
 enthalten **keine** HTTP-Logik.
 
 - **Umgesetzt:** `GET /health` (→ true/false), `GET /status` (→ `{name,fwVersion,apiVersion,ready,defaultOs,
-  otaSupported}`, validiert), `POST /type` `{ text, os }` (→ `{ typed }`), `POST /config` (#17) sowie das
-  **OTA-Update** (#130): `picoClient` (otaBegin/otaChunk/otaCommit) + `firmwareUpdate.ts` (pure
+  otaSupported}`, validiert), `POST /type` `{ text, os }` (→ `{ typed }`), `POST /config` sowie das
+  **OTA-Update**: `picoClient` (otaBegin/otaChunk/otaCommit) + `firmwareUpdate.ts` (pure
   Orchestrierung: Chunking, Progress, Reboot-Polling) + `firmwareAsset.ts` (gebündelte signierte Firmware
   als App-Asset, kein Internet-Download) + `useFirmwareUpdate` (Composable für den Gerät/Pico-Bereich).
 - **Base-URL:** App-Einstellung `picoBaseUrl` (Default **`http://10.10.10.1`**, S2), im Gerät/Pico-Bereich

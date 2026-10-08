@@ -153,16 +153,16 @@ test('clientKey: nur der vertrauenswürdige Proxy darf X-Forwarded-For/X-Real-IP
   const mk = (peer: string, h: Record<string, string> = {}) =>
     ({ socket: { remoteAddress: peer }, headers: h }) as unknown as Parameters<typeof clientKey>[0]
   // Peer == trustedProxy -> echte Client-IP = LETZTER XFF-Hop
-  assert.equal(clientKey(mk('10.0.0.9', { 'x-forwarded-for': '1.2.3.4' }), '10.0.0.9'), 'xff:1.2.3.4')
-  assert.equal(clientKey(mk('10.0.0.9', { 'x-forwarded-for': '9.9.9.9, 1.2.3.4' }), '10.0.0.9'), 'xff:1.2.3.4')
+  assert.equal(clientKey(mk('192.0.2.9', { 'x-forwarded-for': '203.0.113.4' }), '192.0.2.9'), 'xff:203.0.113.4')
+  assert.equal(clientKey(mk('192.0.2.9', { 'x-forwarded-for': '203.0.113.9, 203.0.113.4' }), '192.0.2.9'), 'xff:203.0.113.4')
   // X-Real-IP hat VORRANG vor XFF (robuster, vom Proxy gesetzt) — nur vom trusted Peer
-  assert.equal(clientKey(mk('10.0.0.9', { 'x-real-ip': '7.7.7.7', 'x-forwarded-for': '1.2.3.4' }), '10.0.0.9'), 'ip:7.7.7.7')
+  assert.equal(clientKey(mk('192.0.2.9', { 'x-real-ip': '198.51.100.7', 'x-forwarded-for': '203.0.113.4' }), '192.0.2.9'), 'ip:198.51.100.7')
   // Untrusted Peer -> weder XFF noch X-Real-IP geglaubt (Spoofing-Schutz) -> Socket
-  assert.equal(clientKey(mk('5.5.5.5', { 'x-real-ip': '7.7.7.7', 'x-forwarded-for': '1.2.3.4' }), '10.0.0.9'), 'ip:5.5.5.5')
+  assert.equal(clientKey(mk('198.51.100.5', { 'x-real-ip': '198.51.100.7', 'x-forwarded-for': '203.0.113.4' }), '192.0.2.9'), 'ip:198.51.100.5')
   // kein trustedProxy -> immer Socket
-  assert.equal(clientKey(mk('5.5.5.5', { 'x-forwarded-for': '1.2.3.4' }), null), 'ip:5.5.5.5')
+  assert.equal(clientKey(mk('198.51.100.5', { 'x-forwarded-for': '203.0.113.4' }), null), 'ip:198.51.100.5')
   // trusted Peer aber keine Proxy-Header -> Socket
-  assert.equal(clientKey(mk('10.0.0.9'), '10.0.0.9'), 'ip:10.0.0.9')
+  assert.equal(clientKey(mk('192.0.2.9'), '192.0.2.9'), 'ip:192.0.2.9')
 })
 
 test('DELETE: eigener Rate-Limiter -> 429 nach Limit', async () => {

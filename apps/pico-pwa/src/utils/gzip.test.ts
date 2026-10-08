@@ -1,6 +1,6 @@
 // Läuft mit:  node --test --experimental-strip-types
 //
-// Robustes Entpacken des PZN-Imports (#218): decodeMaybeGzip muss rohes JSON,
+// Robustes Entpacken des PZN-Imports: decodeMaybeGzip muss rohes JSON,
 // einfach-gzip UND doppelt-gzip (iOS-/HTTP-Transport re-gzippt die schon gezippte
 // Download-Datei) korrekt zu JSON-Text auflösen, dabei aber zu viele Schichten und
 // korrupte/fremde Dateien sauber als ungültig (null) abweisen — OHNE zu werfen.
@@ -29,7 +29,7 @@ test('decodeMaybeGzip: einfach-gzip (App-Export, Fall 2) → JSON-Text', async (
   assert.equal(out, JSON_TEXT)
 })
 
-test('decodeMaybeGzip: DOPPELT-gzip (Kern-Regression #218) → muss jetzt gelingen', async () => {
+test('decodeMaybeGzip: DOPPELT-gzip (Kern-Regression) → muss jetzt gelingen', async () => {
   const single = await gzipBytes(JSON_TEXT)
   const double = await gzipBytes(single) // gzip ÜBER der schon gzippten Datei
   const out = await decodeMaybeGzip(double)

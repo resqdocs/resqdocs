@@ -7,7 +7,7 @@ import { bundledManifest, loadBundledFirmware } from './firmwareAsset'
 import type { PicoStatus } from './picoTypes'
 
 /**
- * Composable fuer das OTA-Firmware-Update (#130). Duenne Vue-Anbindung:
+ * Composable fuer das OTA-Firmware-Update. Duenne Vue-Anbindung:
  * die Logik lebt in firmwareUpdate.ts (pur, getestet), die Artefakte in
  * firmwareAsset.ts. KEINE HTTP-Logik in Komponenten.
  */

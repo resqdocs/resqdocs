@@ -7,18 +7,18 @@ import { useStorage } from '@/storage/useStorage'
 import { effectiveScannerMode } from '@/medplan/scannerMode'
 
 /**
- * Kamera-Overlay fuer den BMP-Scan (#36): reiner JS-Scanner (@zxing/browser,
+ * Kamera-Overlay fuer den BMP-Scan: reiner JS-Scanner (@zxing/browser,
  * Data Matrix) ueber getUserMedia - laeuft in iOS-WKWebView, Android-WebView,
  * Huawei (kein Google-Dienst) und im Browser. Netzwerk-Policy: ZXing dekodiert
  * lokal, nichts verlaesst das Geraet; der Roh-String wird nur emittiert.
  *
- * Bedien-UX (#166): Orientierungsrahmen + Hilfetext + optionaler Torch-Button.
+ * Bedien-UX: Orientierungsrahmen + Hilfetext + optionaler Torch-Button.
  *
- * Scanner-Modus (#170): die Einstellung `settings.scannerMode` ist die ZENTRALE
+ * Scanner-Modus: die Einstellung `settings.scannerMode` ist die ZENTRALE
  * Quelle. Hier konkret nutzbar (nativ noch nicht verfuegbar):
  *  - 'webview_standard'  = bisheriger Pfad: BrowserDatamatrixCodeReader ohne Hints,
  *    Default-Intervall, einfache Constraints, kein Dauerfokus, kein 8-s-Hinweis.
- *  - 'webview_optimized' = #171-Tuning: TRY_HARDER, 120 ms, hoehere Wunschaufloesung,
+ *  - 'webview_optimized' = optimierter Pfad: TRY_HARDER, 120 ms, hoehere Wunschaufloesung,
  *    Dauerfokus best-effort, 8-s-Hinweis.
  * Der Schnellumschalter unten aendert dieselbe Einstellung und startet den Scanner
  * neu (sauberer Neustart statt Live-Umkonfiguration).

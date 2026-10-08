@@ -49,7 +49,7 @@ NOTICE-Inhalten nach Abschnitt 4(d) der Apache-2.0 besteht daher nicht. Der voll
 Apache-2.0-Lizenztext liegt dem Paket bei (`node_modules/@zxing/library/LICENSE`) und ist
 unter <https://www.apache.org/licenses/LICENSE-2.0> verfügbar.
 
-### Native Android-Abhängigkeit — ZXing-C++ (#170)
+### Native Android-Abhängigkeit — ZXing-C++
 
 Der native Data-Matrix-Scan auf Android (Scanner-Modus „Native ZXing-C++") nutzt die
 Gradle-/Maven-Abhängigkeit `io.github.zxing-cpp:android:3.0.2` (**Apache-2.0**),

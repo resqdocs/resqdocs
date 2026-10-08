@@ -33,7 +33,7 @@ function sanitize(s: Partial<AppSettings> | null | undefined): AppSettings {
     pznAutoCheck: s?.pznAutoCheck === true,
     scannerMode: SCANNER_MODES.includes(s?.scannerMode as ScannerMode)
       ? (s!.scannerMode as ScannerMode) : DEFAULT_SETTINGS.scannerMode,
-    // TTL des temporaeren Einsatzentwurfs (#173): nur 1–5 ganze Stunden, sonst Default 3.
+    // TTL des temporaeren Einsatzentwurfs: nur 1–5 ganze Stunden, sonst Default 3.
     caseDraftTtlHours: Number.isFinite(Number(s?.caseDraftTtlHours))
       ? Math.max(1, Math.min(5, Math.round(Number(s?.caseDraftTtlHours))))
       : DEFAULT_SETTINGS.caseDraftTtlHours,

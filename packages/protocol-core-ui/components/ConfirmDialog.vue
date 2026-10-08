@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Wiederverwendbare Rückfrage vor destruktiven Aktionen im Einsatz (#260) — bewährtes Muster wie die
+ * Wiederverwendbare Rückfrage vor destruktiven Aktionen im Einsatz — bewährtes Muster wie die
  * Lösch-Bestätigung im Editor (ContainerTreeNode): Abbrechen (ghost, leading) + roter Destruktiv-Button
  * (trailing) mit spezifischem Verb statt OK/Ja; Backdrop + ESC = Abbrechen. Sichtbarkeit steuert die
  * Aufrufstelle per v-if (wie MoveToPicker).

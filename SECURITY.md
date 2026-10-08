@@ -18,7 +18,7 @@ Rückmeldung; feste Reaktionszeiten können nicht garantiert werden (Open-Source
 Die App telefoniert **nirgendwo** hin. Die einzigen erlaubten Remote-Verbindungen:
 
 1. **Lokale Pico-Bridge** (LAN, `http://10.10.10.1` bzw. konfigurierte Base-URL).
-2. **PZN-Wörterbuch-Abruf** (#11): Versions-/Manifest-Check + Download des
+2. **PZN-Wörterbuch-Abruf**: Versions-/Manifest-Check + Download des
    CC0-Artefakts - nur neutrale Referenzdaten, keine Patientendaten.
    - **Standard: kein automatischer Abruf.** Die Aktualisierung ist
      **nutzerinitiiert** - der Download der PZN-Datendatei geschieht ausschließlich
@@ -31,7 +31,7 @@ Die App telefoniert **nirgendwo** hin. Die einzigen erlaubten Remote-Verbindunge
 
 **Keine Analytics, keine Telemetrie, keine Crash-Reporter, keine SDK-Heimsender, keine
 CDNs/Web-Fonts.** Jede neue Dependency wird vor Aufnahme auf Telemetrie-Verhalten geprüft
-(Konsequenz umgesetzt in #36: Google ML Kit entfernt, Scanner ist reines lokales JS).
+(Konsequenz umgesetzt: Google ML Kit entfernt, Scanner ist reines lokales JS).
 Ein Test (`useMedplanScan.test.ts`, "NETZWERK-POLICY") wacht über die Dependency-Liste.
 
 ## Pico-Access-Point: öffentlicher Standard-Zugang (bewusste Entscheidung)

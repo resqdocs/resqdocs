@@ -1,5 +1,5 @@
-// firmwareAsset.ts — EINZIGE Stelle, die die gebuendelte Bridge-Firmware kennt
-// (#130). Die signierten Artefakte legt scripts/ota/sign.mjs unter
+// firmwareAsset.ts — EINZIGE Stelle, die die gebuendelte Bridge-Firmware kennt.
+// Die signierten Artefakte legt scripts/ota/sign.mjs unter
 // src/assets/firmware/ ab; sie werden mit der App ausgeliefert (Netzwerk-
 // Policy: kein Internet-Download). import.meta.glob statt statischem Import,
 // damit der Build auch OHNE Artefakte durchlaeuft (dann: keine gebuendelte
