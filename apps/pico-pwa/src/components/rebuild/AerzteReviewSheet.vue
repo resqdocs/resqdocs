@@ -119,7 +119,7 @@ onMounted(() => {
           <span class="text-xs text-base-content/60">Ausstellende Praxis aus dem Plan:</span>
           <span class="text-sm font-medium">{{ aussteller.name }}<template v-if="aussteller.ort">, {{ aussteller.ort }}</template><template v-if="aussteller.nummer">, {{ aussteller.nummer.typ }} {{ aussteller.nummer.wert }}</template><template v-if="aussteller.telefon">, Tel. {{ aussteller.telefon }}</template></span>
           <div class="flex flex-wrap items-center gap-3 text-sm" role="radiogroup" aria-label="Rolle des Arztes">
-            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="" class="radio radio-sm" /> ohne Rolle</label>
+            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="" class="radio radio-sm" /> Arzt</label>
             <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Hausarzt" class="radio radio-sm" /> Hausarzt</label>
             <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Facharzt" class="radio radio-sm" /> Facharzt</label>
           </div>

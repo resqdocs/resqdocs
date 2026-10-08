@@ -21,6 +21,7 @@ import {
   type PznEntryData,
   type ImportMode,
 } from './pznLibrary.ts'
+import { toLikePattern, pznDigits, toPrefixPattern } from './pznSuggest.ts'
 
 const TABLE = 'pzn_entries'
 const COLS = 'pzn, wirkstoff, staerke, label, category, note'
@@ -51,6 +52,8 @@ export interface PznSqliteRepository {
   getEntry(pzn: string): Promise<PznEntry | null>
   page(opts: PznPageOpts): Promise<PznEntry[]>
   search(query: string, opts: { offset: number; limit: number; missingStaerke?: boolean }): Promise<PznEntry[]>
+  /** Typeahead fuer das manuelle Medikamentenfeld (#275): Infix + `*`, Fragmente ab 3 Zeichen. */
+  suggest(query: string, limit: number): Promise<PznEntry[]>
   allSorted(): Promise<PznEntry[]>
   setEntry(pzn: string, data: PznEntryData): Promise<void>
   setWirkstoff(pzn: string, wirkstoff: string): Promise<void>
@@ -158,6 +161,47 @@ export function createPznLibrarySqliteRepository(client: SqlClient): PznSqliteRe
            WHERE pzn_fts MATCH ? ${missingB}
          ORDER BY pzn ASC LIMIT ? OFFSET ?`,
         [pznNeedle, match, limit, offset],
+      )
+      return rows.map(toEntry)
+    },
+
+    async suggest(query, limit) {
+      // Infix + `*` ueber wirkstoff/label (Trigram-Index, #275), zusaetzlich PZN per Ziffern-LIKE.
+      // Beide Zweige mit UNION vereint. Reihung fuer die AUSWAHL (nicht die kanonische pzn-Ordnung
+      // der Bibliotheksliste): Namen, deren Anfang zur Query passt, zuerst - sonst versinkt das
+      // gesuchte Medikament unter zufaellig niedrigen PZN. Danach alphabetisch nach Name, dann pzn.
+      const like = toLikePattern(query)
+      const digits = pznDigits(query)
+      if (!like && !digits) return []
+      const zweige: string[] = []
+      const params: unknown[] = []
+      if (like) {
+        // ESCAPE '\' passt zu toLikePattern (escapt \ % _). Trigram beschleunigt das '%frag%'.
+        zweige.push(
+          `SELECT b.pzn, b.wirkstoff, b.staerke, b.label, b.category, b.note
+             FROM pzn_tri t JOIN ${TABLE} b ON b.rowid = t.rowid
+            WHERE t.wirkstoff LIKE ? ESCAPE '\\' OR t.label LIKE ? ESCAPE '\\'`,
+        )
+        params.push(like, like)
+      }
+      if (digits) {
+        zweige.push(`SELECT ${COLS} FROM ${TABLE} WHERE pzn LIKE ?`)
+        params.push(`%${digits}%`)
+      }
+      const prefix = toPrefixPattern(query)
+      const nameSort = `COALESCE(NULLIF(lower(wirkstoff), ''), lower(label))`
+      let orderBy: string
+      if (prefix) {
+        // 0 = Name beginnt mit dem Fragment (oben), 1 = nur Infix-/PZN-Treffer.
+        orderBy = `ORDER BY CASE WHEN lower(wirkstoff) LIKE ? ESCAPE '\\' OR lower(label) LIKE ? ESCAPE '\\' THEN 0 ELSE 1 END, ${nameSort}, pzn ASC`
+        params.push(prefix, prefix)
+      } else {
+        orderBy = `ORDER BY ${nameSort}, pzn ASC`
+      }
+      params.push(limit)
+      const rows = await client.query(
+        `SELECT * FROM (\n         ${zweige.join('\n         UNION\n         ')}\n         ) ${orderBy} LIMIT ?`,
+        params,
       )
       return rows.map(toEntry)
     },

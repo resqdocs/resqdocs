@@ -37,6 +37,7 @@ import {
   type PznEntryData,
   type PznLibrary,
 } from './pznLibrary.ts'
+import { toSuggestRegExp, pznDigits, queryHead } from './pznSuggest.ts'
 
 export interface PznPageOpts {
   offset: number
@@ -54,6 +55,8 @@ export interface PznLibraryBackend {
   getEntry(pzn: string): Promise<PznEntry | null>
   page(opts: PznPageOpts): Promise<PznEntry[]>
   search(query: string, opts: { offset: number; limit: number; missingStaerke?: boolean }): Promise<PznEntry[]>
+  /** Typeahead fuer das manuelle Medikamentenfeld (#275): Infix + `*`, Fragmente ab 3 Zeichen. */
+  suggest(query: string, limit: number): Promise<PznEntry[]>
   allSorted(): Promise<PznEntry[]>
   setEntry(pzn: string, data: PznEntryData): Promise<void>
   setWirkstoff(pzn: string, wirkstoff: string): Promise<void>
@@ -113,6 +116,28 @@ export function createPreferencesPznBackend(adapter: KeyValueAdapter): PznLibrar
       const base = filterEntries(listSorted(lib), query)
       const rows = missingStaerke ? base.filter((e) => e.staerke === '') : base
       return rows.slice(offset, offset + limit)
+    },
+    async suggest(query, limit) {
+      const re = toSuggestRegExp(query)
+      const digits = pznDigits(query)
+      if (!re && !digits) return []
+      const hits = listSorted(lib).filter(
+        (e) =>
+          (re && (re.test(e.wirkstoff.toLowerCase()) || re.test(e.label.toLowerCase()))) ||
+          (digits ? e.pzn.includes(digits) : false),
+      )
+      // Gleiche Reihung wie der SQLite-Pfad: Praefix-Treffer oben, dann Name, dann pzn.
+      const head = queryHead(query)
+      const name = (e: PznEntry): string => (e.wirkstoff || e.label).toLowerCase()
+      const startsHead = (e: PznEntry): boolean =>
+        head !== '' && (e.wirkstoff.toLowerCase().startsWith(head) || e.label.toLowerCase().startsWith(head))
+      hits.sort((a, b) => {
+        const pa = startsHead(a) ? 0 : 1
+        const pb = startsHead(b) ? 0 : 1
+        if (pa !== pb) return pa - pb
+        return name(a).localeCompare(name(b)) || a.pzn.localeCompare(b.pzn)
+      })
+      return hits.slice(0, limit)
     },
     async allSorted() {
       return listSorted(lib)

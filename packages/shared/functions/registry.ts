@@ -143,7 +143,7 @@ const medikamentenplan: FunctionDef = {
 }
 
 const aerzte: FunctionDef = {
-  label: 'Ärzte & Kontaktpersonen',
+  label: 'Kontakte/Ärzte',
   // Editor-Vorschau: Muster-Arzt + Muster-Kontaktperson (KEINE echten Personen) - zeigt beide Zeilen-
   // formate: „Name (Rolle), Ort, Tel. …" (Arzt) und „Name (Rolle), Tel. …, … vorhanden" (Kontakt).
   sampleFill: () => ({

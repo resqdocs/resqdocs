@@ -212,3 +212,9 @@ test('singleLine-Vertrag (#55): jede einzeilige Score-Funktion rendert NIE einen
     }
   }
 })
+
+test('Funktionsname „Kontakte/Ärzte": der Kontakt steht vorn (Maintainer-Entscheid 1.6.0)', () => {
+  // Die Funktion fuehrt Ärzte UND Kontaktpersonen (Angehörige/Betreuer). Der Name erscheint im Editor-Menü
+  // und als Titel jeder neu eingefügten Funktion (createFunction) - beides liest diese eine Stelle.
+  assert.equal(FUNCTION_REGISTRY.aerzte.label, 'Kontakte/Ärzte')
+})

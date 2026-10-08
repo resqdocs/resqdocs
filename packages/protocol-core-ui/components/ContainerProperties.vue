@@ -8,6 +8,7 @@ import { DEFAULT_HEADING, DEFAULT_SEPARATOR } from '@resqdocs/protocol-core/mode
 import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 import { findNode, findPath, suggestFreeId } from '@resqdocs/protocol-core/creator'
 import { sanitizeId } from '@resqdocs/protocol-core/ids'
+import { appendOptions } from '@resqdocs/protocol-core/optionList'
 import { useTreeEditor } from '../treeEditor.ts'
 import ConfirmDialog from './ConfirmDialog.vue'
 
@@ -98,6 +99,31 @@ function addOption(): void {
   // Banner-Zustand einfrieren, falls er nur ueber den mehrzeilig-Default kam (sonst springt er still aus).
   set({ options: [...fieldOptions(), ''], multiline: undefined, titleInline: titleOwnLine.value ? false : node.value?.type === 'field' ? node.value.titleInline : undefined })
 }
+// „Liste einfuegen" (#278): viele Optionen auf einmal anlegen (z. B. Alarmierungscodes, eine pro Zeile).
+// Bestehende Optionen bleiben unangetastet; Doppeltes wird uebersprungen (Regeln: optionList.ts).
+const pasteOpen = ref(false)
+const pasteText = ref('')
+const pasteInfo = ref('')
+watch(
+  () => node.value?.id,
+  () => {
+    pasteOpen.value = false
+    pasteText.value = ''
+    pasteInfo.value = ''
+  },
+)
+function applyPastedOptions(): void {
+  const r = appendOptions(fieldOptions(), pasteText.value)
+  if (r.added === 0) {
+    pasteInfo.value = r.duplicates ? `Nichts Neues – ${r.duplicates} schon vorhanden.` : 'Keine Zeilen erkannt.'
+    return
+  }
+  // wie addOption: Optionen -> Select; „mehrzeilig" bereinigen, Banner-Zustand einfrieren.
+  set({ options: r.options, multiline: undefined, titleInline: titleOwnLine.value ? false : node.value?.type === 'field' ? node.value.titleInline : undefined })
+  pasteInfo.value = `${r.added} übernommen${r.duplicates ? `, ${r.duplicates} doppelt übersprungen` : ''}.`
+  pasteText.value = ''
+  pasteOpen.value = false
+}
 function setOption(i: number, value: string): void {
   const opts = fieldOptions().slice()
   const old = opts[i]
@@ -119,6 +145,7 @@ function removeOption(i: number): void {
     patch.allowCustom = undefined // keine Optionen mehr -> kein „individuell"
     patch.multiple = undefined // ... und kein Multi-Select
     patch.exclusiveOptions = undefined
+    patch.defaultEmpty = undefined
   } else if (node.value?.type === 'field' && node.value.exclusiveOptions?.includes(removed)) {
     const ex = node.value.exclusiveOptions.filter((o) => o !== removed)
     patch.exclusiveOptions = ex.length ? ex : undefined
@@ -234,7 +261,7 @@ async function saveAsBaustein(): Promise<void> {
       <div v-if="node.type === 'field' && !node.multiline" class="space-y-2 rounded-lg bg-base-200/50 p-3">
         <span class="text-xs font-semibold text-base-content/60">Auswahl-Optionen <span class="font-normal text-base-content/40">(leer = einfaches Feld)</span></span>
         <div v-for="(opt, i) in (node.options ?? [])" :key="i" class="flex items-center gap-1">
-          <input v-if="new Set((node.options ?? []).filter((o) => o !== '')).size > 1" type="radio" class="radio radio-xs shrink-0" :name="`default-${node.id}`" :checked="effectiveFieldDefault === opt" :aria-label="`als Standard: ${opt}`" title="als Standard" @change="set({ default: opt })" />
+          <input v-if="!(node.multiple && node.defaultEmpty) && new Set((node.options ?? []).filter((o) => o !== '')).size > 1" type="radio" class="radio radio-xs shrink-0" :name="`default-${node.id}`" :checked="effectiveFieldDefault === opt" :aria-label="`als Standard: ${opt}`" title="als Standard" @change="set({ default: opt })" />
           <input class="input input-sm min-w-0 flex-1" :value="opt" placeholder="Option" @input="setOption(i, ($event.target as HTMLInputElement).value)" />
           <!-- Multi-Select: Option als „schliesst andere aus" (Keine/Normal) markieren -->
           <label v-if="node.multiple && opt !== ''" class="flex shrink-0 cursor-pointer items-center gap-1" :title="`„${opt}“ schließt andere Auswahlen aus`">
@@ -245,14 +272,42 @@ async function saveAsBaustein(): Promise<void> {
           <button type="button" class="btn btn-ghost btn-xs px-1" :disabled="i === (node.options?.length ?? 0) - 1" aria-label="nach unten" @click="moveOption(i, 1)">↓</button>
           <button type="button" class="btn btn-ghost btn-xs px-1 text-error" aria-label="entfernen" @click="confirmRemoveOption(i)">✕</button>
         </div>
-        <button type="button" class="btn btn-ghost btn-xs self-start" @click="addOption">＋ Eintrag hinzufügen</button>
+        <div class="flex flex-wrap gap-1">
+          <button type="button" class="btn btn-ghost btn-xs" @click="addOption">＋ Eintrag hinzufügen</button>
+          <button type="button" class="btn btn-ghost btn-xs" :aria-expanded="pasteOpen" @click="pasteOpen = !pasteOpen; pasteInfo = ''">Liste einfügen</button>
+        </div>
+        <!-- „Liste einfuegen" (#278): z. B. mehrere hundert Codes „Zahl: Einsatzmeldung" auf einmal -->
+        <div v-if="pasteOpen" class="flex flex-col gap-1">
+          <textarea
+            v-model="pasteText"
+            rows="6"
+            class="textarea textarea-bordered textarea-sm w-full font-mono"
+            :placeholder="'Eine Option pro Zeile, z. B.\n010: Bewusstlosigkeit\n011: ICB / SAB'"
+            aria-label="Optionen einfügen, eine pro Zeile"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+          <p class="text-xs text-base-content/50">Vorhandene Optionen bleiben; doppelte werden übersprungen.</p>
+          <div class="flex gap-1">
+            <button type="button" class="btn btn-primary btn-xs" :disabled="!pasteText.trim()" @click="applyPastedOptions">Übernehmen</button>
+            <button type="button" class="btn btn-ghost btn-xs" @click="pasteOpen = false; pasteText = ''">Abbrechen</button>
+          </div>
+        </div>
+        <p v-if="pasteInfo" class="text-xs text-base-content/60" role="status">{{ pasteInfo }}</p>
         <label v-if="node.options && node.options.length" class="flex w-full cursor-pointer items-center gap-2 py-0">
           <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.allowCustom === true" @change="set({ allowCustom: ($event.target as HTMLInputElement).checked })" />
           <span class="text-sm">„individuell" erlauben (Freitext als letzte Option)</span>
         </label>
         <label v-if="node.options && node.options.length" class="flex w-full cursor-pointer items-center gap-2 py-0">
-          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.multiple === true" @change="set(($event.target as HTMLInputElement).checked ? { multiple: true } : { multiple: undefined, exclusiveOptions: undefined })" />
+          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.multiple === true" @change="set(($event.target as HTMLInputElement).checked ? { multiple: true } : { multiple: undefined, exclusiveOptions: undefined, defaultEmpty: undefined })" />
           <span class="text-sm">Mehrfachauswahl erlauben</span>
+        </label>
+        <!-- #278: optional OHNE Vorauswahl starten (z. B. Einsatzcodes). Ohne den Schalter bleibt die
+             Standard-Option wie bisher vorausgewaehlt. Beim Einschalten den (dann bedeutungslosen) Standard raeumen. -->
+        <label v-if="node.multiple" class="flex w-full cursor-pointer items-center gap-2 py-0">
+          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.defaultEmpty === true" @change="set(($event.target as HTMLInputElement).checked ? { defaultEmpty: true, default: undefined } : { defaultEmpty: undefined })" />
+          <span class="text-sm">Startet ohne Auswahl <span class="text-base-content/50">(nichts vorausgewählt, z. B. Einsatzcodes)</span></span>
         </label>
       </div>
 

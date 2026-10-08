@@ -17,18 +17,20 @@ test('Migration ist idempotent', async () => {
   assert.ok(client.hasTable(LIBRARY_PROTOCOLS_TABLE))
 })
 
-test('user_version: frisch 0, nach Migration LATEST (=9), idempotent; alle Tabellen', async () => {
+test('user_version: frisch 0, nach Migration LATEST (=10), idempotent; alle Tabellen', async () => {
   const client = createFakeSqlClient()
   assert.equal(await getUserVersion(client), 0)
   assert.equal(await runMigrations(client), LATEST_VERSION)
   assert.equal(await getUserVersion(client), LATEST_VERSION)
-  assert.equal(LATEST_VERSION, 9)
+  assert.equal(LATEST_VERSION, 10)
   assert.ok(client.hasTable('library_protocols'))
   assert.ok(client.hasTable('library_blocks'))
   assert.ok(client.hasTable('library_snippets'))
   assert.ok(client.hasTable('pzn_entries')) // #194/#195: PZN-Bibliothek (Migration v3)
   assert.ok(client.hasTable('rework_protocols')) // Rework-Bibliothek (Migration v6)
   assert.ok(client.hasTable('rework_blocks')) // Rework-Baustein-Bibliothek (Migration v9)
+  // pzn_tri (Migration v10, #275) ist eine VIRTUAL TABLE (fts5) - der Regex-Fake erfasst die nicht;
+  // ihre reale Existenz belegen die node:sqlite-Repo-Tests (suggest joint auf pzn_tri).
   // erneuter Lauf ändert nichts (keine DDL, Version bleibt)
   assert.equal(await runMigrations(client), LATEST_VERSION)
   assert.equal(await getUserVersion(client), LATEST_VERSION)

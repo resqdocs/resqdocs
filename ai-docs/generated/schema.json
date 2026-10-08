@@ -204,6 +204,10 @@
           },
           "description": "Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein „Keine/Normalbefund\" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv)."
         },
+        "defaultEmpty": {
+          "type": "boolean",
+          "description": "Bei multiple: „startet ohne Auswahl\" - KEINE Option ist vorausgewaehlt (z. B. Einsatzcodes, wo eine Vorauswahl einen falschen Code dokumentieren wuerde). Ohne die Eigenschaft gilt wie bisher die Standard-Option (default, sonst die oberste). Eine leere Auswahl ist dann der Ausgangszustand (✓, nichts in der Ausgabe; ein Pflichtfeld bleibt „noch offen\"), nicht „nicht erhoben\". Nur mit multiple wirksam."
+        },
         "multiline": {
           "type": "boolean",
           "description": "Freitext mehrzeilig erfassen: im ✎-Modus ein grosses Textfeld (Sheet) statt einzeiligem <input>\n- fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert."

@@ -159,22 +159,24 @@ const collapsed = ref(false)
           <input :ref="setRenameRef" v-model="draftTitle" class="input input-sm join-item flex-1 bg-warning/10" aria-label="Vorlage umbenennen" @keyup.esc="cancelRename" @blur="commitRename(p.id)" />
           <button type="submit" class="btn btn-sm btn-primary join-item">OK</button>
         </form>
-        <!-- normale Zeile: ganze Flaeche auswaehlen + Kebab -->
+        <!-- normale Zeile: ganze Flaeche auswaehlen + Kebab. min-w-0 wie in den Baustein-/Snippet-Listen:
+             sonst schrumpft die Auswahlflaeche nicht unter die Namensbreite, ein langer Name schiebt Teilen
+             und ⋮ aus der Karte und die Seite verrutscht seitlich. Der Name wird mit … gekuerzt. -->
         <div v-else class="flex items-center gap-1">
           <button
             type="button"
-            class="flex min-h-11 flex-1 items-center gap-2 rounded-lg px-3 text-left text-sm"
+            class="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 text-left text-sm"
             :class="p.id === editorActiveId ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-base-200'"
             :aria-current="p.id === editorActiveId ? 'true' : undefined"
             @click="switchTo(p.id)"
           >
-            <span v-if="p.id === editorActiveId" aria-hidden="true">✓</span>
-            <span class="truncate">{{ (p.title && p.title.trim()) || p.id }}</span>
+            <span v-if="p.id === editorActiveId" class="shrink-0" aria-hidden="true">✓</span>
+            <span class="min-w-0 flex-1 truncate">{{ (p.title && p.title.trim()) || p.id }}</span>
           </button>
-          <button type="button" class="btn btn-ghost btn-sm min-h-11 w-11 px-0" :aria-label="`${(p.title && p.title.trim()) || p.id} teilen (Link und QR)`" title="Teilen (Link & QR)" @click="rowShare(p.id)">
+          <button type="button" class="btn btn-ghost btn-sm min-h-11 w-11 shrink-0 px-0" :aria-label="`${(p.title && p.title.trim()) || p.id} teilen (Link und QR)`" title="Teilen (Link & QR)" @click="rowShare(p.id)">
             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
           </button>
-          <button type="button" class="btn btn-ghost btn-sm min-h-11 w-11 px-0 text-lg leading-none" :aria-label="`Aktionen für ${(p.title && p.title.trim()) || p.id}`" @click="openSheet(p.id)">⋮</button>
+          <button type="button" class="btn btn-ghost btn-sm min-h-11 w-11 shrink-0 px-0 text-lg leading-none" :aria-label="`Aktionen für ${(p.title && p.title.trim()) || p.id}`" @click="openSheet(p.id)">⋮</button>
         </div>
       </li>
       <!-- Drei Entstehungswege einer NEUEN Vorlage (Bibliotheks-Ebene): leer · per verschluesseltem
@@ -186,7 +188,12 @@ const collapsed = ref(false)
         <button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-primary hover:bg-base-200" @click="receiveNewTemplate">↓ Empfangen (Link & QR)</button>
       </li>
       <li>
-        <button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-primary hover:bg-base-200" @click="importNewTemplate">⭳ Aus Datei importieren…</button>
+        <button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-primary hover:bg-base-200" @click="importNewTemplate">
+          <!-- Icon statt Zeichen „⭳": das fehlt in der Android-Schrift (leeres Kaestchen). Dasselbe Import-Icon
+               wie in den Baustein-/Snippet-Listen. -->
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
+          Aus Datei importieren…
+        </button>
       </li>
     </ul>
 

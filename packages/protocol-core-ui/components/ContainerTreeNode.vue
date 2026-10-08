@@ -4,6 +4,7 @@
  *  rekursive Kinder. Feld: Blatt (kein ＋, keine Kinder). :key="child.id" = stabile Wiederverwendung. */
 import { ref, computed, inject } from 'vue'
 import type { Node, FunctionKind } from '@resqdocs/protocol-core/model'
+import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 import { useTreeEditor } from '../treeEditor.ts'
 import { snippetPickerKey, allowedFunctionKindsKey } from '../injection.ts'
 import MoveToPicker from './MoveToPicker.vue'
@@ -130,10 +131,11 @@ function confirmDelete(): void {
             <!-- Funktions-Auswahl: kurze Abfrage, welche Funktion eingefügt werden soll -->
             <template v-else>
               <button type="button" class="btn btn-ghost btn-xs justify-start gap-1 text-base-content/60" @click="addView = 'root'"><span aria-hidden="true">‹</span> zurück</button>
-              <button v-if="kindAllowed('medikamentenplan')" type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'medikamentenplan')">Medikamentenplan</button>
-              <button v-if="kindAllowed('aerzte')" type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'aerzte')">Ärzte</button>
-              <button v-if="kindAllowed('packYears')" type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'packYears')">Pack-Years</button>
-              <button v-if="kindAllowed('news2')" type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', 'news2')">NEWS2</button>
+              <!-- Beschriftung aus der Registry: derselbe Name, den die neue Funktion als Titel bekommt
+                   (createFunction). Vorher stand hier „Ärzte", eingefuegt wurde „Ärzte & Kontaktpersonen". -->
+              <template v-for="k in ALL_FUNCTION_KINDS" :key="k">
+                <button v-if="kindAllowed(k)" type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', k)">{{ FUNCTION_REGISTRY[k].label }}</button>
+              </template>
             </template>
           </div>
         </template>

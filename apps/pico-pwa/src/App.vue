@@ -211,8 +211,10 @@ onBeforeUnmount(() => {
       </div>
     </main>
 
-    <!-- Dock mit Icons (#52): inline-SVGs (stroke), kein Icon-Font/CDN (Netzwerk-Policy) -->
-    <nav class="dock border-t border-base-300 bg-base-100">
+    <!-- Dock mit Icons (#52): inline-SVGs (stroke), kein Icon-Font/CDN (Netzwerk-Policy).
+         z-10 wie die Kopfzeile: daisyUI setzt das Dock nur auf z-index 1 - eine Einsatz-Karte mit offenem
+         Dropdown (z-index 4, style.css) lag sonst ueber der Tab-Leiste (#278). -->
+    <nav class="dock z-10 border-t border-base-300 bg-base-100">
       <button type="button" :class="{ 'dock-active text-primary': activeTab === 'einsatz' }" @click="selectTab('einsatz')">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <rect x="5" y="4.5" width="14" height="16.5" rx="2" />

@@ -199,3 +199,83 @@ test('Nachpflege-Filter (#264): page/search mit missingStaerke + countMissingSta
   await repo.setStaerke('00000002', '600 mg')
   assert.equal(await repo.countMissingStaerke(), 1)
 })
+
+// --- #275: Typeahead-Suche (Infix + Wildcard, Fragmente ab 3) ---------------------------------------
+// Prueft zugleich Migration v10: das CREATE VIRTUAL TABLE ... tokenize='trigram' muss durchlaufen
+// (node:sqlite bringt ein Trigram-faehiges SQLite). suggest matcht ueber den Trigram-Index.
+
+async function repoMit(...eintraege: Array<[string, { wirkstoff?: string; staerke?: string; label?: string }]>) {
+  const repo = await freshRepo()
+  for (const [pzn, d] of eintraege) await repo.setEntry(pzn, { wirkstoff: d.wirkstoff ?? '', staerke: d.staerke ?? '', label: d.label ?? '', category: '', note: '' })
+  return repo
+}
+
+test('suggest: blosses Fragment aus der Wortmitte findet den Treffer (Infix)', async () => {
+  const repo = await repoMit(
+    ['00000001', { wirkstoff: 'Metformin', staerke: '1000 mg' }],
+    ['00000002', { wirkstoff: 'Ramipril' }],
+  )
+  const hits = await repo.suggest('for', 10) // mitten in metFORmin
+  assert.deepEqual(hits.map((e) => e.pzn), ['00000001'])
+})
+
+test('suggest: * ist Platzhalter fuer beliebige Zeichen', async () => {
+  const repo = await repoMit(
+    ['00000001', { wirkstoff: 'Metformin' }],
+    ['00000002', { wirkstoff: 'Metoprolol' }],
+    ['00000003', { wirkstoff: 'Valsartan' }],
+  )
+  assert.deepEqual((await repo.suggest('me*min', 10)).map((e) => e.pzn), ['00000001'], 'me…min nur Metformin')
+  assert.deepEqual((await repo.suggest('*sartan', 10)).map((e) => e.pzn), ['00000003'], 'Endung')
+  assert.deepEqual((await repo.suggest('met', 10)).map((e) => e.pzn), ['00000001', '00000002'], 'Praefix trifft beide')
+})
+
+test('suggest: Label wird mitgesucht, Ausgabe nach Name (nicht nach pzn)', async () => {
+  const repo = await repoMit(
+    ['00000009', { wirkstoff: '', label: 'Aspirin' }],
+    ['00000002', { wirkstoff: '', label: 'Aspirin protect' }],
+  )
+  // 'Aspirin' < 'Aspirin protect' -> 009 vor 002, obwohl 002 die kleinere PZN hat.
+  assert.deepEqual((await repo.suggest('aspir', 10)).map((e) => e.pzn), ['00000009', '00000002'])
+})
+
+test('suggest: Namen mit passendem Wortanfang stehen ueber blossen Infix-Treffern', async () => {
+  // Der Kern des Reihungs-Fix (#275): sonst versinkt das gesuchte Medikament unter zufaellig
+  // niedrigen PZN. 'Comet' enthaelt 'met' nur mittig und stuende alphabetisch VOR 'Metformin' -
+  // trotzdem gehoert der Praefix-Treffer nach oben.
+  const repo = await repoMit(
+    ['00000001', { wirkstoff: 'Metformin' }],
+    ['00000002', { wirkstoff: 'Comet' }],
+  )
+  assert.deepEqual((await repo.suggest('met', 10)).map((e) => e.pzn), ['00000001', '00000002'])
+})
+
+test('suggest: PZN-Ziffern werden zusaetzlich gematcht', async () => {
+  const repo = await repoMit(['00524306', { wirkstoff: 'Ibuprofen' }])
+  assert.deepEqual((await repo.suggest('524306', 10)).map((e) => e.pzn), ['00524306'])
+})
+
+test('suggest: unter 3 Zeichen und leer -> keine Treffer (keine Volltabellensuche)', async () => {
+  const repo = await repoMit(['00000001', { wirkstoff: 'Metformin' }])
+  assert.deepEqual(await repo.suggest('me', 10), [])
+  assert.deepEqual(await repo.suggest('', 10), [])
+  assert.deepEqual(await repo.suggest('  ', 10), [])
+})
+
+test('suggest: limit begrenzt die Trefferzahl', async () => {
+  const repo = await repoMit(
+    ['00000001', { wirkstoff: 'Metformin' }],
+    ['00000002', { wirkstoff: 'Metoprolol' }],
+    ['00000003', { wirkstoff: 'Metamizol' }],
+  )
+  assert.equal((await repo.suggest('met', 2)).length, 2)
+})
+
+test('suggest: das eingebaute % im Namen wirkt nicht als Platzhalter', async () => {
+  const repo = await repoMit(
+    ['00000001', { wirkstoff: 'ab%cd' }],
+    ['00000002', { wirkstoff: 'abXcd' }],
+  )
+  // "b%c" (3 Zeichen) muss das Prozentzeichen LITERAL suchen; waere % ein Platzhalter, traefe es beide.
+  assert.deepEqual((await repo.suggest('b%c', 10)).map((e) => e.pzn), ['00000001'])
+})

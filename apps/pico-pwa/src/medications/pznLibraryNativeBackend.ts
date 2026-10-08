@@ -68,6 +68,9 @@ export function createNativePznBackend(adapter: KeyValueAdapter): PznLibraryBack
     async search(query, opts) {
       return (await repo()).search(query, opts)
     },
+    async suggest(query, limit) {
+      return (await repo()).suggest(query, limit)
+    },
     async allSorted() {
       return (await repo()).allSorted()
     },
