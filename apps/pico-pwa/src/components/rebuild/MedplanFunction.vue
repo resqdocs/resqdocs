@@ -19,7 +19,8 @@ import type { PznEntry } from '@/medications/pznLibrary'
 import { meaningfulLength } from '@/medications/pznSuggest'
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { extractPznFromPackageCode, packageScanName, type PackageBarcodeFormat } from '@/medications/packageScan'
-import PackageScanOverlay from '@/components/PackageScanOverlay.vue'
+import CodeScanOverlay from '@/components/CodeScanOverlay.vue'
+import { PACKAGE_PROFILE } from '@/medplan/scanProfiles'
 import MedplanReviewSheet from './MedplanReviewSheet.vue'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 import FunctionFillToggle from './FunctionFillToggle.vue'
@@ -479,7 +480,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
     <!-- Teleport an body: das Vollbild-Overlay (fixed inset-0) wuerde sonst von einem transformierten/
          backdrop-blur-Vorfahren des Einsatz-Shells auf den Inhaltsbereich eingesperrt. -->
     <Teleport to="body">
-      <PackageScanOverlay v-if="pkgScanOpen" @decoded="onPackageDecoded" @cancel="pkgScanOpen = false" />
+      <CodeScanOverlay v-if="pkgScanOpen" :profile="PACKAGE_PROFILE" @decoded="onPackageDecoded" @cancel="pkgScanOpen = false" />
     </Teleport>
 
     <!-- BMP-Plan-Scan + Review (teleportet sich selbst) -->

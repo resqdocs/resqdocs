@@ -1,7 +1,7 @@
 // Scanner-Modus - zentrale Auswahl der Scan-Strategie.
 //
-// Vergleich WebView-Standard vs. WebView-optimiert in EINEM Build; der native Decoder
-// (Android: ZXing-C++, iOS: Apple Vision) ist als explizite Alternative waehlbar.
+// Gilt nur im Browser: Vergleich WebView-Standard vs. WebView-optimiert. In der App (Android, iOS)
+// laeuft immer der native Scanner (ZXing-C++), siehe CodeScanOverlay.vue.
 // Default ist der stabile WebView-Standard-Scan. Datenschutz: reine lokale Auswahl,
 // kein Netz/Telemetrie.
 
@@ -13,7 +13,7 @@ export const SCANNER_MODES: ScannerMode[] = ['webview_standard', 'webview_optimi
 /** Konkret nutzbare Strategie. */
 export type EffectiveScannerMode = 'webview_standard' | 'webview_optimized' | 'native_zxingcpp'
 
-/** Nativer Scanner aktuell NICHT produktiv verfuegbar (nur Android-Spike). */
+/** Default ohne Plattformwissen: nicht verfuegbar. Die Overlays uebergeben nativeScannerAvailable(). */
 export const NATIVE_SCANNER_AVAILABLE = false
 
 /**
@@ -38,5 +38,5 @@ export function effectiveScannerMode(
 export const SCANNER_MODE_LABELS: Record<ScannerMode, string> = {
   webview_standard: 'WebView Standard',
   webview_optimized: 'WebView optimiert',
-  native_zxingcpp: 'Nativ (kameranativ)', // Android: ZXing-C++, iOS: Apple Vision
+  native_zxingcpp: 'Nativ (eigener Kamerabildschirm)', // Android: CameraX, iOS: AVFoundation; beide ZXing-C++
 }

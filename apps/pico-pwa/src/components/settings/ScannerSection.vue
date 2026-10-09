@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { Capacitor } from '@capacitor/core'
 import { useStorage } from '@/storage/useStorage'
 import { SCANNER_MODE_LABELS, type ScannerMode } from '@/medplan/scannerMode'
-import { nativeDatamatrixScanAvailable } from '@/medplan/nativeDatamatrixScan'
+import { nativeScannerAvailable } from '@/medplan/nativeScanner'
 
 /**
  * Scanner-Modus - Auswahl der Scan-Strategie fuer den BMP-Data-Matrix-Scan.
@@ -10,20 +9,19 @@ import { nativeDatamatrixScanAvailable } from '@/medplan/nativeDatamatrixScan'
  * Datenschutz: rein lokale Auswahl, kein Netz/Telemetrie.
  */
 const storage = useStorage()
-// 'Nativ' nutzt in der App den kameranativen Scanner (nur Android: ZXing-C++). Web + iOS nutzen
-// den WebView-Scanner. Erststart-Default ist 'WebView Standard' (stabiler); der native Pfad bleibt
-// auf Android als explizite Alternative waehlbar. 'Automatisch' wurde entfernt.
-const nativeAvailable = nativeDatamatrixScanAvailable()
-// Grund fuer die deaktivierte Option plattformgerecht: iOS-Nativ derzeit nicht verfuegbar; im Web
-// ueberhaupt nur in der App.
-const nativeHint = nativeAvailable
-  ? ''
-  : Capacitor.getPlatform() === 'ios'
-    ? ' — auf iPhone/iPad derzeit nicht verfügbar'
-    : ' — nur in der App (Android)'
+// 'Nativ' nutzt in der App den eigenen Vollbild-Scanner (Android: CameraX, iOS: AVFoundation; beide ZXing-C++).
+// Nur im Browser bleibt der WebView-Scanner (dort wird die Auswahl angezeigt).
+const nativeAvailable = nativeScannerAvailable()
+// Die native Option gibt es nur in der App; im Browser ist sie deaktiviert.
+const nativeHint = nativeAvailable ? '' : ' — nur in der App'
 
 function onChange(e: Event): void {
   storage.settings.scannerMode = (e.target as HTMLSelectElement).value as ScannerMode
+  void storage.saveSettings()
+}
+
+function onDiagnostics(e: Event): void {
+  storage.settings.scannerDiagnostics = (e.target as HTMLInputElement).checked
   void storage.saveSettings()
 }
 </script>
@@ -36,18 +34,27 @@ function onChange(e: Event): void {
         Strategie für den Medikationsplan-Scan. Für Vergleichstests umschaltbar;
         „WebView Standard" ist die Voreinstellung.
       </p>
-      <select class="select select-bordered select-sm w-full max-w-xs min-h-11" :value="storage.settings.scannerMode" @change="onChange">
+      <template v-if="nativeAvailable">
+        <p class="text-sm">
+          In der App wird immer der eigene Kamerabildschirm genutzt (Zoom, Tippen zum Scharfstellen, Licht;
+          gelesen mit ZXing-C++). Kamerabilder werden weder gespeichert noch übertragen.
+        </p>
+        <label class="flex min-h-11 cursor-pointer items-center gap-3">
+          <input type="checkbox" class="checkbox checkbox-sm" :checked="storage.settings.scannerDiagnostics" @change="onDiagnostics" />
+          <span class="text-sm">Technische Angaben im Scanner anzeigen (Kamera, Auflösung, Zoom, Versuche)</span>
+        </label>
+      </template>
+      <select v-else class="select select-bordered select-sm w-full max-w-xs min-h-11" :value="storage.settings.scannerMode" @change="onChange">
         <option value="webview_standard">{{ SCANNER_MODE_LABELS.webview_standard }}</option>
         <option value="webview_optimized">{{ SCANNER_MODE_LABELS.webview_optimized }}</option>
         <option value="native_zxingcpp" :disabled="!nativeAvailable">
           {{ SCANNER_MODE_LABELS.native_zxingcpp }}{{ nativeHint }}
         </option>
       </select>
-      <p class="text-xs text-base-content/60">
+      <p v-if="!nativeAvailable" class="text-xs text-base-content/60">
         „WebView Standard" ist die stabile Voreinstellung (schlanker Scan im WebView).
-        „Nativ" nutzt auf Android die geräteeigene Kamera + nativen Decoder (ZXing-C++) —
-        als Alternative wählbar, derzeit aber nicht zuverlässiger. Auf iPhone/iPad wird immer
-        der WebView-Scanner verwendet. Es werden keine Bilddaten gespeichert oder übertragen.
+        „Nativ" öffnet in der App einen eigenen Kamerabildschirm mit Zoom, Tippen zum Scharfstellen
+        und Licht; gelesen wird mit ZXing-C++. Kamerabilder werden weder gespeichert noch übertragen.
       </p>
     </div>
   </section>

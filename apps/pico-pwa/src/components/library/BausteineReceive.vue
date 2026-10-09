@@ -8,7 +8,8 @@
 import { ref } from 'vue'
 import { receiveTransfer, TransferError } from '@resqdocs/protocol-core/transferClient'
 import { routeImport } from '@/composables/useImportRouting'
-import QrScanOverlay from '@/components/QrScanOverlay.vue'
+import CodeScanOverlay from '@/components/CodeScanOverlay.vue'
+import { QR_PROFILE } from '@/medplan/scanProfiles'
 
 const transferCfg = (import.meta.env.VITE_TRANSFER_URL as string | undefined)
   ? { baseUrl: import.meta.env.VITE_TRANSFER_URL as string }
@@ -67,6 +68,6 @@ function onQrDecoded(raw: string): void {
       </button>
       <p v-if="msg" class="text-xs" :class="msg.kind === 'ok' ? 'text-success' : 'text-error'">{{ msg.text }}</p>
     </div>
-    <QrScanOverlay v-if="qrOpen" @decoded="onQrDecoded" @cancel="qrOpen = false" />
+    <CodeScanOverlay v-if="qrOpen" :profile="QR_PROFILE" @decoded="onQrDecoded($event.text)" @cancel="qrOpen = false" />
   </div>
 </template>

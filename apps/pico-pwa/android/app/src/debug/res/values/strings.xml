@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- Debug-Builds heissen "ResQDocs Test" und laufen als app.resqdocs.debug neben der Store-App
+     (siehe applicationIdSuffix in app/build.gradle). -->
+<resources>
+    <string name="app_name">ResQDocs Test</string>
+    <string name="title_activity_main">ResQDocs Test</string>
+</resources>

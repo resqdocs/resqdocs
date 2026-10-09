@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.7.0] - 2026-10-09
+
+### Features
+
+- New full-screen camera scanner in the Android and iOS apps for the medication plan, medication packages and QR codes, built on CameraX (Android) and AVFoundation (iOS) with the ZXing-C++ decoder
+- The scanner starts at a zoom level matched to the camera's close-focus distance and supports pinch and slider zoom, tap to focus and the torch
+- The scanner screen follows the selected color theme (light/dark)
+- Settings: technical scanner details (camera, resolution, zoom) can be shown for troubleshooting
+
+### Changed
+
+- All scans share one camera component with decoder profiles per use case; in the browser the JavaScript scanner remains
+- The photo-based decoding path and the camera plugin dependency were removed
+- Debug builds install as a separate test app next to the store version
+- Android: Kotlin Gradle plugin 2.4.21; a build check rejects machine-learning, Firebase and similar tracking dependencies in release builds
+
+### Bug Fixes
+
+- Android: the camera no longer picks a fixed-focus wide-angle lens, which prevented scanning on many multi-camera devices
+- Weak or poorly printed medication plans are read considerably faster
+
 ## [1.6.0] - 2026-10-08
 
 ### Features

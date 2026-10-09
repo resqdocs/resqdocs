@@ -15,7 +15,8 @@ import { usePznLibrary } from '@/medications/usePznLibrary'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
 import { staerkeOhneDuplikat } from '@resqdocs/protocol-core/functions/registry'
-import MedplanScanOverlay from '@/components/MedplanScanOverlay.vue'
+import CodeScanOverlay from '@/components/CodeScanOverlay.vue'
+import { BMP_PROFILE } from '@/medplan/scanProfiles'
 
 const emit = defineEmits<{ apply: [doctor: ArztRow, meds?: MedikamenteRow[]]; close: [] }>()
 
@@ -90,7 +91,7 @@ onMounted(() => {
 <template>
   <!-- BMP-Kamera als Vollbild (teleported; z-50 > Sheet z-40) -->
   <Teleport to="body">
-    <MedplanScanOverlay v-if="scanOpen" @decoded="onDecoded" @cancel="scanOpen = false" />
+    <CodeScanOverlay v-if="scanOpen" :profile="BMP_PROFILE" @decoded="onDecoded($event.text)" @cancel="scanOpen = false" />
   </Teleport>
 
   <!-- Review-Sheet (Bottom-Sheet, teleported; bewusst KEIN daisyUI .modal wegen z-999 ueber der Kamera) -->

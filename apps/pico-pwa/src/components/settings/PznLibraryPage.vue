@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import PackageScanOverlay from '@/components/PackageScanOverlay.vue'
+import CodeScanOverlay from '@/components/CodeScanOverlay.vue'
+import { PACKAGE_PROFILE } from '@/medplan/scanProfiles'
 import { usePznLibrary } from '@/medications/usePznLibrary'
 import { extractPznFromPackageCode, type PackageBarcodeFormat } from '@/medications/packageScan'
 import { normalizePzn, type ImportMode, type PznEntry } from '@/medications/pznLibrary'
@@ -649,7 +650,7 @@ async function deleteAll(): Promise<void> {
         </div>
       </div>
 
-      <PackageScanOverlay v-if="scanning" @decoded="onScanDecoded" @cancel="scanning = false" />
+      <CodeScanOverlay v-if="scanning" :profile="PACKAGE_PROFILE" @decoded="onScanDecoded" @cancel="scanning = false" />
 
       <!-- Loesch-Rueckfrage: kuratierte Eintraege nie rueckfragefrei entfernen -->
       <ConfirmDialog

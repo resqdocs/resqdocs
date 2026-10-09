@@ -4,9 +4,9 @@
 // ueber den gekapselten Parser (@resqdocs/protocol-core/medplan) und haelt die Medikations-
 // zeilen als EDITIERBAREN ENTWURF - ausschliesslich im RAM.
 //
-// Die Kamera liefert der ZXing-Overlay (MedplanScanOverlay.vue, reiner
-// JS-Scanner - Netzwerk-Policy: nichts telefoniert nach Hause, laeuft auch
-// auf Huawei ohne Google-Dienste). Dieses Composable kennt KEINE Kamera -
+// Die Kamera liefert CodeScanOverlay.vue mit BMP_PROFILE (in der App nativ mit
+// ZXing-C++, im Browser zxing-js - Netzwerk-Policy: nichts telefoniert nach
+// Hause, laeuft auch ohne Google-Dienste). Dieses Composable kennt KEINE Kamera -
 // es bekommt rohe UKF-Strings ueber ingest() (Scan UND Text-Einfuegen).
 //
 // Datenschutz (docs/data-flow.md "BMP-Scan"): Roh-Scan und Entwurf werden NIE
