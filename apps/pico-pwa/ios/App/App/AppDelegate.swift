@@ -68,5 +68,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(ICloudBackupPlugin())
+        bridge?.registerPluginInstance(ScannerPlugin()) // nativer Code-Scanner
     }
 }

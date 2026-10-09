@@ -42,7 +42,7 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Die Kamera wird ausschließlich zum Scannen des Medikationsplan-Codes (BMP) verwendet. Es werden keine Fotos gespeichert.</string>
+	<string>Die Kamera wird ausschließlich zum Scannen von Codes (Medikationsplan, Packungen, QR) verwendet. Es werden keine Fotos gespeichert oder übertragen.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Wird vom Kamera-Framework vorausgesetzt. ResQDocs greift NICHT auf deine Mediathek zu – der Medikationsplan-Code (BMP) wird nur live gescannt, nichts wird gelesen.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

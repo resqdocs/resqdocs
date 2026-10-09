@@ -1,31 +1,40 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { BrowserDatamatrixCodeReader } from '@zxing/browser'
+import { BrowserMultiFormatReader } from '@zxing/browser'
 import type { IScannerControls } from '@zxing/browser'
-import { DecodeHintType } from '@zxing/library'
+import { BarcodeFormat, DecodeHintType, type Result } from '@zxing/library'
 import { useStorage } from '@/storage/useStorage'
 import { effectiveScannerMode } from '@/medplan/scannerMode'
+import { useRearCamera } from '@/medplan/useRearCamera'
+import { nativeScannerAvailable, scanNative } from '@/medplan/nativeScanner'
+import { normalizeScanFormat, type ScanProfile, type ScanResult } from '@/medplan/scanProfiles'
 
 /**
- * Kamera-Overlay fuer den BMP-Scan: reiner JS-Scanner (@zxing/browser,
- * Data Matrix) ueber getUserMedia - laeuft in iOS-WKWebView, Android-WebView,
- * Huawei (kein Google-Dienst) und im Browser. Netzwerk-Policy: ZXing dekodiert
- * lokal, nichts verlaesst das Geraet; der Roh-String wird nur emittiert.
+ * DAS Kamera-Overlay der App - ein Pfad fuer alle Scans, keine getrennten Kamera-Pfade je Anwendungsfall.
+ * Was gescannt wird, sagt das Profil (scanProfiles.ts): BMP_PROFILE, PACKAGE_PROFILE, QR_PROFILE.
  *
- * Bedien-UX: Orientierungsrahmen + Hilfetext + optionaler Torch-Button.
+ *  - In der App (Android, iOS): NUR der native Vollbild-Scanner (CameraX bzw. AVFoundation + ZXing-C++).
+ *    Er laeuft als eigener Bildschirm ueber diesem Overlay; hierher kommt nur Ergebnis oder Abbruch.
+ *  - Im Browser (PWA): JS-Scanner (@zxing/browser) ueber getUserMedia mit Linsenwahl (useRearCamera),
+ *    Torch, Tap-to-Refokus und dem Schnellumschalter Standard/Optimiert (settings.scannerMode):
+ *      'webview_standard'  = Reader ohne Hints, Default-Intervall, einfache Constraints
+ *      'webview_optimized' = TRY_HARDER, 120 ms, hoehere Wunschaufloesung, Dauerfokus, 8-s-Hinweis
  *
- * Scanner-Modus: die Einstellung `settings.scannerMode` ist die ZENTRALE
- * Quelle. Hier konkret nutzbar (nativ noch nicht verfuegbar):
- *  - 'webview_standard'  = bisheriger Pfad: BrowserDatamatrixCodeReader ohne Hints,
- *    Default-Intervall, einfache Constraints, kein Dauerfokus, kein 8-s-Hinweis.
- *  - 'webview_optimized' = optimierter Pfad: TRY_HARDER, 120 ms, hoehere Wunschaufloesung,
- *    Dauerfokus best-effort, 8-s-Hinweis.
- * Der Schnellumschalter unten aendert dieselbe Einstellung und startet den Scanner
- * neu (sauberer Neustart statt Live-Umkonfiguration).
+ * Netzwerk-Policy: dekodiert wird lokal; der Roh-String wird nur emittiert, nie geloggt/gespeichert.
+ * Was der Aufrufer daraus extrahiert (PZN, Transfer-Link, BMP), ist seine Sache.
  */
-const emit = defineEmits<{ decoded: [raw: string]; cancel: [] }>()
+const props = defineProps<{ profile: ScanProfile }>()
+const emit = defineEmits<{ decoded: [result: ScanResult]; cancel: [] }>()
 
 const SLOW_HINT_MS = 8000
+const REFOCUS_RETURN_MS = 700
+
+/** zxing-js kennt kein eigenes PZN-Format; Code 39 deckt den PZN-Strichcode ab. */
+const WEB_FORMATS: Partial<Record<ScanProfile['formats'][number], BarcodeFormat>> = {
+  DataMatrix: BarcodeFormat.DATA_MATRIX,
+  QRCode: BarcodeFormat.QR_CODE,
+  Code39: BarcodeFormat.CODE_39,
+}
 
 const storage = useStorage()
 const video = ref<HTMLVideoElement | null>(null)
@@ -37,15 +46,21 @@ const slowHint = ref(false)
 const focusTapSupported = ref(false)
 /** Kurzer visueller Tap-Puls an der Tippstelle (rein kosmetisch, kein pointsOfInterest). */
 const pulse = ref<{ x: number; y: number; key: number } | null>(null)
-/** Aktuell laufende konkrete Strategie (fuer den Schnellumschalter). */
 const activeMode = ref<'webview_standard' | 'webview_optimized'>('webview_optimized')
+const nativeAvailable = nativeScannerAvailable()
 let controls: IScannerControls | null = null
 let done = false
+// true ab onBeforeUnmount: schliesst das Kamera-Leck, wenn das Overlay WAEHREND des getUserMedia-Starts
+// geschlossen wird (controls ist bis nach dem await null -> das stop() im Teardown liefe ins Leere).
+let disposed = false
 let slowTimer: ReturnType<typeof setTimeout> | undefined
 let refocusBusy = false
 let refocusTimer: ReturnType<typeof setTimeout> | undefined
 let pulseKey = 0
-const REFOCUS_RETURN_MS = 700
+
+// Kameraauswahl und Ist-Zustands-Meldung, nur auf Android-WebView aktiv (siehe useRearCamera).
+const { diagnose, keinFokus, umschaltbar, constraintsFor, switchCamera, noteActualTrack } = useRearCamera()
+let switching = false
 
 function currentVideoTrack(): MediaStreamTrack | null {
   const stream = video.value?.srcObject
@@ -77,9 +92,8 @@ function detectFocusTapSupport(): void {
 
 /**
  * Nutzer-initiierter Refokus (Tap-to-Focus): EIN single-shot-AF-Sweep, danach GARANTIERT zurueck
- * auf continuous. Nie automatisch -> der optimierte Scan-Pfad bleibt exakt wie bisher. Der Track
- * wird bei JEDEM Tap frisch geholt (restartScanner tauscht den Stream). iOS/Unsupported: der Guard
- * greift vor jedem applyConstraints -> stiller No-op, kein Throw, keine Affordance.
+ * auf continuous. Der Track wird bei JEDEM Tap frisch geholt (restartScanner tauscht den Stream).
+ * iOS/Unsupported: der Guard greift vor jedem applyConstraints -> stiller No-op.
  */
 function refocus(ev: PointerEvent): void {
   const track = currentVideoTrack()
@@ -88,7 +102,6 @@ function refocus(ev: PointerEvent): void {
   if (refocusBusy) return
   refocusBusy = true
 
-  // Visuelles Tap-Ack an der Tippstelle (Fokus ist global, kein Koordinaten-Fokus).
   const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect()
   pulse.value = { x: ev.clientX - rect.left, y: ev.clientY - rect.top, key: ++pulseKey }
 
@@ -98,9 +111,8 @@ function refocus(ev: PointerEvent): void {
   // applyConstraints auf einer wackligen Kamera-HAL nie resolved.
   refocusTimer = setTimeout(() => {
     const back = { advanced: [{ focusMode: 'continuous' }] } as unknown as MediaTrackConstraints
-    // Torch-Re-Assert ERST, nachdem continuous gesetzt ist (.finally): manche Androids loeschen
-    // beim Fokus-applyConstraints den Torch; unsequenziert koennte switchTorch(true) vor dem
-    // Loeschen laufen und der Blitz bliebe aus, waehrend torchOn 'an' zeigt.
+    // Torch-Re-Assert ERST, nachdem continuous gesetzt ist: manche Androids loeschen beim
+    // Fokus-applyConstraints den Torch.
     void track.applyConstraints(back)
       .catch(() => {})
       .finally(() => {
@@ -110,33 +122,67 @@ function refocus(ev: PointerEvent): void {
   }, REFOCUS_RETURN_MS)
 }
 
+function finish(result: ScanResult): void {
+  if (done) return
+  done = true
+  if (slowTimer) clearTimeout(slowTimer)
+  emit('decoded', result)
+}
+
+/** Nativer Scanner (eigene Activity/ViewController). Technische Angaben nur, wenn in den Einstellungen gewuenscht. */
+async function runNative(): Promise<void> {
+  const r = await scanNative(props.profile, { showDiagnostics: storage.settings.scannerDiagnostics })
+  if (r.status === 'found') {
+    finish({ text: r.raw, format: r.format })
+  } else if (r.status === 'cancelled') {
+    emit('cancel')
+  } else if (r.status === 'denied') {
+    error.value = 'Kamerazugriff verweigert. Bitte in den Systemeinstellungen für ResQDocs erlauben.'
+  } else {
+    error.value = `${r.message}.`
+  }
+}
+
+function webHints(tryHarder: boolean): Map<DecodeHintType, unknown> {
+  const h = new Map<DecodeHintType, unknown>()
+  const formats = props.profile.formats.map((f) => WEB_FORMATS[f]).filter((f): f is BarcodeFormat => f !== undefined)
+  h.set(DecodeHintType.POSSIBLE_FORMATS, formats)
+  if (tryHarder) h.set(DecodeHintType.TRY_HARDER, true)
+  return h
+}
+
 async function startScanner(): Promise<void> {
   error.value = null
-  // Einstellung -> konkrete Strategie (nativ nicht verfuegbar -> webview_*).
-  const eff = effectiveScannerMode(storage.settings.scannerMode)
-  const optimized = eff === 'webview_optimized'
+  if (nativeAvailable) {
+    await runNative()
+    return
+  }
+  const optimized = effectiveScannerMode(storage.settings.scannerMode, false) === 'webview_optimized'
   activeMode.value = optimized ? 'webview_optimized' : 'webview_standard'
   try {
     const reader = optimized
-      ? new BrowserDatamatrixCodeReader(
-          new Map<DecodeHintType, unknown>([[DecodeHintType.TRY_HARDER, true]]),
-          { delayBetweenScanAttempts: 120 },
-        )
-      : new BrowserDatamatrixCodeReader()
-    const videoConstraints: MediaTrackConstraints = optimized
-      ? { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-      : { facingMode: 'environment' }
-    controls = await reader.decodeFromConstraints(
+      ? new BrowserMultiFormatReader(webHints(true), { delayBetweenScanAttempts: 120 })
+      : new BrowserMultiFormatReader(webHints(false))
+    // Linsenwahl statt „irgendeine Ruecklinse": ohne sie greift die WebView auf Mehrlinsen-Geraeten
+    // oft zur Ultraweitwinkel-Linse mit Fixfokus, die auf Scanabstand nie scharf wird (siehe useRearCamera).
+    const videoConstraints = await constraintsFor(optimized)
+    if (disposed) return
+    const c = await reader.decodeFromConstraints(
       { audio: false, video: videoConstraints },
       video.value ?? undefined,
-      (result) => {
+      (result: Result | undefined) => {
         if (result && !done) {
-          done = true
-          if (slowTimer) clearTimeout(slowTimer)
-          emit('decoded', result.getText())
+          finish({ text: result.getText(), format: normalizeScanFormat(BarcodeFormat[result.getBarcodeFormat()]) })
         }
       },
     )
+    // Wurde das Overlay waehrend des Kamera-Starts geschlossen, den gerade erhaltenen Stream sofort stoppen.
+    if (disposed) {
+      c.stop()
+      return
+    }
+    controls = c
+    noteActualTrack(currentVideoTrack()) // was ist wirklich angekommen (Aufloesung, Linse)?
     torchSupported.value = typeof controls.switchTorch === 'function'
     detectFocusTapSupport()
     if (optimized) {
@@ -163,6 +209,19 @@ async function restartScanner(): Promise<void> {
   await startScanner()
 }
 
+/** Notausgang, wenn die automatisch gewaehlte Linse nicht taugt. switchCamera merkt die neue Wahl,
+ *  restartScanner liest sie beim naechsten constraintsFor wieder ein. */
+async function onSwitchCamera(): Promise<void> {
+  if (switching || done) return
+  switching = true
+  try {
+    if (!(await switchCamera(activeMode.value === 'webview_optimized'))) return
+    await restartScanner()
+  } finally {
+    switching = false
+  }
+}
+
 /** Schnellumschalter: aendert die zentrale Einstellung und startet neu. */
 async function switchMode(m: 'webview_standard' | 'webview_optimized'): Promise<void> {
   if (activeMode.value === m) return
@@ -182,9 +241,10 @@ async function toggleTorch(): Promise<void> {
   }
 }
 
-onMounted(startScanner)
+onMounted(() => void startScanner())
 
 onBeforeUnmount(() => {
+  disposed = true
   if (slowTimer) clearTimeout(slowTimer)
   if (refocusTimer) clearTimeout(refocusTimer)
   controls?.stop() // schaltet Torch automatisch aus
@@ -194,7 +254,7 @@ onBeforeUnmount(() => {
 <template>
   <!-- Root in Theme-Farbe (matcht hell/dunkel/resqdocs); nur der Kamera-Bereich bleibt dunkel. -->
   <div class="fixed inset-0 z-50 flex flex-col bg-base-100">
-    <!-- Kamerabild + Orientierungsrahmen (Rahmen rein dekorativ, blockiert Tap/Decode nicht).
+    <!-- Kamerabild + Orientierungsrahmen (rein dekorativ, dekodiert wird das ganze Bild).
          Tap auf den Kamera-Bereich = Refokus (nur wo unterstuetzt; passiv, ohne preventDefault). -->
     <div
       class="relative min-h-0 w-full flex-1 bg-black"
@@ -203,8 +263,15 @@ onBeforeUnmount(() => {
     >
       <video ref="video" class="h-full w-full object-cover" autoplay playsinline muted />
       <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <!-- Rahmen durch BEIDE Viewport-Maße begrenzt -> auch im Querformat sinnvoll. -->
-        <div class="aspect-square w-[min(55vw,55vh)] max-w-[18rem] rounded-2xl border-2 border-white/90 shadow-[0_0_0_100vmax_rgba(0,0,0,0.45)]" />
+        <!-- Rahmen durch BEIDE Viewport-Masse begrenzt -> auch im Querformat sinnvoll. Bewusst NICHT
+             groesser: ein formatfuellender Rahmen liess den Code auf ca. 6 cm heranholen - naeher, als viele
+             Hauptkameras scharfstellen. Breit (3:2) fuer Strichcodes auf Packungen, sonst quadratisch. -->
+        <div
+          class="border-2 border-white/90 shadow-[0_0_0_100vmax_rgba(0,0,0,0.45)]"
+          :class="profile.frame === 'wide'
+            ? 'aspect-[3/2] w-[min(82vw,90vh)] max-w-sm rounded-xl'
+            : 'aspect-square w-[min(55vw,55vh)] max-w-[18rem] rounded-2xl'"
+        />
       </div>
       <!-- Tap-Puls: reines visuelles Ack an der Tippstelle (nur wenn Refokus unterstuetzt wird). -->
       <div
@@ -215,21 +282,32 @@ onBeforeUnmount(() => {
       />
     </div>
 
-    <!-- Steuerleiste in Theme-Farben (daisyUI base-100/base-content) -> immer sichtbar + passend.
-         Kompakt, eine Zeile, auch im Querformat. Safe-Area beachtet. -->
+    <!-- Steuerleiste in Theme-Farben (daisyUI base-100/base-content). Kompakt, Safe-Area beachtet. -->
     <div class="flex flex-col items-stretch gap-1 bg-base-100 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
       <p v-if="error" class="text-center text-sm text-error">{{ error }}</p>
       <template v-else>
-        <p class="truncate text-center text-xs text-base-content/70">BMP-Code flach in den Rahmen halten · Reflexionen vermeiden</p>
-        <p v-if="focusTapSupported" class="truncate text-center text-[11px] text-base-content/50">Zum Scharfstellen aufs Kamerabild tippen.</p>
+        <p class="truncate text-center text-xs text-base-content/70">{{ profile.hint }}</p>
+        <p v-if="profile.note" class="text-center text-[11px] text-base-content/55">{{ profile.note }}</p>
+        <p v-if="keinFokus" class="truncate text-center text-[11px] text-warning">
+          Diese Kamera kann nicht scharfstellen — Abstand ca. 20 cm halten.
+        </p>
+        <p v-else-if="focusTapSupported" class="truncate text-center text-[11px] text-base-content/50">Zum Scharfstellen aufs Kamerabild tippen.</p>
+        <button
+          v-if="diagnose"
+          class="mx-auto max-w-full px-2 py-1 text-center text-[11px] leading-snug text-base-content/50"
+          :class="umschaltbar ? 'underline decoration-dotted underline-offset-2' : 'cursor-default'"
+          type="button"
+          :disabled="!umschaltbar"
+          @click="onSwitchCamera"
+        >
+          {{ diagnose }}<template v-if="umschaltbar"> — andere Kamera</template>
+        </button>
         <p v-if="slowHint" class="truncate text-center text-[11px] text-base-content/50">Abstand langsam verändern, Reflexionen vermeiden.</p>
       </template>
 
-      <!-- Links: Schließen (X) · Mitte: Scanner-Modus · Rechts: Taschenlampe (Icon).
-           BEWUSST KEINE daisyUI-.btn-Klassen fuer die Icon-Buttons: .btn/.btn-ghost
-           setzen eigene Farbvariablen (auch fuer SVGs) und machten die Icons unsichtbar.
-           Stattdessen plain Buttons mit explizitem bg-base-300 + text-base-content
-           (theme-aware, aber garantiert kontrastreich); SVG erbt via currentColor. -->
+      <!-- Links: Schliessen (X) · Mitte: Scanner-Modus (nur Browser) · Rechts: Taschenlampe.
+           BEWUSST KEINE daisyUI-.btn-Klassen fuer die Icon-Buttons: .btn/.btn-ghost setzen eigene
+           Farbvariablen (auch fuer SVGs) und machten die Icons unsichtbar. -->
       <div class="flex items-center justify-between gap-2">
         <button
           class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-base-300 text-base-content active:bg-base-content/20"
@@ -242,7 +320,7 @@ onBeforeUnmount(() => {
           </svg>
         </button>
 
-        <div class="inline-flex shrink-0 overflow-hidden rounded-full bg-base-300 text-sm font-medium" role="group" aria-label="Scanner-Modus">
+        <div v-if="!nativeAvailable" class="inline-flex shrink-0 overflow-hidden rounded-full bg-base-300 text-sm font-medium" role="group" aria-label="Scanner-Modus">
           <button
             class="px-3.5 py-2"
             :class="activeMode === 'webview_standard' ? 'bg-primary text-primary-content' : 'text-base-content'"

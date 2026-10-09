@@ -3,9 +3,6 @@ PODS:
     - CapacitorCordova
   - CapacitorApp (8.1.2):
     - Capacitor
-  - CapacitorCamera (8.2.5):
-    - Capacitor
-    - IONCameraLib (~> 2.0.0)
   - CapacitorCommunitySqlite (8.1.1):
     - Capacitor
     - SQLCipher
@@ -20,7 +17,6 @@ PODS:
     - Capacitor
   - CapacitorShare (8.0.3):
     - Capacitor
-  - IONCameraLib (2.0.0)
   - IONFilesystemLib (2.0.0)
   - SQLCipher (4.10.0):
     - SQLCipher/standard (= 4.10.0)
@@ -28,21 +24,25 @@ PODS:
   - SQLCipher/standard (4.10.0):
     - SQLCipher/common
   - ZIPFoundation (0.9.20)
+  - zxing-cpp (3.1.1):
+    - zxing-cpp/Wrapper (= 3.1.1)
+  - zxing-cpp/Core (3.1.1)
+  - zxing-cpp/Wrapper (3.1.1):
+    - zxing-cpp/Core
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
-  - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
   - "CapacitorCommunitySqlite (from `../../node_modules/@capacitor-community/sqlite`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - CapacitorNativeSettings (from `../../node_modules/capacitor-native-settings`)
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
+  - zxing-cpp (from `https://github.com/zxing-cpp/zxing-cpp.git`, tag `v3.1.1`)
 
 SPEC REPOS:
   trunk:
-    - IONCameraLib
     - IONFilesystemLib
     - SQLCipher
     - ZIPFoundation
@@ -52,8 +52,6 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorApp:
     :path: "../../node_modules/@capacitor/app"
-  CapacitorCamera:
-    :path: "../../node_modules/@capacitor/camera"
   CapacitorCommunitySqlite:
     :path: "../../node_modules/@capacitor-community/sqlite"
   CapacitorCordova:
@@ -66,22 +64,29 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/preferences"
   CapacitorShare:
     :path: "../../node_modules/@capacitor/share"
+  zxing-cpp:
+    :git: https://github.com/zxing-cpp/zxing-cpp.git
+    :tag: v3.1.1
+
+CHECKOUT OPTIONS:
+  zxing-cpp:
+    :git: https://github.com/zxing-cpp/zxing-cpp.git
+    :tag: v3.1.1
 
 SPEC CHECKSUMS:
   Capacitor: 89067779e14fb7ea56af07b4817f45d1f0c2a269
   CapacitorApp: 7b7e43debe505bc61beedb83796aa1368c86078b
-  CapacitorCamera: 2366a2b6d44417406ab33f8545d5c7b7b233028f
   CapacitorCommunitySqlite: 785553c54e52da62d058238d4571db5692c022c4
   CapacitorCordova: 5bec5648cbd09a176ce34ce5e7b6cdabb2c8a327
   CapacitorFilesystem: 17ee1862a45ef2e5012311a87e18de1d45a6811b
   CapacitorNativeSettings: 3f12e9700e0a10cb5d0e22aec00de29d72589a12
   CapacitorPreferences: cca2021f386efb75947c850334447d9ff22b14f1
   CapacitorShare: 5b5e53347556bee89ae6163ed20b5b3c25fe75f1
-  IONCameraLib: 729cae576e1a952602ce750a9790b6dc7d7e2e95
   IONFilesystemLib: 0a001124dedc317c03032d138aaefbf4c18adb09
   SQLCipher: eb79c64049cb002b4e9fcb30edb7979bf4706dfc
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
+  zxing-cpp: 2f0de2db44d59dba9fcd170d8ba7dca920ef3f60
 
-PODFILE CHECKSUM: d647910ee1058573771a75bb2cb4ac1d2ec8da16
+PODFILE CHECKSUM: 4c4d304432368a9ff25759dc78e2ad5a9801cf92
 
 COCOAPODS: 1.17.0
