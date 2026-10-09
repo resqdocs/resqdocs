@@ -43,6 +43,8 @@ export interface AppSettings {
    * Voreinstellung fuer iOS wie Android).
    */
   scannerMode: ScannerMode
+  /** Technische Angaben (Kamera, Aufloesung, Zoom, Versuche) im nativen Scanner einblenden. Default aus. */
+  scannerDiagnostics: boolean
   /**
    * TTL des temporaeren Einsatzentwurfs in STUNDEN. Sliding-Idle: ein
    * laufender Entwurf wird nach so vielen Stunden Inaktivitaet automatisch
@@ -72,6 +74,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   headingWidth: 60,
   pznAutoCheck: false,
   scannerMode: 'webview_standard',
+  scannerDiagnostics: false,
   caseDraftTtlHours: 3,
   typingDelayMs: 60,
 }

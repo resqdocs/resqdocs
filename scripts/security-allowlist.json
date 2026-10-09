@@ -272,6 +272,24 @@
       "term": "prompt",
       "contains": "prompt.de.md",
       "reason": "Dateinamen der generierten Doku (prompt.de.md/prompt.en.md) im gen:ai-docs-Skript, kein KI-Prompt-Inhalt"
+    },
+    {
+      "file": "apps/pico-pwa/android/app/build.gradle",
+      "term": "firebase",
+      "contains": "Firebase-Welt",
+      "reason": "Build-Pruefung, die Firebase-/Telemetrie-Abhaengigkeiten im Release VERBIETET (Kommentar)"
+    },
+    {
+      "file": "apps/pico-pwa/android/app/build.gradle",
+      "term": "firebase",
+      "contains": "com.google.firebase:",
+      "reason": "Verbotsliste der Build-Pruefung, keine Abhaengigkeit"
+    },
+    {
+      "file": "CHANGELOG.md",
+      "term": "firebase",
+      "contains": "rejects machine-learning, Firebase",
+      "reason": "Changelog beschreibt die Build-Pruefung, die Firebase verbietet"
     }
   ]
 }

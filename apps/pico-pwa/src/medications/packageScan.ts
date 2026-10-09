@@ -8,7 +8,10 @@
 // MVP-Formate: Code 39 (klassischer PZN-Barcode) + Data Matrix NUR ueber das
 // PPN-Datenelement (IFA-Agentur '11'). KEIN GTIN/EAN-Mapping (separates Follow-up).
 
-export type PackageBarcodeFormat = 'code39' | 'datamatrix' | 'unknown'
+import type { ScanResultFormat } from '../medplan/scanProfiles.ts'
+
+/** Format aus dem Scanner (CodeScanOverlay); 'qrcode' kommt im Packungs-Profil nicht vor. */
+export type PackageBarcodeFormat = ScanResultFormat
 
 /**
  * Liefert die 8-stellig normalisierte PZN oder null (kein gueltiger PZN-Code).

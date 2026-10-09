@@ -15,8 +15,8 @@ import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
 public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        // Nativer Data-Matrix-Decoder (ZXing-C++, GMS-frei) — VOR super.onCreate registrieren.
-        registerPlugin(DatamatrixDecoderPlugin.class);
+        // Nativer Code-Scanner (CameraX + ZXing-C++, GMS-frei) — VOR super.onCreate registrieren.
+        registerPlugin(app.resqdocs.scanner.ScannerPlugin.class);
         super.onCreate(savedInstanceState);
     }
 

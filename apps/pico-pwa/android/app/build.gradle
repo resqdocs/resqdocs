@@ -19,8 +19,8 @@ android {
         applicationId "com.example.resqdocs"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 16
-        versionName "1.6.0"
+        versionCode 17
+        versionName "1.7.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -41,6 +41,16 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // Test-Builds laufen als eigene App "ResQDocs Test" (app.resqdocs.debug) NEBEN der
+            // Store-Version: Debug-Signatur und Play-Signatur passen nie zusammen, ein Sideload
+            // ueber die installierte Store-App scheitert sonst mit "App nicht installiert" und
+            // Deinstallieren wuerde die lokalen Daten des Testers loeschen. App-Name siehe
+            // src/debug/res/values/strings.xml. Drive-Login (OAuth an Paketname+SHA-1 gebunden)
+            // funktioniert in Debug-Builds nicht - fuer Scanner-/UI-Tests irrelevant.
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -89,7 +99,15 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
-    implementation 'io.github.zxing-cpp:android:3.0.2'   // Data-Matrix-Decoder (Apache-2.0, GMS-frei)
+    // Nativer Scanner: CameraX + ZXing-C++. Beide Apache-2.0, ohne Google-Dienste/Telemetrie
+    // (Abhaengigkeitskette, Manifeste und .so auf Netzwerkcode geprueft). 3.1.x: neuer Data-Matrix-
+    // Detektor fuer grosse, gewoelbte Symbole (BMP).
+    def cameraxVersion = '1.6.2'
+    implementation "androidx.camera:camera-core:$cameraxVersion"
+    implementation "androidx.camera:camera-camera2:$cameraxVersion"
+    implementation "androidx.camera:camera-lifecycle:$cameraxVersion"
+    implementation "androidx.camera:camera-view:$cameraxVersion"
+    implementation 'io.github.zxing-cpp:android:3.1.1'
 }
 
 apply from: 'capacitor.build.gradle'
@@ -111,6 +129,32 @@ tasks.register('checkBundleFresh', Exec) {
     workingDir file("${rootProject.projectDir}/..")   // apps/pico-pwa
     commandLine 'node', 'scripts/check-bundle-fresh.mjs', 'android', 'android/app/src/main/assets/public'
 }
+// Datenschutz-Waechter: Inhalte gescannter medizinischer Codes und Kamerabilder duerfen das
+// Geraet nie verlassen. Bricht jeden Release-Build ab, sobald eine Bild-/Barcode-Erkennung oder
+// Telemetrie aus der Google-/Firebase-Welt oder ein kommerzielles Scanner-SDK in den Release-Klassenpfad
+// rutscht (auch transitiv). Bekannt und erlaubt: play-services-auth & Co. fuer die Google-Anmeldung der
+// Drive-Sicherung - die stehen nicht auf der Liste und werden nur aufgefuehrt.
+tasks.register('pruefeScannerDatenschutz') {
+    doLast {
+        def verboten = [
+            'com.google.mlkit:', 'com.google.android.gms:play-services-mlkit', 'com.google.android.gms:play-services-vision',
+            'com.google.android.gms:play-services-code-scanner', 'com.google.android.odml:', 'com.google.firebase:',
+            'com.google.android.datatransport:', 'androidx.camera:camera-mlkit-vision', 'com.scandit.', 'com.dynamsoft',
+            'com.huawei.hms:',
+        ]
+        def ids = configurations.getByName('releaseRuntimeClasspath').incoming.resolutionResult.allComponents
+            .collect { it.moduleVersion }.findAll { it != null }
+            .collect { "${it.group}:${it.name}:${it.version}".toString() }
+        def treffer = ids.findAll { id -> verboten.any { id.startsWith(it) } }
+        if (treffer) {
+            throw new GradleException("Datenschutz: verbotene Abhaengigkeiten im Release (Scanner): ${treffer}")
+        }
+        def gms = ids.findAll { it.startsWith('com.google.android.gms:') }
+        logger.lifecycle("Datenschutz-Waechter ok (${ids.size()} Abhaengigkeiten; GMS nur fuer die Anmeldung: ${gms})")
+    }
+}
+
 tasks.matching { it.name in ['bundleRelease', 'assembleRelease'] }.configureEach {
+    dependsOn 'pruefeScannerDatenschutz'
     dependsOn 'checkBundleFresh'
 }

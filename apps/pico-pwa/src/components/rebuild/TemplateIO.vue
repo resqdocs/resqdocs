@@ -13,7 +13,8 @@ import { exportTemplate } from '@resqdocs/protocol-core/templateIO'
 import { detectAndParse, kindNoun } from '@resqdocs/protocol-core/importRouter'
 import { shareTransfer, receiveTransfer, TransferError, type TransferTtl } from '@resqdocs/protocol-core/transferClient'
 import QrCode from '@/components/QrCode.vue'
-import QrScanOverlay from '@/components/QrScanOverlay.vue'
+import CodeScanOverlay from '@/components/CodeScanOverlay.vue'
+import { QR_PROFILE } from '@/medplan/scanProfiles'
 import { routeDetected } from '@/composables/useImportRouting'
 import { useTemplateExport } from '@/composables/useTemplateExport'
 import { useAppVersion } from '@/composables/useAppVersion'
@@ -329,7 +330,7 @@ function onFile(e: Event): void {
     <p v-if="msg" class="text-xs" :class="msg.kind === 'ok' ? 'text-success' : 'text-error'">{{ msg.text }}</p>
 
     <!-- QR-Scanner für den Empfang eines Transfer-Links (Vollbild-Overlay). -->
-    <QrScanOverlay v-if="qrScanOpen" @decoded="onQrDecoded" @cancel="qrScanOpen = false" />
+    <CodeScanOverlay v-if="qrScanOpen" :profile="QR_PROFILE" @decoded="onQrDecoded($event.text)" @cancel="qrScanOpen = false" />
 
     <!-- Kollision: Vorlage mit gleicher Kennung existiert -> ueberschreiben oder als neue importieren -->
     <div class="modal" :class="{ 'modal-open': pendingImport !== null }" role="dialog" aria-modal="true">

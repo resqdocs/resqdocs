@@ -26,6 +26,12 @@
 
         </activity>
 
+        <!-- Nativer Code-Scanner: nur intern startbar, Bilder bleiben im Speicher. -->
+        <activity
+            android:name=".scanner.ScanActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
