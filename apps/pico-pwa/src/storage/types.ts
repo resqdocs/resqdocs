@@ -37,6 +37,12 @@ export interface AppSettings {
    */
   pznAutoCheck: boolean
   /**
+   * Hinweis auf eine neue App-Version im Store: hoechstens einmal am Tag die kleine
+   * Versionsangabe von resqdocs.app abrufen (appUpdate/appUpdateNotice.ts). Default an
+   * (Maintainer-Entscheid 2026-10-10), in den App-Einstellungen abschaltbar.
+   */
+  appUpdateCheck: boolean
+  /**
    * Scanner-Strategie fuer den BMP-Data-Matrix-Scan. Zentrale Quelle;
    * der Kamera-Schnellumschalter aendert genau diese Einstellung. Default
    * 'webview_standard' (schlanker ZXing-JS-WebView-Scanner; bewusste Erststart-
@@ -73,6 +79,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   headingFill: '=',
   headingWidth: 60,
   pznAutoCheck: false,
+  appUpdateCheck: true,
   scannerMode: 'webview_standard',
   scannerDiagnostics: false,
   caseDraftTtlHours: 3,

@@ -1,21 +1,11 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# R8-Regeln der App. Capacitor, die Plugins, zxing-cpp, CameraX, Room und SQLCipher bringen ihre
+# Keep-Regeln selbst mit (Consumer-Regeln in den AARs); hier steht nur, was die App zusaetzlich braucht.
 #
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Eigener Code ist ohne Zusatzregel sicher: ScannerPlugin erbt von com.getcapacitor.Plugin (Capacitor-Regel
+# haelt die Klasse vollstaendig), ScanActivity/MainActivity stehen im Manifest, Intent-Extras sind nur
+# einfache Typen und Arrays, Formatnamen kommen aus zxingcpp.** (von zxing-cpp gehalten).
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Zeilennummern in Absturzberichten (Play Console entschluesselt mit der mapping.txt aus dem AAB);
+# der echte Dateiname wird nicht mitgeliefert.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

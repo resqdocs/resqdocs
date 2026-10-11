@@ -233,8 +233,8 @@ function onTouchEnd(e: TouchEvent): void {
           </span>
           <h1 class="text-xl font-bold">Privat by Design</h1>
           <p class="text-sm text-base-content/80">
-            Patientendaten existieren nur flüchtig, während du dokumentierst - getippt, übertragen,
-            verworfen. <strong>Nichts wird gespeichert</strong>, nichts verlässt dein Gerät.
+            Patientendaten existieren nur vorübergehend, während du dokumentierst - getippt, an dein
+            Zielgerät übertragen, automatisch gelöscht. <strong>Nichts davon geht an uns.</strong>
           </p>
           <p class="text-xs text-base-content/60">
             Ausführliche Anleitung: <span class="font-medium">resqdocs.app/anleitung</span>

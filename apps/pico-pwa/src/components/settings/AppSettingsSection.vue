@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useStorage } from '@/storage/useStorage'
+import { useAppUpdateNotice } from '@/appUpdate/useAppUpdateNotice'
 import { speedFromDelay, delayFromSpeed, typingSpeedLabel, DELAY_MIN_MS, DELAY_MAX_MS } from '@/pico/typingSpeed'
 
 /** App-Einstellungen (Zielgerät, Design, Erscheinung). Über die
@@ -9,6 +10,14 @@ import { speedFromDelay, delayFromSpeed, typingSpeedLabel, DELAY_MIN_MS, DELAY_M
  * Vorlagen-/Protokoll-Rework auf der Vorlagen-Ebene neu verortet. Die
  * gespeicherten Werte + die Renderer-Default-Logik bleiben unberührt. */
 const { settings, saveSettings } = useStorage()
+const appUpdateNotice = useAppUpdateNotice()
+
+function onAppUpdateCheck(e: Event): void {
+  const on = (e.target as HTMLInputElement).checked
+  void saveSettings({ appUpdateCheck: on }).then(() => {
+    if (on) void appUpdateNotice.maybeCheck()
+  })
+}
 
 /**
  * Der Regler zeigt GESCHWINDIGKEIT, gespeichert wird die VERZOEGERUNG.
@@ -72,6 +81,22 @@ const typingSpeed = computed({
           <span>Schnell</span>
         </div>
       </fieldset>
+
+      <label class="flex cursor-pointer items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          class="checkbox checkbox-sm mt-0.5"
+          :checked="settings.appUpdateCheck"
+          @change="onAppUpdateCheck"
+        />
+        <span>
+          Auf neue App-Versionen hinweisen
+          <span class="block text-xs text-base-content/60">
+            Fragt bei jedem Öffnen der App die kleine Versionsangabe von resqdocs.app ab. Dabei werden
+            keine Einsatz- oder Gerätedaten übertragen.
+          </span>
+        </span>
+      </label>
 
       <p class="text-xs text-base-content/60">Einstellungen werden lokal gespeichert (keine Cloud).</p>
     </div>
