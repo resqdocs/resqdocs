@@ -31,6 +31,9 @@ function sanitize(s: Partial<AppSettings> | null | undefined): AppSettings {
     headingWidth: Number.isFinite(Number(s?.headingWidth)) && Number(s?.headingWidth) > 0
       ? Math.min(200, Math.round(Number(s?.headingWidth))) : DEFAULT_SETTINGS.headingWidth,
     pznAutoCheck: s?.pznAutoCheck === true,
+    // Default an: auch Bestandsnutzer ohne gespeicherten Wert bekommen den Hinweis; nur ein
+    // bewusstes Abschalten (false) bleibt erhalten.
+    appUpdateCheck: s?.appUpdateCheck !== false,
     scannerMode: SCANNER_MODES.includes(s?.scannerMode as ScannerMode)
       ? (s!.scannerMode as ScannerMode) : DEFAULT_SETTINGS.scannerMode,
     scannerDiagnostics: s?.scannerDiagnostics === true,

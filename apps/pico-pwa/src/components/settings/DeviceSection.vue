@@ -5,6 +5,7 @@ import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-s
 import { usePicoDevice } from '@/pico/usePicoDevice'
 import { useFirmwareUpdate } from '@/pico/useFirmwareUpdate'
 import { isValidSsidId } from '@/pico/picoClient'
+import { normalizeBridgeUrl } from '@/pico/bridgeUrl'
 
 /**
  * Gerät / Pico. Bindet die gekapselte
@@ -20,6 +21,7 @@ const fw = useFirmwareUpdate()
 
 const sendMsg = ref<string | null>(null)
 const draftUrl = ref<string>(baseUrl.value)
+const urlError = ref<string | null>(null)
 const ssidDraft = ref('')
 const ssidMsg = ref<string | null>(null)
 const fwMsg = ref<string | null>(null)
@@ -45,8 +47,17 @@ async function onFirmwareUpdate(): Promise<void> {
   }
 }
 
+// Feld und gespeicherter Wert stimmen nach dem Verlassen immer ueberein: ohne Schema wird http:// ergaenzt,
+// leer springt auf die gespeicherte Adresse zurueck, ein fremdes Schema wird benannt statt still verworfen.
 function commitUrl(): void {
-  if (draftUrl.value.trim()) setBaseUrl(draftUrl.value.trim())
+  const r = normalizeBridgeUrl(draftUrl.value)
+  if (r && !r.ok) {
+    urlError.value = r.error
+    return
+  }
+  urlError.value = null
+  if (r) setBaseUrl(r.url)
+  draftUrl.value = r ? r.url : baseUrl.value
 }
 async function onSend(): Promise<void> {
   sendMsg.value = null
@@ -126,8 +137,11 @@ async function onSetSsid(): Promise<void> {
           class="input input-bordered input-sm w-full max-w-xs min-h-11"
           placeholder="http://10.10.10.1"
           aria-label="Base-URL der Pico-Bridge"
+          :aria-invalid="urlError ? 'true' : undefined"
+          aria-describedby="bridge-url-error"
           @change="commitUrl"
         />
+        <span v-if="urlError" id="bridge-url-error" class="mt-1 text-xs text-error" role="alert">{{ urlError }}</span>
       </label>
 
       <div class="flex flex-wrap gap-2">

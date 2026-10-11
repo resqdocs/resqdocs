@@ -1,7 +1,8 @@
 // icloudCloudStore.ts — CloudBackupStore-Implementierung für iOS über den iCloud-Ubiquity-Container.
-// Gegenstück zu driveCloudStore.ts (Android). Der native ICloudBackup-Plugin legt gzip-Bloebs in einen
-// versteckten Ordner NEBEN Documents/ ab -> synct über die eigenen Apple-Geräte des Nutzers, bleibt in der
-// Files-App unsichtbar. KEIN OAuth, KEIN Profil, KEIN Consent — „angemeldet" heißt: iCloud/Ubiquity verfügbar.
+// Gegenstück zu driveCloudStore.ts (Android). Der native ICloudBackup-Plugin legt gzip-Bloebs unter
+// Documents/Backups/ im Ubiquity-Container ab -> synct über die eigenen Apple-Geräte des Nutzers und ist in der
+// Dateien-App sichtbar (iCloud Drive -> ResQDocs -> Backups, IsDocumentScopePublic=true). KEIN OAuth, KEIN Profil
+// — „angemeldet" heißt: iCloud/Ubiquity verfügbar. Einwilligung holt BackupSection.vue vor dem Einschalten ein.
 // ACHTUNG: nur am iOS-Gerät mit aktivem iCloud verifizierbar, nicht im Container.
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import { gzipString, decodeMaybeGzip, bytesToBase64Async } from '../utils/gzip.ts'

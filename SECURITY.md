@@ -15,7 +15,8 @@ Rückmeldung; feste Reaktionszeiten können nicht garantiert werden (Open-Source
 
 ## Netzwerk-Policy der App (bindend, 2026-06-10)
 
-Die App telefoniert **nirgendwo** hin. Die einzigen erlaubten Remote-Verbindungen:
+Die App telefoniert **nirgendwo** hin: kein Tracking, keine Telemetrie. Die einzigen erlaubten
+Remote-Verbindungen:
 
 1. **Lokale Pico-Bridge** (LAN, `http://10.10.10.1` bzw. konfigurierte Base-URL).
 2. **PZN-Wörterbuch-Abruf**: Versions-/Manifest-Check + Download des
@@ -28,6 +29,25 @@ Die App telefoniert **nirgendwo** hin. Die einzigen erlaubten Remote-Verbindunge
      neue Datenbank-Version hinzuweisen. Sie lädt dabei **nicht** automatisch die
      Datendatei; die eigentliche Aktualisierung bleibt nutzerinitiiert. Fehler
      dieses Checks werden still behandelt (keine Fehlermeldung).
+3. **App-Versions-Hinweis** (Maintainer-Entscheid 2026-10-10/11): bei jedem Öffnen der App
+   (Start oder Rückkehr in den Vordergrund) ein Abruf der statischen Datei `https://resqdocs.app/app-version.json`
+   (`{"ios": "x.y.z", "android": "x.y.z"}`), um auf eine neue Version im Store
+   hinzuweisen. Ohne Kennung, ohne Query-Parameter, ohne Nutzdaten.
+   - **Standard: an**, in den App-Einstellungen abschaltbar (dann kein Abruf).
+   - Die Datei wird erst angehoben, wenn die Version im jeweiligen Store live ist.
+   - Fehler werden still behandelt; ein Fehlschlag löst keinen erneuten Abruf vor
+     Ablauf des Tages aus.
+4. **Teilen per Link** (`transfer.resqdocs.app`): nur auf Knopfdruck. Inhalt wird im
+   Gerät mit AES-256-GCM verschlüsselt, der Schlüssel steht nur im URL-Fragment; der
+   Server speichert nur Chiffrat + Ablauf (höchstens 7 Tage, „1× lesen" = Löschen beim
+   ersten Abruf), keine IP-Adressen, keine Logs.
+5. **Cloud-Sicherung** (Default aus, Einwilligungsdialog): Vorlagen, Bausteine,
+   Textbausteine, PZN-Bibliothek ins eigene Konto des Nutzers - Android Google Drive
+   (`drive.appdata`, Google-Anmeldung), iOS iCloud Drive. Nie Einsatzeingaben oder
+   Einstellungen. Kein eigener Server beteiligt.
+
+Server-Seite: Container-nginx ohne Zugriffslogs; IP-Adressen sieht nur der vorgelagerte
+Reverse Proxy (Logs höchstens 7 Tage). Beschrieben in resqdocs.app/datenschutz.
 
 **Keine Analytics, keine Telemetrie, keine Crash-Reporter, keine SDK-Heimsender, keine
 CDNs/Web-Fonts.** Jede neue Dependency wird vor Aufnahme auf Telemetrie-Verhalten geprüft

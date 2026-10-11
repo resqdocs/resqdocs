@@ -5,7 +5,7 @@
 import { computed, ref, watch } from 'vue'
 import type { Container, Node, Heading, FunctionConfig } from '@resqdocs/protocol-core/model'
 import { DEFAULT_HEADING, DEFAULT_SEPARATOR } from '@resqdocs/protocol-core/model'
-import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
+import { FUNCTION_REGISTRY, FUNCTION_ROW_INLINE_SEPARATOR } from '@resqdocs/protocol-core/functions/registry'
 import { findNode, findPath, suggestFreeId } from '@resqdocs/protocol-core/creator'
 import { sanitizeId } from '@resqdocs/protocol-core/ids'
 import { appendOptions } from '@resqdocs/protocol-core/optionList'
@@ -510,7 +510,8 @@ async function saveAsBaustein(): Promise<void> {
             <fieldset v-if="node.config?.rowLayout === 'inline'" class="fieldset">
               <legend class="fieldset-legend">Trenner zwischen Einträgen</legend>
               <input class="input w-full font-mono" :value="node.config?.rowSeparator ?? ''" placeholder="z. B.  ·  oder ;" @input="setConfig({ rowSeparator: ($event.target as HTMLInputElement).value || undefined })" />
-              <p class="text-xs text-base-content/50">leer = Standard-Trenner „, "</p>
+              <!-- Wert aus der Konstante, die der Renderer nutzt - sonst laufen Text und Ausgabe wieder auseinander. -->
+              <p class="text-xs text-base-content/50">leer = Standard-Trenner „{{ FUNCTION_ROW_INLINE_SEPARATOR }}“ (Mittelpunkt)</p>
             </fieldset>
             <!-- untereinander -> Praefix/Suffix je Zeile -->
             <template v-else>

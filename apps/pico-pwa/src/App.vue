@@ -6,6 +6,7 @@ import DisclaimerGate from '@/components/DisclaimerGate.vue'
 import UsageNoticeModal from '@/components/UsageNoticeModal.vue'
 import FirmwareNoticeBanner from '@/components/FirmwareNoticeBanner.vue'
 import PznNoticeBanner from '@/components/PznNoticeBanner.vue'
+import AppUpdateDialog from '@/components/AppUpdateDialog.vue'
 import TabGuide, { TAB_GUIDE_HINT_ID } from '@/components/TabGuide.vue'
 import EinsatzView from '@/components/rebuild/EinsatzView.vue'
 import EditorView from '@/components/rebuild/EditorView.vue'
@@ -16,6 +17,7 @@ import { configureNativeRepositories } from '@/rebuild/configureNativeRepositori
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
 import { usePznNotice } from '@/medications/usePznNotice'
 import { PZN_DICTIONARY_ENABLED } from '@/medications/featureFlags'
+import { useAppUpdateNotice } from '@/appUpdate/useAppUpdateNotice'
 import { useReworkCaseDraft } from '@/rebuild/useReworkCaseDraft'
 import { useUsageNotice } from '@/composables/useUsageNotice'
 
@@ -28,11 +30,14 @@ const storage = useStorage()
 const protocolPersistence = useProtocolPersistence()
 const pznLookup = useMedicationLookup()
 const pznNotice = usePznNotice()
+const appUpdateNotice = useAppUpdateNotice()
 onMounted(async () => {
   void storage.initLibrary()
   void protocolPersistence.init() // Rework-Bibliothek laden (nativ SQLite / Web Memory) + Auto-Save
   // Settings zuerst (await): der optionale Hintergrund-Check liest das Opt-in.
   await storage.loadSettings()
+  // Hinweis auf eine neue App-Version (Schalter in den Einstellungen; Abruf bei jedem Oeffnen der App).
+  void appUpdateNotice.maybeCheck()
   // PZN-Wörterbuch (Netz-Download) ist deaktiviert (IFA/DSGVO) → nur bei aktivem
   // Flag laden/prüfen. ensureLoaded/maybeCheck sind sonst No-ops (kein Netz).
   if (PZN_DICTIONARY_ENABLED) {
@@ -110,7 +115,11 @@ watch(activeTab, (t) => {
 // ab, solange die App offen bleibt — im Dienst also praktisch nie.
 const draft = useReworkCaseDraft()
 function onVisible(): void {
-  if (document.visibilityState === 'visible') { void draft.checkExpiry(); void check() } // beim Zurückkehren Bridge gleich neu prüfen
+  if (document.visibilityState === 'visible') {
+    void draft.checkExpiry()
+    void check() // beim Zurückkehren Bridge gleich neu prüfen
+    void appUpdateNotice.maybeCheck() // die App bleibt oft tagelang im Speicher; jede Rueckkehr zaehlt als Oeffnen
+  }
 }
 const draftExpiryTimer = window.setInterval(() => {
   if (document.visibilityState === 'visible') void draft.checkExpiry()
@@ -127,6 +136,8 @@ onBeforeUnmount(() => {
   <!-- Haftungsausschluss-Gate: Erst-Start + nach jedem Update (blockt bis bestätigt) -->
   <DisclaimerGate />
   <UsageNoticeModal />
+  <!-- Hinweis auf eine neue App-Version im Store (resqdocs.app/app-version.json), unter den beiden Gates. -->
+  <AppUpdateDialog />
 
   <!-- Welcome-Seite: vollflaechig, erscheint nach dem Disclaimer
        (liegt unter dessen z-50); ueber das ?-Symbol im Header wieder abrufbar. -->

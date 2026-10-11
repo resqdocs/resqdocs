@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.7.1] - 2026-10-11
+
+### Features
+
+- The app shows a dialog on opening when a newer version is available in the app store; it can be postponed until the next start, hidden until the next version or turned off in the settings. The check only fetches a small static version file, without any identifier
+
+### Changed
+
+- Android: release builds are optimized and shrunk with R8; the mapping file ships inside the app bundle
+- The privacy texts in the app describe every network connection and storage location
+- The AI page and the transfer receiver page link to the imprint and the privacy policy
+- Updated dependencies, among them Capacitor 8.5.3, Vite 8.3.4, Vue 3.5.43, Gradle 8.14.6 and the Android Gradle plugin 8.13.2
+
+### Bug Fixes
+
+- A bridge address entered without "http://" is completed automatically instead of being discarded silently
+- The help text for the row separator in the template editor names the separator actually used (" · ")
+- The add menu in the template editor stays within the visible area and scrolls when space is short
+
 ## [1.7.0] - 2026-10-09
 
 ### Features

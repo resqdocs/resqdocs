@@ -19,8 +19,8 @@ android {
         applicationId "com.example.resqdocs"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 17
-        versionName "1.7.0"
+        versionCode 18
+        versionName "1.7.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -52,8 +52,13 @@ android {
             versionNameSuffix "-debug"
         }
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // R8: Code-Schrumpfung, Optimierung und Verschleierung (Play-Vorgabe DEX-Optimierung). Keep-Regeln
+            // bringen Capacitor, die Plugins, zxing-cpp, CameraX, Room und SQLCipher selbst mit (Consumer-Regeln
+            // in den AARs); eigene Ergaenzungen in proguard-rules.pro. Die mapping.txt legt AGP ins AAB, die
+            // Play Console liest sie von dort (lesbare Absturzberichte).
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             // Guard: nur signieren, wenn key.properties geladen wurde. Ein Build ohne
             // Keystore (CI/Container) referenziert den Signing-Config nicht und
             // scheitert daher nicht.
@@ -69,6 +74,18 @@ android {
                 debugSymbolLevel = "FULL"
             }
         }
+        // Geraetetest des R8-Builds: wie release (minifiziert), aber mit Debug-Signatur und als „ResQDocs Test"
+        // (app.resqdocs.debug) neben der Store-App installierbar. ./gradlew assembleReleaseTest
+        releaseTest {
+            initWith release
+            signingConfig signingConfigs.debug
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-r8test"
+            matchingFallbacks = ['release']
+        }
+    }
+    sourceSets {
+        releaseTest.res.srcDirs += 'src/debug/res'   // App-Name „ResQDocs Test"
     }
 }
 
