@@ -1,5 +1,5 @@
 PODS:
-  - Capacitor (8.5.2):
+  - Capacitor (8.5.3):
     - CapacitorCordova
   - CapacitorApp (8.1.2):
     - Capacitor
@@ -7,7 +7,7 @@ PODS:
     - Capacitor
     - SQLCipher
     - ZIPFoundation
-  - CapacitorCordova (8.5.2)
+  - CapacitorCordova (8.5.3)
   - CapacitorFilesystem (8.1.4):
     - Capacitor
     - IONFilesystemLib (~> 2.0.0)
@@ -74,10 +74,10 @@ CHECKOUT OPTIONS:
     :tag: v3.1.1
 
 SPEC CHECKSUMS:
-  Capacitor: 89067779e14fb7ea56af07b4817f45d1f0c2a269
+  Capacitor: 2f67eaeb8ed79909cd35b5e7439a5c2a9ca58e0f
   CapacitorApp: 7b7e43debe505bc61beedb83796aa1368c86078b
   CapacitorCommunitySqlite: 785553c54e52da62d058238d4571db5692c022c4
-  CapacitorCordova: 5bec5648cbd09a176ce34ce5e7b6cdabb2c8a327
+  CapacitorCordova: 0b7326439c7a09fc5d20eced5e0dab986327a493
   CapacitorFilesystem: 17ee1862a45ef2e5012311a87e18de1d45a6811b
   CapacitorNativeSettings: 3f12e9700e0a10cb5d0e22aec00de29d72589a12
   CapacitorPreferences: cca2021f386efb75947c850334447d9ff22b14f1
@@ -87,6 +87,6 @@ SPEC CHECKSUMS:
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
   zxing-cpp: 2f0de2db44d59dba9fcd170d8ba7dca920ef3f60
 
-PODFILE CHECKSUM: 4c4d304432368a9ff25759dc78e2ad5a9801cf92
+PODFILE CHECKSUM: a26971bd6e019a1363fc654f7c12cfe6cf73b32c
 
 COCOAPODS: 1.17.0

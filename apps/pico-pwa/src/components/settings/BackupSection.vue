@@ -414,9 +414,10 @@ async function cloudDelete(id: string): Promise<void> {
       <p class="text-sm font-medium">In deinem Konto sichern (Cloud)</p>
       <p class="mt-1 text-xs text-base-content/60">
         Synchronisiert deine Sicherungen über deine <strong>eigenen Geräte</strong> — <strong>iPhone/iPad über
-        iCloud</strong>, Android über dein Google-Konto (jeweils ein versteckter, app-eigener Ordner). Nur
-        <strong>Vorlagen &amp; Textbausteine, keine Patientendaten</strong> — es liegt in deinem Konto, das
-        entscheidest und verantwortest du selbst.
+        iCloud</strong> (Ordner „ResQDocs“ in iCloud Drive), Android über dein Google-Konto (ausgeblendeter,
+        app-eigener Ordner in Drive). Gesichert werden <strong>Vorlagen, Bausteine, Textbausteine und deine
+        PZN-Bibliothek — keine Einsatzeingaben</strong>. Es liegt in deinem Konto; das entscheidest und
+        verantwortest du selbst.
       </p>
 
       <template v-if="backup.cloudSupported">
@@ -459,18 +460,25 @@ async function cloudDelete(id: string): Promise<void> {
 
       <!-- Einwilligung vor der ERSTEN Aktivierung (Login + Daten in dein Konto). -->
       <div v-if="cloudConsent" class="mt-2 rounded-lg border border-info/40 bg-info/10 p-3 text-sm">
-        <p><strong>Cloud-Sicherung aktivieren?</strong> Deine Sicherungen werden über dein <strong>eigenes Konto</strong>
-          zwischen deinen Geräten synchronisiert. Enthalten sind <strong>nur Vorlagen und Textbausteine — keine
-          Patientendaten.</strong> Das entscheidest und verantwortest du selbst.</p>
+        <p><strong>Cloud-Sicherung aktivieren?</strong> Deine Sicherungen werden in dein <strong>eigenes Konto</strong>
+          hochgeladen und zwischen deinen Geräten abgeglichen. Enthalten sind <strong>Vorlagen, Bausteine,
+          Textbausteine und deine PZN-Bibliothek — keine Einsatzeingaben.</strong> Wir erhalten keinen Zugriff.</p>
+        <p class="mt-2 text-base-content/70">
+          ResQDocs verschlüsselt die Sicherungen nicht zusätzlich; der Anbieter (Google bzw. Apple) kann sie
+          auch in den USA verarbeiten. Du kannst die Cloud-Sicherung jederzeit ausschalten — vorhandene
+          Sicherungen bleiben dabei im Konto, du löschst sie einzeln in der Liste oder in deinem Konto.
+          Details: <a class="link" href="https://resqdocs.app/datenschutz/" target="_blank" rel="noopener">Datenschutzerklärung</a>.
+        </p>
         <p v-if="backup.cloudKind === 'google'" class="mt-2 text-base-content/70">
-          Beim Anmelden fragt Google dein <strong>Basis-Profil</strong> (Name, E-Mail, Bild) ab — das verlangt
-          Google beim Login, <strong>ResQDocs speichert und nutzt davon nichts</strong>. Der einzige Zugriff ist ein
-          <strong>versteckter, app-eigener Ordner</strong> in deinem Drive; deine sonstigen Dateien bleiben unsichtbar.
+          Beim Anmelden übermittelt Google dein <strong>Basis-Profil</strong> (Name, E-Mail, Bild) an die App — das
+          verlangt Google beim Login, <strong>ResQDocs wertet davon nichts aus</strong>. Die App erhält nur Zugriff auf
+          einen <strong>ausgeblendeten, app-eigenen Ordner</strong> in deinem Drive; deine übrigen Dateien bleiben
+          unzugänglich.
         </p>
         <p v-else-if="backup.cloudKind === 'icloud'" class="mt-2 text-base-content/70">
           Auf iPhone/iPad läuft das über <strong>iCloud</strong> — es nutzt dein bereits angemeldetes iCloud-Konto,
-          <strong>ohne extra Login und ohne Profil-Freigabe</strong>. Gespeichert wird in einem <strong>versteckten,
-          app-eigenen Ordner</strong>, der in der Dateien-App nicht auftaucht.
+          <strong>ohne extra Login und ohne Profil-Freigabe</strong>. Gespeichert wird im Ordner <strong>„ResQDocs“
+          in iCloud Drive</strong>; du siehst ihn in der Dateien-App.
         </p>
         <div class="mt-2 flex flex-wrap gap-2">
           <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="cloudBusy" @click="confirmCloudOn">Aktivieren</button>

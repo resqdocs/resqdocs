@@ -2,7 +2,7 @@
 /** Rekursive Baum-Zeile (Container ODER Feld; self-reference ueber den Dateinamen). Aktionen
  *  rufen die zentrale Tree-API (provide/inject). Container: ＋ mit Typwahl (Container/Feld) +
  *  rekursive Kinder. Feld: Blatt (kein ＋, keine Kinder). :key="child.id" = stabile Wiederverwendung. */
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, nextTick } from 'vue'
 import type { Node, FunctionKind } from '@resqdocs/protocol-core/model'
 import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 import { useTreeEditor } from '../treeEditor.ts'
@@ -34,28 +34,65 @@ const blockPickerOpen = ref(false)
 const confirmOpen = ref(false)
 // Aufklapprichtung des ＋-Menues: nach OBEN, wenn unter dem Button zu wenig Platz ist (weniger scrollen).
 const addUp = ref(false)
+// Hoehenbegrenzung des ＋-Menues (px): passt es nicht ganz in den sichtbaren Bereich, scrollt es in sich.
+const addMaxH = ref<number | null>(null)
+const addAnchor = ref<HTMLElement | null>(null)
+const addMenu = ref<HTMLElement | null>(null)
 // Zwei-Stufen-＋-Menü: die vier Funktionen sind unter „Funktion" gebündelt, damit die Liste kurz bleibt.
 const addView = ref<'root' | 'functions'>('root')
 
 function label(n: Node): string {
   return (n.title && n.title.trim()) || n.id
 }
-// Nach oben oeffnen, wenn unter dem Button weniger Platz ist als das Menue braucht UND oben mehr ist.
-function shouldOpenUp(el: HTMLElement, estHeight: number): boolean {
-  const rect = el.getBoundingClientRect()
-  const below = window.innerHeight - rect.bottom
-  return below < estHeight && rect.top > below
+// Sichtbarer Bereich ohne die feststehenden Leisten des Hosts (App: Kopfzeile sticky, Dock fixed unten).
+// Sonst klappt das Menue hinter die Navigationsleiste und die unteren Eintraege sind nicht erreichbar.
+function visibleBand(): { top: number; bottom: number } {
+  const vv = window.visualViewport
+  let top = vv ? vv.offsetTop : 0
+  let bottom = vv ? vv.offsetTop + vv.height : window.innerHeight
+  for (const el of document.querySelectorAll<HTMLElement>('header, .dock')) {
+    const pos = getComputedStyle(el).position
+    if (pos !== 'sticky' && pos !== 'fixed') continue
+    const r = el.getBoundingClientRect()
+    if (r.height === 0) continue
+    if (r.top <= top + 1 && r.bottom > top) top = r.bottom
+    else if (r.bottom >= bottom - 1 && r.top < bottom) bottom = r.top
+  }
+  return { top, bottom }
+}
+// Richtung und Hoehe aus der GEMESSENEN Menuehoehe (Touch-Buttons sind 44 px hoch, eine Schaetzung
+// lag daneben). Nach oben, wenn unten zu wenig Platz ist UND oben mehr; passt es auf keiner Seite,
+// wird es auf den Platz begrenzt und scrollt.
+async function placeAdd(): Promise<void> {
+  await nextTick()
+  const anchor = addAnchor.value
+  const menu = addMenu.value
+  if (!anchor || !menu) return
+  const MARGIN = 8
+  const rect = anchor.getBoundingClientRect()
+  const band = visibleBand()
+  const below = band.bottom - rect.bottom - MARGIN
+  const above = rect.top - band.top - MARGIN
+  const need = menu.scrollHeight
+  addUp.value = need > below && above > below
+  addMaxH.value = Math.max(120, Math.floor(addUp.value ? above : below))
 }
 function closeAdd(): void {
   addOpen.value = false
   addView.value = 'root' // nächstes Öffnen startet wieder auf der Hauptebene
 }
-function toggleAdd(e: MouseEvent): void {
+function toggleAdd(): void {
   if (!addOpen.value) {
-    addUp.value = shouldOpenUp(e.currentTarget as HTMLElement, 200) // 5 Eintraege (Funktionen gebündelt)
     addView.value = 'root'
+    addUp.value = false
+    addMaxH.value = null
   }
   addOpen.value = !addOpen.value
+  if (addOpen.value) void placeAdd()
+}
+function showAddView(view: 'root' | 'functions'): void {
+  addView.value = view
+  void placeAdd()
 }
 function add(kind: 'container' | 'field' | 'function', functionKind?: FunctionKind): void {
   tree.addChild(props.node.id, kind, functionKind)
@@ -115,22 +152,27 @@ function confirmDelete(): void {
       </button>
 
       <!-- nur Container koennen Kinder bekommen -->
-      <div v-if="node.type === 'container'" class="relative">
+      <div v-if="node.type === 'container'" ref="addAnchor" class="relative">
         <button type="button" class="btn btn-ghost btn-xs px-1.5" aria-label="Element hinzufügen" title="Element hinzufügen" @click="toggleAdd">＋</button>
         <template v-if="addOpen">
           <button type="button" class="fixed inset-0 z-10 cursor-default" aria-label="Menü schließen" @click="closeAdd"></button>
-          <div class="overlay-surface absolute right-0 z-20 flex w-44 flex-col rounded-box p-1" :class="addUp ? 'bottom-full mb-1' : 'mt-1'">
+          <div
+            ref="addMenu"
+            class="overlay-surface absolute right-0 z-20 flex w-44 flex-col *:shrink-0 overflow-y-auto overscroll-contain rounded-box p-1"
+            :class="addUp ? 'bottom-full mb-1' : 'mt-1'"
+            :style="addMaxH ? { maxHeight: addMaxH + 'px' } : undefined"
+          >
             <!-- Hauptebene: die vier Funktionen sind unter „Funktion" gebündelt, damit die Liste kurz bleibt -->
             <template v-if="addView === 'root'">
               <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('container')">Container</button>
               <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('field')">Feld</button>
-              <button v-if="anyFunctionAllowed" type="button" class="btn btn-ghost btn-xs justify-between" @click="addView = 'functions'">Funktion<span class="text-base-content/40" aria-hidden="true">›</span></button>
+              <button v-if="anyFunctionAllowed" type="button" class="btn btn-ghost btn-xs justify-between" @click="showAddView('functions')">Funktion<span class="text-base-content/40" aria-hidden="true">›</span></button>
               <button v-if="SnippetPicker" type="button" class="btn btn-ghost btn-xs justify-start" @click="openSnippetPicker">Snippet einfügen</button>
               <button type="button" class="btn btn-ghost btn-xs justify-start" @click="openBlockPicker">Block einfügen</button>
             </template>
             <!-- Funktions-Auswahl: kurze Abfrage, welche Funktion eingefügt werden soll -->
             <template v-else>
-              <button type="button" class="btn btn-ghost btn-xs justify-start gap-1 text-base-content/60" @click="addView = 'root'"><span aria-hidden="true">‹</span> zurück</button>
+              <button type="button" class="btn btn-ghost btn-xs justify-start gap-1 text-base-content/60" @click="showAddView('root')"><span aria-hidden="true">‹</span> zurück</button>
               <!-- Beschriftung aus der Registry: derselbe Name, den die neue Funktion als Titel bekommt
                    (createFunction). Vorher stand hier „Ärzte", eingefuegt wurde „Ärzte & Kontaktpersonen". -->
               <template v-for="k in ALL_FUNCTION_KINDS" :key="k">

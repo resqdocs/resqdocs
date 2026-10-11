@@ -81,6 +81,7 @@ export const RECEIVER_HTML = `<!doctype html>
   ol li { margin:4px 0; }
   .err { color:var(--brand); font-weight:600; }
   .foot { color:var(--muted); font-size:.8rem; margin-top:18px; line-height:1.45; }
+  .foot a { color:inherit; }
   .hide { display:none; }
   .ok { color:var(--ok); }
 </style>
@@ -120,6 +121,7 @@ export const RECEIVER_HTML = `<!doctype html>
   </div>
 
   <p class="foot">Der Inhalt wurde ausschließlich in deinem Browser entschlüsselt. <b>Der Link ist das Geheimnis</b> — teile ihn nur mit vertrauten Personen.</p>
+  <p class="foot"><a href="https://resqdocs.app/impressum/" rel="noopener">Impressum</a> · <a href="https://resqdocs.app/datenschutz/" rel="noopener">Datenschutz</a></p>
 </div></div>
 
 <script>

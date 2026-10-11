@@ -82,6 +82,8 @@ const TEXT = {
     importText: 'Öffne die ResQDocs-App: Tab „Vorlagen" → oben rechts „⋮" → „Daten" → „Importieren" → JSON einfügen (oder .json-Datei wählen) → „Laden". Passt die Format-Version nicht zu deiner App-Version, sagt dir der Import klar Bescheid.',
     openEditor: 'ResQDocs-App laden',
     footer: 'Open Source · keine KI gehostet · keine Patientendaten',
+    imprint: 'Impressum',
+    privacyPolicy: 'Datenschutz',
   },
   en: {
     heading: 'Protocol templates with your LLM',
@@ -105,6 +107,8 @@ const TEXT = {
     importText: 'Open the ResQDocs app: tab "Vorlagen" → "⋮" at the top right → "Daten" → "Importieren" → paste the JSON (or pick a .json file) → "Laden". If the format version does not match your app version, the import tells you clearly.',
     openEditor: 'Get the ResQDocs app',
     footer: 'Open source · no AI hosted · no patient data',
+    imprint: 'Imprint',
+    privacyPolicy: 'Privacy policy',
   },
 } as const
 const t = computed(() => TEXT[lang.value])
@@ -179,6 +183,10 @@ const badge = computed(() =>
 
       <footer class="mt-14 text-center text-xs text-[color:var(--navy)]/45">
         {{ t.footer }}<template v-if="badge"> · {{ badge }}</template>
+        <br />
+        <a href="https://resqdocs.app/impressum/" target="_blank" rel="noopener" class="hover:underline">{{ t.imprint }}</a>
+        ·
+        <a href="https://resqdocs.app/datenschutz/" target="_blank" rel="noopener" class="hover:underline">{{ t.privacyPolicy }}</a>
       </footer>
     </main>
   </div>
