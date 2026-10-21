@@ -6,6 +6,7 @@
 // Datenschutz: Das Plugin gibt nur den gelesenen Inhalt zurueck, nie Bilder. Den Inhalt hier NICHT loggen.
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import { decodeScanBytes, normalizeScanFormat, type ScanProfile, type ScanResultFormat } from './scanProfiles.ts'
+import { ownScreenGate } from '../backup/autoBackupTrigger.ts'
 
 type PluginResult =
   | { status: 'found'; format: string; bytesBase64: string; text: string; diag?: string }
@@ -88,6 +89,9 @@ export function nativeScannerAvailable(): boolean {
 /** Startet den nativen Scanner mit einem Profil. Wirft nicht. */
 export async function scanNative(profile: ScanProfile, opts: { showDiagnostics?: boolean } = {}): Promise<NativeScanOutcome> {
   let r: PluginResult
+  // Der Scanner ist ein eigener Vollbild-Screen (Android: eigene Activity). Solange er offen ist, darf die
+  // automatische Sicherung nicht anlaufen, sonst warten die PZN-Abfragen nach dem Scan auf sie.
+  const release = ownScreenGate.hold()
   try {
     r = await ResQScanner.scan({
       formats: profile.formats,
@@ -102,6 +106,8 @@ export async function scanNative(profile: ScanProfile, opts: { showDiagnostics?:
     })
   } catch (e) {
     return { status: 'error', message: (e as Error)?.message || 'Scanner nicht verfügbar', diag: '' }
+  } finally {
+    release()
   }
   switch (r.status) {
     case 'found':

@@ -30,6 +30,16 @@ import { streamGzipToCacheFileAndShare } from '@/utils/fileTransfer'
 
 function create() {
   let readyPromise: Promise<PznLibraryBackend> | null = null
+  // Aenderungs-Signal fuer die automatische Sicherung: die Bibliothek ist nicht reaktiv, ohne Signal fiele
+  // eine geaenderte PZN erst bei der naechsten taeglichen Pruefung auf.
+  const changeListeners = new Set<() => void>()
+  function onChange(cb: () => void): () => void {
+    changeListeners.add(cb)
+    return () => changeListeners.delete(cb)
+  }
+  function changed(): void {
+    for (const cb of changeListeners) cb()
+  }
 
   function ready(): Promise<PznLibraryBackend> {
     if (!readyPromise) {
@@ -85,6 +95,7 @@ function create() {
     const cur = await b.getEntry(norm)
     const next = addOnePure(miniLib(norm, cur), norm, label, staerke)
     await b.setEntry(norm, next.entries[norm])
+    changed()
     return cur ? 'exists' : 'added'
   }
 
@@ -102,29 +113,37 @@ function create() {
     const cur = await b.getEntry(norm)
     const next = upsertEntryPure(miniLib(norm, cur), norm, fields)
     await b.setEntry(norm, next.entries[norm])
+    changed()
     return cur ? 'updated' : 'added'
   }
 
   async function setWirkstoff(pzn: string, wirkstoff: string): Promise<void> {
     await (await ready()).setWirkstoff(pzn, wirkstoff)
+    changed()
   }
   async function setStaerke(pzn: string, staerke: string): Promise<void> {
     await (await ready()).setStaerke(pzn, staerke)
+    changed()
   }
   async function setLabel(pzn: string, label: string): Promise<void> {
     await (await ready()).setLabel(pzn, label)
+    changed()
   }
   async function setCategory(pzn: string, category: string): Promise<void> {
     await (await ready()).setCategory(pzn, category)
+    changed()
   }
   async function setNote(pzn: string, note: string): Promise<void> {
     await (await ready()).setNote(pzn, note)
+    changed()
   }
   async function remove(pzn: string): Promise<void> {
     await (await ready()).remove(pzn)
+    changed()
   }
   async function clear(): Promise<void> {
     await (await ready()).clear()
+    changed()
   }
 
   /** Backup-Export als JSON-String (kompakte v2-Form, sortiert). NUR Klein-Daten/Tests -
@@ -169,10 +188,12 @@ function create() {
     }
     if (!incoming) return false
     await (await ready()).bulkPut(listSorted(incoming), mode, undefined, onProgress)
+    changed()
     return true
   }
 
   return {
+    onChange,
     ensureReady,
     count,
     countMissingStaerke,

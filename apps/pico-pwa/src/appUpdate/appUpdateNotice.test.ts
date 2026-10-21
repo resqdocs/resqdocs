@@ -217,7 +217,8 @@ test('Netzwerk-Policy: einzige Adresse ist die Versionsdatei auf resqdocs.app, k
   assert.deepEqual(wiring.match(/https?:\/\/[^\s'"`]+/g) ?? [], [], 'Adressen nur ueber appUpdateNotice.ts')
   assert.match(wiring, /\.get\(APP_VERSION_URL, \{/, 'Abruf genau dieser Adresse, ohne angehaengte Parameter')
   assert.ok(!/deviceId|uuid|getId\(/i.test(wiring), 'keine Geraetekennung')
-  // Einziger Header: neutraler User-Agent statt Geraetemodell/Systemversion des HTTP-Stacks.
+  // Nur feste Header: neutraler User-Agent statt Geraetemodell/Systemversion des HTTP-Stacks, feste Sprache
+  // statt der Geraetesprache.
   const headers = [...wiring.matchAll(/headers: (\{[^}]*\})/g)].map((m) => m[1])
-  assert.deepEqual(headers, ["{ 'User-Agent': 'ResQDocs' }"])
+  assert.deepEqual(headers, ["{ 'User-Agent': 'ResQDocs', 'Accept-Language': 'de' }"])
 })

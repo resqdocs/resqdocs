@@ -12,6 +12,8 @@ import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.v
 import { PZN_CATEGORIES } from '@/medications/pznCategories'
 import { readBinaryFile } from '@/utils/fileTransfer'
 import { decodeMaybeGzip } from '@/utils/gzip'
+import { checkImportUrl, downloadImportBytes, NOT_A_LIBRARY_MESSAGE, PznUrlImportError } from '@/medications/pznUrlImport'
+import { pznImportHttpGet } from '@/medications/pznUrlImportHttp'
 import { requestScreenWakeLock } from '@/utils/wakeLock'
 
 /**
@@ -29,7 +31,9 @@ import { requestScreenWakeLock } from '@/utils/wakeLock'
  * Nachpflege-Fluss: Filter „ohne Wirkstärke" (SQL-seitig, Zähler = Fortschritt) + „Speichern &
  * Weiter" (Auto-Advance in place) + Autofokus ins Stärke-Feld + Enter = weiter + Vorschlag-Chip.
  *
- * IFA/DSGVO: KEIN Netzzugriff, KEINE automatische PZN→Name-Auflösung; patientenentkoppelte
+ * IFA/DSGVO: KEINE automatische PZN→Name-Auflösung, kein voreingestelltes Ziel. Netzzugriff nur auf
+ * ausdrücklichen Tipp: Import der EIGENEN Bibliothek von einer selbst eingegebenen https-Adresse
+ * (pznUrlImport.ts, Datenschutzerklärung Nr. 7.8), die Adresse wird nicht gespeichert. Patientenentkoppelte
  * Menge; Backup nur lokal. Datenverantwortung: DISCLAIMER.md.
  */
 const emit = defineEmits<{ back: [] }>()
@@ -349,10 +353,11 @@ function chooseImport(mode: ImportMode): void {
   importChoosing.value = false
   fileInput.value?.click()
 }
-async function onImportFile(e: Event): Promise<void> {
+/** Gemeinsamer Importweg für Datei und Adresse: Bytes laden → entpacken → zusammenführen. Der Modus kommt als
+ *  Parameter (nicht aus importMode), damit ein zweiter Klick während eines Imports ihn nicht umstellen kann. */
+async function runImport(loadBytes: () => Promise<Uint8Array>, invalidMessage: string, mode: ImportMode): Promise<boolean> {
+  if (importing.value) return false // nie zwei Importe gleichzeitig
   status.value = null; error.value = null
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
   importing.value = true
   importProgress.value = null
   // Bildschirm während des (ggf. langen) Imports wachhalten; Hinweis greift zusätzlich.
@@ -362,11 +367,11 @@ async function onImportFile(e: Event): Promise<void> {
   // Balkens — der Import-/Decode-Pfad bleibt unangetastet.
   let lastProgressAt = 0
   try {
-    const bytes = await readBinaryFile(file)
+    const bytes = await loadBytes()
     // Robust entpacken: roh/einfach-gzip/doppelt-gzip → JSON-Text; null = ungültige Datei
     // (korruptes gzip oder zu viele Schichten). Wird wie ok===false behandelt (ein Invalid-Pfad).
     const text = await decodeMaybeGzip(bytes)
-    const ok = text !== null && await lib.importJson(text, importMode.value, (done, total) => {
+    const ok = text !== null && await lib.importJson(text, mode, (done, total) => {
       const now = Date.now()
       if (done >= total || now - lastProgressAt >= 80) {
         lastProgressAt = now
@@ -374,19 +379,69 @@ async function onImportFile(e: Event): Promise<void> {
       }
     })
     if (ok) {
-      status.value = `Bibliothek importiert (${importMode.value === 'overwrite' ? 'Duplikate überschrieben' : 'nur fehlende ergänzt'}).`
+      status.value = `Bibliothek importiert (${mode === 'overwrite' ? 'Duplikate überschrieben' : 'nur fehlende ergänzt'}).`
       await reload()
     } else {
-      error.value = 'Import fehlgeschlagen (ungültige Datei).'
+      error.value = invalidMessage
     }
+    return ok
   } catch (err) {
-    // Mitten im Import (Speicher/Platte/DB) - sonst bliebe die Rejection stumm.
-    error.value = `Import fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`
+    // Download-Fehler tragen schon einen verständlichen Text; sonst mitten im Import (Speicher/Platte/DB) -
+    // ohne Meldung bliebe die Rejection stumm.
+    error.value = err instanceof PznUrlImportError
+      ? err.message
+      : `Import fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`
+    return false
   } finally {
     await wake.release()
     importing.value = false
     importProgress.value = null
+  }
+}
+
+async function onImportFile(e: Event): Promise<void> {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  try {
+    await runImport(() => readBinaryFile(file), 'Import fehlgeschlagen (ungültige Datei).', importMode.value)
+  } finally {
     if (fileInput.value) fileInput.value.value = ''
+  }
+}
+
+// Import von einer Adresse: nur für die EIGENE Bibliothek auf eigenem Speicher. Die Adresse wird nicht
+// gespeichert und erst auf den Tipp des Nutzers abgerufen (Datenschutzerklärung Nr. 7.8).
+const urlOpen = ref(false)
+const urlInput = ref('')
+const urlError = ref<string | null>(null)
+const urlStatus = ref<string | null>(null)
+function openUrlImport(): void {
+  urlOpen.value = true
+  urlError.value = null
+  urlStatus.value = null
+  importChoosing.value = false
+}
+function toggleFileImport(): void {
+  importChoosing.value = !importChoosing.value
+  urlOpen.value = false
+}
+async function importFromUrl(mode: ImportMode): Promise<void> {
+  if (importing.value) return
+  const check = checkImportUrl(urlInput.value)
+  if (!check.ok) {
+    urlError.value = check.error
+    return
+  }
+  urlError.value = null
+  const ok = await runImport(() => downloadImportBytes(check.url, pznImportHttpGet), NOT_A_LIBRARY_MESSAGE, mode)
+  // Ergebnis dort zeigen, wo der Nutzer gerade ist: das Panel steht unter der Liste, die Seitenmeldung weit oben.
+  if (ok) {
+    urlStatus.value = status.value
+    urlOpen.value = false
+    urlInput.value = ''
+  } else {
+    urlError.value = error.value
+    error.value = null
   }
 }
 
@@ -580,17 +635,25 @@ async function deleteAll(): Promise<void> {
           <button class="btn btn-outline btn-xs" type="button" @click="loadMore">Weitere {{ PAGE }} laden</button>
         </div>
 
-        <!-- Backup: lokal, gezipptes JSON (.json.gz) -->
-        <div class="flex flex-col gap-2 border-t border-base-200 pt-3">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs text-base-content/60">Backup (nur lokal):</span>
-            <button class="btn btn-outline btn-xs" type="button" :disabled="!total || exporting" @click="onExport">
+        <!-- Sichern und importieren: Export/Import als Datei (gezipptes JSON, bleibt auf dem Gerät) und Import der
+             eigenen Bibliothek von einer Adresse. Ein Block, gleich breite Knöpfe statt umbrechender Zeile. -->
+        <section class="flex flex-col gap-2 border-t border-base-200 pt-3" aria-labelledby="pzn-transfer-title">
+          <div>
+            <h3 id="pzn-transfer-title" class="text-sm font-semibold">Sichern und importieren</h3>
+            <p class="text-xs text-base-content/60">Export und Import als Datei bleiben auf dem Gerät.</p>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="btn btn-outline btn-xs w-full" type="button" :disabled="!total || exporting" @click="onExport">
               {{ exporting ? 'Exportiere…' : 'Exportieren' }}
             </button>
-            <button class="btn btn-outline btn-xs" type="button" :disabled="importing" @click="importChoosing = !importChoosing">
+            <button class="btn btn-outline btn-xs w-full" type="button" :disabled="importing" @click="toggleFileImport">
               {{ importing ? 'Importiere…' : 'Importieren' }}
             </button>
+            <button v-if="!urlOpen" class="btn btn-outline btn-xs col-span-2 w-full" type="button" :disabled="importing" @click="openUrlImport">
+              Von Adresse importieren
+            </button>
           </div>
+          <span v-if="urlStatus && !urlOpen" class="text-xs text-success" role="status">{{ urlStatus }}</span>
           <!-- Export-Fortschritt: gestreamt, daher Anzeige bis 100 % -->
           <div v-if="exporting" role="status" class="flex flex-col gap-1 rounded-lg bg-base-200/60 p-2">
             <span class="text-xs font-medium text-warning">⚠ Bitte das Telefon anlassen und die App geöffnet halten, bis der Export fertig ist.</span>
@@ -604,12 +667,39 @@ async function deleteAll(): Promise<void> {
           <!-- Nutzerwahl VOR der Dateiauswahl: wie sollen Duplikate behandelt werden? -->
           <div v-if="importChoosing" role="group" aria-label="Import-Modus" class="flex flex-col gap-2 rounded-lg bg-base-200/60 p-2">
             <span class="text-xs text-base-content/70">Wie sollen <strong>bereits vorhandene</strong> Einträge behandelt werden?</span>
-            <div class="flex flex-wrap gap-2">
-              <button class="btn btn-xs btn-primary" type="button" @click="chooseImport('overwrite')">Duplikate überschreiben</button>
-              <button class="btn btn-xs btn-outline" type="button" @click="chooseImport('skip')">Nur fehlende ergänzen</button>
-              <button class="btn btn-xs btn-ghost" type="button" @click="importChoosing = false">Abbrechen</button>
+            <div class="grid gap-2">
+              <button class="btn btn-xs btn-primary w-full" type="button" :disabled="importing" @click="chooseImport('overwrite')">Duplikate überschreiben</button>
+              <button class="btn btn-xs btn-outline w-full" type="button" :disabled="importing" @click="chooseImport('skip')">Nur fehlende ergänzen</button>
+              <button class="btn btn-xs btn-ghost w-full" type="button" :disabled="importing" @click="importChoosing = false">Abbrechen</button>
             </div>
             <span class="text-xs text-base-content/50">Vorhandene Einträge, die nicht in der Datei sind, bleiben in beiden Fällen erhalten. „Überschreiben" ersetzt alle Felder eines Eintrags durch die Backup-Werte — auch die Wirkstärke, die in älteren Backups noch fehlt.</span>
+          </div>
+          <!-- Eigene Bibliothek von einer Adresse laden: nur https, nur auf Tipp, Adresse wird nicht gespeichert -->
+          <div v-if="urlOpen" role="group" aria-labelledby="pzn-url-title" class="flex flex-col gap-2 rounded-lg bg-base-200/60 p-2">
+            <span id="pzn-url-title" class="text-sm font-medium">Von Adresse importieren</span>
+            <span class="text-xs text-base-content/80">
+              Nur für <strong>deine eigene, selbst gesammelte</strong> PZN-Bibliothek, die du zum Beispiel in deinem
+              eigenen Cloud-Speicher abgelegt hast. Fremde Datenbestände darfst du hier nicht importieren.
+            </span>
+            <input v-model="urlInput" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"
+                   class="input input-bordered input-sm w-full" placeholder="https://…/meine-pzn.json.gz"
+                   aria-label="Adresse der eigenen PZN-Bibliothek" :disabled="importing" />
+            <span v-if="urlError" class="text-xs text-error" role="alert">{{ urlError }}</span>
+            <span class="text-xs text-base-content/50">
+              Erlaubt sind .json und .json.gz über https. Die App lädt die Datei erst auf deinen Tipp direkt von dieser
+              Adresse; der Betreiber des Servers sieht dabei wie bei jedem Abruf deine IP-Adresse. Die Adresse wird nicht
+              gespeichert.
+            </span>
+            <span class="text-xs text-base-content/70">Wie sollen <strong>bereits vorhandene</strong> Einträge behandelt werden?</span>
+            <div class="grid gap-2">
+              <button class="btn btn-xs btn-primary w-full" type="button" :disabled="importing" @click="importFromUrl('overwrite')">Laden, Duplikate überschreiben</button>
+              <button class="btn btn-xs btn-outline w-full" type="button" :disabled="importing" @click="importFromUrl('skip')">Laden, nur fehlende ergänzen</button>
+              <button class="btn btn-xs btn-ghost w-full" type="button" :disabled="importing" @click="urlOpen = false; urlError = null">Abbrechen</button>
+            </div>
+            <span class="text-xs text-base-content/50">
+              Vorhandene Einträge, die nicht in der Datei sind, bleiben in beiden Fällen erhalten. „Duplikate überschreiben"
+              ersetzt alle Felder eines vorhandenen Eintrags durch die Werte aus der Datei, auch eine Wirkstärke, die dort fehlt.
+            </span>
           </div>
           <!-- Import-Fortschritt + Hinweis (großer Datensatz kann dauern) -->
           <div v-if="importing" role="status" class="flex flex-col gap-1 rounded-lg bg-base-200/60 p-2">
@@ -620,15 +710,15 @@ async function deleteAll(): Promise<void> {
             </div>
             <progress v-else class="progress progress-primary w-full" />
             <span class="text-xs text-base-content/70">
-              {{ importProgress ? `${importProgress.done} von ${importProgress.total} importiert…` : 'Datei wird gelesen…' }}
+              {{ importProgress ? `${importProgress.done} von ${importProgress.total} importiert…` : 'Datei wird geladen…' }}
             </span>
           </div>
           <input ref="fileInput" type="file" accept=".json,.gz,application/json,application/gzip" class="hidden" @change="onImportFile" />
-        </div>
+        </section>
 
         <!-- Gesamte Bibliothek löschen: irreversibel, nur mit Tipp-Bestätigung „LÖSCHEN" -->
         <div class="flex flex-col gap-2 border-t border-base-200 pt-3">
-          <button v-if="!deleteOpen" class="btn btn-outline btn-error btn-xs self-start" type="button"
+          <button v-if="!deleteOpen" class="btn btn-outline btn-error btn-xs w-full" type="button"
                   :disabled="!total" @click="deleteOpen = true">
             Gesamte Bibliothek löschen
           </button>
