@@ -61,11 +61,11 @@
             Sicherungen der App oder in geteilte Links.
           </p>
           <p>
-            <strong>Verbindungen ins Internet</strong> gibt es nur in drei Fällen: der Blick auf die aktuelle
+            <strong>Verbindungen ins Internet</strong> gibt es nur in vier Fällen: der Blick auf die aktuelle
             Versionsnummer beim Öffnen der App (abschaltbar unter „App-Einstellungen“), das Teilen per Link – im Gerät
-            verschlüsselt, für uns nicht lesbar – und die Cloud-Sicherung in dein eigenes iCloud bzw. Google
-            Drive, die nur läuft, wenn du sie einschaltest. Eine externe Medikamenten- oder PZN-Datenbank
-            ruft die App nicht ab.
+            verschlüsselt, für uns nicht lesbar –, die Cloud-Sicherung in dein eigenes iCloud bzw. Google
+            Drive, die nur läuft, wenn du sie einschaltest, und das Laden deiner eigenen PZN-Bibliothek von einer
+            Adresse, die du selbst eingibst. Eine externe Medikamenten- oder PZN-Datenbank ruft die App nicht ab.
           </p>
           <p>
             <strong>Persönliche PZN-Bibliothek:</strong> Deine PZN-Sammlung pflegst du selbst; sie liegt

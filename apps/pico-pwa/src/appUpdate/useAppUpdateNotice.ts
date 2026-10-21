@@ -31,11 +31,12 @@ export function useAppUpdateNotice(): AppUpdateNotice {
       },
       fetchLatest: async () => {
         // Neutraler User-Agent: ohne ihn schickt Android Geraetemodell + Android-Version mit, iOS die
-        // Systemversion (Datenminimierung, Datenschutzerklaerung: "keine Geraetedaten").
+        // Systemversion. Feste Sprache: sonst ginge die Geraetesprache als Accept-Language mit
+        // (Datenminimierung, Datenschutzerklaerung: "keine Geraetedaten").
         const res = await capacitorHttpAdapter.get(APP_VERSION_URL, {
           connectTimeout: 8000,
           readTimeout: 8000,
-          headers: { 'User-Agent': 'ResQDocs' },
+          headers: { 'User-Agent': 'ResQDocs', 'Accept-Language': 'de' },
         })
         if (res.status < 200 || res.status >= 300) return null
         return typeof res.data === 'string' ? JSON.parse(res.data) : res.data

@@ -48,7 +48,7 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Wird vom Kamera-Framework vorausgesetzt. ResQDocs speichert KEINE Fotos in deiner Mediathek – die Aufnahme dient nur dem Scannen und wird sofort verworfen.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>ResQDocs verbindet sich im lokalen WLAN direkt mit der ResQDocs-Bridge (Pico), um Text zu übertragen. Es findet keine Internet-Kommunikation statt.</string>
+	<string>ResQDocs verbindet sich im lokalen WLAN direkt mit der ResQDocs-Bridge (Pico), um Text zu übertragen. Diese Verbindung bleibt im lokalen Netz.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
