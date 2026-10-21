@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.7.2] - 2026-10-21
+
+### Features
+
+- PZN library: your own, self-collected library can be imported from an https address you enter (.json or .json.gz). The address is not stored and the request carries no identifier
+
+### Changed
+
+- The export and import controls of the PZN library are grouped in one section
+- The app version check sends a fixed language instead of the device language
+- iOS: the local network permission text only describes the connection to the bridge
+
+### Bug Fixes
+
+- After scanning a medication plan, names from the PZN library appear immediately, even with very large libraries. The automatic backup no longer runs while the scanner is open or on every app switch
+
 ## [1.7.1] - 2026-10-11
 
 ### Features

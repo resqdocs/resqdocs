@@ -31,6 +31,8 @@ import {
   DEFAULT_BACKUP_SETTINGS,
   type BackupSettings,
 } from './backupSettings.ts'
+import { autoBackupDue, ownScreenGate } from './autoBackupTrigger.ts'
+import { usePznLibrary } from '../medications/usePznLibrary.ts'
 
 type Status = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -53,7 +55,11 @@ function reportProgress(label: string, done: number, total: number): void {
 }
 let started = false
 let dirty = false
+// Letzte Pruefung mit Ergebnis „unveraendert" (persistiert): startet das Rate-Intervall neu, sonst waere die
+// Automatik nach einem Tag ohne Aenderung bei jedem Hintergrund faellig und laedt jedes Mal alle PZN.
+let lastCheckAt = 0
 let appListener: PluginListenerHandle | null = null
+let pznListener: (() => void) | null = null
 let netTimer: ReturnType<typeof setInterval> | null = null
 let inflight: Promise<BackupResult> | null = null // Single-Flight: nie zwei Läufe parallel (Dateiname-Race)
 let cloudInflight: Promise<void> | null = null // Single-Flight für Cloud (kein doppelter Upload / Listen-Race)
@@ -82,6 +88,7 @@ const DEVICE_KEY = 'resqdocs.backup.deviceId'
 const HASHES_KEY = 'resqdocs.backup.cloudHashes'
 const LAST_SYNC_KEY = 'resqdocs.backup.lastCloudSync'
 const DIRTY_KEY = 'resqdocs.backup.cloudDirty'
+const LAST_CHECK_KEY = 'resqdocs.backup.lastAutoCheck'
 
 /** Stabile, gerätespezifische hex-id (für append-only/gerätescoped Cloud-Namen). */
 async function deviceId(): Promise<string> {
@@ -132,6 +139,12 @@ async function snapshotNow(origin: SnapshotOrigin = 'manual'): Promise<BackupRes
         status.value = 'saved'
         lastMessage.value = 'Gesichert.'
       } else {
+        if (res.reason === 'unchanged') {
+          // Stand ist gesichert: nichts mehr offen, und das Intervall zaehlt ab dieser Pruefung.
+          dirty = false
+          lastCheckAt = Date.now()
+          await Preferences.set({ key: LAST_CHECK_KEY, value: String(lastCheckAt) })
+        }
         status.value = 'idle'
         lastMessage.value =
           res.reason === 'unchanged'
@@ -163,9 +176,15 @@ async function snapshotNow(origin: SnapshotOrigin = 'manual'): Promise<BackupRes
 /** Auto-Snapshot, wenn fällig: bei Änderung ODER wenn das Rate-Intervall seit dem letzten Backup verstrichen ist. */
 async function autoSnapshotIfDue(): Promise<void> {
   if (!native() || !autoEnabled(settings.value)) return
-  const iv = rateIntervalMs(settings.value)
-  const last = history.value[0]?.createdAt ?? 0
-  const due = dirty || (iv != null && Date.now() - last >= iv)
+  // Eigener Screen offen (nativer Scanner): kein Verlassen der App, die Abfragen danach sollen nicht warten.
+  if (ownScreenGate.isOpen()) return
+  const due = autoBackupDue({
+    dirty,
+    lastSnapshotAt: history.value[0]?.createdAt ?? 0,
+    lastCheckAt,
+    intervalMs: rateIntervalMs(settings.value),
+    now: Date.now(),
+  })
   if (due) {
     const res = await snapshotNow('auto')
     // Wenn Cloud aktiv ist, den frischen Auto-Stand auch hochladen (best-effort; cloudSyncNow ist idempotent
@@ -490,23 +509,28 @@ export function useBackup() {
     }
     const dirtyFlag = await Preferences.get({ key: DIRTY_KEY })
     cloudDirty.value = dirtyFlag.value === '1'
+    const lastCheck = await Preferences.get({ key: LAST_CHECK_KEY })
+    lastCheckAt = Number(lastCheck.value) || 0
     document.addEventListener('visibilitychange', onHidden)
     window.addEventListener('pagehide', onPagehide)
     appListener = await App.addListener('appStateChange', ({ isActive }) => {
+      // Android: der native Scanner ist eine eigene Activity -> „Hintergrund" beim Oeffnen, „Vordergrund" bei
+      // der Rueckkehr. Beides ist kein App-Wechsel und loest weder Sicherung noch Cloud-Abgleich aus.
       if (!isActive) {
-        void autoSnapshotIfDue()
-      } else if (cloudEnabled.value && cloudDirty.value) {
+        if (ownScreenGate.background()) void autoSnapshotIfDue()
+      } else if (ownScreenGate.foreground() && cloudEnabled.value && cloudDirty.value) {
         // Rückkehr in den Vordergrund: verpassten Hintergrund-Upload STILL nachholen (kein Login-Dialog).
         void cloudSyncNow()
       }
     })
-    // Änderungs-Erkennung (dirty) über die drei reaktiven Datensätze; PZN (nicht reaktiv) fängt das Rate-Netz.
+    // Änderungs-Erkennung (dirty) über die drei reaktiven Datensätze; die PZN-Bibliothek meldet sich selbst.
     watch(useProtocolTree().protocols, () => (dirty = true), { deep: true })
     watch(useBlockLibrary().blocks, () => (dirty = true), { deep: true })
     watch(useBausteine().snippets, () => (dirty = true), { deep: true })
+    pznListener = usePznLibrary().onChange(() => (dirty = true))
     // Rate-Sicherheitsnetz, solange die App offen ist (bei geschlossener App übernimmt später der native Scheduler).
     netTimer = setInterval(() => {
-      if (document.visibilityState !== 'visible') return
+      if (document.visibilityState !== 'visible' || ownScreenGate.isOpen()) return
       void autoSnapshotIfDue()
       if (cloudEnabled.value && cloudDirty.value) void cloudSyncNow() // ausstehenden Cloud-Upload nachholen
     }, 15 * 60 * 1000)
@@ -520,6 +544,8 @@ export function useBackup() {
     window.removeEventListener('pagehide', onPagehide)
     void appListener?.remove()
     appListener = null
+    pznListener?.()
+    pznListener = null
     if (netTimer != null) clearInterval(netTimer)
     netTimer = null
     started = false

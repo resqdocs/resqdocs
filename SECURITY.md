@@ -45,6 +45,13 @@ Remote-Verbindungen:
    Textbausteine, PZN-Bibliothek ins eigene Konto des Nutzers - Android Google Drive
    (`drive.appdata`, Google-Anmeldung), iOS iCloud Drive. Nie Einsatzeingaben oder
    Einstellungen. Kein eigener Server beteiligt.
+6. **Eigene PZN-Bibliothek von einer Adresse laden**: nur auf Knopfdruck, Adresse gibt der
+   Nutzer selbst ein (nur `https://`, keine Zugangsdaten in der Adresse, der Teil hinter `#`
+   wird nicht gesendet), sie wird nicht gespeichert. Ein GET mit festen Werten
+   `User-Agent: ResQDocs` und `Accept-Language: de`, ohne Kennung; Cookies des Servers werden
+   danach gelöscht. Weiterleitungen folgt die App. Download als Datei in den App-Cache,
+   `.json` oder `.json.gz`, höchstens 96 MB, danach gelöscht. Gedacht nur für die selbst
+   gesammelte Bibliothek; kein voreingestelltes Ziel, kein eigener Server beteiligt.
 
 Server-Seite: Container-nginx ohne Zugriffslogs; IP-Adressen sieht nur der vorgelagerte
 Reverse Proxy (Logs höchstens 7 Tage). Beschrieben in resqdocs.app/datenschutz.
