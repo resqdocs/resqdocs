@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
 import { useStorage } from '@/storage/useStorage'
 import { useBausteine } from '@/composables/useBausteine'
 import { useTemporaryCaseDraft } from '@/composables/useTemporaryCaseDraft'
@@ -121,10 +122,10 @@ async function runReset(): Promise<void> {
       <li>Patientendaten werden <strong>nicht dauerhaft gespeichert</strong>.</li>
       <li>
         Ein laufender Einsatz bleibt lokal erhalten (auch nach App-Neustart) und wird durch
-        <strong>„Abschließen"</strong> im Einsatz-Tab sowie nach Ablauf der unten gewählten Zeit
+        <strong>„Abschließen"</strong> im <TabRef tab="einsatz" /> sowie nach Ablauf der unten gewählten Zeit
         <strong>ohne Bearbeitung</strong> automatisch gelöscht.
       </li>
-      <li>Vorlagen, Bausteine und Mustertexte sind <strong>neutrale Vorlagen</strong> — keine Patientendaten.</li>
+      <li>Vorlagen, gespeicherte Abschnitte und Textbausteine sind <strong>neutrale Vorlagen</strong> — keine Patientendaten.</li>
     </ul>
 
     <!-- Zeitfaktor: Sliding-Idle-Frist des Einsatz-Entwurfs -->
@@ -179,9 +180,9 @@ async function runReset(): Promise<void> {
             Migrationsstand: {{ diag.migrationVersion ?? '–' }}
             <br />
             Vorlagen: {{ diag.rawRows ?? '–' }} (lesbar {{ diag.readableRows ?? '–' }}) ·
-            Bausteine: {{ diag.blockRows ?? '–' }} ·
+            Gespeicherte Abschnitte: {{ diag.blockRows ?? '–' }} ·
             PZN: {{ diag.pznRows ?? '–' }} ·
-            Mustertexte: {{ diag.snippetRows ?? '–' }}
+            Textbausteine: {{ diag.snippetRows ?? '–' }}
           </p>
         </template>
         <p v-else class="mt-1 text-xs text-base-content/60">Status wird ermittelt …</p>
@@ -192,7 +193,7 @@ async function runReset(): Promise<void> {
     <div class="rounded-lg border border-error/30 p-3">
       <p class="text-sm font-medium">App zurücksetzen</p>
       <p class="mt-1 text-xs text-base-content/60">
-        Setzt die App auf den Auslieferungszustand zurück: löscht alle Vorlagen, Bausteine, Mustertexte,
+        Setzt die App auf den Auslieferungszustand zurück: löscht alle Vorlagen, gespeicherten Abschnitte, Textbausteine,
         Einstellungen und einen laufenden Einsatz. Gedacht für die Weitergabe oder Ausmusterung des Geräts.
       </p>
       <button
@@ -207,7 +208,7 @@ async function runReset(): Promise<void> {
 
       <div v-else role="alert" class="alert alert-error mt-2 flex-col items-start gap-2 text-sm">
         <span
-          >Wirklich <strong>alles lokal löschen</strong>? Vorlagen, Bausteine, Mustertexte, Einstellungen und
+          >Wirklich <strong>alles lokal löschen</strong>? Vorlagen, gespeicherte Abschnitte, Textbausteine, Einstellungen und
           ein laufender Einsatz werden gelöscht. Das lässt sich nicht rückgängig machen.</span
         >
         <div class="flex gap-2">

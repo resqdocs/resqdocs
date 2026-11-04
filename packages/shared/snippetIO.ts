@@ -28,15 +28,15 @@ export function parseSnippet(json: string): ParseSnippetResult {
     return { ok: false, error: 'Kein gueltiges JSON.' }
   }
   const o = parsed as { schema?: unknown; version?: unknown; snippet?: unknown }
-  if (o?.schema !== SNIPPET_SCHEMA) return { ok: false, error: 'Kein ResQDocs-Snippet (schema fehlt oder falsch).' }
+  if (o?.schema !== SNIPPET_SCHEMA) return { ok: false, error: 'Kein ResQDocs-Textbaustein (schema fehlt oder falsch).' }
   if (typeof o.version !== 'number' || o.version > SNIPPET_VERSION) {
     return { ok: false, error: `Version ${String(o.version)} wird von dieser App-Version nicht unterstuetzt.` }
   }
   const s = o.snippet as { title?: unknown; text?: unknown } | null
   if (!s || typeof s !== 'object' || typeof s.text !== 'string') {
-    return { ok: false, error: 'Snippet enthaelt keinen gueltigen Text.' }
+    return { ok: false, error: 'Der Textbaustein enthält keinen gültigen Text.' }
   }
-  if (s.text.trim() === '') return { ok: false, error: 'Snippet-Text ist leer.' }
+  if (s.text.trim() === '') return { ok: false, error: 'Der Textbaustein ist leer.' }
   const title = typeof s.title === 'string' ? s.title : ''
   return { ok: true, snippet: { title, text: s.text } }
 }

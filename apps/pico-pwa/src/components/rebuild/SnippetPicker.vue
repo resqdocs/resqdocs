@@ -15,10 +15,11 @@
  * sonst ein. Struktur nach Vorbild MoveToPicker.vue (daisyUI modal modal-bottom / ab sm modal-middle).
  */
 import { computed, onMounted, ref, watch } from 'vue'
+import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
 import { useBausteine } from '@/composables/useBausteine'
 
 const props = withDefaults(defineProps<{ title?: string; multiple?: boolean }>(), {
-  title: 'Snippet einfügen',
+  title: 'Textbaustein einfügen',
   multiple: false,
 })
 const emit = defineEmits<{ select: [text: string]; close: [] }>()
@@ -76,7 +77,7 @@ function confirm(): void {
       <div class="modal-box flex max-h-[80vh] flex-col gap-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <h3 class="text-base font-semibold">{{ title }}</h3>
         <p class="text-xs text-base-content/60">
-          Eingefügt wird eine <strong>Kopie</strong> des Textes — keine Verknüpfung. Änderst du das Snippet später, füge es neu ein.
+          Eingefügt wird eine <strong>Kopie</strong> des Textes — keine Verknüpfung. Änderst du das Original später, füge es neu ein.
           <template v-if="multiple"> Mehrere ausgewählte werden mit Leerzeile verkettet und ans Feld angehängt.</template>
         </p>
 
@@ -84,7 +85,7 @@ function confirm(): void {
              Container + shrink-0 an den Zeilen: sonst staucht Flexbox (v. a. iOS-WebKit) die Zeilen
              unter ihre Inhaltsgröße statt zu scrollen -> mehrzeilige Zeilen überlappen sich. -->
         <template v-if="multiple && usable.length">
-          <div class="-mx-1 flex max-h-[40vh] min-h-0 flex-col overflow-y-auto" role="group" aria-label="Snippets auswählen">
+          <div class="-mx-1 flex max-h-[40vh] min-h-0 flex-col overflow-y-auto" role="group" aria-label="Textbausteine auswählen">
             <label v-for="s in usable" :key="s.id" class="flex min-h-11 shrink-0 cursor-pointer items-start gap-2 rounded-lg px-1 py-2 hover:bg-base-200">
               <input type="checkbox" class="checkbox checkbox-sm mt-0.5 shrink-0" :checked="checked.includes(s.id)" @change="toggle(s.id)" />
               <span class="min-w-0 flex-1">
@@ -98,14 +99,14 @@ function confirm(): void {
 
         <!-- EINZEL: <select> (Editor-Pfad, unverändert) -->
         <template v-else-if="usable.length">
-          <select v-model="sel" class="select select-bordered select-sm w-full" aria-label="Snippet auswählen">
+          <select v-model="sel" class="select select-bordered select-sm w-full" aria-label="Textbaustein auswählen">
             <option v-for="s in usable" :key="s.id" :value="s.id">{{ s.title || '(ohne Titel)' }}</option>
           </select>
           <p v-if="selectedText.trim()" class="max-h-32 overflow-y-auto whitespace-pre-wrap rounded-lg bg-base-200 p-2 text-xs text-base-content/70">{{ selectedText }}</p>
         </template>
 
         <p v-else-if="loaded" class="px-2 py-6 text-center text-sm text-base-content/50">
-          Noch keine Snippets mit Text. Lege im Tab „Bausteine" welche an.
+          Noch keine Textbausteine mit Text. Lege unter <TabRef tab="bausteine" /> welche an.
         </p>
         <p v-else class="px-2 py-6 text-center text-sm text-base-content/50">Lade …</p>
 

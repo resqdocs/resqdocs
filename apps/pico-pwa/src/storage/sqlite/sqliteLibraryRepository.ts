@@ -90,7 +90,7 @@ export function createLibraryRepositoryOnClient(
       return out
     },
     async saveBlock(entry) {
-      if (!isValidLibraryBlock(entry)) throw new Error('Baustein ungültig — nicht gespeichert.')
+      if (!isValidLibraryBlock(entry)) throw new Error('Abschnitt ungültig — nicht gespeichert.')
       const existing = await client.query('SELECT created_at FROM library_blocks WHERE id = ?', [entry.id])
       const createdAt = (existing[0]?.created_at as string | undefined) ?? entry.createdAt ?? now()
       await client.run(
@@ -122,7 +122,7 @@ export function createLibraryRepositoryOnClient(
       return out
     },
     async saveSnippet(entry) {
-      if (!isValidLibrarySnippet(entry)) throw new Error('Snippet ungültig — nicht gespeichert.')
+      if (!isValidLibrarySnippet(entry)) throw new Error('Textbaustein ungültig — nicht gespeichert.')
       const existing = await client.query('SELECT created_at FROM library_snippets WHERE id = ?', [entry.id])
       const createdAt = (existing[0]?.created_at as string | undefined) ?? entry.createdAt ?? now()
       await client.run(

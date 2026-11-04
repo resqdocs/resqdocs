@@ -5,7 +5,7 @@
     {
       "prop": "default",
       "on": "function",
-      "de": "Standardtext",
+      "de": "Standardwert",
       "en": "Default text",
       "note_de": "Fallback ohne Ausgabe: Listen ohne Einträge, Rechner ohne Ergebnis",
       "note_en": "fallback when there is no output: lists without entries, calculators without a result",
@@ -34,8 +34,8 @@
       "on": "function",
       "de": "Kontaktpersonen mit Rechts-Flags",
       "en": "Contact persons with legal flags",
-      "note_de": "Ärzte-Funktion: Kontaktpersonen (Angehörige/Betreuer) mit Rolle + Patientenverfügung/Vollmacht",
-      "note_en": "Doctors function: contact persons (relatives/carers) with role + advance directive / power of attorney",
+      "note_de": "wird im Einsatz erfasst, nicht ins JSON schreiben. Ärzte-Funktion: Kontaktpersonen (Angehörige/Betreuer) mit Rolle + Patientenverfügung/Vollmacht",
+      "note_en": "recorded during a case, do not write it into the JSON. Doctors function: contact persons (relatives/carers) with role + advance directive / power of attorney",
       "minVersion": "1.3.0"
     },
     {
@@ -78,7 +78,7 @@
   "functions": [
     {
       "kind": "medikamentenplan",
-      "de": "Medikamentenplan",
+      "de": "Medikationsplan",
       "en": "Medication list",
       "minVersion": "1.0.0"
     },

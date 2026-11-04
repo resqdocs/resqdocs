@@ -15,7 +15,7 @@
  */
 import { ref } from 'vue'
 
-const props = withDefaults(defineProps<{ text: string; label?: string }>(), { label: 'Ausgabetext' })
+const props = withDefaults(defineProps<{ text: string; label?: string }>(), { label: 'Protokolltext' })
 
 const copyState = ref<'idle' | 'ok' | 'err'>('idle')
 

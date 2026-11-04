@@ -212,7 +212,7 @@ test('setConfig() parst auch JSON-String-Antwort', async () => {
 test('setConfig() mit ungültiger ID wirft OHNE Request', async () => {
   const adapter = createFakeHttpAdapter(() => ({ status: 200, data: { ok: true, restartRequired: true } }))
   const client = createPicoClient(adapter, BASE)
-  await assert.rejects(() => client.setConfig({ ssidId: 'kein leerzeichen!' }), /Ungültige Geräte-ID/)
+  await assert.rejects(() => client.setConfig({ ssidId: 'kein leerzeichen!' }), /Ungültige Bridge-ID/)
   assert.equal(adapter.calls.length, 0, 'ungültige ID darf keinen Request erzeugen')
 })
 

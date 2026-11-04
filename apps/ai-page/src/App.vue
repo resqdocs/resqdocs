@@ -21,7 +21,7 @@ const versionNote = computed(() =>
   !appParam.value
     ? ''
     : lang.value === 'de'
-      ? `\n\n---\nMeine ResQDocs-Version ist ${appParam.value} — nutze das direkt für den Versions-Check (A3 der Doku) und frag mich nicht erneut danach.`
+      ? `\n\n---\nMeine ResQDocs-Version ist ${appParam.value} — nutze das direkt für den Versions-Check (A3 der Anleitung) und frag mich nicht erneut danach.`
       : `\n\n---\nMy ResQDocs version is ${appParam.value} — use this directly for the version check (A3 of the doc); do not ask me again.`,
 )
 const promptForCopy = computed(() => (appParam.value && prompt.value ? prompt.value + versionNote.value : prompt.value))
@@ -61,20 +61,20 @@ watch(lang, loadPrompt)
 
 const TEXT = {
   de: {
-    heading: 'Protokoll-Vorlagen mit deinem LLM',
-    sub: 'Kopiere den Prompt in dein eigenes LLM (ChatGPT, Claude, Gemini). Es lädt die Doku, stellt dir ein paar Fragen und gibt dir ein fertiges Protokoll-JSON für die ResQDocs-App. ResQDocs hostet keine KI — deine Daten bleiben bei dir.',
+    heading: 'Vorlagen mit deinem KI-Assistenten',
+    sub: 'Kopiere den Prompt in deinen eigenen KI-Assistenten (ChatGPT, Claude, Gemini). Er lädt die Anleitung, stellt dir ein paar Fragen und gibt dir ein fertiges Vorlagen-JSON für die ResQDocs-App. ResQDocs hostet keine KI — deine Daten bleiben bei dir.',
     privacy: 'Nur Struktur, keine Patientendaten: die KI baut die leere Vorlage, nie einen Fall.',
     steps: [
       { n: '1', t: 'Prompt kopieren', d: 'Ein Klick.' },
-      { n: '2', t: 'In dein LLM einfügen', d: 'ChatGPT, Claude, Gemini — egal welches.' },
-      { n: '3', t: 'Fragen beantworten', d: 'Das Modell führt dich durch Titel, Abschnitte, Felder und zeigt eine Vorschau.' },
+      { n: '2', t: 'In deinen KI-Assistenten einfügen', d: 'ChatGPT, Claude, Gemini — egal welches.' },
+      { n: '3', t: 'Fragen beantworten', d: 'Er führt dich durch Titel, Abschnitte, Felder und zeigt eine Vorschau.' },
       { n: '4', t: 'In der App importieren', d: 'ResQDocs-App: Vorlagen → ⋮ → Daten → Importieren.' },
     ],
-    fbTitle: 'Dein LLM kann die Doku nicht laden?',
-    fbText: 'Bei Gemini ist das der Normalfall („Ich kann den Link nicht öffnen"); ChatGPT/Claude brauchen teils die aktivierte Websuche. Die KI sagt dir dann selbst Bescheid — dann hier die Doku kopieren und als Nachricht einfügen ODER herunterladen und als Datei anhängen:',
-    copyDoc: 'Doku kopieren',
-    docCopied: '✓ Doku kopiert',
-    downloadDoc: 'Doku herunterladen',
+    fbTitle: 'Dein KI-Assistent kann die Anleitung nicht laden?',
+    fbText: 'Bei Gemini ist das der Normalfall („Ich kann den Link nicht öffnen"); ChatGPT/Claude brauchen teils die aktivierte Websuche. Die KI sagt dir dann selbst Bescheid — dann hier die Anleitung kopieren und als Nachricht einfügen ODER herunterladen und als Datei anhängen:',
+    copyDoc: 'Anleitung kopieren',
+    docCopied: '✓ Anleitung kopiert',
+    downloadDoc: 'Anleitung herunterladen',
     versionDetected: 'Deine App-Version wurde erkannt und ist im Prompt enthalten:',
     powerTitle: 'Für Vielnutzer',
     powerText: 'Lege den Prompt einmal als System-Anweisung in einem ChatGPT-Custom-GPT, Claude-Project oder Gemini-Gem an — dann brauchst du ihn nicht jedes Mal zu kopieren.',

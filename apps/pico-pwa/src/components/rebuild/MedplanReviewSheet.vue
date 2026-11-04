@@ -236,7 +236,7 @@ onMounted(() => {
         <div v-if="manualOpen" class="flex flex-col gap-2">
           <p v-if="scannerMode" id="medplan-ext-scanner-hint" class="text-xs text-base-content/60">
             Externer Scanner (per Bluetooth oder Kabel als Tastatur gekoppelt): Feld ist aktiv – jetzt den
-            BMP-Code scannen. Er wird automatisch übernommen (oder „Übernehmen" tippen); Prüfung, PZN-Abgleich
+            Medikationsplan-Code scannen. Er wird automatisch übernommen (oder „Übernehmen" tippen); Prüfung, PZN-Abgleich
             und Dosierung/Stärke laufen genau wie beim Kamera-Scan.
           </p>
           <textarea
@@ -244,8 +244,8 @@ onMounted(() => {
             v-model="manualText"
             rows="3"
             class="textarea textarea-bordered textarea-sm w-full font-mono"
-            :placeholder="scannerMode ? 'BMP-Code hierher scannen (externer Scanner)…' : 'BMP-Code-Inhalt (XML, beginnt mit <MP …>) einfügen'"
-            :aria-label="scannerMode ? 'BMP-Code scannen (externer Scanner)' : 'BMP-Code-Inhalt'"
+            :placeholder="scannerMode ? 'Code hierher scannen (externer Scanner)…' : 'Inhalt des Codes (XML, beginnt mit <MP …>) einfügen'"
+            :aria-label="scannerMode ? 'Code scannen (externer Scanner)' : 'Inhalt des Codes'"
             :aria-describedby="scannerMode ? 'medplan-ext-scanner-hint' : undefined"
             @keydown.enter="onTextareaEnter"
           />

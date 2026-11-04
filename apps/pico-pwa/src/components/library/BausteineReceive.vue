@@ -45,7 +45,7 @@ function onQrDecoded(raw: string): void {
     <div class="card-body gap-2 p-4">
       <h3 class="font-semibold">Empfangen — verschlüsselter Link + QR</h3>
       <p class="text-xs text-base-content/60">
-        Block- oder Snippet-Link einfügen oder QR scannen — landet automatisch in der richtigen Bibliothek.
+        Link zu einem Textbaustein oder gespeicherten Abschnitt einfügen oder QR scannen — landet automatisch in der richtigen Liste.
       </p>
       <div class="flex items-center gap-2">
         <input

@@ -29,7 +29,7 @@ function resetHints(): void {
       </p>
       <ul class="list-disc pl-5 text-sm text-base-content/80">
         <li><strong>Hilfsmittel, kein Ersatz</strong> für fachliche Dokumentation.</li>
-        <li>Protokolle und Muster sind <strong>unverbindliche Vorlagen</strong>, keine fachliche Vorgabe.</li>
+        <li>Vorlagen und Beispiele sind <strong>unverbindlich</strong>, keine fachliche Vorgabe.</li>
         <li>Für Vorgehen, Bewertung und Dokumentation bleibst <strong>du verantwortlich</strong>.</li>
         <li>Keine Rechtsberatung, keine medizinische Garantie, keine Zusicherung vollständiger DSGVO-Konformität.</li>
       </ul>

@@ -1,11 +1,16 @@
 <script lang="ts">
-/** Hint-ID der Tour - 'v2': die mehrseitige Tour soll auch erscheinen,
- *  wenn nur die alte Inline-Karte (id 'tab-guide') weggeklickt wurde. */
-export const TAB_GUIDE_HINT_ID = 'tab-guide-v2'
+/** Hint-ID der Tour. Eine neue ID zeigt die Tour nach dem Update allen einmal erneut:
+ *  'v3' stellt die neuen Begriffe und die ⓘ-Erklaerungen vor. */
+export const TAB_GUIDE_HINT_ID = 'tab-guide-v3'
+/** Wer diese ID schon hat, kannte die App vorher und bekommt zuerst die Seite „Neu“. */
+const PREVIOUS_HINT_ID = 'tab-guide-v2'
 </script>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import InfoIcon from '@resqdocs/protocol-core-ui/components/InfoIcon.vue'
+import TabIcon from '@resqdocs/protocol-core-ui/components/TabIcon.vue'
+import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
 import { useStorage } from '@/storage/useStorage'
 import { useDisclaimer } from '@/composables/useDisclaimer'
 import { useAppVersion } from '@/composables/useAppVersion'
@@ -40,7 +45,14 @@ const visible = computed(
 )
 
 const step = ref(0)
-const LAST = 4
+// Bisherige Nutzer sehen zuerst, was neu ist; bei einer Neuinstallation waere „heisst jetzt“ nur verwirrend.
+const pages = computed(() =>
+  storage.settings.dismissedHints.includes(PREVIOUS_HINT_ID)
+    ? ['neu', 'begriffe', 'willkommen', 'bridge', 'einsatz', 'vorlagen', 'privat']
+    : ['willkommen', 'bridge', 'einsatz', 'vorlagen', 'begriffe', 'privat'],
+)
+const page = computed(() => pages.value[step.value])
+const LAST = computed(() => pages.value.length - 1)
 
 function dismiss(): void {
   if (!storage.settings.dismissedHints.includes(HINT_ID)) {
@@ -50,7 +62,7 @@ function dismiss(): void {
   step.value = 0 // beim naechsten Abruf (?-Symbol) wieder vorn beginnen
 }
 function next(): void {
-  if (step.value < LAST) step.value++
+  if (step.value < LAST.value) step.value++
 }
 function prev(): void {
   if (step.value > 0) step.value--
@@ -92,8 +104,53 @@ function onTouchEnd(e: TouchEvent): void {
       <div
         class="mx-auto flex min-h-full w-full max-w-md flex-col pb-[max(24px,env(safe-area-inset-bottom))] pl-[max(24px,env(safe-area-inset-left))] pr-[max(24px,env(safe-area-inset-right))] pt-[max(56px,calc(env(safe-area-inset-top)+2.5rem))] sm:max-w-lg"
       >
+        <!-- Seite „Neu“: nur fuer bisherige Nutzer, einmal nach dem Update -->
+        <div v-if="page === 'neu'" class="flex flex-1 flex-col justify-center gap-4">
+          <h1 class="text-center text-xl font-bold">Neu: Die App erklärt sich besser</h1>
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body flex-row items-start gap-3 p-4">
+              <span class="rounded-lg bg-primary/10 p-2 text-primary">
+                <InfoIcon class="size-6" />
+              </span>
+              <p class="text-sm"><strong>Erklärungen per Tipp:</strong> Tippe auf das <InfoIcon class="inline-block size-[1.15em] align-[-0.2em] text-primary" /> neben einem Begriff, und die App erklärt ihn dir.</p>
+            </div>
+          </div>
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body gap-2 p-4">
+              <p class="text-sm"><strong>Neue Namen, gleiche Funktion:</strong></p>
+              <ul class="flex flex-col gap-1 text-sm">
+                <li>Container <span aria-hidden="true">→</span> <strong>Abschnitt</strong></li>
+                <li>Block <span aria-hidden="true">→</span> <strong>Gespeicherter Abschnitt</strong></li>
+                <li>Snippet <span aria-hidden="true">→</span> <strong>Textbaustein</strong></li>
+                <li>Medikamentenplan <span aria-hidden="true">→</span> <strong>Medikationsplan</strong></li>
+                <li>Ausgabe <span aria-hidden="true">→</span> <strong>Protokolltext</strong></li>
+              </ul>
+              <p class="text-xs text-base-content/60">Deine Vorlagen bleiben, wie sie sind.</p>
+            </div>
+          </div>
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body p-4">
+              <p class="text-sm"><strong>Klare Verweise:</strong> Steht im Text <TabRef tab="einsatz" />, ist der Tab unten in der Leiste gemeint.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seite „Begriffe“: die Teile einer Vorlage, mit denselben Zeichen wie im Aufbau und im Bausteine-Tab -->
+        <div v-else-if="page === 'begriffe'" class="flex flex-1 flex-col justify-center gap-4">
+          <h1 class="text-center text-xl font-bold">So ist eine Vorlage aufgebaut</h1>
+          <ul class="card flex flex-col gap-3 bg-base-100 p-4 shadow-sm">
+            <li class="flex items-start gap-3 text-sm"><span class="w-6 shrink-0 text-center text-base text-base-content/40" aria-hidden="true">▸</span><span><strong>Abschnitt:</strong> fasst Felder unter einer Überschrift zusammen.</span></li>
+            <li class="flex items-start gap-3 text-sm"><span class="w-6 shrink-0 text-center text-base text-secondary" aria-hidden="true">◆</span><span><strong>Feld:</strong> eine einzelne Angabe, frei oder aus einer Liste.</span></li>
+            <li class="flex items-start gap-3 text-sm"><span class="w-6 shrink-0 text-center text-base text-accent" aria-hidden="true">⊕</span><span><strong>Funktion:</strong> fertige Eingabehilfe, z. B. Medikationsplan oder NEWS2.</span></li>
+            <li class="flex items-start gap-3 text-sm"><TabIcon tab="bausteine" class="size-6 shrink-0 text-primary" /><span><strong>Textbaustein:</strong> fertiger Text, den du immer wieder nutzt.</span></li>
+            <li class="flex items-start gap-3 text-sm"><TabIcon tab="bausteine" class="size-6 shrink-0 text-primary" /><span><strong>Gespeicherter Abschnitt:</strong> ein Abschnitt, den du in andere Vorlagen einfügst.</span></li>
+          </ul>
+          <p class="text-center text-sm text-base-content/70">Die letzten beiden findest du unter <TabRef tab="bausteine" />.</p>
+          <p class="text-center text-sm text-base-content/70">Mehr dazu erfährst du in der App: Tippe auf das <InfoIcon class="inline-block size-[1.15em] align-[-0.2em] text-primary" /> neben einem Begriff.</p>
+        </div>
+
         <!-- Seite 1: Willkommen / Wertversprechen -->
-        <div v-if="step === 0" class="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+        <div v-else-if="page === 'willkommen'" class="flex flex-1 flex-col items-center justify-center gap-5 text-center">
           <img src="/brand.svg" alt="ResQDocs" class="brand-logo brand-logo-light h-20 w-auto" />
           <img src="/brand-dark.svg" alt="ResQDocs" class="brand-logo brand-logo-dark h-20 w-auto" />
           <h1 class="text-2xl font-bold">Willkommen!</h1>
@@ -104,8 +161,8 @@ function onTouchEnd(e: TouchEvent): void {
         </div>
 
         <!-- Seite 2: Das Neuartige - die Bridge -->
-        <div v-else-if="step === 1" class="flex flex-1 flex-col justify-center gap-5">
-          <h1 class="text-center text-xl font-bold">So kommt dein Text in NIDA</h1>
+        <div v-else-if="page === 'bridge'" class="flex flex-1 flex-col justify-center gap-5">
+          <h1 class="text-center text-xl font-bold">So kommt dein Text ins Zielgerät</h1>
           <ol class="flex flex-col gap-3">
             <li class="card bg-base-100 shadow-sm">
               <div class="card-body flex-row items-center gap-3 p-4">
@@ -122,41 +179,41 @@ function onTouchEnd(e: TouchEvent): void {
             <li class="card bg-base-100 shadow-sm">
               <div class="card-body flex-row items-center gap-3 p-4">
                 <span class="badge badge-primary badge-lg shrink-0">3</span>
-                <p class="text-sm">Textfeld am Zielgerät antippen, in der App <strong>„In Zielgerät tippen"</strong> - fertig.</p>
+                <p class="text-sm">Textfeld am Zielgerät antippen, in der App <strong>„An Zielgerät senden"</strong> - fertig.</p>
               </div>
             </li>
           </ol>
         </div>
 
         <!-- Seite 3: Dokumentieren mit Tri-State -->
-        <div v-else-if="step === 2" class="flex flex-1 flex-col justify-center gap-5">
-          <h1 class="text-center text-xl font-bold">Dokumentieren im Einsatz</h1>
-          <p class="text-center text-sm text-base-content/70">Jeder Befund hat drei Zustände:</p>
+        <div v-else-if="page === 'einsatz'" class="flex flex-1 flex-col justify-center gap-5">
+          <h1 class="text-center text-xl font-bold">Dokumentieren im <TabRef tab="einsatz" /></h1>
+          <p class="text-center text-sm text-base-content/70">Jedes Feld hat drei Zustände:</p>
           <div class="flex flex-col gap-3">
             <div class="card bg-base-100 shadow-sm">
               <div class="card-body flex-row items-center gap-3 p-4">
                 <span class="text-xl text-success">✓</span>
-                <p class="text-sm"><strong>Bestätigt</strong> - der hinterlegte Normalbefund wird übernommen.</p>
+                <p class="text-sm"><strong>Bestätigt</strong> - der hinterlegte Standardwert wird übernommen.</p>
               </div>
             </div>
             <div class="card bg-base-100 shadow-sm">
               <div class="card-body flex-row items-center gap-3 p-4">
                 <span class="text-xl text-warning">✎</span>
-                <p class="text-sm"><strong>Abweichend</strong> - du beschreibst den Befund selbst.</p>
+                <p class="text-sm"><strong>Eigener Wert</strong> - du trägst selbst etwas ein.</p>
               </div>
             </div>
             <div class="card bg-base-100 shadow-sm">
               <div class="card-body flex-row items-center gap-3 p-4">
                 <span class="text-xl text-base-content/50">−</span>
-                <p class="text-sm"><strong>Nicht erhoben</strong> - taucht in der Ausgabe gar nicht auf. <em>Nicht erhoben = weglassen.</em></p>
+                <p class="text-sm"><strong>Nicht erhoben</strong> - taucht im Protokolltext gar nicht auf. <em>Nicht erhoben = weglassen.</em></p>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Seite 4: Vorlagen & Bausteine -->
-        <div v-else-if="step === 3" class="flex flex-1 flex-col justify-center gap-5">
-          <h1 class="text-center text-xl font-bold">Du bestimmst dein Protokoll</h1>
+        <div v-else-if="page === 'vorlagen'" class="flex flex-1 flex-col justify-center gap-5">
+          <h1 class="text-center text-xl font-bold">Du bestimmst deine Vorlagen</h1>
           <div class="flex flex-col gap-3">
             <div class="card bg-base-100 shadow-sm">
               <div class="card-body flex-row items-start gap-3 p-4">
@@ -168,9 +225,8 @@ function onTouchEnd(e: TouchEvent): void {
                   </svg>
                 </span>
                 <p class="text-sm">
-                  Im Tab <strong>Vorlagen</strong> baust du eigene Protokoll-Vorlagen aus Containern,
-                  Feldern und Funktionen. Die mitgelieferte
-                  <em>Funktionsdemo</em> zeigt alles zum Abschauen.
+                  In <TabRef tab="vorlagen" /> baust du eigene Vorlagen aus Abschnitten,
+                  Feldern und Funktionen. Das <InfoIcon class="inline-block size-[1.15em] align-[-0.2em] text-primary" /> neben einem Begriff erklärt ihn.
                 </p>
               </div>
             </div>
@@ -193,30 +249,13 @@ function onTouchEnd(e: TouchEvent): void {
               <div class="card-body flex-row items-start gap-3 p-4">
                 <span class="rounded-lg bg-primary/10 p-2 text-primary">
                   <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="4" y="4" width="7" height="7" rx="1.5" />
-                    <rect x="13" y="4" width="7" height="7" rx="1.5" />
-                    <rect x="4" y="13" width="7" height="7" rx="1.5" />
-                    <rect x="13" y="13" width="7" height="7" rx="1.5" />
-                  </svg>
-                </span>
-                <p class="text-sm">
-                  <strong>Bausteine</strong> sind wiederverwendbare Snippets, die du als Feld-Vorgabe in
-                  deine Vorlagen oder direkt im Einsatz einfügst.
-                </p>
-              </div>
-            </div>
-            <div class="card bg-base-100 shadow-sm">
-              <div class="card-body flex-row items-start gap-3 p-4">
-                <span class="rounded-lg bg-primary/10 p-2 text-primary">
-                  <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M4 7h9M19 7h1M4 17h5M15 17h5" />
                     <circle cx="16" cy="7" r="2" />
                     <circle cx="12" cy="17" r="2" />
                   </svg>
                 </span>
                 <p class="text-sm">
-                  Scores (NEWS2, LAMS …), EKG-Referenz und der Medikationsplan-Scan hängen als
-                  <strong>Werkzeuge</strong> direkt an den Feldern.
+                  Medikationsplan mit Scan, NEWS2 und Pack-Years fügst du als <strong>Funktionen</strong> in deine Vorlage ein.
                 </p>
               </div>
             </div>
@@ -224,7 +263,7 @@ function onTouchEnd(e: TouchEvent): void {
         </div>
 
         <!-- Seite 5: Privat by Design + CTA -->
-        <div v-else class="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+        <div v-else-if="page === 'privat'" class="flex flex-1 flex-col items-center justify-center gap-5 text-center">
           <span class="rounded-full bg-primary/10 p-4 text-primary">
             <svg class="size-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z" />
@@ -238,7 +277,7 @@ function onTouchEnd(e: TouchEvent): void {
           </p>
           <p class="text-xs text-base-content/60">
             Ausführliche Anleitung: <span class="font-medium">resqdocs.app/anleitung</span>
-            (auch unter Einstellungen → Info &amp; Hilfe).
+            (auch unter <TabRef tab="einstellungen" /> → Info &amp; Hilfe).
           </p>
         </div>
 
@@ -258,7 +297,7 @@ function onTouchEnd(e: TouchEvent): void {
             <button v-else class="btn btn-primary min-h-11 flex-1" type="button" @click="dismiss">Los geht's</button>
           </div>
           <p class="text-center text-xs text-base-content/50">
-            Diese Tour findest du jederzeit über das ?-Symbol oben rechts.
+            Diese Einführung findest du jederzeit über das ?-Symbol oben rechts.
           </p>
         </div>
       </div>

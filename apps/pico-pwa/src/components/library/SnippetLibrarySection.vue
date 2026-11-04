@@ -7,6 +7,8 @@ import { exportSnippet } from '@resqdocs/protocol-core/snippetIO'
 import { routeImport } from '@/composables/useImportRouting'
 import { shareJson, copyToClipboard } from '@/utils/fileTransfer'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
+import InfoTip from '@resqdocs/protocol-core-ui/components/InfoTip.vue'
+import { INFO } from '@resqdocs/protocol-core-ui/terms'
 import { useTransferShare } from '@resqdocs/protocol-core-ui/useTransferShare'
 import { shouldCloseCard, tapIsPending } from '@resqdocs/protocol-core-ui/cardFocusGuard'
 import type { TransferTtl } from '@resqdocs/protocol-core/transferClient'
@@ -188,7 +190,7 @@ async function addAndEdit(): Promise<void> {
     const id = await addSnippet()
     focusNext = true
     editingId.value = id
-    draftTitle.value = 'Neues Snippet'
+    draftTitle.value = 'Neuer Textbaustein'
     draftText.value = ''
   } finally {
     adding.value = false
@@ -304,7 +306,7 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
   const name = (p.title.trim() || s.id || 'snippet').replace(/[^a-z0-9_-]+/gi, '-')
   try {
     // shareJson: nativ Cache-Datei + System-Share-Sheet, Web -> Blob-Download (wie BlockLibrarySection).
-    await shareJson(`snippet-${name}.json`, exportSnippet(p), 'Snippet exportieren')
+    await shareJson(`snippet-${name}.json`, exportSnippet(p), 'Textbaustein exportieren')
   } catch (err) {
     const m = err instanceof Error ? err.message : String(err)
     if (!/cancel|abbruch/i.test(m)) ioMsg.value = { kind: 'err', text: 'Export fehlgeschlagen: ' + m } // Nutzer-Abbruch nicht als Fehler
@@ -318,23 +320,24 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
   <section class="card bg-base-100 shadow">
     <div class="card-body gap-2 p-4">
       <div class="flex items-center gap-2">
-        <h3 class="font-semibold">Snippets</h3>
+        <h3 class="font-semibold">Textbausteine</h3>
+        <InfoTip :info="INFO.snippets" />
         <span v-if="snippets.length" class="badge badge-neutral badge-sm">{{ snippets.length }}</span>
-        <button class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 px-1.5" type="button" :class="importOpen ? 'btn-active' : ''" aria-label="Snippet aus Datei importieren" title="Aus Datei importieren" @click="toggleImport">
+        <button class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 px-1.5" type="button" :class="importOpen ? 'btn-active' : ''" aria-label="Textbaustein aus Datei importieren" title="Aus Datei importieren" @click="toggleImport">
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
         </button>
-        <button class="btn btn-primary btn-sm min-h-11 min-w-11 px-1.5" type="button" :disabled="adding" aria-label="Neues Snippet" title="Neues Snippet" @click="addAndEdit"><span class="text-lg leading-none" aria-hidden="true">＋</span></button>
+        <button class="btn btn-primary btn-sm min-h-11 min-w-11 px-1.5" type="button" :disabled="adding" aria-label="Neuer Textbaustein" title="Neuer Textbaustein" @click="addAndEdit"><span class="text-lg leading-none" aria-hidden="true">＋</span></button>
       </div>
 
       <!-- Import: Snippet-JSON einfügen oder Datei wählen (eigenes resqdocs-snippet-Schema, getrennt von Blöcken/Vorlagen) -->
       <div v-if="importOpen" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
-        <span class="text-xs font-semibold text-base-content/60">Snippet-JSON einfügen oder Datei wählen</span>
-        <textarea v-model="importText" rows="4" class="textarea textarea-bordered w-full text-xs" placeholder='{"schema":"resqdocs-snippet","version":1,"snippet":{ … }}' aria-label="Snippet-JSON"></textarea>
+        <span class="text-xs font-semibold text-base-content/60">JSON einfügen oder Datei wählen</span>
+        <textarea v-model="importText" rows="4" class="textarea textarea-bordered w-full text-xs" placeholder='{"schema":"resqdocs-snippet","version":1,"snippet":{ … }}' aria-label="JSON"></textarea>
         <div class="flex flex-wrap items-center gap-2">
           <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="!importText.trim()" @click="doImport(importText)">Laden</button>
-          <input type="file" accept="application/json,.json" class="file-input file-input-sm min-h-11" aria-label="Snippet-Datei wählen" @change="onImportFile" />
+          <input type="file" accept="application/json,.json" class="file-input file-input-sm min-h-11" aria-label="Datei wählen" @change="onImportFile" />
         </div>
-        <p class="text-xs text-base-content/50">Wird als neues Snippet in die Bibliothek importiert.</p>
+        <p class="text-xs text-base-content/50">Wird als neuer Textbaustein importiert.</p>
       </div>
       <p v-if="ioMsg" class="text-xs" :class="ioMsg.kind === 'ok' ? 'text-success' : 'text-error'">{{ ioMsg.text }}</p>
 
@@ -348,7 +351,7 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
           type="button"
           class="flex min-h-11 w-full min-w-0 items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-left shadow-sm active:bg-base-200"
           :aria-expanded="false"
-          :aria-label="`Snippet ${summaryTitle(s)} — bearbeiten`"
+          :aria-label="`Textbaustein ${summaryTitle(s)} — bearbeiten`"
           @click="openEdit(s)"
         >
           <span class="min-w-0 flex-1 truncate text-sm">
@@ -372,29 +375,29 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
               v-model="draftTitle"
               class="input input-sm flex-1 font-medium"
               placeholder="Titel"
-              aria-label="Snippet-Titel"
+              aria-label="Titel des Textbausteins"
             />
-            <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`Snippet ${draftTitle || 'ohne Titel'} löschen`" @click="pendingDelete = s.id">✕</button>
+            <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`Textbaustein ${draftTitle || 'ohne Titel'} löschen`" @click="pendingDelete = s.id">✕</button>
           </div>
           <textarea
             v-model="draftText"
             class="textarea textarea-bordered textarea-sm w-full"
             rows="3"
             placeholder="Neutraler Text …"
-            aria-label="Snippet-Text"
+            aria-label="Text des Textbausteins"
           />
           <div class="flex flex-wrap justify-end gap-2">
-            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" aria-label="Snippet-Text groß bearbeiten" title="Großes Textfeld" @click="openBigText">
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" aria-label="Text groß bearbeiten" title="Großes Textfeld" @click="openBigText">
               <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></svg>
             </button>
-            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="copiedId === s.id ? 'Snippet-JSON kopiert' : 'Snippet-JSON kopieren'" title="Kopieren" @click="exportCopy(s)">
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="copiedId === s.id ? 'JSON kopiert' : 'JSON kopieren'" title="Kopieren" @click="exportCopy(s)">
               <svg v-if="copiedId === s.id" class="size-5 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
               <svg v-else class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
             </button>
-            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" aria-label="Snippet als Datei sichern" title="Als Datei" :disabled="sharing" @click="exportDownload(s)">
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" aria-label="Textbaustein als Datei exportieren" title="Als Datei exportieren" :disabled="sharing" @click="exportDownload(s)">
               <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7" /><path d="M12 16V3" /><path d="M8 7l4-4 4 4" /></svg>
             </button>
-            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :class="shareOpenId === s.id ? 'btn-active' : ''" aria-label="Snippet teilen (Link und QR)" title="Teilen (Link & QR)" @click="openLinkShare(s)">
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :class="shareOpenId === s.id ? 'btn-active' : ''" aria-label="Textbaustein teilen (Link und QR)" title="Teilen (Link & QR)" @click="openLinkShare(s)">
               <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
             </button>
             <button type="button" class="btn btn-primary btn-sm min-h-11" @click="closeEdit">Fertig</button>
@@ -421,7 +424,7 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
         </div>
       </template>
       </div>
-      <p v-if="!snippets.length" class="px-1 py-1 text-sm text-base-content/60">Noch keine Snippets.</p>
+      <p v-if="!snippets.length" class="px-1 py-1 text-sm text-base-content/60">Noch keine Textbausteine.</p>
     </div>
 
     <!-- Grosses Textfeld: der Text der OFFENEN Karte (draftText, live) in einem Vollbild-Sheet — Muster wie
@@ -430,13 +433,13 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
          NICHT selbst; Persistenz laeuft beim Karten-Schliessen (commitEdit); expandOpen haelt onFocusOut ab. -->
     <dialog ref="bigTextDialog" class="modal modal-bottom sm:modal-middle" @close="expandOpen = false">
       <div class="modal-box flex h-[85vh] max-h-none flex-col gap-3 pb-[env(safe-area-inset-bottom)]">
-        <h3 class="text-base font-semibold">{{ draftTitle.trim() || 'Snippet' }} — Text</h3>
+        <h3 class="text-base font-semibold">{{ draftTitle.trim() || 'Textbaustein' }} — Text</h3>
         <textarea
           ref="bigTextArea"
           v-model="draftText"
           class="textarea textarea-bordered min-h-0 w-full flex-1 text-base leading-relaxed"
           placeholder="Neutraler Text …"
-          aria-label="Snippet-Text"
+          aria-label="Text des Textbausteins"
         />
         <div class="flex justify-end">
           <button type="button" class="btn btn-primary btn-sm" @click="bigTextDialog?.close()">Fertig</button>
@@ -447,8 +450,8 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
 
     <ConfirmDialog
       v-if="pendingDelete"
-      :title="`Snippet „${pendingTitle}“ löschen?`"
-      message="Das Snippet wird aus der Bibliothek entfernt. Bereits eingefügte Kopien bleiben unverändert. Das lässt sich nicht rückgängig machen."
+      :title="`Textbaustein „${pendingTitle}“ löschen?`"
+      message="Der Textbaustein wird gelöscht. Bereits eingefügte Kopien bleiben unverändert. Das lässt sich nicht rückgängig machen."
       confirm-label="Löschen"
       @confirm="confirmDelete"
       @cancel="pendingDelete = null"

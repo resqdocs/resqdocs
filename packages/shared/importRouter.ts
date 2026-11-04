@@ -22,7 +22,7 @@ export type DetectResult =
 
 /** Nutzer-sichtbares Substantiv fuer den erkannten Typ (Meldung „Als <…> importiert"). */
 export function kindNoun(k: DetectedKind): string {
-  return k === 'protocol' ? 'Vorlage' : k === 'block' ? 'Baustein' : 'Snippet'
+  return k === 'protocol' ? 'Vorlage' : k === 'block' ? 'Gespeicherter Abschnitt' : 'Textbaustein'
 }
 
 /** JSON am schema-Feld erkennen und mit dem passenden Parser parsen. Reicht tree/snippet 1:1 durch. */

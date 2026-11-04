@@ -312,7 +312,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
         <TriStateToggle :model-value="triState" :label="label" :allow-excluded="!node.required" @update:model-value="onState" />
         <span class="text-sm font-medium">{{ label }}<RequiredMark v-if="node.required" :open="isOpen" /></span>
         <!-- Icon-only (Bausteine-4-Quadrate-Icon aus dem Dock -> Wiedererkennung); Bedeutung via aria-label/Tooltip -->
-        <button type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 shrink-0 px-1.5" aria-label="Snippet einfügen" title="Snippet einfügen" @click="snippetPickerOpen = true">
+        <button type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 shrink-0 px-1.5" aria-label="Textbaustein einfügen" title="Textbaustein einfügen" @click="snippetPickerOpen = true">
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="4" y="4" width="7" height="7" rx="1.5" />
             <rect x="13" y="4" width="7" height="7" rx="1.5" />
@@ -328,7 +328,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
         <input v-else class="input input-sm w-full" :value="customValue" :aria-label="`${label}: eigener Wert`" :aria-required="node.required || undefined" @input="onInput" />
       </div>
       <p v-else class="pl-9 text-sm italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
-      <SnippetPicker v-if="snippetPickerOpen" multiple title="Snippets als Wert einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
+      <SnippetPicker v-if="snippetPickerOpen" multiple title="Textbausteine als Wert einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
     </template>
 
     <!-- Pflichtfeld noch offen: ruhiger Amber-Hinweis (kein roter Rahmen/kein Gate — darf im Einsatz

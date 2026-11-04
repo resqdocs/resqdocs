@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Einsatz-Komponente der Funktion „Medikamentenplan". Eigener Zustand (Medikamentenzeilen) im selben
+ * Einsatz-Komponente der Funktion „Medikationsplan". Eigener Zustand (Medikamentenzeilen) im selben
  * Werte-Store (useCaseValues.getRows/setRows) -> erbt Entwurf-Persistenz + DSGVO-Reset gratis.
  *
  * Mode-in-place (quellenbasiert NN/g/Baymard): fertige Medikamente erscheinen kompakt als Summary-Zeile,
@@ -40,7 +40,7 @@ const lookup = useMedicationLookup()
 
 const rows = computed<MedikamenteRow[]>(() => caseValues.getRows(props.node.id) as MedikamenteRow[])
 const filledCount = computed(() => rows.value.filter((r) => r.name.trim()).length) // leere Zeile zaehlt nicht
-const label = computed(() => (props.node.title && props.node.title.trim()) || 'Medikamentenplan')
+const label = computed(() => (props.node.title && props.node.title.trim()) || 'Medikationsplan')
 // Pflicht-Funktion „noch offen": keine Zeilen/kein Freitext/kein Standardtext -> reiner visueller Hinweis.
 const isOpen = computed(() => // Funktionen fuehren ihren Status eigenstaendig (state:'function' mit status), nicht ueber den
 // Feld-Tri-State. UNO Reverse ist fuer sie deshalb NICHT entschieden - bewusst kein Knoten hier.
@@ -121,12 +121,12 @@ const confirmTitle = computed(() => {
   if (p === 'all') return 'Alle Medikamente zurücksetzen?'
   // Gerade leergeraeumte Bestandszeile: den Stand beim Oeffnen der Karte zeigen.
   const current = p ? formatMedikament(p) : ''
-  return `„${current || editingLabel.value || 'Medikament'}“ entfernen?`
+  return `„${current || editingLabel.value || 'Medikament'}“ löschen?`
 })
 const confirmMessage = computed(() => {
   if (pendingRemove.value !== 'all') return 'Das lässt sich nicht rückgängig machen.'
   const n = rows.value.filter(medikamentRowHasData).length
-  return `${n === 1 ? 'Der erfasste Eintrag wird' : `Alle ${n} erfassten Einträge werden`} entfernt. Das lässt sich nicht rückgängig machen.`
+  return `${n === 1 ? 'Der erfasste Eintrag wird' : `Alle ${n} erfassten Einträge werden`} gelöscht. Das lässt sich nicht rückgängig machen.`
 })
 function confirmPendingRemove(): void {
   const p = pendingRemove.value
@@ -337,7 +337,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
     </button>
 
     <!-- nicht erhoben: Zeilen-Verwaltung aus, nur Hinweis. Daten bleiben erhalten und kommen beim Zurueckschalten wieder. -->
-    <p v-if="excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
+    <p v-if="excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokolltext</p>
 
     <div v-else-if="custom" class="flex flex-col gap-1">
       <!-- Freitext ersetzt in der Ausgabe die Zeilen; vorbelegt mit dem Standardtext, Zeilen bleiben erhalten. -->
@@ -349,7 +349,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
         :placeholder="node.default || 'z. B. Medikation siehe beiliegender Plan'"
         @input="setCustomText(($event.target as HTMLTextAreaElement).value)"
       ></textarea>
-      <p class="text-xs italic text-base-content/50">Freitext — ersetzt in der Ausgabe die Einträge. Erfasste Einträge bleiben erhalten.</p>
+      <p class="text-xs italic text-base-content/50">Freitext — ersetzt im Protokolltext die Einträge. Erfasste Einträge bleiben erhalten.</p>
     </div>
 
     <template v-else>
@@ -389,7 +389,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
             @input="onNameInput(i, ($event.target as HTMLInputElement).value)"
             @keydown.esc.stop="closeSuggest"
           />
-          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Medikament ' + (i + 1)} entfernen`" @click="requestRemove(i)">✕</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Medikament ' + (i + 1)} löschen`" @click="requestRemove(i)">✕</button>
         </div>
         <!-- Vorschlaege aus der PZN-Bibliothek: INNERHALB der Karte, damit der Tap-Guard
              (onCardTap/focusout) den Tap nicht als „Karte verlassen" wertet. Auswahl fuellt die Zeile. -->
@@ -456,7 +456,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-6 w-6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
             </span>
             <span class="flex flex-col text-left">
-              <span>Plan (BMP) scannen</span>
+              <span>Medikationsplan scannen</span>
               <span class="text-xs text-base-content/60">Ganzer Plan mit der Kamera</span>
             </span>
           </button>
@@ -491,7 +491,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
       v-if="pendingRemove !== null"
       :title="confirmTitle"
       :message="confirmMessage"
-      :confirm-label="pendingRemove === 'all' ? 'Alle zurücksetzen' : 'Entfernen'"
+      :confirm-label="pendingRemove === 'all' ? 'Alle zurücksetzen' : 'Löschen'"
       @confirm="confirmPendingRemove"
       @cancel="pendingRemove = null"
     />

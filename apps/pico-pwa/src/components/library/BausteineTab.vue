@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
 import { useBausteine } from '@/composables/useBausteine'
 import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
 import SnippetLibrarySection from './SnippetLibrarySection.vue'
@@ -26,7 +27,7 @@ onMounted(() => {
   <div class="flex flex-col gap-4">
     <h2 class="text-base font-semibold">Bausteine</h2>
     <p class="max-w-prose text-sm text-base-content/60">
-      Wiederverwendbare Snippets und Blöcke für deine Vorlagen und Einsätze.
+      Textbausteine und gespeicherte Abschnitte, die du in <TabRef tab="vorlagen" /> und im <TabRef tab="einsatz" /> wiederverwendest.
     </p>
 
     <div role="note" class="alert alert-info max-w-prose text-sm">
@@ -42,9 +43,5 @@ onMounted(() => {
     <SnippetLibrarySection />
     <BlockLibrarySection />
 
-    <p class="max-w-prose text-xs text-base-content/50">
-      Snippet einfügen: im Vorlagen-Editor als Feld-Vorgabe oder im Einsatz direkt als Feldwert.
-      Blöcke anlegen: im Vorlagen-Editor an einem Container „Als Baustein speichern".
-    </p>
   </div>
 </template>

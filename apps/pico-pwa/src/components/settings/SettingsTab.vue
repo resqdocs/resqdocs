@@ -69,7 +69,7 @@ watch(page, (p) => {
   <div v-else class="flex flex-col gap-4">
     <h2 class="text-base font-semibold">Einstellungen</h2>
     <p class="text-sm text-base-content/60">
-      App-Einstellungen, Bridge/Gerät, Daten und Rechtliches.
+      App-Einstellungen, Bridge, Daten und Rechtliches.
     </p>
 
     <!-- Täglich benötigt: immer sichtbar. -->
@@ -80,13 +80,13 @@ watch(page, (p) => {
     <button
       type="button"
       class="card bg-base-100 text-left shadow transition hover:bg-base-200"
-      aria-label="Bridge / Gerät öffnen"
+      aria-label="Bridge öffnen"
       @click="page = 'device'"
     >
       <div class="card-body flex-row items-center justify-between gap-3 p-4">
         <div class="flex flex-col">
-          <span class="font-medium">Bridge / Gerät</span>
-          <span class="text-xs text-base-content/60">Verbindung · Firmware · Testtext · Geräte-ID</span>
+          <span class="font-medium">Bridge</span>
+          <span class="text-xs text-base-content/60">Verbindung · Firmware · Testtext · Bridge-ID</span>
         </div>
         <div class="flex items-center gap-2">
           <span
@@ -121,7 +121,7 @@ watch(page, (p) => {
     <!-- Selten benötigt: eingeklappt. Unabhängige Collapses (checkbox, NICHT radio-gruppiert -> einzeln auf/zu). -->
     <div class="collapse collapse-arrow bg-base-100 shadow">
       <input type="checkbox" aria-label="Daten und lokale Daten ein- oder ausklappen" />
-      <div class="collapse-title min-h-11 font-semibold">Daten &amp; lokale Daten</div>
+      <div class="collapse-title min-h-11 font-semibold">Datenschutz &amp; lokale Daten</div>
       <div class="collapse-content flex flex-col gap-4">
         <PrivacyDataSection />
         <!-- Altes PZN-Wörterbuch (Netz-Download) — deaktiviert (IFA/DSGVO), nur sichtbar wenn Flag an. -->

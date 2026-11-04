@@ -27,7 +27,7 @@ test('countDescendants: zaehlt ALLE verschachtelten Elemente nach Typ (nicht nur
 })
 
 test('blockStructureLabel: Null-Kategorien weggelassen, Singular/Plural, leer', () => {
-  assert.equal(blockStructureLabel(sample()), '2 Container · 5 Felder · 1 Funktion')
+  assert.equal(blockStructureLabel(sample()), '2 Abschnitte · 5 Felder · 1 Funktion')
   const oneField = addChild(createContainer('r'), 'r', createField('x')) as Container
   assert.equal(blockStructureLabel(oneField), '1 Feld')
   assert.equal(blockStructureLabel(createContainer('leer')), 'leer')

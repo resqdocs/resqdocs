@@ -635,11 +635,11 @@ async function deleteAll(): Promise<void> {
           <button class="btn btn-outline btn-xs" type="button" @click="loadMore">Weitere {{ PAGE }} laden</button>
         </div>
 
-        <!-- Sichern und importieren: Export/Import als Datei (gezipptes JSON, bleibt auf dem Gerät) und Import der
+        <!-- Exportieren und importieren: Export/Import als Datei (gezipptes JSON, bleibt auf dem Gerät) und Import der
              eigenen Bibliothek von einer Adresse. Ein Block, gleich breite Knöpfe statt umbrechender Zeile. -->
         <section class="flex flex-col gap-2 border-t border-base-200 pt-3" aria-labelledby="pzn-transfer-title">
           <div>
-            <h3 id="pzn-transfer-title" class="text-sm font-semibold">Sichern und importieren</h3>
+            <h3 id="pzn-transfer-title" class="text-sm font-semibold">Exportieren und importieren</h3>
             <p class="text-xs text-base-content/60">Export und Import als Datei bleiben auf dem Gerät.</p>
           </div>
           <div class="grid grid-cols-2 gap-2">
@@ -672,7 +672,7 @@ async function deleteAll(): Promise<void> {
               <button class="btn btn-xs btn-outline w-full" type="button" :disabled="importing" @click="chooseImport('skip')">Nur fehlende ergänzen</button>
               <button class="btn btn-xs btn-ghost w-full" type="button" :disabled="importing" @click="importChoosing = false">Abbrechen</button>
             </div>
-            <span class="text-xs text-base-content/50">Vorhandene Einträge, die nicht in der Datei sind, bleiben in beiden Fällen erhalten. „Überschreiben" ersetzt alle Felder eines Eintrags durch die Backup-Werte — auch die Wirkstärke, die in älteren Backups noch fehlt.</span>
+            <span class="text-xs text-base-content/50">Vorhandene Einträge, die nicht in der Datei sind, bleiben in beiden Fällen erhalten. „Überschreiben" ersetzt alle Felder eines Eintrags durch die Werte aus der Datei — auch die Wirkstärke, die in älteren Backups noch fehlt.</span>
           </div>
           <!-- Eigene Bibliothek von einer Adresse laden: nur https, nur auf Tipp, Adresse wird nicht gespeichert -->
           <div v-if="urlOpen" role="group" aria-labelledby="pzn-url-title" class="flex flex-col gap-2 rounded-lg bg-base-200/60 p-2">
@@ -745,9 +745,9 @@ async function deleteAll(): Promise<void> {
       <!-- Loesch-Rueckfrage: kuratierte Eintraege nie rueckfragefrei entfernen -->
       <ConfirmDialog
         v-if="pendingDelete"
-        :title="`PZN ${pendingDelete.pzn} entfernen?`"
+        :title="`PZN ${pendingDelete.pzn} löschen?`"
         :message="[pendingDelete.label || pendingDelete.wirkstoff, 'Das lässt sich nicht rückgängig machen.'].filter(Boolean).join(' — ')"
-        confirm-label="Entfernen"
+        confirm-label="Löschen"
         @confirm="confirmDelete"
         @cancel="pendingDelete = null"
       />

@@ -47,7 +47,7 @@ export const BMP_PROFILE: ScanProfile = {
   charset: 'iso-8859-1',
   codeSizeMm: 40,
   title: 'Medikationsplan scannen',
-  hint: 'BMP-Code in den Rahmen halten · Reflexionen vermeiden',
+  hint: 'Medikationsplan-Code in den Rahmen halten · Reflexionen vermeiden',
   frame: 'square',
 }
 
