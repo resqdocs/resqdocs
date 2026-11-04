@@ -82,7 +82,7 @@ export function parseBackup(json: string): ParseBackupResult {
   } catch {
     return { ok: false, error: 'Kein gültiges JSON.' }
   }
-  if (!parsed || typeof parsed !== 'object') return { ok: false, error: 'Backup ist kein Objekt.' }
+  if (!parsed || typeof parsed !== 'object') return { ok: false, error: 'Die Datei ist keine gültige Sicherung.' }
   const p = parsed as Partial<BackupEnvelope>
   if (p.schema !== BACKUP_SCHEMA) return { ok: false, error: 'Keine ResQDocs-Sicherung.' }
   if (typeof p.version !== 'number' || p.version > BACKUP_VERSION) {

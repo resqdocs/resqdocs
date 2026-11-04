@@ -25,8 +25,8 @@ onMounted(() => {
 const NEXT = { confirmed: 'custom', custom: 'excluded', excluded: 'confirmed' } as const
 const TITLE = {
   confirmed: 'erhoben',
-  custom: 'Freitext (eigener Text)',
-  excluded: 'nicht erhoben - erscheint nicht im Protokoll',
+  custom: 'eigener Wert (Freitext)',
+  excluded: 'nicht erhoben - erscheint nicht im Protokolltext',
 } as const
 
 function toggle(): void {

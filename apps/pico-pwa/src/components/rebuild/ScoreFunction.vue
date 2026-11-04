@@ -98,7 +98,7 @@ function doReset(): void {
     <!-- − nicht erhoben: Rechner entfaellt in der Ausgabe. -->
     <p v-if="supported && excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
 
-    <!-- ✎ Freitext: ersetzt in der Ausgabe das Ergebnis (vorbelegt mit Standardtext). -->
+    <!-- ✎ Freitext: ersetzt im Protokolltext das Ergebnis (vorbelegt mit Standardtext). -->
     <div v-else-if="supported && custom" class="flex flex-col gap-1">
       <textarea
         class="textarea textarea-bordered textarea-sm w-full"
@@ -108,7 +108,7 @@ function doReset(): void {
         :placeholder="node.default || 'z. B. nicht erhebbar'"
         @input="setCustomText(($event.target as HTMLTextAreaElement).value)"
       ></textarea>
-      <p class="text-xs italic text-base-content/50">Freitext — ersetzt in der Ausgabe das Ergebnis. Erfasste Werte bleiben erhalten.</p>
+      <p class="text-xs italic text-base-content/50">Freitext — ersetzt im Protokolltext das Ergebnis. Erfasste Werte bleiben erhalten.</p>
     </div>
 
     <!-- ✓ berechnen: Ergebnis-Zeile; Antippen öffnet die Eingabe (nur bei unterstütztem Rechner). -->
@@ -126,7 +126,7 @@ function doReset(): void {
       </button>
       <!-- Unbekannter/nicht unterstützter Rechner (Fremd-Import o. neuere Vorlage): read-only, kein totes Tap-Ziel. -->
       <p v-else class="rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm italic text-base-content/50">
-        Dieser Rechner wird von deiner App-Version nicht unterstützt.
+        Diese Funktion wird von deiner App-Version nicht unterstützt.
       </p>
     </template>
 
@@ -137,7 +137,7 @@ function doReset(): void {
     <ConfirmDialog
       v-if="confirmReset"
       :title="`„${label}“ zurücksetzen?`"
-      message="Die erfassten Werte werden entfernt. Das lässt sich nicht rückgängig machen."
+      message="Die erfassten Werte werden gelöscht. Das lässt sich nicht rückgängig machen."
       confirm-label="Zurücksetzen"
       @confirm="doReset"
       @cancel="confirmReset = false"

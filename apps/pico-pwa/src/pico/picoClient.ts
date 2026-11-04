@@ -103,7 +103,7 @@ export function createPicoClient(http: HttpAdapter, baseUrl: string | (() => str
     },
     async setConfig({ ssidId }): Promise<PicoConfigResult> {
       // Vorvalidierung: ungültige ID erzeugt KEINEN Request (Server bleibt maßgeblich).
-      if (!isValidSsidId(ssidId)) throw new Error('Ungültige Geräte-ID (erlaubt: A-Z a-z 0-9 _ -, max. 23 Zeichen)')
+      if (!isValidSsidId(ssidId)) throw new Error('Ungültige Bridge-ID (erlaubt: A-Z a-z 0-9 _ -, max. 23 Zeichen)')
       const res = await http.post(`${base()}/config`, { ssidId }, { connectTimeout: CONNECT_TIMEOUT, readTimeout: CONNECT_TIMEOUT })
       if (!isOk(res.status)) throw new Error(`Konfiguration fehlgeschlagen (HTTP ${res.status})`)
       const o = parseBody(res.data)

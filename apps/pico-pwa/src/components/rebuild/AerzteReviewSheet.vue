@@ -109,7 +109,7 @@ onMounted(() => {
         </div>
 
         <div v-if="manualOpen" class="flex flex-col gap-2">
-          <textarea v-model="manualText" rows="3" class="textarea textarea-bordered textarea-sm w-full font-mono" placeholder="BMP-Code-Inhalt (XML, beginnt mit <MP …>) einfügen" aria-label="BMP-Code-Inhalt" />
+          <textarea v-model="manualText" rows="3" class="textarea textarea-bordered textarea-sm w-full font-mono" placeholder="Inhalt des Codes (XML, beginnt mit <MP …>) einfügen" aria-label="Inhalt des Codes" />
           <button type="button" class="btn btn-sm self-start min-h-11" :disabled="!manualText.trim()" @click="onManualAdd">Übernehmen</button>
         </div>
 
@@ -128,7 +128,7 @@ onMounted(() => {
           <!-- Cross-Uebernahme: Medikamente auch anlegen? Nur wenn ein Medikamentenplan existiert. -->
           <label v-if="hasMedplan && medCount" class="mt-1 flex items-center gap-2 border-t border-base-300 pt-2 text-sm">
             <input v-model="alsoAddMeds" type="checkbox" class="checkbox checkbox-sm" />
-            Auch {{ medCount }} Medikament{{ medCount === 1 ? '' : 'e' }} in den Medikamentenplan übernehmen
+            Auch {{ medCount }} Medikament{{ medCount === 1 ? '' : 'e' }} in den Medikationsplan übernehmen
           </label>
         </div>
         <p v-else-if="!scanOpen" class="text-sm italic text-base-content/50">Noch nichts gescannt — „Code scannen" oder „Text einfügen".</p>

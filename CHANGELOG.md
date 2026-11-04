@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.8.0] - 2026-11-04
+
+### Added
+
+- Info tips: a small info icon next to terms and settings explains them on tap; the advanced settings show examples of the resulting protocol text
+- The introduction appears once after this update and shows what is new and how a template is structured
+- References to tabs show the tab's icon
+
+### Changed
+
+- Consistent terminology across the app and the template editor, for example section instead of container; templates and data stay unchanged
+- The AI guide uses a complete standard protocol as its main example, with placeholders for dispatch codes, and explains newer options in plain language
+
+### Fixed
+
+- The introduction, website and guide no longer mention features that do not exist
+
 ## [1.7.2] - 2026-10-21
 
 ### Features

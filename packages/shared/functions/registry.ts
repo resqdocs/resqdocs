@@ -122,7 +122,7 @@ export function arztRowHasData(r: ArztRow): boolean {
 }
 
 const medikamentenplan: FunctionDef = {
-  label: 'Medikamentenplan',
+  label: 'Medikationsplan',
   // Editor-Vorschau: 3 Muster-Medikamente (KEINE echten Praeparate/Dosierungen) - zeigen das Zeilenformat
   // „Name Staerke, Schema (Hinweis)" inkl. der Variante ohne Staerke.
   sampleFill: () => ({

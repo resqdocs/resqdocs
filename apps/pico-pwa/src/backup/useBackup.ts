@@ -237,7 +237,7 @@ async function applyEnvelope(envelope: BackupEnvelope, mode: 'merge' | 'replace'
   if (cloudEnabled.value) await cloudSyncNow()
   await refreshHistory()
   status.value = 'saved'
-  lastMessage.value = `${verb}: +${counts.protocols} Vorlagen · +${counts.blocks} Bausteine · +${counts.snippets} Mustertexte · +${counts.pzn} PZN`
+  lastMessage.value = `${verb}: +${counts.protocols} Vorlagen · +${counts.blocks} Abschnitte · +${counts.snippets} Textbausteine · +${counts.pzn} PZN`
   setTimeout(() => {
     if (status.value === 'saved') status.value = 'idle'
   }, 2500)
@@ -280,7 +280,7 @@ async function importFromFile(file: File, mode: 'merge' | 'replace'): Promise<Re
     const text = await decodeMaybeGzip(await readBinaryFile(file))
     if (!text) {
       status.value = 'error'
-      lastMessage.value = 'Datei nicht lesbar oder kein gültiges Backup.'
+      lastMessage.value = 'Datei nicht lesbar oder keine gültige Sicherung.'
       return null
     }
     const parsed = parseBackup(text)

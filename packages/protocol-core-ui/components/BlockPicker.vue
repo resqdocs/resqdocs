@@ -12,7 +12,7 @@ import type { Container } from '@resqdocs/protocol-core/model'
 import { blockStructureLabel } from '../blockSummary.ts'
 import { useBlockLibrary } from '../useBlockLibrary.ts'
 
-withDefaults(defineProps<{ title?: string }>(), { title: 'Block einfügen' })
+withDefaults(defineProps<{ title?: string }>(), { title: 'Gespeicherten Abschnitt einfügen' })
 const emit = defineEmits<{ select: [block: Container]; close: [] }>()
 
 const { blocks, loaded, reload } = useBlockLibrary()
@@ -49,11 +49,11 @@ function confirm(): void {
       <div class="modal-box flex max-h-[80vh] flex-col gap-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <h3 class="text-base font-semibold">{{ title }}</h3>
         <p class="text-xs text-base-content/60">
-          Eingefügt wird eine <strong>Kopie</strong> der Struktur — keine Verknüpfung. Änderst du den Block später, füge ihn neu ein.
+          Eingefügt wird eine <strong>Kopie</strong> der Struktur — keine Verknüpfung. Änderst du das Original später, füge es neu ein.
         </p>
 
         <template v-if="blocks.length">
-          <select v-model="sel" class="select select-bordered select-sm w-full" aria-label="Block auswählen">
+          <select v-model="sel" class="select select-bordered select-sm w-full" aria-label="Gespeicherten Abschnitt auswählen">
             <option v-for="b in blocks" :key="b.id" :value="b.id">{{ (b.title && b.title.trim()) || '(ohne Titel)' }}</option>
           </select>
           <p v-if="selected" class="max-h-32 overflow-y-auto rounded-lg bg-base-200 p-2 text-xs text-base-content/70">
@@ -62,7 +62,7 @@ function confirm(): void {
           </p>
         </template>
         <p v-else-if="loaded" class="px-2 py-6 text-center text-sm text-base-content/50">
-          Noch keine Blöcke. Lege im Vorlagen-Editor an einem Container „Als Baustein speichern" an.
+          Noch keine gespeicherten Abschnitte. Unter den Eigenschaften eines Abschnitts „Für andere Vorlagen speichern“ wählen.
         </p>
         <p v-else class="px-2 py-6 text-center text-sm text-base-content/50">Lade …</p>
 

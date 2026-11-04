@@ -3,10 +3,11 @@
  * Einsatz - Neuaufbau, Slice 1: Anzeige des Container-Baums beim Ausfuellen + Text-Vorschau.
  * Liest den GETEILTEN Protokoll-Baum (useProtocolTree) - dieselbe Definition, die der Editor
  * schreibt. Modell: ein langer, einspaltiger Scroll mit Sektionen (docs/rework/einsatz-display.md).
- * Umschalter (small-screen-first): Ausfuellen <-> Vorschau (Ausgabetext); ab lg beides
+ * Umschalter (small-screen-first): Ausfuellen <-> Vorschau (Protokolltext); ab lg beides
  * nebeneinander, Vorschau klebt. Die Vorschau nutzt denselben reinen Renderer wie die Ausgabe.
  */
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
 import { resolveInitialProtocolId } from '@resqdocs/protocol-core/library'
@@ -358,11 +359,11 @@ onUnmounted(() => {
           <div v-if="protocols.length > 1" class="rounded-lg border border-base-300 bg-base-100 p-2">
             <button type="button" class="flex min-h-11 w-full items-center gap-2 px-1 text-left text-sm" :aria-expanded="!collapsed" @click="collapsed = !collapsed">
               <span aria-hidden="true">{{ collapsed ? '▸' : '▾' }}</span>
-              <span class="text-base-content/60">Protokoll:</span>
+              <span class="text-base-content/60">Vorlage:</span>
               <span class="truncate font-semibold">{{ activeTitle }}</span>
             </button>
             <template v-if="!collapsed">
-              <ul class="mt-1 flex flex-col gap-1" role="radiogroup" aria-label="Protokoll wählen">
+              <ul class="mt-1 flex flex-col gap-1" role="radiogroup" aria-label="Vorlage wählen">
                 <li v-for="p in protocols" :key="p.id">
                   <button type="button" role="radio" :aria-checked="p.id === einsatzActiveId" class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm" :class="p.id === einsatzActiveId ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-base-200'" @click="choose(p.id)">
                     <span v-if="p.id === einsatzActiveId" aria-hidden="true">✓</span>
@@ -372,14 +373,14 @@ onUnmounted(() => {
                 </li>
               </ul>
               <!-- ausserhalb der radiogroup (kein Radio) -->
-              <button type="button" class="btn btn-ghost btn-xs mt-1" @click="toggleDefault">{{ isDefault ? 'Standard entfernen' : 'Als Standard merken' }}</button>
+              <button type="button" class="btn btn-ghost btn-xs mt-1" @click="toggleDefault">{{ isDefault ? 'Nicht mehr als Standard-Vorlage' : 'Als Standard-Vorlage merken' }}</button>
             </template>
           </div>
 
           <div>
-            <h2 class="text-base font-semibold">{{ (root.title && root.title.trim()) || 'Protokoll' }}</h2>
+            <h2 class="text-base font-semibold">{{ (root.title && root.title.trim()) || 'Vorlage' }}</h2>
             <p class="text-sm text-base-content/60">
-              Felder ausfüllen: tippe auf <span class="whitespace-nowrap">✓/✎/−</span> je Feld (bestätigt · eigener Wert · nicht erhoben). Die Vorschau zeigt den Ausgabetext.
+              Felder ausfüllen: tippe auf <span class="whitespace-nowrap">✓/✎/−</span> je Feld (bestätigt · eigener Wert · nicht erhoben). Die Vorschau zeigt den Protokolltext.
             </p>
           </div>
 
@@ -404,16 +405,16 @@ onUnmounted(() => {
             </template>
           </div>
           <p v-else class="rounded-lg border border-dashed border-base-300 px-4 py-10 text-center text-sm text-base-content/50">
-            Noch keine Container. Lege im Tab „Vorlagen" welche an — sie erscheinen hier sofort.
+            Noch keine Abschnitte. Lege in <TabRef tab="vorlagen" /> welche an — sie erscheinen hier sofort.
           </p>
         </div>
       </div>
 
-      <!-- Vorschau: Ausgabetext (gleicher reiner Renderer wie die finale Ausgabe) -->
+      <!-- Vorschau: Protokolltext (gleicher reiner Renderer wie die finale Ausgabe) -->
       <div class="lg:block" :class="{ hidden: view !== 'vorschau' }">
         <div class="card bg-base-100 shadow lg:sticky lg:top-20">
           <div class="card-body gap-2 p-4">
-            <OutputText :text="text" label="Ausgabetext" />
+            <OutputText :text="text" label="Protokolltext" />
           </div>
         </div>
       </div>
@@ -426,7 +427,7 @@ onUnmounted(() => {
       <div class="mx-auto flex w-full max-w-sm flex-col items-center gap-3">
         <button type="button" class="btn btn-primary w-full" :disabled="sending || reachable !== true" @click="senden">
           <span v-if="sending" class="loading loading-spinner loading-sm"></span>
-          {{ sending ? 'Sende …' : 'An Gerät senden' }}
+          {{ sending ? 'Sende …' : 'An Zielgerät senden' }}
         </button>
         <p v-if="sendMsg" class="text-center text-xs" :class="sendMsg.kind === 'ok' ? 'text-success' : 'text-error'" role="status" aria-live="polite">{{ sendMsg.text }}</p>
         <p v-else-if="reachable !== true" class="text-center text-xs text-base-content/50">Bridge nicht verbunden — Senden gesperrt.</p>
@@ -441,7 +442,7 @@ onUnmounted(() => {
     <!-- Loesch-Bestaetigung (DSGVO): bewusster, expliziter Schritt -->
     <div class="modal" :class="{ 'modal-open': showConfirm }" role="dialog" aria-modal="true">
       <div class="modal-box">
-        <h3 class="text-base font-semibold">Protokoll abschließen?</h3>
+        <h3 class="text-base font-semibold">Einsatz abschließen?</h3>
         <p class="py-3 text-sm">
           Wirklich fertig? Alle erfassten Eingaben werden jetzt <strong>gezielt und endgültig gelöscht</strong> —
           Datenschutz, besonders schützenswerte Gesundheitsdaten (Art. 9 DSGVO). Das lässt sich nicht rückgängig machen.
@@ -457,7 +458,7 @@ onUnmounted(() => {
     <!-- Slice 4: Wechsel-Confirm (nur wenn bereits Eingaben erfasst sind) -->
     <div class="modal" :class="{ 'modal-open': pendingId !== null }" role="dialog" aria-modal="true">
       <div class="modal-box">
-        <h3 class="text-base font-semibold">Protokoll wechseln?</h3>
+        <h3 class="text-base font-semibold">Vorlage wechseln?</h3>
         <p class="py-3 text-sm">
           Beim Wechsel zu <strong>{{ pendingTitle }}</strong> werden die bereits erfassten Eingaben dieses Einsatzes <strong>nicht gespeichert</strong> und verworfen.
         </p>

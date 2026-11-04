@@ -60,6 +60,6 @@ test('detectAndParse: bekanntes schema, aber Parser lehnt ab -> ok:false MIT kin
 
 test('kindNoun: nutzerlesbare Substantive', () => {
   assert.equal(kindNoun('protocol'), 'Vorlage')
-  assert.equal(kindNoun('block'), 'Baustein')
-  assert.equal(kindNoun('snippet'), 'Snippet')
+  assert.equal(kindNoun('block'), 'Gespeicherter Abschnitt')
+  assert.equal(kindNoun('snippet'), 'Textbaustein')
 })

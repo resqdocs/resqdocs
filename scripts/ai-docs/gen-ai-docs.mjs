@@ -133,24 +133,14 @@ const EXAMPLES = [
     en: 'Smallest useful template: two sections with plain fields. A good starting point for short auxiliary templates.',
   },
   {
-    file: 'mit-funktionen.json',
-    de: 'Vorlage mit den Spezial-Funktionen Medikamentenplan und Ärzte (FunctionNode). Passt, wenn Scan-Funktionen gebraucht werden.',
-    en: 'Template using the special functions medication list and doctors (FunctionNode). Use when scan functions are needed.',
-  },
-  {
-    file: 'granular.json',
-    de: 'Zeigt Layout-Feinheiten: einklappbar, als „nicht erhoben" abwählbar, Felder nebeneinander, Auswahl mit eigener Eingabe.',
-    en: 'Shows layout details: collapsible, excludable, inline fields, select with custom input.',
-  },
-  {
     file: 'multiselect.json',
     de: 'Zeigt Mehrfachauswahl (`multiple`): Auskultation/Zyanose mit mehreren gleichzeitig wählbaren Optionen und einer exklusiven „Keine/Normal"-Option (`exclusiveOptions`), die alle anderen ausschließt. Ab App-Version 1.4.0.',
     en: 'Shows multi-select (`multiple`): auscultation/cyanosis with several options selectable at once and an exclusive "none/normal" option (`exclusiveOptions`) that excludes all others. From app version 1.4.0.',
   },
   {
     file: 'standardprotokoll.json',
-    de: 'GOLD-BEISPIEL: vollständiges Standardprotokoll (Einsatz, Anamnese, Medikation, xABCDE, Messwerte, Maßnahmen, Übergabe). Dieses Beispiel zeigt das FORMAT und ist der Ausgangspunkt für „Standardprotokoll anpassen" — Struktur und Schreibweise exakt übernehmen, Inhalte (Abschnitte, Felder, Optionen) kommen aus dem Dialog mit dem Nutzer.',
-    en: 'GOLD EXAMPLE: complete standard protocol (mission, history, medication, xABCDE, vitals, measures, handover). This example shows the FORMAT and is the starting point for "adapt the standard protocol" — copy structure and notation exactly; contents (sections, fields, options) come from the dialog with the user.',
+    de: 'GOLD-BEISPIEL: das Standardprotokoll aus der Praxis (Alarmierung, Allergien, Vorerkrankungen, Anamnese, xABCDE, Risikofaktoren, Medikation, Kontakte, Verlauf, Transport) mit allen vier Funktionen, Pflichtfeldern, Mehrfachauswahl und Abschnitten, die erst bei Bedarf zugeschaltet werden. Es zeigt das FORMAT und was alles möglich ist, und ist der Ausgangspunkt für „Standardprotokoll anpassen“. Struktur und Schreibweise exakt übernehmen; die Inhalte kommen aus dem Dialog mit dem Nutzer. Die Einsatzcodes sind Platzhalter (A2).',
+    en: 'GOLD EXAMPLE: the standard protocol from practice (dispatch, allergies, medical history, current history, xABCDE, risk factors, medication, contacts, course, transport) with all four functions, required fields, multi-select and sections switched on only when needed. It shows the FORMAT and what is possible, and is the starting point for "adapt the standard protocol". Copy structure and notation exactly; contents come from the dialog with the user. The dispatch codes are placeholders (A2).',
   },
 ]
 const exampleDir = join(ROOT, 'ai-docs/examples')

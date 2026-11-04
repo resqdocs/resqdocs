@@ -13,13 +13,13 @@ import { useBausteine } from './useBausteine'
 export type ImportOutcome = { ok: boolean; message: string }
 
 async function routeBlock(tree: Container): Promise<ImportOutcome> {
-  const out = await useBlockLibrary().addBausteinFromContainer(tree, (tree.title ?? '').trim() || 'Importierter Baustein')
-  return out.ok ? { ok: true, message: `Als Baustein „${out.title}“ importiert.` } : { ok: false, message: out.error }
+  const out = await useBlockLibrary().addBausteinFromContainer(tree, (tree.title ?? '').trim() || 'Importierter Abschnitt')
+  return out.ok ? { ok: true, message: `Als gespeicherter Abschnitt „${out.title}“ importiert.` } : { ok: false, message: out.error }
 }
 async function routeSnippet(title: string, text: string): Promise<ImportOutcome> {
-  const saved = title.trim() || 'Importiertes Snippet' // gleicher Fallback wie addSnippetFrom -> Meldung == gespeichert
+  const saved = title.trim() || 'Importierter Textbaustein' // gleicher Fallback wie addSnippetFrom -> Meldung == gespeichert
   await useBausteine().addSnippetFrom(title, text)
-  return { ok: true, message: `Als Snippet „${saved}“ importiert.` }
+  return { ok: true, message: `Als Textbaustein „${saved}“ importiert.` }
 }
 function routeProtocolAsNew(tree: Container): ImportOutcome {
   // kollisionsfrei als neue Vorlage; Kollisions-Modal bleibt dem Vorlagen-Sheet vorbehalten. importProtocol
