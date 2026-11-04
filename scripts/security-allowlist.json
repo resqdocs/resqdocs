@@ -290,6 +290,12 @@
       "term": "firebase",
       "contains": "rejects machine-learning, Firebase",
       "reason": "Changelog beschreibt die Build-Pruefung, die Firebase verbietet"
+    },
+    {
+      "file": "ai-docs/examples/standardprotokoll.json",
+      "term": "prompt",
+      "contains": "prompt lichtreagibel",
+      "reason": "Medizinischer Fachbegriff im Standardprotokoll, kein KI-Prompt"
     }
   ]
 }
