@@ -215,7 +215,7 @@ async function cloudDelete(id: string): Promise<void> {
 
     <!-- Datenschutz-Banner: dauerhaft, ehrlich, ohne Hedging -->
     <div class="rounded-lg border border-info/30 bg-info/5 p-3 text-xs text-base-content/80">
-      <strong>Lokal auf diesem Gerät.</strong> Sichert nur <strong>Vorlagen, Bausteine, Mustertexte und die
+      <strong>Lokal auf diesem Gerät.</strong> Sichert nur <strong>Vorlagen, gespeicherte Abschnitte, Textbausteine und die
       PZN-Bibliothek</strong> — <strong>keine Patientendaten</strong>, keinen laufenden Einsatz. Wenn du eine
       Sicherung <strong>teilst oder in eine Cloud legst, verlässt sie dein Gerät — das entscheidest und
       verantwortest du selbst.</strong>
@@ -357,8 +357,8 @@ async function cloudDelete(id: string): Promise<void> {
           >
             <span class="text-sm">{{ absTime(s.createdAt) }}</span>
             <span class="text-xs text-base-content/60">
-              <template v-if="s.counts">{{ s.counts.protocols }} Vorlagen · {{ s.counts.blocks }} Bausteine ·
-                {{ s.counts.snippets }} Mustertexte · {{ s.counts.pzn }} PZN</template>
+              <template v-if="s.counts">{{ s.counts.protocols }} Vorlagen · {{ s.counts.blocks }} Abschnitte ·
+                {{ s.counts.snippets }} Textbausteine · {{ s.counts.pzn }} PZN</template>
               <template v-else>{{ s.total }} Einträge</template>
               · {{ relTime(s.createdAt) }}
             </span>
@@ -379,7 +379,7 @@ async function cloudDelete(id: string): Promise<void> {
 
           <div v-if="openSnapshot === s.name" class="mt-2 flex flex-col gap-2 border-t border-base-300 pt-2">
             <p class="text-xs text-base-content/70">
-              Wiederherstellen ändert nur deine Live-Bibliothek. <strong>Neuere Sicherungen bleiben erhalten</strong> —
+              Wiederherstellen ändert nur deine aktuellen Daten. <strong>Neuere Sicherungen bleiben erhalten</strong> —
               vorher wird automatisch dein aktueller Stand gesichert, du kannst jederzeit zurückspringen.
             </p>
             <div v-if="confirmReplace !== s.name" class="flex flex-wrap gap-2">
@@ -394,7 +394,7 @@ async function cloudDelete(id: string): Promise<void> {
               </button>
             </div>
             <div v-else class="rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm">
-              <p>„Exakt herstellen" <strong>ersetzt deine aktuelle Bibliothek</strong> durch diesen Stand
+              <p>„Exakt herstellen" <strong>ersetzt deine aktuellen Daten</strong> durch diesen Stand
                 (später Hinzugefügtes verschwindet). Dein jetziger Stand wurde gerade gesichert — du kannst
                 zurückspringen. Fortfahren?</p>
               <div class="mt-2 flex flex-wrap gap-2">
@@ -415,7 +415,7 @@ async function cloudDelete(id: string): Promise<void> {
       <p class="mt-1 text-xs text-base-content/60">
         Synchronisiert deine Sicherungen über deine <strong>eigenen Geräte</strong> — <strong>iPhone/iPad über
         iCloud</strong> (Ordner „ResQDocs“ in iCloud Drive), Android über dein Google-Konto (ausgeblendeter,
-        app-eigener Ordner in Drive). Gesichert werden <strong>Vorlagen, Bausteine, Textbausteine und deine
+        app-eigener Ordner in Drive). Gesichert werden <strong>Vorlagen, gespeicherte Abschnitte, Textbausteine und deine
         PZN-Bibliothek — keine Einsatzeingaben</strong>. Es liegt in deinem Konto; das entscheidest und
         verantwortest du selbst.
       </p>
@@ -461,7 +461,7 @@ async function cloudDelete(id: string): Promise<void> {
       <!-- Einwilligung vor der ERSTEN Aktivierung (Login + Daten in dein Konto). -->
       <div v-if="cloudConsent" class="mt-2 rounded-lg border border-info/40 bg-info/10 p-3 text-sm">
         <p><strong>Cloud-Sicherung aktivieren?</strong> Deine Sicherungen werden in dein <strong>eigenes Konto</strong>
-          hochgeladen und zwischen deinen Geräten abgeglichen. Enthalten sind <strong>Vorlagen, Bausteine,
+          hochgeladen und zwischen deinen Geräten abgeglichen. Enthalten sind <strong>Vorlagen, gespeicherte Abschnitte,
           Textbausteine und deine PZN-Bibliothek — keine Einsatzeingaben.</strong> Wir erhalten keinen Zugriff.</p>
         <p class="mt-2 text-base-content/70">
           ResQDocs verschlüsselt die Sicherungen nicht zusätzlich; der Anbieter (Google bzw. Apple) kann sie
@@ -505,7 +505,7 @@ async function cloudDelete(id: string): Promise<void> {
             </span>
           </div>
           <div v-if="confirmCloudReplace === c.id" class="mt-2 rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm">
-            <p>„Exakt herstellen" <strong>ersetzt deine aktuelle Bibliothek</strong> durch diesen Cloud-Stand
+            <p>„Exakt herstellen" <strong>ersetzt deine aktuellen Daten</strong> durch diesen Cloud-Stand
               (später Hinzugefügtes verschwindet). Dein jetziger Stand wird vorher gesichert. Fortfahren?</p>
             <div class="mt-2 flex flex-wrap gap-2">
               <button class="btn btn-warning btn-sm min-h-11" type="button" :disabled="cloudBusy" @click="cloudRestoreReplace(c.id)">
@@ -537,7 +537,7 @@ async function cloudDelete(id: string): Promise<void> {
     <!-- Alle löschen -->
     <div class="rounded-lg border border-error/30 p-3">
       <p class="text-sm font-medium">Alle Sicherungen löschen</p>
-      <p class="mt-1 text-xs text-base-content/60">Entfernt den gesamten lokalen Backup-Verlauf. Die Live-Bibliothek bleibt unberührt.</p>
+      <p class="mt-1 text-xs text-base-content/60">Löscht alle lokalen Sicherungen. Deine aktuellen Daten bleiben unberührt.</p>
       <button v-if="!confirmDeleteAll" class="btn btn-outline btn-error btn-sm mt-2 min-h-11" type="button" :disabled="busy" @click="confirmDeleteAll = true">
         Alle löschen
       </button>

@@ -17,7 +17,7 @@ export function useTemplateExport() {
     try {
       // shareJson: nativ Cache-Datei + System-Share-Sheet, Web -> Blob-Download (roher <a download>-Blob
       // funktioniert in der nativen WebView NICHT).
-      await shareJson(`protokoll-${name}.json`, exportTemplate(template), 'Protokoll exportieren')
+      await shareJson(`protokoll-${name}.json`, exportTemplate(template), 'Vorlage exportieren')
       return { ok: true }
     } catch (err) {
       const m = err instanceof Error ? err.message : String(err)

@@ -30,10 +30,10 @@ export function parseTemplate(json: string): ParseResult {
     return { ok: false, error: 'Kein gueltiges JSON.' }
   }
   const o = parsed as { schema?: unknown; version?: unknown; tree?: unknown }
-  if (o?.schema !== PROTOCOL_SCHEMA) return { ok: false, error: 'Kein ResQDocs-Protokoll (schema fehlt oder falsch).' }
+  if (o?.schema !== PROTOCOL_SCHEMA) return { ok: false, error: 'Keine ResQDocs-Vorlage (schema fehlt oder falsch).' }
   if (typeof o.version !== 'number' || o.version > PROTOCOL_VERSION) {
     return { ok: false, error: `Version ${String(o.version)} wird von dieser App-Version nicht unterstuetzt.` }
   }
-  if (!isContainerLike(o.tree)) return { ok: false, error: 'Vorlage enthaelt keinen gueltigen Container-Baum.' }
+  if (!isContainerLike(o.tree)) return { ok: false, error: 'Die Vorlage hat keinen gültigen Aufbau.' }
   return { ok: true, tree: o.tree }
 }

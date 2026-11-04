@@ -56,7 +56,7 @@ function create() {
     // Vorab konkret validieren → spezifische Meldung statt nur "Baustein ungültig"
     // (z. B. "findingGroup 'grp' ohne key"). repo.saveBlock validiert zusätzlich.
     const check = assertValidProtocolDraft({ schemaVersion: SCHEMA_VERSION, id: '_lib', title: '_lib', blocks: [entry.block] })
-    if (!check.valid) return { ok: false, error: check.errors[0] ?? 'Block ungültig.' }
+    if (!check.valid) return { ok: false, error: check.errors[0] ?? 'Abschnitt ungültig.' }
     try {
       await repo.saveBlock(entry)
       await reload()
@@ -75,7 +75,7 @@ function create() {
     if (!cur) return { ok: false, error: 'Baustein nicht gefunden.' }
     const entry = applyBlockEdit(cur, block, nowIso())
     const check = assertValidProtocolDraft({ schemaVersion: SCHEMA_VERSION, id: '_lib', title: '_lib', blocks: [entry.block] })
-    if (!check.valid) return { ok: false, error: check.errors[0] ?? 'Block ungültig.' }
+    if (!check.valid) return { ok: false, error: check.errors[0] ?? 'Abschnitt ungültig.' }
     try {
       await storage.getLibraryRepository().saveBlock(entry)
       await reload()
@@ -102,7 +102,7 @@ function create() {
   async function addSnippet(): Promise<string> {
     const id = createUniqueId('snippet', new Set(snippets.value.map((s) => s.id)))
     const ts = nowIso()
-    const snippet = { id, title: 'Neues Snippet', text: '', createdAt: ts, updatedAt: ts }
+    const snippet = { id, title: 'Neuer Textbaustein', text: '', createdAt: ts, updatedAt: ts }
     snippets.value = [...snippets.value, snippet]
     try {
       await storage.getLibraryRepository().saveSnippet(snippet)
@@ -132,7 +132,7 @@ function create() {
       ? createUniqueId('snippet', new Set(snippets.value.map((s) => s.id)))
       : `snippet-imp-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
     const ts = nowIso()
-    const snippet = { id, title: title.trim() || 'Importiertes Snippet', text, createdAt: ts, updatedAt: ts }
+    const snippet = { id, title: title.trim() || 'Importierter Textbaustein', text, createdAt: ts, updatedAt: ts }
     snippets.value = [...snippets.value, snippet]
     try {
       await storage.getLibraryRepository().saveSnippet(snippet)

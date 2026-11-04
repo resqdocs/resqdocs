@@ -38,6 +38,6 @@ export function parseBlock(json: string): ParseResult {
   if (typeof o.version !== 'number' || o.version > BLOCK_VERSION) {
     return { ok: false, error: `Version ${String(o.version)} wird von dieser App-Version nicht unterstuetzt.` }
   }
-  if (!isContainerLike(o.tree)) return { ok: false, error: 'Baustein enthaelt keinen gueltigen Container-Baum.' }
+  if (!isContainerLike(o.tree)) return { ok: false, error: 'Die Datei enthält keinen gültigen Abschnitt.' }
   return { ok: true, tree: o.tree }
 }

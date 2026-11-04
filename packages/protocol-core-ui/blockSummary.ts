@@ -25,11 +25,11 @@ export function countDescendants(root: Container): NodeCounts {
   return counts
 }
 
-/** „2 Container · 5 Felder · 1 Funktion" (Null-Kategorien weggelassen, Singular/Plural); leer -> „leer". */
+/** „2 Abschnitte · 5 Felder · 1 Funktion" (Null-Kategorien weggelassen, Singular/Plural); leer -> „leer". */
 export function blockStructureLabel(root: Container): string {
   const { containers, fields, functions } = countDescendants(root)
   const parts: string[] = []
-  if (containers) parts.push(`${containers} Container`)
+  if (containers) parts.push(`${containers} ${containers === 1 ? 'Abschnitt' : 'Abschnitte'}`)
   if (fields) parts.push(`${fields} ${fields === 1 ? 'Feld' : 'Felder'}`)
   if (functions) parts.push(`${functions} ${functions === 1 ? 'Funktion' : 'Funktionen'}`)
   return parts.length ? parts.join(' · ') : 'leer'

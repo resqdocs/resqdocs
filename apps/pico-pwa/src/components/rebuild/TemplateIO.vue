@@ -287,7 +287,7 @@ function onFile(e: Event): void {
           <button class="btn btn-primary btn-sm" type="button" :disabled="!importText.trim() || loadBusy || receiveBusy" @click="load(importText)">Laden</button>
           <input type="file" accept="application/json,.json" class="file-input file-input-sm" @change="onFile" />
         </div>
-        <p class="text-xs text-base-content/50">Wird als neue Vorlage importiert — bei gleicher Kennung wird gefragt.</p>
+        <p class="text-xs text-base-content/50">Wird als neue Vorlage importiert — bei gleichem Namen wird gefragt.</p>
       </div>
 
       <!-- Per Transfer-Link empfangen: entschlüsselt lokal und läuft durch dieselbe Erkennung wie ein Import.

@@ -9,10 +9,12 @@ import { useTreeEditor } from '../treeEditor.ts'
 import { snippetPickerKey, allowedFunctionKindsKey } from '../injection.ts'
 import MoveToPicker from './MoveToPicker.vue'
 import BlockPicker from './BlockPicker.vue'
+import InfoTip from './InfoTip.vue'
+import { INFO } from '../terms.ts'
 import type { Container } from '@resqdocs/protocol-core/model'
 
 // Snippet-Auswahl wird vom Host injiziert (App: SnippetPicker über die Bausteine-Sammlung); ohne sie
-// entfällt „Snippet einfügen" (der Online-Editor kann später eine eigene Quelle bereitstellen).
+// entfällt „Textbaustein einfügen" (der Online-Editor kann später eine eigene Quelle bereitstellen).
 const SnippetPicker = inject(snippetPickerKey, null)
 
 // Versions-Gating der Funktionen: der Online-Editor stellt die für die gewählte App-Version anbietbaren
@@ -158,17 +160,18 @@ function confirmDelete(): void {
           <button type="button" class="fixed inset-0 z-10 cursor-default" aria-label="Menü schließen" @click="closeAdd"></button>
           <div
             ref="addMenu"
-            class="overlay-surface absolute right-0 z-20 flex w-44 flex-col *:shrink-0 overflow-y-auto overscroll-contain rounded-box p-1"
+            class="overlay-surface absolute right-0 z-20 flex w-56 flex-col *:shrink-0 overflow-y-auto overscroll-contain rounded-box p-1"
             :class="addUp ? 'bottom-full mb-1' : 'mt-1'"
             :style="addMaxH ? { maxHeight: addMaxH + 'px' } : undefined"
           >
             <!-- Hauptebene: die vier Funktionen sind unter „Funktion" gebündelt, damit die Liste kurz bleibt -->
             <template v-if="addView === 'root'">
-              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('container')">Container</button>
+              <div class="flex min-h-9 items-center justify-between pl-2 text-xs font-semibold text-base-content/60">Hinzufügen<InfoTip :info="INFO.addMenu" /></div>
+              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('container')">Abschnitt</button>
               <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('field')">Feld</button>
               <button v-if="anyFunctionAllowed" type="button" class="btn btn-ghost btn-xs justify-between" @click="showAddView('functions')">Funktion<span class="text-base-content/40" aria-hidden="true">›</span></button>
-              <button v-if="SnippetPicker" type="button" class="btn btn-ghost btn-xs justify-start" @click="openSnippetPicker">Snippet einfügen</button>
-              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="openBlockPicker">Block einfügen</button>
+              <button v-if="SnippetPicker" type="button" class="btn btn-ghost btn-xs justify-start" @click="openSnippetPicker">Textbaustein</button>
+              <button type="button" class="btn btn-ghost btn-xs justify-start" @click="openBlockPicker">Gespeicherter Abschnitt</button>
             </template>
             <!-- Funktions-Auswahl: kurze Abfrage, welche Funktion eingefügt werden soll -->
             <template v-else>
@@ -189,13 +192,13 @@ function confirmDelete(): void {
         <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="`Verschieben: ${label(node)}`" title="Verschieben" @click="pickerOpen = true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" /></svg>
         </button>
-        <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5 text-error" :aria-label="`Entfernen: ${label(node)}`" title="Entfernen" @click="confirmOpen = true">✕</button>
+        <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5 text-error" :aria-label="`Löschen: ${label(node)}`" title="Löschen" @click="confirmOpen = true">✕</button>
       </template>
     </div>
 
     <MoveToPicker v-if="pickerOpen" :node-id="node.id" :node-label="label(node)" @close="pickerOpen = false" />
-    <component :is="SnippetPicker" v-if="SnippetPicker && snippetPickerOpen" title="Snippet als Feld einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
-    <BlockPicker v-if="blockPickerOpen" title="Block als Container einfügen" @select="onInsertBlock" @close="blockPickerOpen = false" />
+    <component :is="SnippetPicker" v-if="SnippetPicker && snippetPickerOpen" title="Textbaustein als Feld einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
+    <BlockPicker v-if="blockPickerOpen" title="Gespeicherten Abschnitt einfügen" @select="onInsertBlock" @close="blockPickerOpen = false" />
 
     <!-- Loesch-Bestaetigung: irreversibel; bei einem Container werden alle Nachfahren mit-geloescht (Liste). -->
     <Teleport to="body">

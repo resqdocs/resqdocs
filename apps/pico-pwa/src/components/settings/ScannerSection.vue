@@ -29,7 +29,7 @@ function onDiagnostics(e: Event): void {
 <template>
   <section class="card bg-base-100 shadow">
     <div class="card-body gap-3 p-4">
-      <h3 class="font-medium">Scanner-Modus (BMP-Data-Matrix)</h3>
+      <h3 class="font-medium">Scanner-Modus (Medikationsplan-Code)</h3>
       <p class="text-sm text-base-content/70">
         Strategie für den Medikationsplan-Scan. Für Vergleichstests umschaltbar;
         „WebView Standard" ist die Voreinstellung.

@@ -19,9 +19,9 @@ const emit = defineEmits<{ 'update:modelValue': [v: TriState] }>()
 
 const NEXT: Record<TriState, TriState> = { confirmed: 'custom', custom: 'excluded', excluded: 'confirmed' }
 const TITLE: Record<TriState, string> = {
-  confirmed: 'bestätigt (Standard)',
-  custom: 'abweichend (eigener Text)',
-  excluded: 'nicht erhoben - erscheint nicht im Protokoll',
+  confirmed: 'bestätigt (Standardwert)',
+  custom: 'eigener Wert',
+  excluded: 'nicht erhoben - erscheint nicht im Protokolltext',
 }
 
 function cycle(): void {

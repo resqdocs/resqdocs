@@ -8,7 +8,7 @@ import { isValidSsidId } from '@/pico/picoClient'
 import { normalizeBridgeUrl } from '@/pico/bridgeUrl'
 
 /**
- * Gerät / Pico. Bindet die gekapselte
+ * Bridge. Bindet die gekapselte
  * Pico-Schicht (usePicoDevice/useFirmwareUpdate) an: Verbindung prüfen,
  * Status abrufen, Firmware aktualisieren, manueller Testtext über /type,
  * SSID-ID ändern über /config. KEINE HTTP-Logik hier (nur über die
@@ -96,7 +96,7 @@ async function onSetSsid(): Promise<void> {
   <section class="card bg-base-100 shadow">
     <div class="card-body gap-3 p-4">
       <div class="flex items-center justify-between">
-        <h3 class="font-medium">Gerät / Pico</h3>
+        <h3 class="font-medium">Bridge</h3>
         <span
           class="badge badge-sm"
           :class="reachable === true ? 'badge-success' : reachable === false ? 'badge-error' : 'badge-ghost'"
@@ -136,7 +136,7 @@ async function onSetSsid(): Promise<void> {
           v-model="draftUrl"
           class="input input-bordered input-sm w-full max-w-xs min-h-11"
           placeholder="http://10.10.10.1"
-          aria-label="Base-URL der Pico-Bridge"
+          aria-label="Base-URL der Bridge"
           :aria-invalid="urlError ? 'true' : undefined"
           aria-describedby="bridge-url-error"
           @change="commitUrl"
@@ -154,7 +154,7 @@ async function onSetSsid(): Promise<void> {
         <div><span class="text-base-content/60">Firmware:</span> {{ status.fwVersion }}</div>
         <div><span class="text-base-content/60">API:</span> {{ status.apiVersion }}</div>
         <div><span class="text-base-content/60">Bereit:</span> {{ status.ready ? 'ja' : 'nein' }}</div>
-        <div><span class="text-base-content/60">Default-OS:</span> {{ status.defaultOs }}</div>
+        <div><span class="text-base-content/60">Standard-Zielgerät:</span> {{ status.defaultOs }}</div>
       </div>
       <p v-if="error" class="text-sm text-error">{{ error }}</p>
 
@@ -222,7 +222,7 @@ async function onSetSsid(): Promise<void> {
         />
       </label>
       <div class="flex items-center gap-2">
-        <select v-model="os" class="select select-bordered select-sm w-32 min-h-11" aria-label="Ziel-OS">
+        <select v-model="os" class="select select-bordered select-sm w-32 min-h-11" aria-label="Zielgerät">
           <option value="win_de">Windows DE (z. B. NIDA)</option>
           <option value="mac_de">macOS</option>
           <option value="ios">iPad (ios)</option>
@@ -237,13 +237,13 @@ async function onSetSsid(): Promise<void> {
 
       <!-- SSID-ID ändern über /config -->
       <label class="form-control">
-        <span class="label-text mb-1">Geräte-ID (WLAN heißt "ResQDocs-&lt;ID&gt;")</span>
+        <span class="label-text mb-1">Bridge-ID (WLAN heißt "ResQDocs-&lt;ID&gt;")</span>
         <input
           v-model="ssidDraft"
           class="input input-bordered input-sm w-full max-w-xs min-h-11"
           placeholder="z. B. RTW-1"
           maxlength="23"
-          aria-label="Neue Geräte-ID"
+          aria-label="Neue Bridge-ID"
         />
       </label>
       <div class="flex items-center gap-2">
@@ -253,7 +253,7 @@ async function onSetSsid(): Promise<void> {
           :disabled="busy || !isValidSsidId(ssidDraft.trim())"
           @click="onSetSsid"
         >
-          Geräte-ID ändern
+          Bridge-ID ändern
         </button>
         <span v-if="ssidDraft.trim() && !isValidSsidId(ssidDraft.trim())" class="text-xs text-warning">
           Erlaubt: A-Z a-z 0-9 _ - (max. 23 Zeichen)
@@ -265,7 +265,7 @@ async function onSetSsid(): Promise<void> {
         Lokale HTTP-Verbindung zur Bridge. <strong>Keine Patientendaten</strong> im Testtext verwenden —
         <code>POST /type</code> überträgt den Text nur <strong>transient</strong> (Body, kein Logging/Cache).
         Im Web-Browser kann es CORS-/Mixed-Content-Probleme geben; die native App nutzt CapacitorHttp.
-        Nach dem Ändern der Geräte-ID startet die Bridge ihr WLAN neu; alternativ geht die Änderung
+        Nach dem Ändern der Bridge-ID startet die Bridge ihr WLAN neu; alternativ geht die Änderung
         auch seriell (<code>id NEUEID</code>).
       </p>
     </div>

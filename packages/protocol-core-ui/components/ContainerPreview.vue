@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** Live-Vorschau: Text-Ausgabe (geteilter Renderer, zeigt Überschriften-Format + showTitle)
+/** Live-Vorschau: Protokolltext (geteilter Renderer, zeigt Überschriften-Format + showTitle)
  *  und eine interaktive Einsatz-Vorschau zum Testen von Einklappen + Struktur. */
 import { computed, ref } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
@@ -12,7 +12,7 @@ const props = defineProps<{ root: Container }>()
 // Editor-Vorschau, umschaltbar:
 //  - „Beispiel" (Default): Funktionen mit festen Beispiel-Zeilen (previewValues) -> zeigt eine GEFUELLTE Ausgabe.
 //  - „Leer": mit {} rendern -> Funktionen leer (zeigt Standardtexte/Leerzustand), Felder auf ihren Defaults.
-// Betrifft nur die Text-Ausgabe; der Einsatz rendert mit den echten Werten (nicht hier).
+// Betrifft nur die Protokolltext; der Einsatz rendert mit den echten Werten (nicht hier).
 const showSample = ref(true)
 const text = computed(() => render(props.root, showSample.value ? previewValues(props.root) : {}))
 </script>
@@ -29,7 +29,7 @@ const text = computed(() => render(props.root, showSample.value ? previewValues(
             <button type="button" class="btn btn-xs join-item" :class="!showSample ? 'btn-primary' : 'btn-ghost'" @click="showSample = false">Leer</button>
           </div>
         </div>
-        <OutputText :text="text" label="Text-Ausgabe" />
+        <OutputText :text="text" label="Protokolltext" />
       </div>
     </div>
     <div class="card bg-base-100 shadow">

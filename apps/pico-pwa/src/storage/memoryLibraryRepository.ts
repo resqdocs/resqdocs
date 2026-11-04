@@ -54,7 +54,7 @@ export function createMemoryLibraryRepository(
       return blocks.filter(isValidLibraryBlock).map((b) => structuredClone(b))
     },
     async saveBlock(block) {
-      if (!isValidLibraryBlock(block)) throw new Error('Baustein ungültig — nicht gespeichert.')
+      if (!isValidLibraryBlock(block)) throw new Error('Abschnitt ungültig — nicht gespeichert.')
       upsert(blocks, stamp(blocks, block))
     },
     async deleteBlock(blockId) {
@@ -66,7 +66,7 @@ export function createMemoryLibraryRepository(
       return snippets.filter(isValidLibrarySnippet).map((s) => structuredClone(s))
     },
     async saveSnippet(snippet) {
-      if (!isValidLibrarySnippet(snippet)) throw new Error('Snippet ungültig — nicht gespeichert.')
+      if (!isValidLibrarySnippet(snippet)) throw new Error('Textbaustein ungültig — nicht gespeichert.')
       upsert(snippets, stamp(snippets, snippet))
     },
     async deleteSnippet(snippetId) {

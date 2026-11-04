@@ -83,7 +83,7 @@ test('createFunction: Funktions-Blatt; Tree-Ops behandeln es als Blatt', () => {
   const fn = findNode(r, 'mp')
   assert.equal(fn?.type, 'function')
   assert.equal((fn as { functionKind?: string }).functionKind, 'medikamentenplan')
-  assert.equal(fn?.title, 'Medikamentenplan') // Default-Titel aus der Registry (Editor==Einsatz)
+  assert.equal(fn?.title, 'Medikationsplan') // Default-Titel aus der Registry (Editor==Einsatz)
   assert.equal(parentOf(r, 'mp')?.id, 'r')
   assert.equal(parentOf(reparent(r, 'mp', 'c'), 'mp')?.id, 'c') // verschiebbar wie ein Blatt
   assert.deepEqual(moveTargets(r, 'mp').map((t) => t.id).sort(), ['c', 'r']) // Funktion selbst kein Ziel

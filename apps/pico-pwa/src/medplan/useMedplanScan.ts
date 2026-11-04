@@ -53,7 +53,7 @@ export function useMedplanScan(resolvePzn?: (pzn: string) => string | null) {
       parsed = parseMedplanMedications(raw)
     } catch {
       // Bewusst OHNE Roh-Inhalt in der Meldung (kann Gesundheitsdaten enthalten).
-      error.value = 'Kein Medikationsplan-Code erkannt (BMP-Data-Matrix erwartet).'
+      error.value = 'Kein Medikationsplan-Code erkannt.'
       return false
     }
     if (scannedPages.value.includes(parsed.page.current)) {

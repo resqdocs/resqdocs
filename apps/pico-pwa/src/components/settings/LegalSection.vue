@@ -11,6 +11,7 @@
  * Hinweis: kein Ersatz für rechtliche Beratung; ladungsfähige Anschrift + Kontakt
  * sind Pflicht und vom Maintainer zu prüfen.
  */
+import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
 </script>
 
 <template>
@@ -55,7 +56,7 @@
             Gerät. Kein Konto, keine Telemetrie, kein Tracking, keine Werbe-SDKs, keine Crash-Reporter.
           </p>
           <p>
-            <strong>Einsatzeingaben:</strong> Was du im Einsatz einträgst, bleibt auf dem Gerät, geht nur über
+            <strong>Einsatzeingaben:</strong> Was du im <TabRef tab="einsatz" /> einträgst, bleibt auf dem Gerät, geht nur über
             die Bridge an dein Zielgerät und wird automatisch gelöscht – beim Abschließen oder nach der unter
             „Datenschutz &amp; lokale Daten“ gewählten Zeit ohne Bearbeitung. Nie an uns, nie in die
             Sicherungen der App oder in geteilte Links.
@@ -68,7 +69,7 @@
             Adresse, die du selbst eingibst. Eine externe Medikamenten- oder PZN-Datenbank ruft die App nicht ab.
           </p>
           <p>
-            <strong>Persönliche PZN-Bibliothek:</strong> Deine PZN-Sammlung pflegst du selbst; sie liegt
+            <strong>Persönliche PZN-Bibliothek:</strong> Deine PZN-Bibliothek pflegst du selbst; sie liegt
             auf dem Gerät, ist individuell und <strong>nicht zum Teilen oder Weitergeben bestimmt</strong>.
           </p>
           <p>
@@ -79,7 +80,7 @@
             Ausführliche Datenschutzerklärung (alle Verarbeitungen, Speicherdauer, Rechtsgrundlagen, deine
             Rechte, Aufsichtsbehörde):
             <a class="link" href="https://resqdocs.app/datenschutz/" target="_blank" rel="noopener">resqdocs.app/datenschutz</a>.
-            Lokale Daten kannst du jederzeit löschen (Einstellungen → „Datenschutz &amp; lokale Daten")
+            Lokale Daten kannst du jederzeit löschen (<TabRef tab="einstellungen" /> → „Datenschutz &amp; lokale Daten")
             oder durch Deinstallation. Stand: Oktober 2026
           </p>
         </div>

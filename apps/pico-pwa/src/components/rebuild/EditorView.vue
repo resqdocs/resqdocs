@@ -81,12 +81,12 @@ const api: TreeEditorApi = {
   async saveContainerAsBaustein(id) {
     const live = findNode(root.value, id)
     if (!live || live.type !== 'container' || id === root.value.id) {
-      return { ok: false, error: 'Nur ein Container (nicht die Wurzel) kann als Baustein gespeichert werden.' }
+      return { ok: false, error: 'Nur ein Abschnitt lässt sich für andere Vorlagen speichern, nicht die ganze Vorlage.' }
     }
     // toRaw + JSON-Klon: entproxyt den reaktiven Baum (structuredClone wuerfe DataCloneError) und
     // entkoppelt den Baustein von der Vorlage - spaetere Editor-Aenderungen wirken nicht zurueck.
     const copy = JSON.parse(JSON.stringify(toRaw(live))) as Container
-    return blocks.addBausteinFromContainer(copy, live.title ?? 'Baustein')
+    return blocks.addBausteinFromContainer(copy, live.title ?? 'Abschnitt')
   },
   remove(id) {
     if (id === root.value.id) return
@@ -144,7 +144,7 @@ provide(snippetPickerKey, SnippetPicker)
     <AiToolNotice />
 
     <p class="text-sm text-base-content/60">
-      Container anlegen, verschachteln und konfigurieren. Die Vorschau zeigt Text-Ausgabe und Einklappen.
+      Abschnitte anlegen, verschachteln und konfigurieren. Die Vorschau zeigt den Protokolltext.
     </p>
 
     <!-- small-screen-first: ein Bereich nach dem anderen; ab lg alle drei nebeneinander -->

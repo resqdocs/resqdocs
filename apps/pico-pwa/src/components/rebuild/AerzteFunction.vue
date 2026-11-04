@@ -105,12 +105,12 @@ const confirmTitle = computed(() => {
   const p = pendingRemove.value
   if (p === 'all') return 'Alle Kontakte/Ärzte zurücksetzen?'
   const current = p ? formatArzt(p) : ''
-  return `„${current || editingLabel.value || 'Eintrag'}“ entfernen?`
+  return `„${current || editingLabel.value || 'Eintrag'}“ löschen?`
 })
 const confirmMessage = computed(() => {
   if (pendingRemove.value !== 'all') return 'Das lässt sich nicht rückgängig machen.'
   const n = rows.value.filter(arztRowHasData).length
-  return `${n === 1 ? 'Der erfasste Eintrag wird' : `Alle ${n} erfassten Einträge werden`} entfernt. Das lässt sich nicht rückgängig machen.`
+  return `${n === 1 ? 'Der erfasste Eintrag wird' : `Alle ${n} erfassten Einträge werden`} gelöscht. Das lässt sich nicht rückgängig machen.`
 })
 function confirmPendingRemove(): void {
   const p = pendingRemove.value
@@ -217,7 +217,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
         :placeholder="node.default || 'z. B. Arzt bekannt, Kontakt siehe Akte'"
         @input="setCustomText(($event.target as HTMLTextAreaElement).value)"
       ></textarea>
-      <p class="text-xs italic text-base-content/50">Freitext — ersetzt in der Ausgabe die Einträge. Erfasste Einträge bleiben erhalten.</p>
+      <p class="text-xs italic text-base-content/50">Freitext — ersetzt im Protokolltext die Einträge. Erfasste Einträge bleiben erhalten.</p>
     </div>
 
     <template v-else>
@@ -258,7 +258,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
               <option value="Betreuer">Betreuer</option>
             </select>
           </label>
-          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Eintrag ' + (i + 1)} entfernen`" @click="requestRemove(i)">✕</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Eintrag ' + (i + 1)} löschen`" @click="requestRemove(i)">✕</button>
         </div>
         <div class="flex gap-2">
           <input
@@ -302,7 +302,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
       <button type="button" class="btn btn-primary btn-sm min-h-11 grow gap-1" @click="addRow"><span aria-hidden="true">＋</span> Eintrag</button>
       <button type="button" class="btn btn-outline btn-sm min-h-11 grow gap-2" @click="bmpOpen = true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5 shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
-        Arzt aus Plan scannen
+        Arzt aus Medikationsplan scannen
       </button>
     </div>
 
@@ -316,7 +316,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
       v-if="pendingRemove !== null"
       :title="confirmTitle"
       :message="confirmMessage"
-      :confirm-label="pendingRemove === 'all' ? 'Alle zurücksetzen' : 'Entfernen'"
+      :confirm-label="pendingRemove === 'all' ? 'Alle zurücksetzen' : 'Löschen'"
       @confirm="confirmPendingRemove"
       @cancel="pendingRemove = null"
     />

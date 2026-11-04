@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch, watchEffect, nextTick } from 'vue'
 import BausteineTab from '@/components/library/BausteineTab.vue'
+import TabIcon from '@resqdocs/protocol-core-ui/components/TabIcon.vue'
 import SettingsTab from '@/components/settings/SettingsTab.vue'
 import DisclaimerGate from '@/components/DisclaimerGate.vue'
 import UsageNoticeModal from '@/components/UsageNoticeModal.vue'
@@ -179,8 +180,8 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11"
-          aria-label="Erklärung der Bereiche anzeigen"
-          title="Was macht welcher Bereich?"
+          aria-label="Einführung anzeigen"
+          title="Einführung anzeigen"
           @click="reshowGuide"
         >?</button>
       </div>
@@ -227,36 +228,19 @@ onBeforeUnmount(() => {
          Dropdown (z-index 4, style.css) lag sonst ueber der Tab-Leiste. -->
     <nav class="dock z-10 border-t border-base-300 bg-base-100">
       <button type="button" :class="{ 'dock-active text-primary': activeTab === 'einsatz' }" @click="selectTab('einsatz')">
-        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="5" y="4.5" width="14" height="16.5" rx="2" />
-          <path d="M9 4.5V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5v1" />
-          <path d="M9 11h6M9 15h4" />
-        </svg>
+        <TabIcon tab="einsatz" class="size-5" />
         <span class="dock-label">Einsatz</span>
       </button>
       <button type="button" :class="{ 'dock-active text-primary': activeTab === 'protokolle' }" @click="selectTab('protokolle')">
-        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="8" y="3" width="12" height="15" rx="2" />
-          <path d="M4 7v12a2 2 0 0 0 2 2h11" />
-          <path d="M11.5 8h5M11.5 11.5h5" />
-        </svg>
+        <TabIcon tab="vorlagen" class="size-5" />
         <span class="dock-label">Vorlagen</span>
       </button>
       <button type="button" :class="{ 'dock-active text-primary': activeTab === 'bausteine' }" @click="selectTab('bausteine')">
-        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="4" y="4" width="7" height="7" rx="1.5" />
-          <rect x="13" y="4" width="7" height="7" rx="1.5" />
-          <rect x="4" y="13" width="7" height="7" rx="1.5" />
-          <rect x="13" y="13" width="7" height="7" rx="1.5" />
-        </svg>
+        <TabIcon tab="bausteine" class="size-5" />
         <span class="dock-label">Bausteine</span>
       </button>
       <button type="button" :class="{ 'dock-active text-primary': activeTab === 'einstellungen' }" @click="selectTab('einstellungen')">
-        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M4 7h9M19 7h1M4 17h5M15 17h5" />
-          <circle cx="16" cy="7" r="2" />
-          <circle cx="12" cy="17" r="2" />
-        </svg>
+        <TabIcon tab="einstellungen" class="size-5" />
         <span class="dock-label">Einstellungen</span>
       </button>
     </nav>
