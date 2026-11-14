@@ -185,27 +185,37 @@ void typeRawKey(uint8_t hidKeycode, bool shift, bool altgr) {
   rawCombo(hidKeycode, mods);
 }
 
+size_t typeNextUtf8(const char* utf8, bool* typed) {
+  if (typed) *typed = false;
+  const uint8_t* start = (const uint8_t*)utf8;
+  const uint8_t* p = start;
+  if (!*p) return 0;
+
+  uint8_t b = *p++;
+  uint32_t cp;
+  int extra;
+  if (b < 0x80)            { cp = b;          extra = 0; }
+  else if ((b & 0xE0) == 0xC0) { cp = b & 0x1F; extra = 1; }
+  else if ((b & 0xF0) == 0xE0) { cp = b & 0x0F; extra = 2; }
+  else if ((b & 0xF8) == 0xF0) { cp = b & 0x07; extra = 3; }
+  else return (size_t)(p - start);  // invalid lead byte — skip
+
+  for (int i = 0; i < extra; i++) {
+    if ((*p & 0xC0) != 0x80) return (size_t)(p - start);  // truncated sequence — skip
+    cp = (cp << 6) | (*p++ & 0x3F);
+  }
+
+  typeCodepoint(cp);
+  if (typed) *typed = true;
+  return (size_t)(p - start);
+}
+
 void typeUtf8(const char* utf8, uint16_t perCharDelayMs) {
-  const uint8_t* p = (const uint8_t*)utf8;
+  const char* p = utf8;
   while (*p) {
-    uint8_t b = *p++;
-    uint32_t cp;
-    int extra;
-    if (b < 0x80)            { cp = b;          extra = 0; }
-    else if ((b & 0xE0) == 0xC0) { cp = b & 0x1F; extra = 1; }
-    else if ((b & 0xF0) == 0xE0) { cp = b & 0x0F; extra = 2; }
-    else if ((b & 0xF8) == 0xF0) { cp = b & 0x07; extra = 3; }
-    else continue;  // invalid lead byte — skip
-
-    bool ok = true;
-    for (int i = 0; i < extra; i++) {
-      if ((*p & 0xC0) != 0x80) { ok = false; break; }  // truncated sequence
-      cp = (cp << 6) | (*p++ & 0x3F);
-    }
-    if (!ok) continue;
-
-    typeCodepoint(cp);
-    if (perCharDelayMs) delay(perCharDelayMs);
+    bool typed = false;
+    p += typeNextUtf8(p, &typed);
+    if (typed && perCharDelayMs) delay(perCharDelayMs);
   }
 }
 

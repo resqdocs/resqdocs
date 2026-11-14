@@ -4,6 +4,8 @@ import { capacitorHttpAdapter } from './httpAdapter'
 import { createPicoClient } from './picoClient'
 import { useFirmwareNotice } from './useFirmwareNotice'
 import { useBridgeConnection } from './useBridgeConnection'
+import { useTypingProgress } from './useTypingProgress'
+import { countChars } from './typingProgress'
 import type { OsMode, PicoStatus } from './picoTypes'
 
 /**
@@ -15,6 +17,7 @@ export function usePicoDevice() {
   const storage = useStorage()
   // Base-URL live aus den App-Einstellungen (über die gekapselte Storage-Schicht).
   const client = createPicoClient(capacitorHttpAdapter, () => storage.settings.picoBaseUrl)
+  const typingProgress = useTypingProgress()
 
   const reachable = ref<boolean | null>(null)
   const status = ref<PicoStatus | null>(null)
@@ -74,11 +77,14 @@ export function usePicoDevice() {
       // er gesetzt ist; bridge_s2.ino faellt sonst auf 60 zurueck) - der Test lief also unabhaengig
       // vom Regler und an beiden Reglerenden gleich schnell. Genau der Knopf, mit dem man die
       // Einstellung ausprobiert, zeigte ihre Wirkung nicht.
+      const sent = testText.value
       const r = await client.typeText({
-        text: testText.value,
+        text: sent,
         os: os.value,
         delayMs: storage.settings.typingDelayMs,
       })
+      // Auch der Testtext zeigt den Fortschritt - damit laesst sich die Tippgeschwindigkeit ausprobieren.
+      typingProgress.start({ total: countChars(sent), delayMs: storage.settings.typingDelayMs })
       return { ok: true, typed: r.typed }
     } catch (e) {
       error.value = (e as Error).message

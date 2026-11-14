@@ -28,6 +28,12 @@ OsMode typerMode();
 // per-character delay makes failures observable in real time on the target.
 void typeUtf8(const char* utf8, uint16_t perCharDelayMs = 60);
 
+// Type the NEXT codepoint of a UTF-8 string and return the number of bytes consumed
+// (0 at the terminating NUL). `typed` is set to false if the bytes were skipped as
+// invalid UTF-8. Lets a caller type step by step and do other work in between
+// (answer status requests, pause, cancel) without changing the typing path itself.
+size_t typeNextUtf8(const char* utf8, bool* typed = nullptr);
+
 // Type a single Unicode codepoint. Returns true if it was mapped to a
 // keystroke, false if the visible [?] marker was emitted instead.
 bool typeCodepoint(uint32_t cp);

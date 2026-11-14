@@ -32,6 +32,8 @@ final class ScanViewController: UIViewController {
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var refocusTimer: Timer?
     private var done = false
+    /// Nutzer hat selbst gezoomt (Geste oder Regler) – ein verzögerter Start-Zoom überschreibt das nicht. Nur Main.
+    private var userZoomed = false
     private var torchOn = false
 
     private let titleLabel = UILabel()
@@ -191,15 +193,29 @@ final class ScanViewController: UIViewController {
         let relative = StartZoom.compute(minFocusMm: minFocus, fovDegrees: fovWide, codeSizeMm: options.codeSizeMm,
                                          frameFill: ScanViewController.frameFill, maxZoom: maxZoom / wideFactor)
         let zoom = min(max(CGFloat(wideFactor * relative), cam.minAvailableVideoZoomFactor), cam.maxAvailableVideoZoomFactor)
-        cam.videoZoomFactor = zoom
+        // 1-fach = Hauptlinse (bei virtuellen Kameras ist das wideFactor, nicht videoZoomFactor 1).
+        let oneX = min(max(CGFloat(wideFactor), cam.minAvailableVideoZoomFactor), cam.maxAvailableVideoZoomFactor)
+        let delayed = relative > 1 && options.startZoomDelayMs > 0 && zoom > oneX
+        // Verzögert: erst ohne Zoom, damit ein großer Code ganz ins Bild passt; ohne Treffer und ohne eigenes
+        // Zoomen nach der Wartezeit auf den Start-Zoom.
+        cam.videoZoomFactor = delayed ? oneX : zoom
 
         let camName = cam.deviceType.rawValue.replacingOccurrences(of: "AVCaptureDeviceType", with: "")
         let focusText = (minFocus > 0 ? "Nahgrenze ~\(Int(minFocus / 10)) cm" : "Nahgrenze unbekannt")
-            + String(format: " · Start-Zoom %.1f", Double(zoom))
+            + (delayed
+                ? String(format: " · Start-Zoom %.1f -> %.1f nach %.1f s", Double(oneX), Double(zoom), Double(options.startZoomDelayMs) / 1000)
+                : String(format: " · Start-Zoom %.1f", Double(zoom)))
+        let delay = Double(options.startZoomDelayMs) / 1000
         DispatchQueue.main.async { [weak self] in
             self?.diagCamera = "Kamera \(camName)"
             self?.diagFocus = focusText
             self?.updateDiag()
+            guard delayed else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let s = self, !s.done, !s.userZoomed else { return }
+                s.setZoom(zoom)
+                s.zoomSlider.value = Float(s.sliderPosition(for: zoom))
+            }
         }
     }
 
@@ -424,6 +440,7 @@ final class ScanViewController: UIViewController {
         guard let cam = device else { return }
         switch g.state {
         case .changed, .ended:
+            userZoomed = true
             setZoom(cam.videoZoomFactor * g.scale)
             g.scale = 1
             zoomSlider.value = Float(sliderPosition(for: cam.videoZoomFactor))
@@ -431,7 +448,10 @@ final class ScanViewController: UIViewController {
         }
     }
 
-    @objc private func onSlider(_ s: UISlider) { setZoom(zoomFactor(forSlider: Double(s.value))) }
+    @objc private func onSlider(_ s: UISlider) {
+        userZoomed = true
+        setZoom(zoomFactor(forSlider: Double(s.value)))
+    }
 
     @objc private func onTorch() {
         torchOn.toggle()

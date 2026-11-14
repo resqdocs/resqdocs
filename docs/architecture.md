@@ -62,5 +62,7 @@ Renderer erzeugt daraus verlustfrei sauberen Fließtext. Siehe [`../protocols/`]
 1. **Dumme Brücke** — Firmware empfängt Text (WLAN-AP) → tippt per DE-HID. *(braucht Hardware)*
 2. **Protokoll-Datenmodell** — Vorlage + Snippets + Renderer. *(rein softwareseitig, Unit-Test)*
 3. **Composer-PWA** — Abschnitte, Klickstruktur, Snippets, Freitext → sendet an die Brücke.
-4. **Spracheingabe** — Diktat in die Composer-Felder.
+4. **Spracheingabe** — über das Diktat der Handy-Tastatur (Mikrofon-Taste) in jedem Textfeld. Ein
+   eigenes Sprach-Feature ist zurückgestellt: Die Systemdienste von iOS und Android schicken Audio an
+   Apple bzw. Google, was der Netzwerk-Policy widerspricht; eine Offline-Lösung wäre groß.
 5. *(optional)* alte Tasten-Box als Schnell-Trigger gegen dieselbe Brücke.

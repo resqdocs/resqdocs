@@ -53,9 +53,10 @@ Firmware liefert das Feld nicht → App zeigt den BOOTSEL-Hinweis).
 ### `POST /type`
 Text als USB-HID-Tastatur ins fokussierte Feld tippen.
 ```
-Request:  application/json  { "text":"…", "os":"win_de"|"mac_de"|"ios" }
-200  { "typed": <int Zeichen> }
+Request:  application/json  { "text":"…", "os":"win_de"|"mac_de"|"ios", "delayMs":<int>? }
+200  { "typed": <int Zeichen> }          (angenommen; getippt wird danach)
 400  { "error":"invalid_body" | "text_too_long" }
+503  { "error":"busy" }                  (ab 0.4.0: Warteschlange voll, später erneut senden)
 5xx  { "error":"internal" }
 ```
 - `os` **optional**; fehlt es, nutzt die Firmware den Fallback `win_de`. (Die App sendet es i. d. R. aus den
@@ -63,7 +64,42 @@ Request:  application/json  { "text":"…", "os":"win_de"|"mac_de"|"ios" }
 - **Max. Textlänge: 16384 Zeichen** pro Request (passt ein volles Protokoll inkl. Anamnese; für RP2350 winzig).
   **Überlauf:** Die App **chunkt** längere Texte in mehrere `/type`-Requests → **Gesamtlänge unbegrenzt**,
   der Pico behält eine feste Puffergrenze. `> 16384` → `400 text_too_long`.
+- `delayMs` **optional** (ab 0.3.4): Verzögerung pro Zeichen = Tippgeschwindigkeit. Fehlt es, gilt 60 ms.
+  Die Firmware begrenzt nur technisch auf **5–150 ms** (vor 0.4.0: 20–150; kleinere Werte werden dort auf 20
+  angehoben). Die eigentliche Auswahl trifft die App: 10–55 ms in 5-ms-Schritten, Standard 45 ms. Eine andere
+  Spanne in der App braucht keine neue Firmware.
 - Tippen dauert (Per-Char-Delay) → App nutzt großzügigen `readTimeout`.
+- **Die Antwort kommt sofort, getippt wird danach** – und unabhängig von der Verbindung: Ein angenommener
+  Auftrag läuft zu Ende, auch wenn das Handy das WLAN verlässt.
+- **Ab 0.4.0** tippt die Bridge zeichenweise und beantwortet dazwischen weiter Anfragen. Kommt währenddessen
+  ein weiteres `POST /type`, wird der Text **hinten angehängt** (so schicken auch ältere Apps lange Texte in
+  mehreren Teilen). Passt er nicht mehr in die Warteschlange (65536 Bytes Rest plus neuer Teil), antwortet
+  die Bridge `503 busy`; die App wartet und schickt denselben Teil erneut.
+
+### `GET /type/status` (ab 0.4.0)
+Fortschritt des laufenden bzw. letzten Tipp-Auftrags. **Nur Zahlen und Zustand, nie Text.**
+```
+200  { "state":"idle"|"typing"|"paused", "done":<int>, "total":<int>, "delayMs":<int>,
+       "jobId":<int>, "lastEnd":"none"|"done"|"cancelled" }
+```
+- `done`/`total` in Zeichen. `total` wächst, wenn ein weiterer Teil angehängt wird.
+- `jobId` zählt je **neuem** Auftrag hoch (angehängte Teile behalten die Nummer).
+- `lastEnd` sagt, wie der letzte Auftrag endete; nach dem Ende bleiben `done`/`total` stehen.
+- Dasselbe Objekt steht als `typing` in `GET /status`. Firmware vor 0.4.0 kennt den Endpunkt nicht
+  (`404`) und liefert kein `typing`; die App schätzt den Fortschritt dann aus Zeichenzahl und Tempo.
+
+### `POST /type/pause` · `POST /type/resume` · `POST /type/cancel` (ab 0.4.0)
+Laufenden Auftrag anhalten, fortsetzen oder abbrechen. Body leer (`{}`).
+```
+200  { …wie GET /type/status }
+409  { "error":"no_job" }                (kein laufender Auftrag)
+```
+- Angehalten wird **zwischen zwei Zeichen**; es bleibt keine Taste gedrückt.
+- `cancel` verwirft den restlichen Text sofort. Bereits Getipptes bleibt im Zielfeld stehen.
+- Ein angehaltener Auftrag wird nach **5 Minuten** von selbst verworfen, damit der Text nicht unbegrenzt
+  im Speicher der Bridge liegt.
+- Solange ein Auftrag läuft oder angehalten ist, antworten `POST /config` und `POST /ota/begin` mit
+  `409 { "error":"busy" }`.
 
 ### `POST /config`
 Geräte-Konfiguration setzen (aktuell: SSID-`<id>`).
@@ -117,11 +153,31 @@ Nach dem Reboot pollt der Client `GET /health` (App: alle 2 s, Budget 90 s) und 
 über `GET /status` → `fwVersion` == Manifest-Version. **Henne-Ei:** Firmware ≤ 0.2.0 hat kein OTA —
 das erste Update auf 0.3.0 erfolgt einmalig manuell per BOOTSEL (siehe `firmware/bridge/README.md`).
 
+## Kompatibilität zwischen App und Bridge
+
+App und Bridge bleiben **mindestens 6 Monate rückwärtskompatibel**, in beide Richtungen:
+
+- **Neue App, ältere Bridge:** Eine App spricht jede Bridge-Firmware, die in den letzten 6 Monaten
+  ausgeliefert wurde. Neue Felder in Requests sind optional und werden nur mitgeschickt, wenn sie gesetzt
+  sind (Beispiel `delayMs` in `POST /type` seit 0.3.4; ältere Firmware ignoriert unbekannte Felder und
+  tippt mit ihrem Standard).
+- **Ältere App, neue Bridge:** Eine neue Firmware nimmt alle Requests der App-Versionen der letzten
+  6 Monate an. Endpunkte, Pflichtfelder, Antwortfelder und Fehlercodes werden in dieser Zeit weder entfernt
+  noch umgedeutet; neue Antwortfelder kommen nur hinzu.
+- **OTA:** Das Update-Protokoll (`/ota/begin|chunk|commit`), das Flash-Layout und die Lage der
+  Einstellungen (EEPROM) bleiben gleich, damit jede Firmware der letzten 6 Monate die nächste per WLAN
+  annehmen kann. Eine App bietet nie ein Downgrade an: Ist die Bridge neuer als die mitgelieferte Firmware,
+  gilt sie als aktuell.
+- Eine Änderung, die das brechen würde, braucht eine neue `apiVersion` und einen Übergang, in dem beide
+  Varianten angenommen werden.
+
 ## API-Verträge (Übersicht)
 ```http
 GET  /health     -> 200 "ok"
-GET  /status     -> 200 { name, fwVersion, apiVersion, ready, defaultOs, otaSupported }
-POST /type       { text, os? }     -> 200 { typed } | 400 { error } | 5xx { error }   (Limit 16384, App chunkt)
+GET  /status     -> 200 { name, fwVersion, apiVersion, ready, defaultOs, otaSupported, typing? }
+GET  /type/status                  -> 200 { state, done, total, delayMs, jobId, lastEnd }      (ab 0.4.0)
+POST /type/pause|resume|cancel {}  -> 200 { …wie /type/status } | 409 { error }                (ab 0.4.0)
+POST /type       { text, os?, delayMs? } -> 200 { typed } | 400 { error } | 503 { error } | 5xx { error }   (Limit 16384, App chunkt)
 POST /config     { ssidId }        -> 200 { ok, restartRequired } | 400 { error }
 POST /ota/begin  { size, sha256, sig } -> 200 { ok, chunkMax } | 400/507/500 { error }
 POST /ota/chunk  { offset, dataB64 }   -> 200 { received } | 400/409/413/500 { error }

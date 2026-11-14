@@ -79,6 +79,10 @@ export interface Field {
   options?: string[]
   /** Bei einem Select zusaetzlich „individuell" -> Freitext anbieten (Default aus). */
   allowCustom?: boolean
+  /** Bei allowCustom: die „individuell"-Eingabe ist ein grosses Textfeld statt einer Zeile - fuer
+   *  laengere Texte. Nur mit options + allowCustom wirksam. ADDITIV: aeltere App-Versionen ignorieren
+   *  die Eigenschaft und zeigen das einzeilige Feld; der Wert bleibt ein String, Ausgabe unveraendert. */
+  customMultiline?: boolean
   /** Mehrfachauswahl: mehrere Optionen gleichzeitig waehlbar (Checkboxen bei ≤6, Multi-Dropdown bei >6).
    *  Nur mit options wirksam. Fehlt/false -> Einfachauswahl wie bisher. ADDITIV + rueckwaerts/vorwaerts-
    *  kompatibel: alte App-Versionen ignorieren das Feld und rendern normales Single-Select (kein Bump von

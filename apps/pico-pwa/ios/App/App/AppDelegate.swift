@@ -69,5 +69,6 @@ class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(ICloudBackupPlugin())
         bridge?.registerPluginInstance(ScannerPlugin()) // nativer Code-Scanner
+        bridge?.registerPluginInstance(KeepAwakePlugin()) // Bildschirm an, solange die Bridge tippt
     }
 }

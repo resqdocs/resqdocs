@@ -32,6 +32,12 @@ export interface ScanProfile {
   charset: ScanCharset
   /** Kantenlaenge des erwarteten Codes in mm - daraus berechnet der Scanner den Start-Zoom. */
   codeSizeMm: number
+  /**
+   * Verzoegerter Start-Zoom in ms (0 oder fehlend = sofort). Der Scanner startet dann ohne Zoom (1-fach,
+   * Hauptlinse) und geht erst nach dieser Zeit ohne Treffer auf den berechneten Start-Zoom. Hat der Nutzer
+   * vorher selbst gezoomt, bleibt sein Zoom.
+   */
+  startZoomDelayMs?: number
   title: string
   hint: string
   /** Zielrahmen im WebView-Overlay: quadratisch (2D-Codes) oder breit (Strichcode auf Packungen). */
@@ -40,12 +46,17 @@ export interface ScanProfile {
   note?: string
 }
 
-/** Bundeseinheitlicher Medikationsplan: dichter Data-Matrix-Code (96x96 Module), dunkel auf hell. */
+/**
+ * Bundeseinheitlicher Medikationsplan: dichter Data-Matrix-Code (96x96 Module), dunkel auf hell.
+ * Der Code besteht aus mehreren sichtbaren Kaestchen und wird nur vollstaendig im Bild dekodiert. Ein hoher
+ * Start-Zoom zeigt anfangs oft nur ein Kaestchen - deshalb erst ohne Zoom, der Start-Zoom folgt verzoegert.
+ */
 export const BMP_PROFILE: ScanProfile = {
   formats: ['DataMatrix'],
   decoder: { tryHarder: true, tryRotate: true, tryInvert: false, tryDownscale: true, tryDenoise: false },
   charset: 'iso-8859-1',
   codeSizeMm: 40,
+  startZoomDelayMs: 2500,
   title: 'Medikationsplan scannen',
   hint: 'Medikationsplan-Code in den Rahmen halten · Reflexionen vermeiden',
   frame: 'square',

@@ -67,6 +67,8 @@ const restoreValue = computed(() => (fill.value.state === 'custom' ? fill.value.
 // Zeilenumbrueche enthaelt (z. B. ein via Snippet gesetzter mehrzeiliger custom-Wert). Sonst verschluckt ein
 // einzeiliges <input> die \n und der erste Edit verwirft sie still (Verify).
 const useLongText = computed(() => !!props.node.multiline || customValue.value.includes('\n'))
+// Dasselbe fuer die „individuell"-Eingabe einer Auswahlliste: die Vorlage waehlt das grosse Textfeld.
+const useLongCustom = computed(() => !!props.node.customMultiline || customValue.value.includes('\n'))
 
 // „individuell"/Freitext: sticky ref (vom Nutzer gesetzt -> kein Modus-Flip beim Tippen eines
 // Options-Texts) PLUS Ableitung „Wert nicht in options". Der computed gatet auf state==='custom',
@@ -148,10 +150,12 @@ function pickIndividuell(): void {
 // ✎ mit der aktuellen Auswahl als Text, Cursor im Feld. Derselbe Zustand wie ueber den Schalter vor dem Titel.
 const INDIVIDUELL = 'individuell'
 const individuellInput = ref<HTMLInputElement | null>(null)
+const individuellLong = ref<InstanceType<typeof LongTextField> | null>(null)
 function openIndividuell(): void {
   emptiedByUncheck.value = false
   pickIndividuell()
-  void nextTick(() => individuellInput.value?.focus())
+  // Direkt ins Schreiben: Cursor in die Zeile bzw. das grosse Textfeld oeffnen.
+  void nextTick(() => (useLongCustom.value ? individuellLong.value?.open() : individuellInput.value?.focus()))
 }
 function pickExcluded(): void {
   caseValues.set(props.node.id, { state: 'excluded' })
@@ -310,7 +314,10 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
 
       <!-- ✎ individuell: eigener Freitext — genau wie beim Single-Select (kein Feld unter den Checkboxen) -->
       <div v-else-if="selectTriState === 'custom'" class="pl-9">
-        <input ref="individuellInput" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
+        <!-- Vorlage legt fest: grosses Textfeld (customMultiline) oder eine Zeile. Enthaelt der Wert schon
+             Zeilenumbrueche, immer das grosse Feld - eine einzelne Zeile wuerde sie verschlucken. -->
+        <LongTextField v-if="useLongCustom" ref="individuellLong" :model-value="customValue" :title="label" :required="node.required" @update:model-value="caseValues.setCustom(node.id, $event)" />
+        <input v-else ref="individuellInput" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
       </div>
 
       <!-- − nicht erhoben -->
@@ -358,7 +365,10 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
 
       <!-- ✎ individuell: eigener Freitext -->
       <div v-else-if="selectTriState === 'custom'" class="pl-9">
-        <input ref="individuellInput" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
+        <!-- Vorlage legt fest: grosses Textfeld (customMultiline) oder eine Zeile. Enthaelt der Wert schon
+             Zeilenumbrueche, immer das grosse Feld - eine einzelne Zeile wuerde sie verschlucken. -->
+        <LongTextField v-if="useLongCustom" ref="individuellLong" :model-value="customValue" :title="label" :required="node.required" @update:model-value="caseValues.setCustom(node.id, $event)" />
+        <input v-else ref="individuellInput" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
       </div>
 
       <!-- − nicht erhoben -->

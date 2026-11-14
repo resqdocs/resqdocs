@@ -8,8 +8,11 @@
 
     GET  /health  -> 200 "ok"                                   (text/plain)
     GET  /status  -> 200 { name, fwVersion, apiVersion, ready, defaultOs,
-                           otaSupported }
-    POST /type    { text, os?, delayMs? } -> 200 { typed } | 400 { error } (Limit 16384)
+                           otaSupported, typing }
+    POST /type    { text, os?, delayMs? } -> 200 { typed } | 400 { error } | 503 { error:"busy" }
+                                             (Limit 16384 je Request; laeuft ein Auftrag, wird angehaengt)
+    GET  /type/status  -> 200 { state, done, total, delayMs, jobId, lastEnd }   (nur Zahlen)
+    POST /type/pause | /type/resume | /type/cancel -> 200 { ...wie /type/status } | 409 { error:"no_job" }
     POST /config  { ssidId }     -> 200 { ok, restartRequired } | 400 { error }
     POST /ota/begin  { size, sha256, sig } -> 200 { ok, chunkMax } | Fehler
     POST /ota/chunk  { offset, dataB64 }   -> 200 { received } | Fehler
@@ -24,6 +27,8 @@
 
   Datenschutz (S2/S3): /type-Text kann Patientendaten enthalten -> nur im Body,
   wird NICHT geloggt, NICHT gespeichert; reine transiente Durchleitung zum Typer.
+  Getippt wird zeichenweise (TypeJob.h): der Fortschritt ist abfragbar (nur Zahlen), das Tippen
+  laeuft aber ohne Verbindung zu Ende.
 
   CORS: permissive Header, damit der Web-Dev-Browser (Vite) testen kann; die
   native App (CapacitorHttp) braucht sie nicht.
@@ -41,11 +46,12 @@
 #include "ConfigStore.h"
 #include "JsonMini.h"
 #include "OtaUpdate.h"
+#include "TypeJob.h"
 
 using namespace rq;
 
-static const char* FW_VERSION  = "0.3.4";  // 0.3.4: optionales delayMs in POST /type (Tippgeschwindigkeit)
-static const char* API_VERSION = "0.1.1";  // 0.1.1: POST /type akzeptiert optionales delayMs (abwaertskompatibel)
+static const char* FW_VERSION  = "0.4.0";  // 0.4.0: arduino-pico 6.3.2, Tipp-Fortschritt mit Stoppen/Weitertippen/Abbrechen, Tippen ab 5 ms
+static const char* API_VERSION = "0.2.0";  // 0.2.0: Tipp-Fortschritt + Anhalten/Fortsetzen/Abbrechen (additiv)
 static const char* AP_PREFIX   = "ResQDocs-";
 static const char* AP_PASS     = "resqdocs2026";  // fix/oeffentlich (S2)
 static const uint32_t TYPE_MAX_CHARS = 16384;     // S2: pro Request; App chunkt
@@ -55,10 +61,8 @@ WebServer server(80);
 static String ssidId;            // aktuelle <id> (EEPROM bzw. Chip-Default)
 static bool   ready = false;     // USB-HID initialisiert
 
-// Web -> Typer Puffer (Koexistenz-Seam): Handler fuellt, loop() tippt.
-static String pendingText;
-static volatile bool hasPending = false;
-static uint16_t pendingDelayMs = 60;  // Tippgeschwindigkeit (ms/Zeichen) des letzten /type-Requests
+// Web -> Typer (Koexistenz-Seam): Handler nimmt an, loop() tippt zeichenweise (TypeJob.h).
+static TypeJob typeJob;
 static bool restartAp = false;   // /config: AP nach der Antwort neu starten
 static bool otaReboot = false;   // /ota/commit: Reboot nach der Antwort
 static bool otaAvailable = false;  // LittleFS gemountet (Flash-Split vorhanden)
@@ -107,7 +111,8 @@ static void handleStatus() {
                 "\",\"apiVersion\":\"" + API_VERSION +
                 "\",\"ready\":" + (ready ? "true" : "false") +
                 ",\"defaultOs\":\"win_de\",\"otaSupported\":" +
-                (otaAvailable ? "true" : "false") + "}";
+                (otaAvailable ? "true" : "false") +
+                ",\"typing\":" + typeJob.json() + "}";
   sendJson(200, json);
 }
 
@@ -130,22 +135,46 @@ static void handleType() {
     return;
   }
   String os;  // optional; fehlt -> win_de (S2)
-  typerSetMode(jsonExtractString(body, "os", os) ? osFromString(os) : OsMode::WIN_DE);
+  const OsMode mode = jsonExtractString(body, "os", os) ? osFromString(os) : OsMode::WIN_DE;
 
   // delayMs optional (Tippgeschwindigkeit, ms/Zeichen): fehlt -> 60 (abwaertskompatibel),
-  // defensiv auf 20–150 begrenzt (die App validiert ebenfalls).
+  // defensiv auf 5–150 begrenzt (bis 0.3.4: 20). Die Feinabstimmung macht die App; 5 ms ist nur die
+  // technische Untergrenze, damit dafuer keine neue Firmware noetig ist.
   uint32_t delayMs = 60, parsedDelay = 0;
   if (jsonExtractUInt(body, "delayMs", parsedDelay)) {
-    delayMs = parsedDelay < 20 ? 20 : (parsedDelay > 150 ? 150 : parsedDelay);
+    delayMs = parsedDelay < 5 ? 5 : (parsedDelay > 150 ? 150 : parsedDelay);
   }
-  pendingDelayMs = (uint16_t)delayMs;
-
-  pendingText = text;   // KEIN Logging des Inhalts (kann Patientendaten enthalten)
-  hasPending = true;
+  // KEIN Logging des Inhalts (kann Patientendaten enthalten). Laeuft schon ein Auftrag, wird der Text
+  // angehaengt: so schicken auch aeltere Apps lange Texte weiter in mehreren Teilen. Kein Platz -> 503.
+  if (!typeJob.accept(text, chars, (uint16_t)delayMs)) {
+    sendJson(503, "{\"error\":\"busy\"}");
+    return;
+  }
+  typerSetMode(mode);
   sendJson(200, String("{\"typed\":") + chars + "}");
 }
 
+// Fortschritt und Steuerung des laufenden Auftrags. Antworten enthalten nur Zahlen/Zustand.
+static void handleTypeStatus() { sendJson(200, typeJob.json()); }
+
+static void handleTypePause() {
+  if (!typeJob.pause()) { sendJson(409, "{\"error\":\"no_job\"}"); return; }
+  sendJson(200, typeJob.json());
+}
+
+static void handleTypeResume() {
+  if (!typeJob.resume()) { sendJson(409, "{\"error\":\"no_job\"}"); return; }
+  sendJson(200, typeJob.json());
+}
+
+static void handleTypeCancel() {
+  if (!typeJob.cancel()) { sendJson(409, "{\"error\":\"no_job\"}"); return; }
+  sendJson(200, typeJob.json());
+}
+
 static void handleConfig() {
+  // Der AP-Neustart wuerde einen laufenden Auftrag von der App abschneiden.
+  if (typeJob.active()) { sendJson(409, "{\"error\":\"busy\"}"); return; }
   const String body = server.arg("plain");
   String id;
   if (!jsonExtractString(body, "ssidId", id) || !ssidIdValid(id)) {
@@ -169,6 +198,8 @@ static void handleNotFound() {
 // --- OTA (Logik in OtaUpdate.h) ---------------------------------------------------
 
 static void handleOtaBegin() {
+  // Kein Firmware-Update, waehrend getippt wird (Flash-Schreiben und Neustart mitten im Auftrag).
+  if (typeJob.active()) { sendJson(409, "{\"error\":\"busy\"}"); return; }
   if (!otaAvailable) {
     sendJson(500, "{\"error\":\"fs_error\"}");
     return;
@@ -295,11 +326,18 @@ void setup() {
   server.on("/health", HTTP_GET, handleHealth);
   server.on("/status", HTTP_GET, handleStatus);
   server.on("/type", HTTP_POST, handleType);
+  server.on("/type/status", HTTP_GET, handleTypeStatus);
+  server.on("/type/pause", HTTP_POST, handleTypePause);
+  server.on("/type/resume", HTTP_POST, handleTypeResume);
+  server.on("/type/cancel", HTTP_POST, handleTypeCancel);
   server.on("/config", HTTP_POST, handleConfig);
   server.on("/ota/begin", HTTP_POST, handleOtaBegin);
   server.on("/ota/chunk", HTTP_POST, handleOtaChunk);
   server.on("/ota/commit", HTTP_POST, handleOtaCommit);
   server.on("/type", HTTP_OPTIONS, handleOptions);
+  server.on("/type/pause", HTTP_OPTIONS, handleOptions);
+  server.on("/type/resume", HTTP_OPTIONS, handleOptions);
+  server.on("/type/cancel", HTTP_OPTIONS, handleOptions);
   server.on("/config", HTTP_OPTIONS, handleOptions);
   server.on("/ota/begin", HTTP_OPTIONS, handleOptions);
   server.on("/ota/chunk", HTTP_OPTIONS, handleOptions);
@@ -334,9 +372,5 @@ void loop() {
     Serial.println(fullSsid());
   }
 
-  if (hasPending) {
-    hasPending = false;
-    typeUtf8(pendingText.c_str(), pendingDelayMs);
-    pendingText = "";      // Inhalt nicht vorhalten (transiente Durchleitung)
-  }
+  typeJob.tick();  // hoechstens ein Zeichen, dann wieder der Webserver
 }

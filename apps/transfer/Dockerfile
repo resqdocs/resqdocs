@@ -1,7 +1,7 @@
 # Transfer-Dienst (Node) — erster dynamischer Dienst. Laeuft als non-root, schreibt nur nach /data
-# (SQLite, gemountetes Volume) und /tmp. node:sqlite ist Node-Core (kein npm-Modul); Node 24 strippt
+# (SQLite, gemountetes Volume) und /tmp. node:sqlite ist Node-Core (kein npm-Modul); Node 26 strippt
 # TypeScript ohne Flag. --experimental-sqlite haelt den node:sqlite-Pfad ueber Versionsgrenzen stabil.
-FROM node:24-alpine
+FROM node:26-alpine
 
 WORKDIR /app
 COPY package.json ./

@@ -24,14 +24,16 @@ App-ID: `com.example.resqdocs` (identisch zu iOS). App-Name: `ResQDocs`.
 
 - **JDK 21** (z. B. Temurin/OpenJDK 21). Für Gradle ist das in
   `android/gradle/gradle-daemon-jvm.properties` festgelegt: `./gradlew` sucht sich ein
-  installiertes JDK 21 selbst, unabhängig von `JAVA_HOME`. Neuere JDKs (25+) laufen mit
-  Gradle 8.14.3 nicht. Android Studio bringt inzwischen Java 25 mit; dort unter
+  installiertes JDK 21 selbst, unabhängig von `JAVA_HOME`. Der Build ist auf JDK 21 festgelegt
+  und mit neueren JDKs nicht geprüft. Android Studio bringt inzwischen Java 25 mit; dort unter
   *Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK* ein JDK 21
   oder das Daemon-Kriterium wählen. Findet Gradle kein JDK 21, bricht es mit einem Hinweis
   darauf ab. Auf dem Mac installiert z. B. `brew install --cask temurin@21` eines.
 - **Android SDK**: Platform `android-36`, Build-Tools `36.0.0`, Platform-Tools.
   Bequem über Android Studio (Giraffe+) oder die Command-line-Tools (`sdkmanager`).
-- Gradle wird vom Wrapper (`./gradlew`, Version 8.14.3) automatisch geladen.
+- Gradle wird vom Wrapper (`./gradlew`, Version 9.6.0) automatisch geladen; das Android Gradle Plugin
+  ist 9.4.1. Capacitor 8 nutzt noch die Build-Beschreibung von Plugin 8, deshalb stehen in
+  `android/gradle.properties` Übergangsschalter (siehe Kommentar dort).
 
 `android/local.properties` muss auf das SDK zeigen (wird nicht eingecheckt):
 

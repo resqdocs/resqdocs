@@ -99,6 +99,8 @@ class ScanActivity : AppCompatActivity() {
     private var diagFocus = ""
     @Volatile private var attempts = 0
     @Volatile private var lastDecodeMs = 0
+    /** Nutzer hat selbst gezoomt (Geste oder Regler) - ein verzoegerter Start-Zoom ueberschreibt das nicht. */
+    private var userZoomed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -164,14 +166,27 @@ class ScanActivity : AppCompatActivity() {
         val sensorShort = if (sensor != null) minOf(sensor.width, sensor.height) else 0f
         val maxZoom = cam.cameraInfo.zoomState.value?.maxZoomRatio ?: 1f
         val zoom = StartZoom.compute(diopters, calibrated, focal, sensorShort, options.codeSizeMm, FRAME_FILL, maxZoom)
-        if (zoom > 1f) cam.cameraControl.setZoomRatio(zoom)
+        val delayed = zoom > 1f && options.startZoomDelayMs > 0
+        if (delayed) {
+            // Erst ohne Zoom (Ratio 1 = Hauptlinse), damit ein grosser Code ganz ins Bild passt; ohne Treffer
+            // und ohne eigenes Zoomen nach der Wartezeit auf den Start-Zoom.
+            mainHandler.postDelayed({
+                if (!done.get() && !userZoomed) camera?.cameraControl?.setZoomRatio(zoom)
+            }, options.startZoomDelayMs)
+        } else if (zoom > 1f) {
+            cam.cameraControl.setZoomRatio(zoom)
+        }
 
         diagCamera = "Kamera ${info.cameraId}"
         diagFocus = when {
             diopters <= 0f -> "Fixfokus"
             calibrated -> "Nahgrenze ~${(100f / diopters).toInt()} cm"
             else -> "Fokus unkalibriert"
-        } + " · Start-Zoom ${"%.1f".format(zoom)}"
+        } + if (delayed) {
+            " · Start-Zoom 1.0 -> ${"%.1f".format(zoom)} nach ${"%.1f".format(options.startZoomDelayMs / 1000f)} s"
+        } else {
+            " · Start-Zoom ${"%.1f".format(zoom)}"
+        }
         updateDiag()
     }
 
@@ -267,6 +282,7 @@ class ScanActivity : AppCompatActivity() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 val cam = camera ?: return false
                 val z = cam.cameraInfo.zoomState.value ?: return false
+                userZoomed = true
                 cam.cameraControl.setZoomRatio((z.zoomRatio * detector.scaleFactor).coerceIn(z.minZoomRatio, z.maxZoomRatio))
                 return true
             }
@@ -302,7 +318,10 @@ class ScanActivity : AppCompatActivity() {
             progressBackgroundTintList = ColorStateList.valueOf(withAlpha(th.baseContent, 0.25f))
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
-                    if (fromUser) camera?.cameraControl?.setLinearZoom(progress / 100f)
+                    if (fromUser) {
+                        userZoomed = true
+                        camera?.cameraControl?.setLinearZoom(progress / 100f)
+                    }
                 }
                 override fun onStartTrackingTouch(bar: SeekBar) {}
                 override fun onStopTrackingTouch(bar: SeekBar) {}
