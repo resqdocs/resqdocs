@@ -154,13 +154,14 @@ export function useProtocolTree() {
     resolveImportTarget(tree: Container): ImportTarget {
       return resolveImportTargetOp(protocols.value, tree)
     },
-    /** Die per Namen getroffene Vorlage (existingId) durch den Import-Baum ersetzen (kollisionssicher). */
+    /** Die per Namen getroffene Vorlage (existingId) durch den Import-Baum ersetzen (kollisionssicher).
+     *  Kennung + Listenplatz der lokalen Vorlage bleiben (added.id === existingId) -> Standard-/Zuletzt-
+     *  Verweise und der laufende Einsatz zeigen weiter auf sie. */
     overwriteProtocolById(existingId: string, tree: Container): Container {
       const { protocols: next, added } = overwriteProtocolByIdOp(protocols.value, existingId, tree, nextId)
       protocols.value = next
       editorActiveId.value = added.id
-      // einsatzActiveId nachfuehren: zeigte der Einsatz-Tab auf die ersetzte Vorlage, folgt er auf die neue id
-      // (sonst verwaist er nach einem etwaigen Re-id und der Einsatz springt still auf die erste Vorlage).
+      // Absicherung fuer den Fallback „existingId unbekannt" (dann kommt eine neue Kennung zurueck).
       if (einsatzActiveId.value === existingId) einsatzActiveId.value = added.id
       return added
     },

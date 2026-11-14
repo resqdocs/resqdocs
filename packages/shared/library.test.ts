@@ -135,24 +135,63 @@ test('findProtocolByName: getrimmt + case-insensitiv; leer -> undefined', () => 
   assert.equal(findProtocolByName(ps, undefined), undefined)
 })
 
-test('overwriteProtocolById: ersetzt die gleichnamige (andere Kennung), Name bleibt, kollisionssicher', () => {
+test('overwriteProtocolById: ersetzt den Inhalt, lokale Kennung + Listenplatz bleiben', () => {
+  const first = { ...createContainer('first'), title: 'Erste' }
   const existing = { ...createContainer('alt'), title: 'Reanimation' }
   const other = { ...createContainer('other'), title: 'Intubation' }
-  const incoming = { ...createContainer('neu'), title: 'Reanimation' } // gleicher NAME, andere Kennung
-  const { protocols, added } = overwriteProtocolById([existing, other], 'alt', incoming, idGen())
-  assert.equal(protocols.length, 2)
-  assert.ok(!protocols.some((p) => p.id === 'alt')) // alte gleichnamige entfernt
-  assert.ok(protocols.some((p) => p.id === 'other')) // fremde bleibt
+  let incoming: Container = { ...createContainer('neu'), title: 'Reanimation' } // gleicher NAME, andere Kennung
+  incoming = addChild(incoming, 'neu', createField('feld-neu')) as Container
+  const { protocols, added } = overwriteProtocolById([first, existing, other], 'alt', incoming, idGen())
+  // Reihenfolge unveraendert: die ersetzte Vorlage rutscht NICHT ans Ende (sonst stuende nach dem
+  // naechsten Start eine andere Vorlage vorn und im Einsatz).
+  assert.deepEqual(protocols.map((p) => p.id), ['first', 'alt', 'other'])
+  assert.equal(added.id, 'alt') // lokale Kennung bleibt -> Standard-/Zuletzt-Verweise + Einsatz bleiben gueltig
   assert.equal(added.title, 'Reanimation') // Name bleibt, KEIN „(Import)"
-  assert.ok(protocols.some((p) => p.id === added.id && p.title === 'Reanimation'))
+  assert.deepEqual(added.children.map((c) => c.id), ['feld-neu']) // neuer Inhalt, innere ids unveraendert
 })
 
-test('overwriteProtocolById: Kennungs-Kollision mit Rest-Bibliothek -> Import-Baum wird re-id-et', () => {
+test('overwriteProtocolById: Regression Meldung „Ueberschreiben wirkt nicht" — Standard-Verweis ueberlebt', () => {
+  // Geraet: eine andere Vorlage steht vorn, die gleichnamige ist persoenliche Standard-Vorlage. Der
+  // Import-Baum traegt eine Kennung, die mit der anderen Vorlage kollidiert. Frueher: neue Wurzel-id +
+  // ans Ende -> Verweis tot -> nach dem Start zeigte der Einsatz die ERSTE Vorlage statt der neuen.
+  const other = addChild({ ...createContainer('eigene'), title: 'Eigene' }, 'eigene', createField('n162')) as Container
+  const existing = { ...createContainer('standard-01'), title: 'Standardprotokoll' }
+  let incoming: Container = { ...createContainer('standard-01'), title: 'Standardprotokoll' }
+  incoming = addChild(incoming, 'standard-01', createField('n162')) as Container // kollidiert mit 'eigene'
+  const { protocols, added } = overwriteProtocolById([other, existing], 'standard-01', incoming, idGen())
+  const ids = protocols.map((p) => p.id)
+  assert.equal(resolveInitialProtocolId(ids, 'standard-01', 'standard-01'), 'standard-01')
+  assert.equal(added.id, 'standard-01')
+  assert.notEqual(added.children[0].id, 'n162') // innere Kollision -> frische ids
+  assert.equal(other.children[0].id, 'n162') // fremde Vorlage unberuehrt
+})
+
+test('overwriteProtocolById: Wurzel-Kennung des Import-Baums ist egal (auch wenn sie mit dem Rest kollidiert)', () => {
   const other = { ...createContainer('shared-id'), title: 'Intubation' }
   const existing = { ...createContainer('alt'), title: 'Reanimation' }
-  const incoming = { ...createContainer('shared-id'), title: 'Reanimation' } // kollidiert mit 'other'
-  const { added } = overwriteProtocolById([existing, other], 'alt', incoming, idGen())
-  assert.notEqual(added.id, 'shared-id')
+  let incoming: Container = { ...createContainer('shared-id'), title: 'Reanimation' } // Wurzel kollidiert mit 'other'
+  incoming = addChild(incoming, 'shared-id', createField('f1')) as Container
+  const { protocols, added } = overwriteProtocolById([existing, other], 'alt', incoming, idGen())
+  assert.equal(added.id, 'alt')
+  assert.deepEqual(added.children.map((c) => c.id), ['f1']) // kein unnoetiges Re-id der inneren Knoten
+  assert.deepEqual(protocols.map((p) => p.id), ['alt', 'shared-id'])
+})
+
+test('overwriteProtocolById: innerer Knoten traegt die lokale Kennung -> Baum wird re-id-et, keine doppelte id', () => {
+  const existing = { ...createContainer('n5'), title: 'Reanimation' }
+  let incoming: Container = { ...createContainer('root'), title: 'Reanimation' }
+  incoming = addChild(incoming, 'root', createField('n5')) as Container
+  const { added } = overwriteProtocolById([existing], 'n5', incoming, idGen())
+  assert.equal(added.id, 'n5')
+  assert.notEqual(added.children[0].id, 'n5')
+})
+
+test('overwriteProtocolById: unbekannte Kennung -> als neue Vorlage, nichts geht verloren', () => {
+  const other = { ...createContainer('other'), title: 'Intubation' }
+  const incoming = { ...createContainer('neu'), title: 'Reanimation' }
+  const { protocols, added } = overwriteProtocolById([other], 'gibt-es-nicht', incoming, idGen())
+  assert.deepEqual(protocols.map((p) => p.id), ['other', 'neu'])
+  assert.equal(added.id, 'neu')
 })
 
 test('resolveImportTarget: DATENSICHER — id-Kollision loest NIE Ueberschreiben aus, Dialog nennt die lokale Vorlage', () => {

@@ -42,6 +42,55 @@
     *Los Angeles Motor Scale to Identify Large Vessel Occlusion: Prehospital
     Validation and Comparison with Other Screens.* Stroke. 2018;49(3):565-572.
     DOI <https://doi.org/10.1161/STROKEAHA.117.019228>.
+- **Ausgabe als Funktion:** eine Zeile mit Summe und den drei Befunden, ab
+  4 Punkten mit dem Zusatz „V. a. proximalen Verschluss (LVO)", z. B.
+  `LAMS 4/5 (Fazialisparese, Arm fällt sofort, Händedruck schwach) - V. a.
+  proximalen Verschluss (LVO)`. Im Einsatz: grün bei 0, gelb bei 1-3, rot ab 4.
+
+## FAST4D
+
+- **Quelle:** Claudi C, Worm A, Schmohl D, Juenemann M, Alhaj Omar O, Loesche H,
+  Huttner HB, Schramm P. *FAST4D - A New Score to Reduce Missed Strokes in
+  Emergency Medical Service: A Prospective, Multicentric Observational
+  Proof-of-Concept Trial.* J Clin Med. 2024;13(17):5033. PMID **39274246**,
+  DOI <https://doi.org/10.3390/jcm13175033> (Open Access, CC BY 4.0).
+- **Konkrete Fundstellen:**
+  - **Zeichen:** FAST (Face, Arm, Speech, Time) plus vier Zeichen der hinteren
+    Zirkulation: Doppelbilder, Gesichtsfelddefekt, Dreh-/Schwankschwindel,
+    Dysmetrie/Ataxie → Claudi 2024, *Abstract* und *Methods*.
+  - **Kein Punktescore, positiv ab einem auffälligen Zeichen** → Claudi 2024,
+    *Methods*: „FAST4D was flagged as true if any one of the FAST4D score items
+    was documented as positive".
+  - **Aussagekraft** (1469 Patient:innen, davon 1035 mit Schlaganfall, Tabellen
+    1 und 2): Sensitivität FAST 78,0 % (807/1035), FAST4D 93,3 % (966/1035).
+    Schlaganfälle der hinteren Zirkulation: 175 von 314 mit FAST, 298 von 314
+    mit FAST4D (*Results 3.3*).
+  - **Grenzen laut Autoren:** Spezifität und positiver prädiktiver Wert waren
+    methodisch nicht bestimmbar; die höhere Sensitivität geht mit mehr
+    Übertriage einher (224 zusätzlich falsch positive Fälle gegenüber FAST) →
+    *Discussion*, *Limitations*, *Conclusions*. Proof-of-Concept-Studie.
+  - Im Fließtext nennt die Arbeit 259 zusätzlich erkannte Schlaganfälle; aus den
+    Tabellen ergeben sich 159 (966 − 807). Zitiert sind hier die Tabellenwerte.
+- **Bewusste App-Entscheidungen (2026-11-13):**
+  - **Keine Schwelle, kein Zuweisungshinweis.** Die Studie nennt keinen Cut-off
+    und wertet Gefäßverschlüsse nicht aus. Der Hinweis „FAST4D ≥ 4 ggf. direkt
+    an ein endovaskuläres Zentrum" stammt aus einem regionalen Versorgungskonzept
+    (*Präklinische Versorgung von Schlaganfallpatienten - Konsentiertes Konzept
+    in Mittelhessen*, Version 2.3), nicht aus der Studie, und wird nicht
+    ausgegeben. Die Anzahl auffälliger Befunde steht als Zählung in der Zeile
+    („positiv (3/7)"), ohne Wertung.
+  - **Time zählt nicht zum Ergebnis.** Symptombeginn oder „zuletzt gesund
+    gesehen" wird mit Uhrzeit dokumentiert, alternativ „unklar".
+  - **„nicht prüfbar" je Befund.** Ein nicht prüfbarer Befund zählt nicht als
+    auffällig und wird in der Zeile benannt. Sind alle sieben nicht prüfbar,
+    lautet die Ausgabe „nicht prüfbar".
+  - **Seite** (rechts/links) optional bei Face und Arm, nur zur Dokumentation.
+  - **Farbe im Einsatz:** grün nur, wenn alle sieben Zeichen unauffällig sind;
+    gelb, sobald ein Zeichen auffällig ist; keine Farbe, wenn nichts auffällig
+    ist, aber nicht alles prüfbar war. Kein Rot, weil es keine belegte Schwelle
+    gibt. Die Farbe ist nur eine Anzeige in der App, der Text bleibt gleich.
+  - **Hilfstexte im Eingabeblatt** sind eigene Formulierungen, keine Übernahme
+    aus Taschenkarten.
 
 ## BMI (Body-Mass-Index)
 

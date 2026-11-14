@@ -2,12 +2,13 @@
 // Einheitliche Begriffe: Altbegriffe aus der Liste in terms.ts duerfen in sichtbaren Texten nicht zurueckkommen.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
-const DIRS = ['apps/pico-pwa/src', 'packages/protocol-core-ui/components']
+// Der Online-Editor liegt nicht in jedem Checkout, deshalb nur pruefen, was da ist.
+const DIRS = ['apps/pico-pwa/src', 'apps/protocol-editor/src', 'packages/protocol-core-ui/components'].filter((d) => existsSync(join(ROOT, d)))
 // Altcode ohne Oberflaeche und das abgeschaltete PZN-Woerterbuch.
 const SKIP = /\.test\.|useCreatorSession|creatorSession|PznSection|PznNoticeBanner|useMedicationLookup/
 

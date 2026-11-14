@@ -24,6 +24,26 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Angetippter Transfer-Link (App Link): https://transfer.resqdocs.app/#<id>.<key>.
+                 Android kann nicht nach Fragment filtern, daher nur die Wurzel. Die App ordnet die URL
+                 selbst ein und ruft erst nach Bestaetigung ab. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="transfer.resqdocs.app" />
+                <data android:path="/" />
+            </intent-filter>
+
+            <!-- Knopf „In der ResQDocs-App oeffnen" der Empfaenger-Seite: resqdocs://receive#<id>.<key> -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="resqdocs" android:host="receive" />
+            </intent-filter>
+
         </activity>
 
         <!-- Nativer Code-Scanner: nur intern startbar, Bilder bleiben im Speicher. -->

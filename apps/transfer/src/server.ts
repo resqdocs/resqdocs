@@ -7,6 +7,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { createStore, BlobTooLargeError, StoreFullError, MAX_BLOB_BYTES, DEFAULT_MAX_BLOBS, DEFAULT_MAX_TOTAL_BYTES, type BlobStore } from './store.ts'
 import { createRateLimiter, type RateLimiter } from './rateLimiter.ts'
 import { RECEIVER_HTML } from './receiverPage.ts'
+import { parseAppLinksEnv, buildAppleAppSiteAssociation, buildAssetLinks, type AppLinksConfig } from './appLinks.ts'
 
 // Sicherheits-Header der Empfaenger-Seite. no-referrer: beim „Im Editor oeffnen" darf weder Pfad noch
 // id an die Editor-Herkunft lecken (das Fragment strippt der Browser ohnehin aus dem Referer). CSP
@@ -98,10 +99,17 @@ export interface ServerOptions {
   deleteLimiter?: RateLimiter | null
   /** Socket-Adresse des vertrauenswuerdigen Reverse-Proxys; nur von ihm wird X-Forwarded-For geglaubt. */
   trustedProxy?: string | null
+  /** App-Zuordnung (Universal Links / App Links). Fehlt sie, antworten die .well-known-Pfade mit 404. */
+  appLinks?: AppLinksConfig | null
 }
 
 export function createTransferServer(opts: ServerOptions) {
-  const { store, postLimiter = null, getLimiter = null, deleteLimiter = null, trustedProxy = null } = opts
+  const { store, postLimiter = null, getLimiter = null, deleteLimiter = null, trustedProxy = null, appLinks = null } = opts
+  // Einmal beim Start gebaut: statischer, oeffentlicher Inhalt (die Betriebssysteme rufen ihn selbst ab).
+  const wellKnown: Record<string, string | null> = {
+    '/.well-known/apple-app-site-association': appLinks ? buildAppleAppSiteAssociation(appLinks) : null,
+    '/.well-known/assetlinks.json': appLinks ? buildAssetLinks(appLinks) : null,
+  }
 
   const server = createHttpServer(async (req, res) => {
     const method = req.method ?? 'GET'
@@ -116,6 +124,17 @@ export function createTransferServer(opts: ServerOptions) {
     // Der Schluessel erreicht den Server hier NIE (Fragment wird nicht mitgesendet).
     if ((method === 'GET' || method === 'HEAD') && path === '/') {
       return send(res, 200, method === 'HEAD' ? undefined : RECEIVER_HTML, PAGE_HEADERS)
+    }
+
+    // GET /.well-known/… — App-Zuordnung fuer angetippte Links. Muss ohne Umleitung als JSON kommen.
+    if ((method === 'GET' || method === 'HEAD') && Object.hasOwn(wellKnown, path)) {
+      const body = wellKnown[path]
+      if (body === null) return send(res, 404, 'Nicht konfiguriert.')
+      return send(res, 200, method === 'HEAD' ? undefined : body, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=3600',
+        'X-Content-Type-Options': 'nosniff',
+      })
     }
 
     // POST /v1/blob — Chiffrat ablegen
@@ -208,7 +227,8 @@ if (isMain) {
   }
   cleanup()
   setInterval(cleanup, 60_000).unref()
-  const server = createTransferServer({ store, postLimiter, getLimiter, deleteLimiter, trustedProxy })
+  const appLinks = parseAppLinksEnv(process.env)
+  const server = createTransferServer({ store, postLimiter, getLimiter, deleteLimiter, trustedProxy, appLinks })
   // Verbindungs-Obergrenze gegen Speicher-DoS: jede offene Verbindung kann bis zu 512 KB Body puffern.
   // Deckel * 512 KB haelt den Body-Speicher weit unter mem_limit (256m). Der Rate-Limiter zaehlt nur
   // Requests/Minute, nicht Gleichzeitigkeit — deshalb hier zusaetzlich harte Concurrency-Grenze. Am externen

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * Einsatz-Shell für SCORE-/Rechner-Funktionen. Gemeinsames Muster für Pack-Years (und
- * später NEWS2): eine kompakte Ergebnis-Zeile (gerendert über DENSELBEN render()/registry wie die
+ * Einsatz-Shell für SCORE-/Rechner-Funktionen. Gemeinsames Muster für Pack-Years, NEWS2, LAMS
+ * und FAST4D: eine kompakte Ergebnis-Zeile (gerendert über DENSELBEN render()/registry wie die
  * Ausgabe) + Antippen öffnet ein Eingabe-Sheet (Modal, bewusste Entscheidung: die Funktion
  * darf im Modal sein, die Einbindung im Editor fühlt sich an wie jedes Feld). Genau EINE Score-Zeile
  * im selben Werte-Store (getRows/setRows) -> Entwurf-Persistenz + DSGVO-Reset gratis.
@@ -9,11 +9,13 @@
  * Destruktives Zurücksetzen mit Rückfrage (Lösch-Schutz-Muster: erfasste Werte sind Arbeit).
  */
 import { computed, ref } from 'vue'
-import type { FunctionNode, FunctionRow, PackYearsRow, NEWS2Row } from '@resqdocs/protocol-core/model'
+import type { FunctionNode, FunctionRow, PackYearsRow, NEWS2Row, LAMSRow, FAST4DRow } from '@resqdocs/protocol-core/model'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 import PackYearsSheet from './PackYearsSheet.vue'
 import News2Sheet from './News2Sheet.vue'
+import LamsSheet from './LamsSheet.vue'
+import Fast4dSheet from './Fast4dSheet.vue'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 import RequiredMark from '@/components/RequiredMark.vue'
 import FunctionFillToggle from './FunctionFillToggle.vue'
@@ -34,7 +36,7 @@ const isOpen = computed(() => isRequiredOpen(props.node, fill.value))
 // Tri-State wie bei den Listen-Funktionen: ✓ berechnet / ✎ eigener Freitext / − nicht erhoben. Der Status
 // lebt in der Funktions-Fill; render.ts wertet ihn generisch aus (excluded=weg, custom=Freitext, sonst
 // Ergebnis ODER Standardtext-Fallback node.default).
-const status = computed(() => caseValues.getFunctionStatus(props.node.id))
+const status = computed(() => caseValues.getFunctionStatus(props.node.id, props.node))
 const excluded = computed(() => status.value === 'excluded')
 const custom = computed(() => status.value === 'custom')
 const customText = computed(() => caseValues.getFunctionText(props.node.id))
@@ -57,10 +59,13 @@ const row = computed<FunctionRow | undefined>(() => caseValues.getRows(props.nod
 // Typisierte Sicht je functionKind (das v-if am Sheet garantiert den passenden Typ).
 const packYearsRow = computed<PackYearsRow | undefined>(() => row.value as PackYearsRow | undefined)
 const news2Row = computed<NEWS2Row | undefined>(() => row.value as NEWS2Row | undefined)
+const lamsRow = computed<LAMSRow | undefined>(() => row.value as LAMSRow | undefined)
+const fast4dRow = computed<FAST4DRow | undefined>(() => row.value as FAST4DRow | undefined)
 // Welche Score-Typen haben ein Eingabe-Sheet? Ein Knoten ohne Sheet ODER ohne Registry-Def
 // (unbekannter functionKind, z. B. Fremd-Import) darf KEIN aktives Tap-Ziel bekommen
 // (sonst stiller toter Button) - stattdessen read-only.
-const hasSheet = computed(() => props.node.functionKind === 'packYears' || props.node.functionKind === 'news2')
+const SHEET_KINDS: readonly string[] = ['packYears', 'news2', 'lams', 'fast4d']
+const hasSheet = computed(() => SHEET_KINDS.includes(props.node.functionKind))
 const supported = computed(() => !!def.value && hasSheet.value)
 
 const sheetOpen = ref(false)
@@ -120,7 +125,9 @@ function doReset(): void {
         :aria-label="`${label}: ${hasData ? ergebnis : 'noch nicht erhoben'} — eingeben`"
         @click="sheetOpen = true"
       >
-        <span v-if="hasData" class="min-w-0 flex-1 truncate text-sm"><span v-if="accentClass" :class="accentClass" aria-hidden="true">● </span>{{ ergebnis }}</span>
+        <!-- Kein truncate: Befund-Scores (LAMS/FAST4D) nennen die Befunde - die Zeile darf umbrechen,
+             sonst fehlt im Einsatz genau der Teil, den man gegenlesen will. -->
+        <span v-if="hasData" class="min-w-0 flex-1 break-words text-sm"><span v-if="accentClass" :class="accentClass" aria-hidden="true">● </span>{{ ergebnis }}</span>
         <span v-else class="min-w-0 flex-1 truncate text-sm italic text-base-content/50">Noch nicht erhoben — antippen zum Eingeben</span>
         <span class="shrink-0 text-base-content/40" aria-hidden="true">✎</span>
       </button>
@@ -133,6 +140,8 @@ function doReset(): void {
     <!-- Eingabe-Sheet je Score-Typ (teleportet sich selbst) -->
     <PackYearsSheet v-if="sheetOpen && node.functionKind === 'packYears'" :initial="packYearsRow" @apply="apply" @close="sheetOpen = false" />
     <News2Sheet v-if="sheetOpen && node.functionKind === 'news2'" :initial="news2Row" @apply="apply" @close="sheetOpen = false" />
+    <LamsSheet v-if="sheetOpen && node.functionKind === 'lams'" :initial="lamsRow" @apply="apply" @close="sheetOpen = false" />
+    <Fast4dSheet v-if="sheetOpen && node.functionKind === 'fast4d'" :initial="fast4dRow" @apply="apply" @close="sheetOpen = false" />
 
     <ConfirmDialog
       v-if="confirmReset"

@@ -144,6 +144,9 @@ async function snapshotNow(origin: SnapshotOrigin = 'manual'): Promise<BackupRes
           dirty = false
           lastCheckAt = Date.now()
           await Preferences.set({ key: LAST_CHECK_KEY, value: String(lastCheckAt) })
+          // Die Altersgrenze kann auch ohne neuen Stand Sicherungen geloescht haben -> Liste neu laden,
+          // sonst zeigte der Verlauf Eintraege, deren Datei es nicht mehr gibt.
+          if (res.pruned?.length) await refreshHistory()
         }
         status.value = 'idle'
         lastMessage.value =
@@ -347,8 +350,10 @@ async function cloudSyncNow(): Promise<void> {
       const plan = planCloudSync(files, id, { createdAt: Date.now(), total, hash }, rotationFor(settings.value))
       if (plan.upload) {
         await cloudStore.put(plan.name, JSON.stringify(env))
-        for (const pid of plan.pruneIds) await cloudStore.remove(pid)
       }
+      // Ausgemusterte EIGENE Staende loeschen - nach einem Upload die der Rotation, ohne Upload nur die
+      // ueber der Altersgrenze (planCloudSync liefert sonst eine leere Liste).
+      for (const pid of plan.pruneIds) await cloudStore.remove(pid)
     }
     cloudFiles.value = cloudHistory(await cloudStore.list())
     cloudHashes.value = new Set(cloudFiles.value.map((c) => c.hash))

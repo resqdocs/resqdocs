@@ -18,6 +18,8 @@ import { QR_PROFILE } from '@/medplan/scanProfiles'
 import { routeDetected } from '@/composables/useImportRouting'
 import { useTemplateExport } from '@/composables/useTemplateExport'
 import { useAppVersion } from '@/composables/useAppVersion'
+import { incomingOpen, takeIncomingOpen } from '@/composables/useIncomingOpen'
+import { readIncomingFile, discardIncomingFile } from '@/utils/fileTransfer'
 
 // Optionaler Dev-Override der Transfer-Dienst-URL (sonst Default aus dem Client).
 const transferCfg = (import.meta.env.VITE_TRANSFER_URL as string | undefined)
@@ -154,6 +156,36 @@ async function receiveViaLink(): Promise<void> {
   }
 }
 
+// Von aussen geoeffnet (angetippter Link / geteilte Datei, useIncomingOpen): NIE ohne Nachfrage abrufen
+// oder importieren - ein „1× lesen"-Link waere sonst unbemerkt verbraucht. Bestaetigt laeuft es durch
+// dieselben Pfade wie Einfuegen bzw. Datei-Import (inkl. Ueberschreiben-Dialog).
+const incomingBusy = ref(false)
+async function confirmIncoming(): Promise<void> {
+  const item = takeIncomingOpen()
+  if (!item) return
+  if (item.kind === 'transfer') {
+    receiveText.value = item.link
+    await receiveViaLink()
+    return
+  }
+  incomingBusy.value = true
+  msg.value = null
+  mode.value = 'import'
+  try {
+    const text = await readIncomingFile(item.url)
+    importText.value = text
+    await load(text)
+  } catch {
+    msg.value = { kind: 'err', text: 'Die Datei konnte nicht gelesen werden.' }
+  } finally {
+    incomingBusy.value = false
+  }
+}
+function cancelIncoming(): void {
+  const item = takeIncomingOpen()
+  if (item?.kind === 'file') void discardIncomingFile(item.url)
+}
+
 const pendingImport = ref<{ tree: Container; existingId: string; name: string } | null>(null)
 
 function finishImport(added: Container): void {
@@ -284,7 +316,7 @@ function onFile(e: Event): void {
         <span class="text-xs font-semibold text-base-content/60">Importieren — aus Datei/JSON</span>
         <textarea v-model="importText" rows="5" class="textarea textarea-bordered w-full text-xs" placeholder='{"schema":"resqdocs-protocol","version":1,"tree":{ ... }}'></textarea>
         <div class="flex flex-wrap items-center gap-2">
-          <button class="btn btn-primary btn-sm" type="button" :disabled="!importText.trim() || loadBusy || receiveBusy" @click="load(importText)">Laden</button>
+          <button class="btn btn-primary btn-sm" type="button" :disabled="!importText.trim() || loadBusy || receiveBusy || incomingBusy" @click="load(importText)">Laden</button>
           <input type="file" accept="application/json,.json" class="file-input file-input-sm" @change="onFile" />
         </div>
         <p class="text-xs text-base-content/50">Wird als neue Vorlage importiert — bei gleichem Namen wird gefragt.</p>
@@ -332,6 +364,28 @@ function onFile(e: Event): void {
     <!-- QR-Scanner für den Empfang eines Transfer-Links (Vollbild-Overlay). -->
     <CodeScanOverlay v-if="qrScanOpen" :profile="QR_PROFILE" @decoded="onQrDecoded($event.text)" @cancel="qrScanOpen = false" />
 
+    <!-- Beide Rueckfragen per Teleport an body: TemplateIO sitzt im Daten-Blatt (.modal-bottom), dessen
+         Regeln sonst auf die verschachtelte modal-box durchschlagen (unten angeklebt, eckig, eingerueckt). -->
+    <Teleport to="body">
+    <!-- Von aussen geoeffnet: angetippter Transfer-Link oder geteilte Datei -> erst nachfragen -->
+    <div class="modal" :class="{ 'modal-open': incomingOpen !== null }" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <template v-if="incomingOpen?.kind === 'file'">
+          <h3 class="text-base font-semibold">Datei importieren?</h3>
+          <p class="py-3 text-sm"><strong class="break-all">{{ incomingOpen.name }}</strong> wird gelesen und importiert. Gibt es schon eine Vorlage mit gleichem Namen, wird vorher gefragt.</p>
+        </template>
+        <template v-else>
+          <h3 class="text-base font-semibold">Link empfangen?</h3>
+          <p class="py-3 text-sm">Der Inhalt wird abgerufen und auf diesem Gerät entschlüsselt. Ein Link mit der Einstellung „1× lesen“ ist danach verbraucht.</p>
+        </template>
+        <div class="modal-action flex-wrap">
+          <button type="button" class="btn btn-ghost btn-sm" @click="cancelIncoming">Abbrechen</button>
+          <button type="button" class="btn btn-primary btn-sm" @click="confirmIncoming">{{ incomingOpen?.kind === 'file' ? 'Importieren' : 'Empfangen' }}</button>
+        </div>
+      </div>
+      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="cancelIncoming"></button>
+    </div>
+
     <!-- Kollision: Vorlage mit gleicher Kennung existiert -> ueberschreiben oder als neue importieren -->
     <div class="modal" :class="{ 'modal-open': pendingImport !== null }" role="dialog" aria-modal="true">
       <div class="modal-box">
@@ -345,5 +399,6 @@ function onFile(e: Event): void {
       </div>
       <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="cancelImport"></button>
     </div>
+    </Teleport>
   </div>
 </template>

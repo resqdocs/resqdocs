@@ -3,7 +3,7 @@
 #
 #   npm run android      # aus apps/pico-pwa
 #
-# Schritte: deps -> Web-Build -> cap sync -> Android Studio mit android/ oeffnen.
+# Schritte: deps (npm ci) -> Web-Build -> cap sync -> Android Studio mit android/ oeffnen.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -11,8 +11,16 @@ cd "$(dirname "$0")/.."
 echo "==> Versions-Konsistenz prüfen"
 node scripts/check-version-consistency.mjs
 
-echo "==> npm install"
-npm install
+# npm ci statt npm install: installiert exakt nach Lockfile und schreibt es nie um. Ein npm install
+# mit aelterem npm (< 12) hat die Lockfile bei jedem Build veraendert und Branch-Wechsel blockiert.
+NPM_MAJOR="$(npm -v | cut -d. -f1)"
+if [ "$NPM_MAJOR" -lt 12 ]; then
+  echo "✗ npm $(npm -v) gefunden, das Projekt braucht npm 12 oder neuer (package.json: engines)." >&2
+  echo "  Aktualisieren: npm install -g npm@latest" >&2
+  exit 1
+fi
+echo "==> npm ci"
+npm ci
 
 echo "==> Web-Build"
 npm run build

@@ -163,3 +163,30 @@ export async function shareBinary(
     setTimeout(() => { void Filesystem.deleteFile({ path: filename, directory: Directory.Cache }).catch(() => {}) }, 10000)
   }
 }
+
+// Obergrenze fuer eine vom System uebergebene Datei: Vorlagen liegen weit darunter.
+const MAX_INCOMING_BYTES = 5 * 1024 * 1024
+
+/**
+ * Liest eine vom System uebergebene Datei (file://-URL, iOS „In ResQDocs öffnen": Kopie in
+ * Documents/Inbox) als Text und raeumt die Kopie danach weg. Nur nativ.
+ */
+export async function readIncomingFile(url: string): Promise<string> {
+  const { Filesystem, Encoding } = await import('@capacitor/filesystem')
+  try {
+    const { size } = await Filesystem.stat({ path: url })
+    if (size > MAX_INCOMING_BYTES) throw new Error('too-large')
+    const { data } = await Filesystem.readFile({ path: url, encoding: Encoding.UTF8 })
+    if (typeof data !== 'string') throw new Error('not-text')
+    return data
+  } finally {
+    void discardIncomingFile(url)
+  }
+}
+
+/** Entfernt die Inbox-Kopie einer uebergebenen Datei. Loescht bewusst NUR dort, nie anderswo. */
+export async function discardIncomingFile(url: string): Promise<void> {
+  if (!url.includes('/Documents/Inbox/')) return
+  const { Filesystem } = await import('@capacitor/filesystem')
+  await Filesystem.deleteFile({ path: url }).catch(() => {})
+}

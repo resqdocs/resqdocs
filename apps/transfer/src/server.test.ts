@@ -13,6 +13,9 @@ import { createRateLimiter } from './rateLimiter.ts'
 import { RECEIVER_CORE } from './receiverPage.ts'
 import { encryptTransfer, decryptTransfer } from '../../../packages/shared/transferCrypto.ts'
 
+// Beispiel-Fingerabdruck (32 Byte, kein echtes Zertifikat).
+const FP = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0').toUpperCase()).join(':')
+
 async function withServer(fn: (base: string) => Promise<void>) {
   const store = createStore(new DatabaseSync(':memory:'))
   const server = createTransferServer({ store })
@@ -191,10 +194,46 @@ test('Empfänger-Seite: GET / liefert die Seite (kein 404 für Browser-Öffner),
     const html = await r.text()
     assert.match(html, /Vorlage empfangen/)
     assert.match(html, /\/v1\/blob\//) // Abruf nur auf den id-Pfad, nie mit Schlüssel
+    assert.match(html, /resqdocs:\/\/receive/) // Übergabe an die App über das eigene Schema
     const head = await fetch(`${base}/`, { method: 'HEAD' })
     assert.equal(head.status, 200)
     assert.equal((await head.text()).length, 0)
   })
+})
+
+test('App-Zuordnung: ohne Konfiguration 404, mit Konfiguration JSON ohne Umleitung', async () => {
+  await withServer(async (base) => {
+    assert.equal((await fetch(`${base}/.well-known/apple-app-site-association`)).status, 404)
+    assert.equal((await fetch(`${base}/.well-known/assetlinks.json`)).status, 404)
+  })
+  const store = createStore(new DatabaseSync(':memory:'))
+  const appLinks = { iosAppIds: ['ABCDE12345.com.example.app'], android: [{ packageName: 'com.example.app', fingerprints: [FP] }] }
+  const server = createTransferServer({ store, appLinks })
+  await new Promise<void>((r) => server.listen(0, r))
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+  try {
+    const aasa = await fetch(`${base}/.well-known/apple-app-site-association`, { redirect: 'manual' })
+    assert.equal(aasa.status, 200)
+    assert.match(aasa.headers.get('content-type') || '', /^application\/json/)
+    assert.deepEqual(await aasa.json(), {
+      applinks: { details: [{ appIDs: ['ABCDE12345.com.example.app'], components: [{ '/': '/', '#': '?*' }] }] },
+    })
+    const links = await fetch(`${base}/.well-known/assetlinks.json`, { redirect: 'manual' })
+    assert.equal(links.status, 200)
+    assert.match(links.headers.get('content-type') || '', /^application\/json/)
+    assert.deepEqual(await links.json(), [
+      {
+        relation: ['delegate_permission/common.handle_all_urls'],
+        target: { namespace: 'android_app', package_name: 'com.example.app', sha256_cert_fingerprints: [FP] },
+      },
+    ])
+    const head = await fetch(`${base}/.well-known/assetlinks.json`, { method: 'HEAD' })
+    assert.equal(head.status, 200)
+    assert.equal((await head.text()).length, 0)
+    assert.equal((await fetch(`${base}/.well-known/anderes`)).status, 404)
+  } finally {
+    await new Promise<void>((r) => server.close(() => r()))
+  }
 })
 
 test('Empfänger-Seite: der AUSGELIEFERTE Entschlüssel-Kern (RECEIVER_CORE) entschlüsselt echtes encryptTransfer', async () => {

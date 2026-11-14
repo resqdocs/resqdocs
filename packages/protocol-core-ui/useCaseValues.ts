@@ -5,7 +5,7 @@
 
 import { ref } from 'vue'
 import type { FieldFill, FunctionRow } from '@resqdocs/protocol-core/model'
-import { defaultFill, cycleFill } from '@resqdocs/protocol-core/fill'
+import { defaultFill, cycleFill, functionStatus } from '@resqdocs/protocol-core/fill'
 
 const values = ref<Record<string, FieldFill>>({})
 
@@ -102,10 +102,11 @@ export function useCaseValues() {
       else fill = { state: 'function', rows }
       values.value = { ...values.value, [id]: fill }
     },
-    /** Funktions-Status lesen (confirmed/custom/excluded); Nicht-Funktions-Fill -> confirmed. */
-    getFunctionStatus(id: string): 'confirmed' | 'custom' | 'excluded' {
-      const f = values.value[id]
-      return f?.state === 'function' ? (f.status ?? 'confirmed') : 'confirmed'
+    /** Funktions-Status lesen (confirmed/custom/excluded). Ohne Eintrag gilt der Ausgangszustand des
+     *  Knotens (UNO Reverse: defaultExcluded startet auf „nicht erhoben"). Der Knoten ist Pflicht, damit
+     *  kein Aufrufer den Ausgangszustand versehentlich uebergeht; null nur, wenn es wirklich keinen gibt. */
+    getFunctionStatus(id: string, node: { defaultExcluded?: boolean } | null): 'confirmed' | 'custom' | 'excluded' {
+      return functionStatus(node, values.value[id])
     },
     /** Freitext (nur bei status='custom') lesen; sonst ''. */
     getFunctionText(id: string): string {

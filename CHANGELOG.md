@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.9.0] - 2026-11-13
+
+### Added
+
+- FAST4D and LAMS as functions for stroke assessment: findings are entered in a sheet and the result is written as one line of protocol text; each finding comes with a short explanation
+- Functions can start as "not assessed" in a template and only appear in the protocol once switched on
+- Tapping a shared template link opens the app, which asks before importing; on iOS a template file can be shared into the app
+- Selection lists offer "individual" as a list entry that opens the text field with the current selection
+- Backups: optional automatic deletion of old backups after a period chosen by the user
+- The transfer service can serve app association files configured through environment variables
+
+### Changed
+
+- Backup lists show the newest entries first, older ones behind "show older"
+- Updated dependencies, among them Capacitor 8.6.2, Vue 3.5.45 and Vite 8.3.8; the web images use nginx 1.31
+- The build scripts install with npm ci
+
+### Fixed
+
+- Importing with "overwrite" keeps the template's position and its role as default template
+- A multi-select stays open when the default value is unticked first
+
 ## [1.8.0] - 2026-11-04
 
 ### Added

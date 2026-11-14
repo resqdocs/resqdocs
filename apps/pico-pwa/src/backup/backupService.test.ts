@@ -111,3 +111,21 @@ test('sha256Hex ist deterministisch + 64-hex', async () => {
   assert.equal(a, await sha256Hex('abc'))
   assert.match(a, /^[0-9a-f]{64}$/)
 })
+
+test('Altersgrenze ohne neuen Stand: abgelaufene Sicherung wird gelöscht und als pruned gemeldet', async () => {
+  const DAY = 86_400_000
+  const t0 = 1_700_000_000_000
+  const { store, files, index } = fakeStore()
+  // Zwei Stände ohne Frist anlegen, dann die Frist einschalten und OHNE Änderung erneut sichern.
+  const r1 = await runBackup(fakeSrc({ protocols: [proto('p1', 'A')] }), store, { now: t0, hash: idHash })
+  const src = fakeSrc({ protocols: [proto('p1', 'B')] })
+  await runBackup(src, store, { now: t0 + 10 * DAY, hash: idHash })
+  assert.equal(files.size, 2)
+  const cfg = { recent: 10, dailyDays: 30, weeklyWeeks: 12, maxAgeDays: 30 }
+  const r3 = await runBackup(src, store, { now: t0 + 50 * DAY, hash: idHash, cfg })
+  const alt = r1.written ? r1.name : ''
+  assert.deepEqual(r3, { written: false, reason: 'unchanged', pruned: [alt] })
+  assert.equal(files.has(alt), false, 'Datei des abgelaufenen Stands ist weg')
+  assert.deepEqual(index().map((m) => m.name).includes(alt), false, 'und steht nicht mehr im Index')
+  assert.equal(files.size, 1, 'der neueste Stand bleibt, obwohl auch er älter als die Frist ist')
+})

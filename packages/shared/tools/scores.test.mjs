@@ -3,7 +3,7 @@
 // Llanes 2004; BMI WHO). Fachlich gegenzuprüfen.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { packYears, bmi, lams, news2, ekgAxisTable, signatureBlock } from './scores.mjs'
+import { packYears, bmi, lams, fast4d, news2, ekgAxisTable, signatureBlock } from './scores.mjs'
 
 test('packYears: Definition (Zig./Tag ÷ 20) × Jahre, Rundung auf 1 Nachkommastelle', () => {
   assert.equal(packYears({ cigarettesPerDay: 20, years: 10 }).value, 10)
@@ -34,6 +34,68 @@ test('lams: Summe 0-5; >= 4 markiert LVO-Verdacht', () => {
   assert.ok(high.text.includes('LAMS 4/5'))
   assert.ok(high.text.includes('LVO'))
   assert.throws(() => lams({ face: 2, arm: 0, grip: 0 }))
+})
+
+test('lams: body = text ohne „LAMS"-Praefix (Funktion: Label kommt vom Knoten-Titel)', () => {
+  assert.equal(lams({ face: 1, arm: 2, grip: 1 }).body, '4/5 (Fazialisparese, Arm fällt sofort, Händedruck schwach) - V. a. proximalen Verschluss (LVO)')
+  assert.equal(lams({ face: 0, arm: 0, grip: 0 }).body, '0/5 (Gesicht o. B., Arm o. B., Händedruck normal)')
+  const mid = lams({ face: 1, arm: 1, grip: 1 })
+  assert.equal(mid.text, `LAMS ${mid.body}`)
+  assert.ok(!mid.body.includes('LVO')) // 3 liegt unter der Schwelle
+})
+
+const F4D_NEG = { face: 'neg', arm: 'neg', speech: 'neg', diplopia: 'neg', field: 'neg', vertigo: 'neg', ataxia: 'neg' }
+
+test('fast4d: positiv ab EINEM auffälligen Zeichen, kein Punktescore', () => {
+  const neg = fast4d(F4D_NEG)
+  assert.equal(neg.positive, false)
+  assert.equal(neg.count, 0)
+  assert.equal(neg.body, 'negativ.')
+  assert.equal(neg.text, 'FAST4D negativ.')
+  const one = fast4d({ ...F4D_NEG, vertigo: 'pos' })
+  assert.equal(one.positive, true)
+  assert.equal(one.count, 1)
+  assert.equal(one.body, 'positiv (1/7): Dreh-/Schwankschwindel.')
+})
+
+test('fast4d: Befunde mit Seite, „nicht prüfbar" getrennt, Zeit angehängt', () => {
+  const r = fast4d({ face: 'pos', faceSide: 're', arm: 'pos', armSide: 're', speech: 'neg', diplopia: 'pos', field: 'neg', vertigo: 'neg', ataxia: 'na', timeMode: 'onset', time: '14:30' })
+  assert.equal(r.body, 'positiv (3/7): Fazialisparese rechts, Armabsinken rechts, Doppelbilder; nicht prüfbar: Dysmetrie/Ataxie. Symptombeginn 14:30.')
+  assert.deepEqual(r.notTestable, ['Dysmetrie/Ataxie'])
+  assert.equal(fast4d({ ...F4D_NEG, arm: 'pos', armSide: 'li' }).body, 'positiv (1/7): Armabsinken links.')
+  assert.equal(fast4d({ ...F4D_NEG, ataxia: 'na' }).body, 'negativ (nicht prüfbar: Dysmetrie/Ataxie).')
+})
+
+test('fast4d: Seite nur bei auffälligem Face/Arm; alles „nicht prüfbar" ist weder positiv noch negativ', () => {
+  // Seite an einem unauffälligen Befund erscheint nicht.
+  assert.equal(fast4d({ ...F4D_NEG, faceSide: 're', armSide: 'li' }).body, 'negativ.')
+  const na = fast4d({ face: 'na', arm: 'na', speech: 'na', diplopia: 'na', field: 'na', vertigo: 'na', ataxia: 'na' })
+  assert.equal(na.untestable, true)
+  assert.equal(na.positive, false)
+  assert.equal(na.body, 'nicht prüfbar.')
+})
+
+test('fast4d: Zeit wird dokumentiert, nicht gewertet; ungültige Uhrzeit entfällt', () => {
+  assert.equal(fast4d({ ...F4D_NEG, timeMode: 'lsw', time: '06:05' }).body, 'negativ. Zuletzt gesund gesehen 06:05.')
+  assert.equal(fast4d({ ...F4D_NEG, timeMode: 'unknown' }).body, 'negativ. Symptombeginn unklar.')
+  assert.equal(fast4d({ ...F4D_NEG, timeMode: 'unknown' }).count, 0)
+  assert.equal(fast4d({ ...F4D_NEG, timeMode: 'onset' }).body, 'negativ.') // Modus ohne Uhrzeit
+  assert.equal(fast4d({ ...F4D_NEG, timeMode: 'onset', time: '25:99' }).body, 'negativ.')
+  assert.equal(fast4d({ ...F4D_NEG, time: '14:30' }).body, 'negativ.') // Uhrzeit ohne Modus
+})
+
+test('fast4d: unvollständige/ungültige Eingabe wirft', () => {
+  assert.throws(() => fast4d({ ...F4D_NEG, ataxia: undefined }))
+  assert.throws(() => fast4d({ ...F4D_NEG, face: 'ja' }))
+})
+
+test('fast4d/lams: Ausgabe nur mit Zeichen, die die Brücke auf dem NIDA-Layout tippen kann', () => {
+  const texte = [
+    lams({ face: 1, arm: 2, grip: 2 }).body,
+    fast4d({ face: 'pos', faceSide: 'li', arm: 'pos', armSide: 're', speech: 'pos', diplopia: 'pos', field: 'pos', vertigo: 'pos', ataxia: 'pos', timeMode: 'onset', time: '09:15' }).body,
+    fast4d({ face: 'na', arm: 'na', speech: 'na', diplopia: 'na', field: 'na', vertigo: 'na', ataxia: 'na', timeMode: 'unknown' }).body,
+  ]
+  for (const t of texte) assert.match(t, /^[A-Za-z0-9ÄÖÜäöüß .,:;()\/-]+$/)
 })
 
 test('news2: unauffälliger Patient = 0 (Risiko niedrig)', () => {

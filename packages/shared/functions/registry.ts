@@ -2,8 +2,9 @@
 // Body-Render (Klartext der Daten, OHNE Titel) + hasData. Die Einsatz-Komponente (Vue) liegt getrennt
 // (EinsatzFunction.vue), damit der pure Kern (render.ts/deviations.ts) testbar bleibt. Erweiterbar:
 // eine neue Funktion = ein neuer FunctionKind + ein Eintrag hier (Kern bleibt unberuehrt).
-import type { FunctionKind, FieldFill, MedikamenteRow, ArztRow, PackYearsRow, NEWS2Row, FunctionRow, FunctionConfig } from '../model.ts'
-import { packYears, packYearsShort, news2 } from '../tools/scores.mjs'
+import type { FunctionKind, FunctionNode, FieldFill, MedikamenteRow, ArztRow, PackYearsRow, NEWS2Row, LAMSRow, FAST4DRow, FunctionRow, FunctionConfig } from '../model.ts'
+import { DEFAULT_HEADING } from '../model.ts'
+import { packYears, packYearsShort, news2, lams, fast4d } from '../tools/scores.mjs'
 
 /** Inline-Default fuer FUNKTIONS-Zeilen: Mittelpunkt statt DEFAULT_SEPARATOR ", " - das Komma ist
  *  seit dem Zeilenformat "Name Staerke, Schema" die Grenze INNERHALB einer Zeile; als
@@ -30,6 +31,17 @@ export interface FunctionDef {
    *  (NEWS2: niedrig->success, mittel->warning, hoch->error). Rein visuell in der App - die Text-/Export-
    *  Ausgabe traegt keine Farbe. Fehlt/undefined -> kein Farbakzent. */
   accent?(fill: FieldFill | undefined): 'success' | 'warning' | 'error' | undefined
+  /** Optionale Start-Formatierung des Titels beim ANLEGEN der Funktion (createFunction mischt sie ein).
+   *  Als Funktion, damit jeder neue Knoten ein eigenes heading-Objekt bekommt (keine geteilte Referenz).
+   *  Fehlt -> Titel als Banner in eigener Zeile (wie bisher). Im Editor frei aenderbar. */
+  createDefaults?(): Partial<Pick<FunctionNode, 'titleInline' | 'heading'>>
+}
+
+/** Start-Formatierung der Befund-Scores (LAMS/FAST4D): Titel OHNE Markdown-Praefix inline vor dem
+ *  Ergebnis -> eine Zeile „LAMS 4/5 (…)" statt Banner + Zeile. So steht die Zeile im Freitext des
+ *  Protokolls wie von Hand geschrieben. */
+function inlineTitleDefaults(): Partial<Pick<FunctionNode, 'titleInline' | 'heading'>> {
+  return { titleInline: true, heading: { ...DEFAULT_HEADING, prefix: '', suffix: ' ' } }
 }
 
 function rowsOf(fill: FieldFill | undefined): FunctionRow[] {
@@ -226,9 +238,105 @@ const news2Fn: FunctionDef = {
   },
 }
 
+/** Vollstaendige LAMS-Eingabe? (alle drei Befunde gewaehlt, je im gueltigen Bereich). scores.lams wirft
+ *  sonst - darum VOR dem Aufruf pruefen (wie news2Complete). */
+function lamsComplete(r: LAMSRow | undefined): r is Required<LAMSRow> {
+  return !!r && [0, 1].includes(r.lamsFace as number) && [0, 1, 2].includes(r.lamsArm as number) && [0, 1, 2].includes(r.lamsGrip as number)
+}
+
+/** LAMS (Los Angeles Motor Scale): drei motorische Befunde -> Summe 0-5, ab 4 Hinweis auf proximalen
+ *  Gefaessverschluss. Ausgabe MIT Befunden: „4/5 (Fazialisparese, Arm fällt sofort, Händedruck schwach)
+ *  - V. a. proximalen Verschluss (LVO)". Rechenkern + Schwelle sind quellenbelegt
+ *  (docs/medical-sources.md, Llanes 2004 / Nour 2018) und bleiben unveraendert. */
+const lamsFn: FunctionDef = {
+  label: 'LAMS',
+  singleLine: true,
+  createDefaults: inlineTitleDefaults,
+  // Editor-Vorschau: 1 + 2 + 1 = 4 -> zeigt Befunde UND den LVO-Hinweis.
+  sampleFill: () => ({ state: 'function', rows: [{ lamsFace: 1, lamsArm: 2, lamsGrip: 1 }] }),
+  renderBody(fill) {
+    const r = scoreRow<LAMSRow>(fill)
+    if (!lamsComplete(r)) return ''
+    return lams({ face: r.lamsFace, arm: r.lamsArm, grip: r.lamsGrip }).body
+  },
+  hasData(fill) {
+    return lamsComplete(scoreRow<LAMSRow>(fill))
+  },
+  // Ampel fuer die Einsatz-Anzeige: 0 -> gruen, 1-3 -> gelb, ab 4 (LVO-Hinweis) -> rot (nur App, nicht der Text).
+  accent(fill) {
+    const r = scoreRow<LAMSRow>(fill)
+    if (!lamsComplete(r)) return undefined
+    const { score, lvoSuspected } = lams({ face: r.lamsFace, arm: r.lamsArm, grip: r.lamsGrip })
+    return lvoSuspected ? 'error' : score >= 1 ? 'warning' : 'success'
+  },
+}
+
+const FAST4D_BEFUND_KEYS = ['fastFace', 'fastArm', 'fastSpeech', 'fastDiplopia', 'fastField', 'fastVertigo', 'fastAtaxia'] as const
+type Fast4dCompleteRow = FAST4DRow & Required<Pick<FAST4DRow, (typeof FAST4D_BEFUND_KEYS)[number]>>
+
+/** Vollstaendige FAST4D-Eingabe? (alle sieben Befunde gewaehlt). Seite und Zeit sind optional.
+ *  scores.fast4d wirft sonst - darum VOR dem Aufruf pruefen (wie lamsComplete). */
+function fast4dComplete(r: FAST4DRow | undefined): r is Fast4dCompleteRow {
+  return !!r && FAST4D_BEFUND_KEYS.every((k) => ['neg', 'pos', 'na'].includes(r[k] as string))
+}
+function fast4dResult(r: Fast4dCompleteRow): ReturnType<typeof fast4d> {
+  return fast4d({
+    face: r.fastFace,
+    arm: r.fastArm,
+    speech: r.fastSpeech,
+    diplopia: r.fastDiplopia,
+    field: r.fastField,
+    vertigo: r.fastVertigo,
+    ataxia: r.fastAtaxia,
+    faceSide: r.fastFaceSide,
+    armSide: r.fastArmSide,
+    timeMode: r.fastTimeMode,
+    time: r.fastTime,
+  })
+}
+
+/** FAST4D (Schlaganfall-Screening): sieben Befunde, positiv ab EINEM auffaelligen. KEIN Punktescore und
+ *  bewusst OHNE Schwelle/Zuweisungshinweis (die Studie nennt keinen Cut-off, docs/medical-sources.md,
+ *  Claudi et al. 2024). Ausgabe MIT Befunden: „positiv (3/7): Fazialisparese rechts, …; nicht prüfbar:
+ *  …. Symptombeginn 14:30." Die Zeit steht in der Zeile, zaehlt aber nicht zum Ergebnis. */
+const fast4dFn: FunctionDef = {
+  label: 'FAST4D',
+  singleLine: true,
+  createDefaults: inlineTitleDefaults,
+  // Editor-Vorschau: zeigt Befunde mit Seite, „nicht prüfbar" und die Zeitangabe.
+  sampleFill: () => ({
+    state: 'function',
+    rows: [{
+      fastFace: 'pos', fastArm: 'pos', fastSpeech: 'neg', fastDiplopia: 'pos', fastField: 'neg', fastVertigo: 'neg', fastAtaxia: 'na',
+      fastFaceSide: 're', fastArmSide: 're', fastTimeMode: 'onset', fastTime: '14:30',
+    }],
+  }),
+  renderBody(fill) {
+    const r = scoreRow<FAST4DRow>(fill)
+    if (!fast4dComplete(r)) return ''
+    return fast4dResult(r).body
+  },
+  hasData(fill) {
+    return fast4dComplete(scoreRow<FAST4DRow>(fill))
+  },
+  // Ampel fuer die Einsatz-Anzeige: mindestens ein Zeichen auffaellig -> gelb; ALLE sieben unauffaellig
+  // -> gruen; nichts auffaellig, aber etwas nicht pruefbar -> keine Farbe (Gruen hiesse sonst „Screening
+  // unauffaellig", obwohl es nur zum Teil stattfand). Kein Rot: ohne belegte Schwelle gibt es keine
+  // Abstufung nach Anzahl. Nur App, nicht der Text.
+  accent(fill) {
+    const r = scoreRow<FAST4DRow>(fill)
+    if (!fast4dComplete(r)) return undefined
+    const { positive, notTestable } = fast4dResult(r)
+    if (positive) return 'warning'
+    return notTestable.length === 0 ? 'success' : undefined
+  },
+}
+
 export const FUNCTION_REGISTRY: Record<FunctionKind, FunctionDef> = {
   medikamentenplan,
   aerzte,
   packYears: packYearsFn,
   news2: news2Fn,
+  lams: lamsFn,
+  fast4d: fast4dFn,
 }

@@ -20,7 +20,7 @@ const SnippetPicker = inject(snippetPickerKey, null)
 // Versions-Gating der Funktionen: der Online-Editor stellt die für die gewählte App-Version anbietbaren
 // functionKinds bereit; fehlt der Provider (Mobile-App = eigene Version), sind ALLE erlaubt.
 const allowedKinds = inject(allowedFunctionKindsKey, null)
-const ALL_FUNCTION_KINDS: FunctionKind[] = ['medikamentenplan', 'aerzte', 'packYears', 'news2']
+const ALL_FUNCTION_KINDS: FunctionKind[] = ['medikamentenplan', 'aerzte', 'packYears', 'news2', 'lams', 'fast4d']
 function kindAllowed(k: FunctionKind): boolean {
   return !allowedKinds || allowedKinds.value.includes(k)
 }

@@ -28,7 +28,7 @@ export interface BackupStore {
 
 export type BackupResult =
   | { written: true; name: string; counts: BackupEnvelope['counts']; pruned: string[] }
-  | { written: false; reason: 'degraded' | 'unchanged' | 'empty' | 'error' }
+  | { written: false; reason: 'degraded' | 'unchanged' | 'empty' | 'error'; pruned?: string[] }
 
 export interface RunBackupOptions {
   /** „jetzt" in Epoch ms (injiziert -> testbar + deterministischer Dateiname). */
@@ -91,7 +91,16 @@ export async function runBackup(
   const origin: SnapshotOrigin = opts.origin ?? 'auto'
   const cfg = opts.cfg ?? DEFAULT_ROTATION
   const plan = planBackup(existing, { name, createdAt: opts.now, hash, total, origin, counts: env.counts }, cfg, opts.force ?? false)
-  if (!plan.write) return { written: false, reason: 'unchanged' }
+  if (!plan.write) {
+    // Inhaltsgleich -> nichts schreiben. Eine gesetzte Altersgrenze raeumt trotzdem abgelaufene Staende ab.
+    if (plan.prune.length > 0) {
+      for (const n of plan.prune) await store.deleteSnapshot(n)
+      await store.putIndex(existing.filter((m) => plan.keep.includes(m.name)))
+      // pruned mitgeben: der Aufrufer muss seine Liste neu laden, obwohl nichts geschrieben wurde.
+      return { written: false, reason: 'unchanged', pruned: plan.prune }
+    }
+    return { written: false, reason: 'unchanged' }
+  }
 
   // Schreiben ZUERST, dann ausgemusterte löschen -> nie ist ein guter Stand weg, bevor der neue da ist.
   await store.writeSnapshot(name, JSON.stringify(env), opts.onProgress)

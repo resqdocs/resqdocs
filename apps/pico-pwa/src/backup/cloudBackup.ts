@@ -80,8 +80,12 @@ export function planCloudSync(
   const existing: SnapshotMeta[] = own.map((o) => ({ name: o.name, createdAt: o.meta.createdAt, hash: o.meta.hash, total: o.meta.total }))
   const name = cloudName({ deviceId, createdAt: candidate.createdAt, total: candidate.total, hash: h })
   const plan = planBackup(existing, { name, createdAt: candidate.createdAt, hash: h, total: candidate.total }, cfg, force)
-  if (!plan.write) return { upload: false, skipReason: plan.skipReason, pruneIds: [], name }
   const idByName = new Map(own.map((o) => [o.name, o.id]))
+  // Auch ohne Upload koennen eigene Staende ueber die Altersgrenze hinaus sein (plan.prune dann nicht leer).
+  if (!plan.write) {
+    const expired = plan.prune.map((n) => idByName.get(n)).filter((x): x is string => Boolean(x))
+    return { upload: false, skipReason: plan.skipReason, pruneIds: expired, name }
+  }
   const pruneIds = plan.prune.map((n) => idByName.get(n)).filter((x): x is string => Boolean(x))
   return { upload: true, pruneIds, name }
 }

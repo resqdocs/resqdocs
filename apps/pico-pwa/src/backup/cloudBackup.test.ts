@@ -68,3 +68,17 @@ test('cloudHistory: alle Geräte gemischt, neueste zuerst', () => {
   assert.equal(hist[0].id, 'b0') // neuer
   assert.equal(hist[1].id, 'a0')
 })
+
+test('planCloudSync: Altersgrenze löscht nur EIGENE abgelaufene Stände, auch ohne Upload', () => {
+  const DAY = 86_400_000
+  const now = 400 * DAY
+  const h = 'aaaaaaaaaaaa'
+  const files = [
+    { id: 'own-alt', name: cloudName({ deviceId: 'dev1', createdAt: now - 90 * DAY, total: 5, hash: 'bbbbbbbbbbbb' }), modifiedTime: 0, size: 1 },
+    { id: 'own-neu', name: cloudName({ deviceId: 'dev1', createdAt: now - DAY, total: 5, hash: h }), modifiedTime: 0, size: 1 },
+    { id: 'fremd-alt', name: cloudName({ deviceId: 'dev2', createdAt: now - 300 * DAY, total: 5, hash: 'cccccccccccc' }), modifiedTime: 0, size: 1 },
+  ]
+  const plan = planCloudSync(files, 'dev1', { createdAt: now, total: 5, hash: h }, { recent: 10, dailyDays: 30, weeklyWeeks: 12, maxAgeDays: 30 })
+  assert.equal(plan.upload, false)
+  assert.deepEqual(plan.pruneIds, ['own-alt'])
+})

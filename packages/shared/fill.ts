@@ -32,6 +32,18 @@ export function isDefaultFill(node: { defaultExcluded?: boolean } | null | undef
   return (fill ?? defaultFill(node)).state === defaultFill(node).state
 }
 
+/** Status EINER Funktion (✓ erhoben / ✎ Freitext / − nicht erhoben) - die eine Stelle, die den
+ *  Ausgangszustand aufloest. Der Status lebt in der 'function'-Fill; fehlt der Eintrag, gilt der
+ *  Ausgangszustand des Knotens: „nicht erhoben" bei `defaultExcluded` (UNO Reverse), sonst „erhoben".
+ *  Wie bei Feld und Abschnitt wird der Ausgangszustand NIE in den Werte-Store geschrieben. */
+export function functionStatus(
+  node: { defaultExcluded?: boolean } | null | undefined,
+  fill: FieldFill | undefined,
+): 'confirmed' | 'custom' | 'excluded' {
+  if (fill?.state === 'function') return fill.status ?? 'confirmed'
+  return node?.defaultExcluded ? 'excluded' : 'confirmed'
+}
+
 /** Tri-State-Zyklus: confirmed -> custom(value=default) -> excluded -> confirmed.
  *  Verlustbehaftet by design: Verlassen von 'custom' verwirft den eingetippten Wert
  *  (ein Re-Edit INNERHALB von custom behaelt ihn - das macht der Store via setCustom). */
@@ -133,6 +145,19 @@ export function multiFill(field: Field, selection: readonly string[]): FieldFill
   const d = defaultOptionValue(field)
   if (!startsEmpty(field) && v.length === 1 && v[0] === d) return { state: 'confirmed' }
   return { state: 'custom', value: joinFieldValues(v), values: v }
+}
+
+/** Vorbelegung des ✎-Freitexts („individuell") eines Auswahlfelds beim Wechsel aus der Auswahl (✓).
+ *  Reihenfolge: laufender eigener Text (kein Options-Wert) > ruhend gemerkter Text (`preserved`,
+ *  prevValue) > der Text, den das Feld gerade ausgibt (gewaehlte Option bzw. verkettete Mehrfachauswahl,
+ *  bei confirmed der Standardwert). So aendert der Wechsel auf ✎ die Ausgabe nicht - man schreibt an der
+ *  Auswahl weiter, statt bei einem leeren Feld neu anzufangen. '' nur, wenn nichts gewaehlt ist. */
+export function individuellPrefill(field: Field, fill: FieldFill | undefined, preserved = ''): string {
+  const f = fill ?? defaultFill(field)
+  const isOwnText = f.state === 'custom' && !(f.values && f.values.length) && !(field.options ?? []).includes(f.value)
+  if (isOwnText) return f.value
+  if (preserved !== '') return preserved
+  return fillValue(field, f) ?? ''
 }
 
 /** „Erfuellt" (fuer die Pflichtfeld-Vollstaendigkeit): der Feldwert loest sich zu nicht-leerem Text auf.

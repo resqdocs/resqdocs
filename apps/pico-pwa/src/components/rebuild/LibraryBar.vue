@@ -14,6 +14,7 @@ import { useTreeEditor } from '@resqdocs/protocol-core-ui/treeEditor'
 import { useStorage } from '@/storage/useStorage'
 import SaveStatusBadge from './SaveStatusBadge.vue'
 import TemplateIO from './TemplateIO.vue'
+import { incomingOpen } from '@/composables/useIncomingOpen'
 
 const tree = useProtocolTree()
 const editor = useTreeEditor()
@@ -132,6 +133,21 @@ function sheetDelete(): void {
 // --- Daten-Sheet (Teilen/Empfangen + Datei-Export/Import) ---
 const dataOpen = ref(false)
 const dataIo = ref<InstanceType<typeof TemplateIO> | null>(null) // fuer die Direkt-Spruenge openShare/openReceive
+
+// Von aussen geoeffneter Link / geteilte Datei: Daten-Blatt im passenden Abschnitt aufmachen. Die
+// Nachfrage und der Import selbst liegen in TemplateIO.
+watch(
+  incomingOpen,
+  async (item) => {
+    if (!item) return
+    sheetOpen.value = false
+    dataOpen.value = true
+    await nextTick()
+    if (item.kind === 'transfer') dataIo.value?.openReceive()
+    else dataIo.value?.openImportFile()
+  },
+  { immediate: true },
+)
 
 // --- Liste einklappbar (offen by default); zugeklappt nur aktive Vorlage + Menue ---
 const collapsed = ref(false)

@@ -23,6 +23,23 @@ Klartext, nie den Schlüssel, nie den Vorlagentyp. Node + eingebautes `node:sqli
 - `GET /v1/blob/{idOrCode}` — Body = Blob; bei Burn danach atomar gelöscht. `404` abgelaufen/verbrannt.
 - `DELETE /v1/blob/{id}` mit `X-Delete-Token`.
 - `GET /healthz`.
+- `GET /.well-known/apple-app-site-association` und `GET /.well-known/assetlinks.json` — App-Zuordnung, damit
+  ein angetippter Transfer-Link direkt die App öffnet (iOS Universal Links, Android App Links). Nur
+  vorhanden, wenn konfiguriert (siehe unten), sonst `404`.
+
+## Link direkt in der App öffnen
+Zugeordnet wird nur die Wurzel mit Fragment (`/#<id>.<key>`), also genau die Form eines Transfer-Links.
+Die App ruft den Inhalt erst nach einer Bestätigung ab; ein Link mit „1× lesen" wird durch das Öffnen
+nicht verbraucht. Die Werte sind Deploy-Konfiguration und stehen nicht im Code:
+
+- `APPLINKS_IOS_APP_IDS` — kommagetrennt, je `<Team-ID>.<Bundle-ID>`.
+- `APPLINKS_ANDROID` — kommagetrennt, je `<Paketname>=<SHA-256-Fingerabdruck des Signaturzertifikats>`
+  (mehrere Zertifikate je Paket: Eintrag wiederholen).
+
+Ungültige Einträge werden verworfen. Der Reverse Proxy muss beide Pfade ohne Umleitung und unverändert
+durchreichen. Die Empfänger-Seite bietet auf Mobilgeräten zusätzlich „In der ResQDocs-App öffnen" an
+(eigenes Schema `resqdocs://receive#<id>.<key>`), weil ein Tipp innerhalb derselben Seite keine
+Zuordnung auslöst.
 
 ## Sicherheit
 - **Injection:** ausschließlich parametrisierte Prepared Statements; `id`/`code` per Regex `[A-Za-z0-9]+`
