@@ -80,6 +80,8 @@ struct ScanOptions {
     let tryDownscale: Bool
     /// Kantenlänge des erwarteten Codes in mm – steuert den Start-Zoom.
     let codeSizeMm: Double
+    /// Verzögerter Start-Zoom in ms (0 = sofort): erst 1-fach, nach dieser Zeit ohne Treffer der Start-Zoom.
+    let startZoomDelayMs: Int
     let title: String
     let hint: String
     let cancelLabel: String
@@ -95,6 +97,7 @@ struct ScanOptions {
         tryInvert = (d["tryInvert"] as? Bool) ?? false
         tryDownscale = (d["tryDownscale"] as? Bool) ?? true
         codeSizeMm = min(200, max(5, call.getDouble("codeSizeMm") ?? 40))
+        startZoomDelayMs = min(10_000, max(0, call.getInt("startZoomDelayMs") ?? 0))
         title = call.getString("title") ?? "Code scannen"
         hint = call.getString("hint") ?? "Code in den Rahmen halten"
         cancelLabel = call.getString("cancelLabel") ?? "Abbrechen"

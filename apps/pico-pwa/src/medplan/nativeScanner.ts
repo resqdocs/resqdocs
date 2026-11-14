@@ -28,6 +28,7 @@ interface ResQScannerPlugin {
     formats: string[]
     decoder: ScanProfile['decoder']
     codeSizeMm: number
+    startZoomDelayMs: number
     title: string
     hint: string
     cancelLabel: string
@@ -97,6 +98,7 @@ export async function scanNative(profile: ScanProfile, opts: { showDiagnostics?:
       formats: profile.formats,
       decoder: profile.decoder,
       codeSizeMm: profile.codeSizeMm,
+      startZoomDelayMs: profile.startZoomDelayMs ?? 0,
       title: profile.title,
       hint: profile.hint,
       cancelLabel: 'Abbrechen',

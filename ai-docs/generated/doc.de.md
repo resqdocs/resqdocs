@@ -43,6 +43,7 @@ Zusätzlich sind einzelne **Eigenschaften** erst ab einer Mindestversion verfüg
 | Startet auf „nicht erhoben" | `defaultExcluded` | field, container (Feld oder Abschnitt startet im Einsatz auf „nicht erhoben" statt auf „bestätigt" und erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Für Inhalte, die man nur in bestimmten Lagen braucht. Am Container zusätzlich excludable nötig; am Feld nicht zusammen mit required.) | 1.5.0 |
 | Startet auf „nicht erhoben" | `defaultExcluded` | Funktionen (Die Funktion startet im Einsatz auf „nicht erhoben" und erscheint erst in der Ausgabe, wenn der Anwender sie einschaltet oder Daten erfasst. Nicht zusammen mit required.) | 1.9.0 |
 | Startet ohne Auswahl | `defaultEmpty` | field (Bei Mehrfachauswahl: keine Option ist vorausgewählt (z. B. Einsatzcodes). Ohne die Eigenschaft gilt die Standard-Option bzw. die oberste. Eine leere Auswahl gibt nichts aus; ein Pflichtfeld bleibt bis zur Auswahl offen.) | 1.6.0 |
+| „individuell" als großes Textfeld | `customMultiline` | field (Bei einer Auswahlliste mit allowCustom: Die eigene Eingabe ist ein großes Textfeld statt einer Zeile, für längere Texte. Ältere App-Versionen zeigen die einzeilige Eingabe; die Ausgabe ist dieselbe.) | 1.10.0 |
 
 **Gate-Regel:** Ein `functionKind` ist verfügbar **nur, wenn seine Mindestversion ≤ der Nutzer-Version** ist. Sonst biete ihn nicht an; fragt der Nutzer danach, sag „das braucht mindestens Version X". **Schreibe niemals** einen `functionKind` ins JSON, den die genannte Version nicht kennt. Container und Felder gehen ab Version 1.0.0 immer. Nennt der Nutzer eine Version **vor 1.0.0** (oder keine), nimm die Basis an — nur `container` + `field`, keine Funktionen — und weise darauf hin, dass Funktionen und der Vorlagen-Import selbst mindestens 1.0.0 brauchen.
 
@@ -142,6 +143,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `blankLineBefore` (boolean): Optische Leerzeile (Absatz) VOR diesem Feld - nur wirksam, wenn darueber etwas ausgegeben wird UND das Feld eine eigene Titel-/Banner-Zeile hat (multiline oder titleInline=false).
 - `options` (Liste von string): Vordefinierte Auswahl-Optionen. Gesetzt -> das Feld ist ein SELECT (Wert = Ausgabetext). Tri-State unveraendert: ✓ = default (sonst options[0]), ✎ = Option waehlen/Freitext, − = entfaellt.
 - `allowCustom` (boolean): Bei einem Select zusaetzlich „individuell" -> Freitext anbieten (Default aus).
+- `customMultiline` (boolean): Bei allowCustom: die „individuell"-Eingabe ist ein grosses Textfeld statt einer Zeile - fuer laengere Texte. Nur mit options + allowCustom wirksam. ADDITIV: aeltere App-Versionen ignorieren die Eigenschaft und zeigen das einzeilige Feld; der Wert bleibt ein String, Ausgabe unveraendert.
 - `multiple` (boolean): Mehrfachauswahl: mehrere Optionen gleichzeitig waehlbar (Checkboxen bei ≤6, Multi-Dropdown bei >6). Nur mit options wirksam. Fehlt/false -> Einfachauswahl wie bisher. ADDITIV + rueckwaerts/vorwaerts- kompatibel: alte App-Versionen ignorieren das Feld und rendern normales Single-Select (kein Bump von BLOCK_VERSION/PROTOCOL_VERSION -> geteilte „Multi"-Bloecke werden von aelteren Apps akzeptiert).
 - `exclusiveOptions` (Liste von string): Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein „Keine/Normalbefund" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv).
 - `defaultEmpty` (boolean): Bei multiple: „startet ohne Auswahl" - KEINE Option ist vorausgewaehlt (z. B. Einsatzcodes, wo eine Vorauswahl einen falschen Code dokumentieren wuerde). Ohne die Eigenschaft gilt wie bisher die Standard-Option (default, sonst die oberste). Eine leere Auswahl ist dann der Ausgangszustand (✓, nichts in der Ausgabe; ein Pflichtfeld bleibt „noch offen"), nicht „nicht erhoben". Nur mit multiple wirksam.
@@ -378,6 +380,10 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
           "type": "boolean",
           "description": "Bei einem Select zusaetzlich „individuell\" -> Freitext anbieten (Default aus)."
         },
+        "customMultiline": {
+          "type": "boolean",
+          "description": "Bei allowCustom: die „individuell\"-Eingabe ist ein grosses Textfeld statt einer Zeile - fuer laengere Texte. Nur mit options + allowCustom wirksam. ADDITIV: aeltere App-Versionen ignorieren die Eigenschaft und zeigen das einzeilige Feld; der Wert bleibt ein String, Ausgabe unveraendert."
+        },
         "multiple": {
           "type": "boolean",
           "description": "Mehrfachauswahl: mehrere Optionen gleichzeitig waehlbar (Checkboxen bei ≤6, Multi-Dropdown bei >6). Nur mit options wirksam. Fehlt/false -> Einfachauswahl wie bisher. ADDITIV + rueckwaerts/vorwaerts- kompatibel: alte App-Versionen ignorieren das Feld und rendern normales Single-Select (kein Bump von BLOCK_VERSION/PROTOCOL_VERSION -> geteilte „Multi\"-Bloecke werden von aelteren Apps akzeptiert)."
@@ -538,7 +544,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 ### Nur Felder
 - **Mit einem Standardwert vorbelegen?** (`default`) — Steht im Feld, bis der Nutzer etwas anderes einträgt. *Beispiel: „Bewusstsein" startet mit „wach, orientiert".*
 - **Auswahlliste statt Freitext?** (`options`) — Der Nutzer wählt aus festen Werten (Liste von Strings). *Beispiel: „Übergabe an" mit „Notaufnahme/Arzt/Pflegepersonal".*
-- **Zusätzlich eigene Eingabe erlauben?** (`allowCustom`) — Auswahl plus die Möglichkeit, etwas Eigenes zu schreiben. *Beispiel: „Atmung" mit festen Stufen, aber auch frei beschreibbar.*
+- **Zusätzlich eigene Eingabe erlauben?** (`allowCustom`) — Auswahl plus die Möglichkeit, etwas Eigenes zu schreiben. *Beispiel: „Atmung" mit festen Stufen, aber auch frei beschreibbar.* Mit `customMultiline: true` (ab App 1.10.0) ist die eigene Eingabe ein großes Textfeld statt einer Zeile, für längere Texte.
 - **Mehrfachauswahl erlauben?** (`multiple`, ab App 1.4.0) — Mehrere Optionen gleichzeitig wählbar (Checkboxen bei ≤6, Multiselect-Dropdown bei >6). *Beispiel: „Auskultation" — beidseits belüftet UND Giemen zugleich.* Nur mit `options`. Die Ausgabe verkettet die gewählten Werte als Aufzählung („a, b und c"). Optional `exclusiveOptions` (Teilmenge von `options`): eine „Keine/Normalbefund"-Option, die alle anderen ausschließt (und umgekehrt) — *Beispiel: „Keine Zyanose" schließt „zentrale/periphere Zyanose" aus.*
 - **Großes, mehrzeiliges Textfeld?** (`multiline`) — Für längere Texte mit Zeilenumbrüchen. *Beispiel: „Anamnese" mit mehreren Sätzen.*
 - **Pflichtfeld?** (`required`, ab App 1.2.0) — Das Feld lässt sich im Einsatz nicht auf „nicht erhoben“ stellen; solange es leer ist, wird es als offen markiert. *Beispiel: „Aktuelle Anamnese“.* Nicht zusammen mit `defaultExcluded`. Bei einer Einfachauswahl ohne `default` gilt die erste Option als Wert, das Feld ist dann nie leer.

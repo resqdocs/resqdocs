@@ -47,6 +47,8 @@ function createFakeClient(opts: {
       return status
     },
     async typeText() { throw new Error('nicht erwartet') },
+    async typeStatus() { throw new Error('nicht erwartet') },
+    async typeControl() { throw new Error('nicht erwartet') },
     async setConfig() { throw new Error('nicht erwartet') },
     async otaBegin(m) {
       calls.push({ kind: 'begin', bytes: m.size })

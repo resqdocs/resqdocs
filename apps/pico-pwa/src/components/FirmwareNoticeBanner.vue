@@ -59,14 +59,16 @@ async function onUpdate(): Promise<void> {
 
           <div v-else class="flex flex-wrap items-center gap-2">
             <button class="btn btn-primary btn-xs" type="button" @click="onUpdate">Jetzt aktualisieren</button>
-            <button class="btn btn-ghost btn-xs" type="button" @click="notice.dismiss()">Später</button>
+            <!-- Schrift/Rahmen in der Textfarbe des Hinweises: btn-ghost allein nimmt die dunkle Seitenschrift
+                 und ist auf dem farbigen Hintergrund kaum lesbar. -->
+            <button class="btn btn-ghost btn-xs border border-info-content/50 text-info-content" type="button" @click="notice.dismiss()">Später</button>
             <span class="text-xs opacity-70">Dauert ~1 Minute; die Bridge startet dabei neu.</span>
           </div>
         </template>
 
         <span v-if="resultMsg" :class="fw.phase.value === 'error' ? 'text-error' : ''">{{ resultMsg }}</span>
         <div v-if="done" class="flex justify-end">
-          <button class="btn btn-ghost btn-xs" type="button" @click="done = false">OK</button>
+          <button class="btn btn-ghost btn-xs border border-success-content/50 text-success-content" type="button" @click="done = false">OK</button>
         </div>
       </div>
     </div>

@@ -91,15 +91,16 @@ Das **designated place** für den vollständigen, korrespondierenden Quellstand 
 Repository (`firmware/`). Build der ausgelieferten Binary:
 
 ```bash
-# Toolchain: arduino-cli + arduino-pico Core 5.6.0
+# Toolchain: arduino-cli + arduino-pico Core 6.3.2
+arduino-cli core install rp2040:rp2040@6.3.2
 arduino-cli lib install Crypto            # rweather, Ed25519/SHA256 (MIT)
-arduino-cli compile --fqbn rp2040:rp2040:rpipico2w:flash=4194304_1048576 \
-  --libraries firmware/bridge/libraries \
-  --output-dir firmware/bridge/build/bridge_s2 firmware/bridge/bridge_s2
+# pfadneutral (-ffile-prefix-map), FQBN rp2040:rp2040:rpipico2w:flash=4194304_1048576:
+bash firmware/bridge/build-reproducible.sh
 # Ergebnis: build/bridge_s2/bridge_s2.ino.bin -> signieren via scripts/ota/sign.mjs
+# (Bauen + Signieren in einem Schritt: scripts/ota/build-sign-bridge.sh)
 ```
 
-- **arduino-pico Core-Version:** `5.6.0`
+- **arduino-pico Core-Version:** `6.3.2`
 - **FQBN:** `rp2040:rp2040:rpipico2w:flash=4194304_1048576`
 - **Crypto (rweather):** `0.4.0` (Build-Umgebung; via `arduino-cli lib install Crypto`,
   Quelle <https://github.com/rweather/arduinolibs>). Hinweis: ob die historisch
@@ -110,12 +111,14 @@ arduino-cli compile --fqbn rp2040:rp2040:rpipico2w:flash=4194304_1048576 \
 
 | Feld | Wert |
 |------|------|
-| FW_VERSION (Quelle, `bridge_s2/bridge_s2.ino`) | `0.3.2` |
-| Manifest-Version (`…/assets/firmware/bridge_s2.manifest.json`) | `0.3.2` |
-| Größe | `430240` Bytes |
-| sha256 | `30781cba27719ba72f942e1785911456416a293c2a147a52c66fc13d185b73ed` |
+| FW_VERSION (Quelle, `bridge_s2/bridge_s2.ino`) | `0.4.0` |
+| Manifest-Version (`…/assets/firmware/bridge_s2.manifest.json`) | `0.4.0` |
+| Toolchain | arduino-pico Core `6.3.2`, Crypto `0.4.0`, pfadneutral (`build-reproducible.sh`) |
+| Größe | `425356` Bytes |
+| sha256 | `01eb4703956bb830323592bf982e5b995bc9b5236c31f86f119278342cfdc892` |
 | Signatur | Ed25519 über den sha256-Digest (`sigB64` im Manifest; Public Key in `bridge_s2/OtaPublicKey.h`) |
-| Quell-Commit (Binary signiert) | `9354ae3` (S2 0.3.2); Quellstand `402d150` (FW_VERSION 0.3.2) |
+| Quell-Commit (Binary signiert) | `522cdd4` (Quellstand `fd847cf`) |
+| Reproduzierbarkeit | Bit-identisch auf zwei Rechnern gebaut (macOS und Linux, gleiche sha256) |
 
 Die `.uf2`-Dateien unter `dist/` sind der BOOTSEL-Weg (anderes Format, gleicher Quellstand);
 die ausgelieferte `.bin` ist das OTA-Format.

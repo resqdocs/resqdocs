@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useStorage } from '@/storage/useStorage'
 import { useAppUpdateNotice } from '@/appUpdate/useAppUpdateNotice'
-import { speedFromDelay, delayFromSpeed, typingSpeedLabel, DELAY_MIN_MS, DELAY_MAX_MS } from '@/pico/typingSpeed'
+import { speedFromDelay, delayFromSpeed, typingSpeedLabel, DELAY_MIN_MS, DELAY_MAX_MS, DELAY_STEP_MS } from '@/pico/typingSpeed'
 
 /** App-Einstellungen (Zielgerät, Design, Erscheinung). Über die
  * gekapselte Storage-Schicht — kein Backend-Wissen.
@@ -70,7 +70,7 @@ const typingSpeed = computed({
           type="range"
           :min="DELAY_MIN_MS"
           :max="DELAY_MAX_MS"
-          step="10"
+          :step="DELAY_STEP_MS"
           class="range range-sm w-full"
           aria-label="Tippgeschwindigkeit der Bridge — weiter rechts tippt schneller"
           :aria-valuetext="typingSpeedLabel(settings.typingDelayMs)"

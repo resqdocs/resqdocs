@@ -6,12 +6,14 @@ import SettingsTab from '@/components/settings/SettingsTab.vue'
 import DisclaimerGate from '@/components/DisclaimerGate.vue'
 import UsageNoticeModal from '@/components/UsageNoticeModal.vue'
 import FirmwareNoticeBanner from '@/components/FirmwareNoticeBanner.vue'
+import TypingProgressBar from '@/components/TypingProgressBar.vue'
 import PznNoticeBanner from '@/components/PznNoticeBanner.vue'
 import AppUpdateDialog from '@/components/AppUpdateDialog.vue'
 import TabGuide, { TAB_GUIDE_HINT_ID } from '@/components/TabGuide.vue'
 import EinsatzView from '@/components/rebuild/EinsatzView.vue'
 import EditorView from '@/components/rebuild/EditorView.vue'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
+import { useTypingProgress } from '@/pico/useTypingProgress'
 import { useStorage } from '@/storage/useStorage'
 import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
 import { configureNativeRepositories } from '@/rebuild/configureNativeRepositories'
@@ -126,6 +128,7 @@ watch(incomingOpen, (item) => {
 // Geteilter Verbindungszustand: EINE Quelle für den Header-Indikator. Beim
 // App-Start und beim Öffnen des Einsatz-Tabs sparsam geprüft (kein Polling).
 const { reachable, checking, check, startPolling, stopPolling } = useBridgeConnection()
+const { visible: typingVisible } = useTypingProgress()
 onMounted(() => { void check(); startPolling() })
 watch(activeTab, (t) => {
   if (t === 'einsatz') void check()
@@ -166,7 +169,9 @@ onBeforeUnmount(() => {
        (liegt unter dessen z-50); ueber das ?-Symbol im Header wieder abrufbar. -->
   <TabGuide />
 
-  <div class="min-h-full bg-base-200 pb-24">
+  <!-- Laeuft die Tipp-Anzeige, bekommt die Seite unten mehr Platz: sie liegt fest ueber der Tab-Leiste und
+       wuerde sonst die untersten Knoepfe verdecken. -->
+  <div class="min-h-full bg-base-200" :class="typingVisible ? 'pb-64' : 'pb-24'">
     <!-- Safe-Area oben: Header weicht der iOS-Statusleiste aus. max(4px, …)
          gibt mind. 4px Abstand, damit das Logo auf Android (env()=0) nicht oben
          klebt; auf iOS bleibt der größere Notch-Inset erhalten. Web: 4px. -->
@@ -248,6 +253,8 @@ onBeforeUnmount(() => {
     <!-- Dock mit Icons: inline-SVGs (stroke), kein Icon-Font/CDN (Netzwerk-Policy).
          z-10 wie die Kopfzeile: daisyUI setzt das Dock nur auf z-index 1 - eine Einsatz-Karte mit offenem
          Dropdown (z-index 4, style.css) lag sonst ueber der Tab-Leiste. -->
+    <TypingProgressBar />
+
     <nav class="dock z-10 border-t border-base-300 bg-base-100">
       <button type="button" :class="{ 'dock-active text-primary': activeTab === 'einsatz' }" @click="selectTab('einsatz')">
         <TabIcon tab="einsatz" class="size-5" />

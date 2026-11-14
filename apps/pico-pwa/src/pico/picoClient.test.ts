@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { createPicoClient, isValidSsidId, TYPE_CHUNK_LIMIT, OTA_CHUNK_FALLBACK } from './picoClient.ts'
+import { createPicoClient, isValidSsidId, parseTyping, TYPE_CHUNK_LIMIT, OTA_CHUNK_FALLBACK, TYPE_BUSY_RETRY_MS, TYPE_BUSY_MAX_RETRIES } from './picoClient.ts'
 import type { HttpAdapter, HttpResponse } from './picoTypes.ts'
 
 interface Call { method: string; url: string; body?: unknown; opts?: { connectTimeout?: number; readTimeout?: number } }
@@ -280,4 +280,75 @@ test('usePicoDevice persistiert den Testtext NICHT (Quelltext)', () => {
   // testText wird nie an saveSettings/Repository übergeben (nur als POST-Body via client)
   assert.ok(!/saveSettings\([^)]*testText/.test(src))
   assert.ok(/testText: ref\('/.test(src) || /testText = ref\('/.test(src), 'testText ist nur ein RAM-ref')
+})
+
+// --- Tipp-Fortschritt und Steuerung (Firmware ab 0.4.0) ---------------------------------------
+
+const typing = { state: 'typing', done: 12, total: 340, delayMs: 10, jobId: 3, lastEnd: 'none' }
+
+test('status() uebernimmt den Tipp-Fortschritt, wenn die Firmware ihn meldet', async () => {
+  const mit = createPicoClient(createFakeHttpAdapter(() => ({ status: 200, data: { ...validStatus, typing } })), BASE)
+  assert.deepEqual((await mit.status()).typing, typing)
+  const ohne = createPicoClient(createFakeHttpAdapter(() => ({ status: 200, data: validStatus })), BASE)
+  assert.equal((await ohne.status()).typing, undefined, 'aeltere Firmware: kein Feld, kein Fehler')
+})
+
+test('typeStatus(): GET /type/status, kurzer Timeout, liefert den Fortschritt', async () => {
+  const adapter = createFakeHttpAdapter(() => ({ status: 200, data: typing }))
+  assert.deepEqual(await createPicoClient(adapter, BASE).typeStatus(), typing)
+  assert.equal(adapter.calls[0].method, 'GET')
+  assert.equal(adapter.calls[0].url, `${BASE}/type/status`)
+  assert.ok((adapter.calls[0].opts?.connectTimeout ?? 0) <= 3000, 'verlassenes WLAN wird schnell erkannt')
+})
+
+test('typeStatus(): aeltere Firmware (404) → null statt Fehler; andere Fehler werfen', async () => {
+  const alt = createPicoClient(createFakeHttpAdapter(() => ({ status: 404, data: { error: 'not_found' } })), BASE)
+  assert.equal(await alt.typeStatus(), null)
+  const kaputt = createPicoClient(createFakeHttpAdapter(() => ({ status: 500, data: null })), BASE)
+  await assert.rejects(() => kaputt.typeStatus(), /HTTP 500/)
+})
+
+test('typeControl(): POST /type/pause|resume|cancel mit leerem Body, liefert den neuen Zustand', async () => {
+  const adapter = createFakeHttpAdapter(() => ({ status: 200, data: { ...typing, state: 'paused' } }))
+  const client = createPicoClient(adapter, BASE)
+  for (const action of ['pause', 'resume', 'cancel'] as const) {
+    const r = await client.typeControl(action)
+    assert.equal(r?.state, 'paused')
+  }
+  assert.deepEqual(adapter.calls.map((c) => `${c.method} ${c.url}`), [`POST ${BASE}/type/pause`, `POST ${BASE}/type/resume`, `POST ${BASE}/type/cancel`])
+  assert.deepEqual(adapter.calls[0].body, {}, 'kein Inhalt in der Steuerung')
+})
+
+test('typeControl(): kein Auftrag (409) oder aeltere Firmware (404) → null', async () => {
+  for (const status of [409, 404]) {
+    const client = createPicoClient(createFakeHttpAdapter(() => ({ status, data: { error: 'no_job' } })), BASE)
+    assert.equal(await client.typeControl('cancel'), null)
+  }
+})
+
+test('parseTyping(): nur vollstaendige, plausible Angaben; alles andere → null', () => {
+  assert.deepEqual(parseTyping(typing), typing)
+  assert.deepEqual(parseTyping(JSON.stringify(typing)), typing)
+  assert.equal(parseTyping({ ...typing, done: 999 })?.done, 340, 'done nie groesser als total')
+  for (const kaputt of [null, 'kein json', 42, { ...typing, state: 'los' }, { ...typing, done: -1 }, { ...typing, total: '340' }, { ...typing, lastEnd: 'x' }, { state: 'idle' }]) {
+    assert.equal(parseTyping(kaputt), null)
+  }
+})
+
+test('typeText(): bei 503 busy wartet die App und schickt DENSELBEN Teil erneut', async () => {
+  const warten: number[] = []
+  let n = 0
+  const adapter = createFakeHttpAdapter(() => (++n <= 2 ? { status: 503, data: { error: 'busy' } } : { status: 200, data: { typed: 3 } }))
+  const client = createPicoClient(adapter, BASE, { sleep: async (ms) => { warten.push(ms) } })
+  assert.deepEqual(await client.typeText({ text: 'abc', os: 'win_de' }), { typed: 3 })
+  assert.equal(adapter.calls.length, 3)
+  assert.deepEqual(warten, [TYPE_BUSY_RETRY_MS, TYPE_BUSY_RETRY_MS])
+  assert.deepEqual(adapter.calls.map((c) => (c.body as { text: string }).text), ['abc', 'abc', 'abc'])
+})
+
+test('typeText(): bleibt die Bridge dauerhaft busy, endet es mit einem Fehler statt endlos', async () => {
+  const adapter = createFakeHttpAdapter(() => ({ status: 503, data: { error: 'busy' } }))
+  const client = createPicoClient(adapter, BASE, { sleep: async () => {} })
+  await assert.rejects(() => client.typeText({ text: 'abc', os: 'win_de' }), /HTTP 503/)
+  assert.equal(adapter.calls.length, TYPE_BUSY_MAX_RETRIES + 1)
 })

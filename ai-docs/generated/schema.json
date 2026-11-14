@@ -193,6 +193,10 @@
           "type": "boolean",
           "description": "Bei einem Select zusaetzlich „individuell\" -> Freitext anbieten (Default aus)."
         },
+        "customMultiline": {
+          "type": "boolean",
+          "description": "Bei allowCustom: die „individuell\"-Eingabe ist ein grosses Textfeld statt einer Zeile - fuer laengere Texte. Nur mit options + allowCustom wirksam. ADDITIV: aeltere App-Versionen ignorieren die Eigenschaft und zeigen das einzeilige Feld; der Wert bleibt ein String, Ausgabe unveraendert."
+        },
         "multiple": {
           "type": "boolean",
           "description": "Mehrfachauswahl: mehrere Optionen gleichzeitig waehlbar (Checkboxen bei ≤6, Multi-Dropdown bei >6). Nur mit options wirksam. Fehlt/false -> Einfachauswahl wie bisher. ADDITIV + rueckwaerts/vorwaerts- kompatibel: alte App-Versionen ignorieren das Feld und rendern normales Single-Select (kein Bump von BLOCK_VERSION/PROTOCOL_VERSION -> geteilte „Multi\"-Bloecke werden von aelteren Apps akzeptiert)."

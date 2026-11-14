@@ -19,7 +19,7 @@ diese Datei deckt nur das *Veröffentlichen* ab.
 - **Datenschutz-URL:** `https://resqdocs.app/datenschutz` (für Play „Data safety"
   + Store-Eintrag) und `https://resqdocs.app/impressum`.
 - **App-ID:** `app.resqdocs`. Build-Tooling: JDK 21, Android SDK (Platform/
-  Build-Tools 36), Gradle-Wrapper 8.14.3.
+  Build-Tools 36), Gradle-Wrapper 9.6.0, Android Gradle Plugin 9.4.1.
 
 ## Versionierung
 

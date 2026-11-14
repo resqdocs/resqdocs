@@ -43,6 +43,7 @@ Additionally, individual **properties** are only available from a minimum versio
 | Starts as "not assessed" | `defaultExcluded` | field, container (Field or section starts as "not assessed" instead of "confirmed" and only appears in the output once the user deliberately switches it on. For content needed only in specific situations. On a container it also requires excludable; on a field it is mutually exclusive with required.) | 1.5.0 |
 | Starts as "not assessed" | `defaultExcluded` | functions (The function starts as "not assessed" and only appears in the output once the user switches it on or enters data. Mutually exclusive with required.) | 1.9.0 |
 | Starts without selection | `defaultEmpty` | field (with multi-select: no option is preselected (e.g. dispatch codes). Without it the default option (or the first one) applies. An empty selection outputs nothing; a required field stays open until something is chosen.) | 1.6.0 |
+| "Custom" as a large text field | `customMultiline` | field (On a select with allowCustom: the custom input is a large text field instead of a single line, for longer texts. Older app versions show the single-line input; the output is the same.) | 1.10.0 |
 
 **Gate rule:** a `functionKind` is available **only if its minimum version ≤ the user's version**. Otherwise do not offer it; if the user asks, say "that needs at least version X". **Never write** a `functionKind` into the JSON that the stated version does not know. Containers and fields work from version 1.0.0 onward. If the user states a version **before 1.0.0** (or none), assume the base — only `container` + `field`, no functions — and point out that functions and the template import itself need at least 1.0.0.
 
@@ -142,6 +143,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - `blankLineBefore` (boolean)
 - `options` (list of string)
 - `allowCustom` (boolean)
+- `customMultiline` (boolean)
 - `multiple` (boolean)
 - `exclusiveOptions` (list of string)
 - `defaultEmpty` (boolean)
@@ -378,6 +380,10 @@ Three node types: **Container** (section with children), **Field** (input field)
           "type": "boolean",
           "description": "Bei einem Select zusaetzlich „individuell\" -> Freitext anbieten (Default aus)."
         },
+        "customMultiline": {
+          "type": "boolean",
+          "description": "Bei allowCustom: die „individuell\"-Eingabe ist ein grosses Textfeld statt einer Zeile - fuer laengere Texte. Nur mit options + allowCustom wirksam. ADDITIV: aeltere App-Versionen ignorieren die Eigenschaft und zeigen das einzeilige Feld; der Wert bleibt ein String, Ausgabe unveraendert."
+        },
         "multiple": {
           "type": "boolean",
           "description": "Mehrfachauswahl: mehrere Optionen gleichzeitig waehlbar (Checkboxen bei ≤6, Multi-Dropdown bei >6). Nur mit options wirksam. Fehlt/false -> Einfachauswahl wie bisher. ADDITIV + rueckwaerts/vorwaerts- kompatibel: alte App-Versionen ignorieren das Feld und rendern normales Single-Select (kein Bump von BLOCK_VERSION/PROTOCOL_VERSION -> geteilte „Multi\"-Bloecke werden von aelteren Apps akzeptiert)."
@@ -538,7 +544,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 ### Fields only
 - **Prefill with a default?** (`default`) — Stays in the field until the user changes it. *Example: "Consciousness" starts as "alert, oriented".*
 - **Select list instead of free text?** (`options`) — The user picks from fixed values (list of strings). *Example: "Handover to" with "ED/physician/nursing staff".*
-- **Additionally allow custom input?** (`allowCustom`) — Select plus the option to type something else. *Example: "Breathing" with fixed grades but also free text.*
+- **Additionally allow custom input?** (`allowCustom`) — Select plus the option to type something else. *Example: "Breathing" with fixed grades but also free text.* With `customMultiline: true` (from app 1.10.0) the custom input is a large text field instead of a single line, for longer texts.
 - **Allow multiple selections?** (`multiple`, from app 1.4.0) — Several options selectable at once (checkboxes for ≤6, multi-select dropdown for >6). *Example: "Auscultation" — ventilated bilaterally AND wheezing at the same time.* Only with `options`. The output joins the chosen values as an enumeration ("a, b and c"). Optional `exclusiveOptions` (subset of `options`): a "none/normal" option that excludes all others (and vice versa) — *example: "No cyanosis" excludes "central/peripheral cyanosis".*
 - **Large multi-line text field?** (`multiline`) — For longer texts with line breaks. *Example: "History" with several sentences.*
 - **Required field?** (`required`, from app 1.2.0) — The field cannot be set to "not collected" during a case; while empty it is marked as open. *Example: "Aktuelle Anamnese".* Not together with `defaultExcluded`. A single select without `default` uses the first option as its value, so the field is never empty.

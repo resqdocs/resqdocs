@@ -19,6 +19,7 @@ bridge_s2/              PRODUKTIV: S2-Bridge — REST-API (docs/pico-api.md)
   ConfigStore.h         SSID-<id>: Chip-ID-Default, EEPROM-persistiert, validiert
   JsonMini.h            dependency-freier JSON-Extraktor (String + UInt) + UTF-8-Zaehler
   OtaUpdate.h           OTA-Session + Verifikation (SHA-256 + Ed25519)
+  TypeJob.h             Tipp-Auftrag: zeichenweise tippen, Fortschritt, Anhalten/Fortsetzen/Abbrechen
   OtaPublicKey.h        Ed25519-Public-Key (von scripts/ota/keygen.mjs generiert)
 build/                  .uf2/.bin-Output (compile-check)
 dist/                   versionierte .uf2 (BOOTSEL) + signierte .bin/.manifest (OTA)
@@ -30,7 +31,7 @@ Beim Implementieren auf echte Lib-Quellen geprüft; drei Plan-Annahmen mussten k
 
 | Komponente | Status | Befund |
 |---|---|---|
-| **arduino-pico Core** `rp2040:rp2040` **5.6.0** | ✅ genutzt | hat Pico-2-W-Board `rpipico2w`, picotool gebündelt |
+| **arduino-pico Core** `rp2040:rp2040` **6.3.2** | ✅ genutzt | hat Pico-2-W-Board `rpipico2w`, picotool gebündelt |
 | **core-gebündelte `Keyboard` 1.0.3 / `HID_Keyboard` 1.0.4** | ✅ genutzt | liefert `KeyboardLayout_de_DE` + `Keyboard_de_DE.h` (KEY_*_UMLAUT-Makros) |
 | **`KeyboardLayout_de_DE`** | ⚠️ nur ASCII | Layout ist **ASCII-only** (deckt aber AltGr `@ \ { } [ ] \| ~` ab). Umlaute/€/§/°/µ/Akzente **nicht** drin → eigene Unicode-Tabelle in `Typer.cpp` |
 | **cervoise/KeyboardWithLayout** | ❌ verworfen | nur EN/FR; Include-Guard `KEYBOARD_h` + `KeyReport`/`KEY_*` **kollidieren** mit `Keyboard.h` → nicht koexistenzfähig |
@@ -85,18 +86,17 @@ Update ueber WLAN, signiert (Ed25519 ueber den SHA-256-Digest). Details:
 #    Repos, ~/.resqdocs/; OtaPublicKey.h wird ueberschrieben -> committen!)
 node scripts/ota/keygen.mjs
 
-# 1) Bauen (FQBN mit Flash-Split, s. o.) -> build/bridge_s2/bridge_s2.ino.bin
-
-# 2) Signieren + Release ablegen: schreibt dist/bridge_s2.pico2w.<v>.bin
-#    + .manifest.json UND apps/pico-pwa/src/assets/firmware/ (App-Bundle).
-node scripts/ota/sign.mjs \
-  --bin firmware/bridge/build/bridge_s2/bridge_s2.ino.bin --version 0.3.0
+# 1+2) Version setzen, pfadneutral bauen, signieren und alle Artefakte ablegen
+#    (dist/, App-Bundle apps/pico-pwa/src/assets/firmware/, Landing-.uf2 + Versionslabel).
+#    Bricht ab, wenn die Binary einen Build-/Home-Pfad enthaelt.
+bash scripts/ota/build-sign-bridge.sh --bump 0.4.1 "Kurznotiz zur Version"
+#    (ohne --bump: baut die Version, die in FW_VERSION steht)
 
 # 3a) Update aus der App: Einstellungen -> Geraet/Pico -> Firmware aktualisieren
 # 3b) Update ohne App (Dev/Test, Mac im Bridge-WLAN):
 node scripts/ota/upload.mjs \
-  --bin firmware/bridge/dist/bridge_s2.pico2w.0.3.0.bin \
-  --manifest firmware/bridge/dist/bridge_s2.pico2w.0.3.0.manifest.json
+  --bin firmware/bridge/dist/bridge_s2.pico2w.0.4.0.bin \
+  --manifest firmware/bridge/dist/bridge_s2.pico2w.0.4.0.manifest.json
 ```
 
 **Henne-Ei:** Firmware ≤ 0.2.0 hat **kein OTA**. Eine Pico mit ≤ 0.2.0 kann ein

@@ -63,3 +63,20 @@ test('KOMPAT: Block mit multiple/exclusiveOptions-Feld (Version 1) wird akzeptie
     assert.deepEqual(f.exclusiveOptions, ['Beidseits belüftet'])
   }
 })
+
+test('KOMPAT: Feld mit customMultiline (Version 1) wird akzeptiert und bleibt erhalten (kein Versions-Bump)', () => {
+  const json = JSON.stringify({
+    schema: BLOCK_SCHEMA, version: BLOCK_VERSION,
+    tree: { type: 'container', id: 'blk-y', children: [
+      { type: 'field', id: 'a', title: 'Atmung', options: ['unauffällig', 'Dyspnoe'], allowCustom: true, customMultiline: true },
+    ] },
+  })
+  const r = parseBlock(json)
+  assert.equal(r.ok, true)
+  // Additive Eigenschaft: neue App zeigt bei „individuell" das grosse Textfeld, aeltere die einzelne Zeile.
+  if (r.ok) {
+    const f = r.tree.children[0] as { allowCustom?: boolean; customMultiline?: boolean }
+    assert.equal(f.allowCustom, true)
+    assert.equal(f.customMultiline, true)
+  }
+})

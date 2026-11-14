@@ -83,7 +83,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   scannerMode: 'webview_standard',
   scannerDiagnostics: false,
   caseDraftTtlHours: 3,
-  typingDelayMs: 60,
+  typingDelayMs: 45,
 }
 
 /** Neutraler, wiederverwendbarer Block (z. B. „Mitfahrtverweigerung"). KEINE Patientendaten. */

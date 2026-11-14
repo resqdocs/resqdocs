@@ -16,6 +16,7 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
 		ABBFD298300D7C6100024D39 /* ICloudBackupPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABBFD297300D7C6100024D39 /* ICloudBackupPlugin.swift */; };
+		7C1E5A0B31A04D2F9E6B4C10 /* KeepAwakePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1E5A0A31A04D2F9E6B4C10 /* KeepAwakePlugin.swift */; };
 		4938EFDE53E845FBB33B72BC /* ScannerPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D072F062F424427AB37AD422 /* ScannerPlugin.swift */; };
 		C2910C5AD5D141AE814CE5FB /* ScanViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69445A58E8C34EA5B48E206B /* ScanViewController.swift */; };
 		BD7BA99EB9344A6F8E1C0ED6 /* StartZoom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35AEC27C73104480B88C1C33 /* StartZoom.swift */; };
@@ -38,6 +39,7 @@
 		ABBFD295300D7C6100024D39 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = App.entitlements; path = App/App.entitlements; sourceTree = "<group>"; };
 		ABBFD296300D7C6100024D39 /* ICloudBackupPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ICloudBackupPlugin.m; path = App/ICloudBackupPlugin.m; sourceTree = "<group>"; };
 		ABBFD297300D7C6100024D39 /* ICloudBackupPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ICloudBackupPlugin.swift; path = App/ICloudBackupPlugin.swift; sourceTree = "<group>"; };
+		7C1E5A0A31A04D2F9E6B4C10 /* KeepAwakePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeepAwakePlugin.swift; path = App/KeepAwakePlugin.swift; sourceTree = "<group>"; };
 		D072F062F424427AB37AD422 /* ScannerPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerPlugin.swift; sourceTree = "<group>"; };
 		69445A58E8C34EA5B48E206B /* ScanViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanViewController.swift; sourceTree = "<group>"; };
 		35AEC27C73104480B88C1C33 /* StartZoom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartZoom.swift; sourceTree = "<group>"; };
@@ -73,6 +75,7 @@
 				ABBFD295300D7C6100024D39 /* App.entitlements */,
 				ABBFD296300D7C6100024D39 /* ICloudBackupPlugin.m */,
 				ABBFD297300D7C6100024D39 /* ICloudBackupPlugin.swift */,
+				7C1E5A0A31A04D2F9E6B4C10 /* KeepAwakePlugin.swift */,
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
 				7F8756D8B27F46E3366F6CEA /* Pods */,
@@ -242,6 +245,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				ABBFD298300D7C6100024D39 /* ICloudBackupPlugin.swift in Sources */,
+				7C1E5A0B31A04D2F9E6B4C10 /* KeepAwakePlugin.swift in Sources */,
 				ABBFD299300D7C6100024D39 /* ICloudBackupPlugin.m in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				073760CF4148440881D2956A /* SceneDelegate.swift in Sources */,
@@ -408,7 +412,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = App/Info.plist;
@@ -419,7 +423,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.9.0;
+				MARKETING_VERSION = 1.10.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.resqdocs;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -439,7 +443,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = App/Info.plist;
@@ -450,7 +454,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.9.0;
+				MARKETING_VERSION = 1.10.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.resqdocs;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";

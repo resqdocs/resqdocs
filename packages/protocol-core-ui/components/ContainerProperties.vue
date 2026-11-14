@@ -13,6 +13,7 @@ import { useTreeEditor } from '../treeEditor.ts'
 import ConfirmDialog from './ConfirmDialog.vue'
 import InfoTip from './InfoTip.vue'
 import { INFO } from '../terms.ts'
+import { defaultYields, withDefaultYield, moveDefaultYield } from '../defaultYield.ts'
 import { allowedFunctionKindsKey } from '../injection.ts'
 
 const props = defineProps<{ root: Container }>()
@@ -148,6 +149,7 @@ function removeOption(i: number): void {
   if (node.value?.type === 'field' && node.value.default === removed) patch.default = undefined
   if (!opts.length) {
     patch.allowCustom = undefined // keine Optionen mehr -> kein „individuell"
+    patch.customMultiline = undefined
     patch.multiple = undefined // ... und kein Multi-Select
     patch.exclusiveOptions = undefined
     patch.defaultEmpty = undefined
@@ -193,6 +195,18 @@ const effectiveFieldDefault = computed<string | undefined>(() => {
   const d = node.value.default
   return d != null && opts.includes(d) ? d : opts[0]
 })
+
+// „Standardwert weicht" (Mehrfachauswahl): die Standard-Option als „allein" fuehren, siehe defaultYield.ts.
+const defaultYield = computed(() => node.value?.type === 'field' && defaultYields(node.value.exclusiveOptions, effectiveFieldDefault.value))
+function setDefaultYield(on: boolean): void {
+  if (node.value?.type !== 'field') return
+  set({ exclusiveOptions: withDefaultYield(node.value.exclusiveOptions, effectiveFieldDefault.value, on) })
+}
+/** Standard-Option wechseln; eine eingeschaltete „weicht"-Einstellung wandert mit auf die neue Option. */
+function setDefaultOption(opt: string): void {
+  if (node.value?.type !== 'field') return
+  set({ default: opt, exclusiveOptions: moveDefaultYield(node.value.exclusiveOptions, effectiveFieldDefault.value, opt) })
+}
 
 // id ist Identifier UND Key im Einsatz-Werte-Store: nur Buchstaben/Ziffern/_/-, eindeutig im Baum.
 // Eigener Entwurf + Commit on blur, damit Tippen nicht staendig saniert wird.
@@ -270,12 +284,12 @@ async function saveAsBaustein(): Promise<void> {
       <div v-if="node.type === 'field' && !node.multiline" class="space-y-2 rounded-lg bg-base-200/50 p-3">
         <span class="text-xs font-semibold text-base-content/60">Auswahl-Optionen <span class="font-normal text-base-content/40">(leer = einfaches Feld)</span> <InfoTip :info="INFO.options" /></span>
         <div v-for="(opt, i) in (node.options ?? [])" :key="i" class="flex items-center gap-1">
-          <input v-if="!(node.multiple && node.defaultEmpty) && new Set((node.options ?? []).filter((o) => o !== '')).size > 1" type="radio" class="radio radio-xs shrink-0" :name="`default-${node.id}`" :checked="effectiveFieldDefault === opt" :aria-label="`als Standardwert: ${opt}`" title="als Standard" @change="set({ default: opt })" />
+          <input v-if="!(node.multiple && node.defaultEmpty) && new Set((node.options ?? []).filter((o) => o !== '')).size > 1" type="radio" class="radio radio-xs shrink-0" :name="`default-${node.id}`" :checked="effectiveFieldDefault === opt" :aria-label="`als Standardwert: ${opt}`" title="als Standard" @change="setDefaultOption(opt)" />
           <input class="input input-sm min-w-0 flex-1" :value="opt" placeholder="Option" @input="setOption(i, ($event.target as HTMLInputElement).value)" />
           <!-- Multi-Select: Option als „schliesst andere aus" (Keine/Normal) markieren -->
           <label v-if="node.multiple && opt !== ''" class="flex shrink-0 cursor-pointer items-center gap-1" :title="`„${opt}“ schließt andere Auswahlen aus`">
             <input type="checkbox" class="checkbox checkbox-xs" :checked="(node.exclusiveOptions ?? []).includes(opt)" :aria-label="`„${opt}“ schließt andere aus`" @change="toggleExclusiveOption(opt, ($event.target as HTMLInputElement).checked)" />
-            <span class="text-xs text-base-content/50">excl.</span>
+            <span class="text-xs text-base-content/50">allein</span>
           </label>
           <button type="button" class="btn btn-ghost btn-xs px-1" :disabled="i === 0" aria-label="nach oben" @click="moveOption(i, -1)">↑</button>
           <button type="button" class="btn btn-ghost btn-xs px-1" :disabled="i === (node.options?.length ?? 0) - 1" aria-label="nach unten" @click="moveOption(i, 1)">↓</button>
@@ -305,9 +319,15 @@ async function saveAsBaustein(): Promise<void> {
         </div>
         <p v-if="pasteInfo" class="text-xs text-base-content/60" role="status">{{ pasteInfo }}</p>
         <label v-if="node.options && node.options.length" class="flex w-full cursor-pointer items-center gap-2 py-0">
-          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.allowCustom === true" @change="set({ allowCustom: ($event.target as HTMLInputElement).checked })" />
+          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.allowCustom === true" @change="set(($event.target as HTMLInputElement).checked ? { allowCustom: true } : { allowCustom: false, customMultiline: undefined })" />
           <span class="text-sm">„individuell" erlauben (Freitext als letzte Option)</span>
           <InfoTip :info="INFO.allowCustom" class="ml-auto" />
+        </label>
+        <!-- Nur bei „individuell": frei schreiben im grossen Textfeld statt in einer Zeile. -->
+        <label v-if="node.options && node.options.length && node.allowCustom" class="flex w-full cursor-pointer items-center gap-2 py-0">
+          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.customMultiline === true" @change="set({ customMultiline: ($event.target as HTMLInputElement).checked ? true : undefined })" />
+          <span class="text-sm">Großes Textfeld bei „individuell" <span class="text-base-content/50">(für längere Texte)</span></span>
+          <InfoTip :info="INFO.customMultiline" class="ml-auto" />
         </label>
         <label v-if="node.options && node.options.length" class="flex w-full cursor-pointer items-center gap-2 py-0">
           <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.multiple === true" @change="set(($event.target as HTMLInputElement).checked ? { multiple: true } : { multiple: undefined, exclusiveOptions: undefined, defaultEmpty: undefined })" />
@@ -320,6 +340,12 @@ async function saveAsBaustein(): Promise<void> {
           <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.defaultEmpty === true" @change="set(($event.target as HTMLInputElement).checked ? { defaultEmpty: true, default: undefined } : { defaultEmpty: undefined })" />
           <span class="text-sm">Startet ohne Auswahl <span class="text-base-content/50">(nichts vorausgewählt, z. B. Einsatzcodes)</span></span>
           <InfoTip :info="INFO.defaultEmpty" class="ml-auto" />
+        </label>
+        <!-- Standardwert als pauschale Aussage (z. B. Normalbefund): weicht, sobald genauer gewaehlt wird. -->
+        <label v-if="node.multiple && !node.defaultEmpty && effectiveFieldDefault" class="flex w-full cursor-pointer items-center gap-2 py-0">
+          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="defaultYield" @change="setDefaultYield(($event.target as HTMLInputElement).checked)" />
+          <span class="text-sm">Standardwert weicht <span class="text-base-content/50">(verschwindet, sobald etwas anderes gewählt wird)</span></span>
+          <InfoTip :info="INFO.defaultYield" class="ml-auto" />
         </label>
       </div>
 
