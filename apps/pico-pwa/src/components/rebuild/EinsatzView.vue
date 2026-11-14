@@ -17,6 +17,8 @@ import { useReworkCaseDraft } from '@/rebuild/useReworkCaseDraft'
 import { CASE_DRAFT_DELETED_NOTICE, nextDraftDebounceWait, type ReworkCaseDraft } from '@resqdocs/protocol-core/caseDraft'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { usePicoApi, type OsMode } from '@/composables/usePicoApi'
+import { useTypingProgress } from '@/pico/useTypingProgress'
+import { countChars } from '@/pico/typingProgress'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
 import { useStorage } from '@/storage/useStorage'
 import { render } from '@resqdocs/protocol-core/render'
@@ -190,12 +192,17 @@ onMounted(() => {
 })
 const sending = ref(false)
 const sendMsg = ref<{ kind: 'ok' | 'err'; text: string } | null>(null)
+// Fortschritt des Tippens (Balken ueber der Tab-Leiste). Solange die Bridge nachweislich noch tippt
+// oder angehalten ist, bleibt Senden gesperrt - ein zweiter Auftrag wuerde hinten angehaengt.
+const typing = useTypingProgress()
 async function senden(): Promise<void> {
   sending.value = true
   sendMsg.value = null
   try {
-    await pico.typeText(text.value, (storage.settings.defaultOs ?? 'win_de') as OsMode, storage.settings.typingDelayMs)
+    const sent = text.value
+    await pico.typeText(sent, (storage.settings.defaultOs ?? 'win_de') as OsMode, storage.settings.typingDelayMs)
     markReachable(true) // erfolgreicher Kontakt -> Status frisch halten
+    typing.start({ total: countChars(sent), delayMs: storage.settings.typingDelayMs })
     // Wiederholbar: KEIN „fertig"-Zustand. Erfolg verschwindet nach kurzer Zeit von selbst,
     // damit erneut-senden als normaler Weg sichtbar bleibt (nicht als abgeschlossen).
     sendMsg.value = { kind: 'ok', text: 'An Gerät übertragen — bei Bedarf erneut senden.' }
@@ -425,9 +432,9 @@ onUnmounted(() => {
          wiederholbar (kein „fertig"-Zustand); Abschließen destruktiv + getrennt + dezent. -->
     <div v-if="root.children.length" class="border-t border-base-200 pt-4">
       <div class="mx-auto flex w-full max-w-sm flex-col items-center gap-3">
-        <button type="button" class="btn btn-primary w-full" :disabled="sending || reachable !== true" @click="senden">
+        <button type="button" class="btn btn-primary w-full" :disabled="sending || reachable !== true || typing.busy.value" @click="senden">
           <span v-if="sending" class="loading loading-spinner loading-sm"></span>
-          {{ sending ? 'Sende …' : 'An Zielgerät senden' }}
+          {{ sending ? 'Sende …' : typing.busy.value ? 'Bridge tippt noch …' : 'An Zielgerät senden' }}
         </button>
         <p v-if="sendMsg" class="text-center text-xs" :class="sendMsg.kind === 'ok' ? 'text-success' : 'text-error'" role="status" aria-live="polite">{{ sendMsg.text }}</p>
         <p v-else-if="reachable !== true" class="text-center text-xs text-base-content/50">Bridge nicht verbunden — Senden gesperrt.</p>

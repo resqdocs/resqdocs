@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.10.0] - 2026-11-14
+
+### Added
+
+- Typing progress: after sending, the app shows how far the bridge has typed and the estimated time left; typing can be paused, resumed and cancelled
+- Bridge firmware 0.4.0: types character by character and reports progress as numbers only, never text; new endpoints for status, pause, resume and cancel; the update is delivered over Wi-Fi through the app
+- Multi-select fields: the default value can give way as soon as another option is chosen
+- Selection lists: "individual" can optionally use a large text field
+- The screen stays on while the bridge is typing and the progress is shown
+
+### Changed
+
+- Typing speed: finer steps and a faster range, 10 to 55 ms per character, default 45 ms
+- Scanner: the medication plan scan starts without zoom and zooms in only after a short wait without a result
+- The firmware is built path-neutral and reproducibly with arduino-pico 6.3.2; third-party notices completed
+- App and bridge stay backward compatible for at least six months, documented in the API description
+- Node 26 as runtime and minimum version, Android Gradle Plugin 9.4.1 and Gradle 9.6, updated dependencies
+
+### Fixed
+
+- Buttons on coloured notices are readable
+
 ## [1.9.0] - 2026-11-13
 
 ### Added

@@ -1,10 +1,10 @@
 <script lang="ts">
 /** Hint-ID der Tour. Eine neue ID zeigt die Tour nach dem Update allen einmal erneut:
- *  'v3' stellte mit 1.8.0 die neuen Begriffe und die ⓘ-Erklaerungen vor, 'v4' zeigt mit 1.9.0,
- *  was in dieser Version neu ist. */
-export const TAB_GUIDE_HINT_ID = 'tab-guide-v4'
+ *  'v3' stellte mit 1.8.0 die neuen Begriffe und die ⓘ-Erklaerungen vor, 'v4' zeigte mit 1.9.0,
+ *  was neu war, 'v5' zeigt es mit 1.10.0. */
+export const TAB_GUIDE_HINT_ID = 'tab-guide-v5'
 /** Wer eine dieser IDs schon hat, kannte die App vorher und bekommt zuerst die Seite „Neu“. */
-const PREVIOUS_HINT_IDS = ['tab-guide-v2', 'tab-guide-v3']
+const PREVIOUS_HINT_IDS = ['tab-guide-v2', 'tab-guide-v3', 'tab-guide-v4']
 </script>
 
 <script setup lang="ts">
@@ -111,29 +111,35 @@ function onTouchEnd(e: TouchEvent): void {
           <h1 class="text-center text-xl font-bold">Neu in dieser Version</h1>
           <div class="card bg-base-100 shadow-sm">
             <div class="card-body flex-row items-start gap-3 p-4">
-              <span class="w-6 shrink-0 text-center text-base text-accent" aria-hidden="true">⊕</span>
-              <p class="text-sm"><strong>FAST4D und LAMS:</strong> zwei neue Funktionen für Schlaganfall-Zeichen. Befunde im Eingabeblatt antippen, das Ergebnis steht als eine Zeile im Protokolltext.</p>
+              <TabIcon tab="einsatz" class="size-6 shrink-0 text-primary" />
+              <p class="text-sm"><strong>Fortschritt beim Tippen:</strong> Nach dem Senden siehst du, wie weit die Bridge ist und wie lange es noch dauert. Mit „Stoppen“, „Weitertippen“ und „Abbrechen“ steuerst du das Tippen.</p>
             </div>
           </div>
           <div class="card bg-base-100 shadow-sm">
             <div class="card-body flex-row items-start gap-3 p-4">
-              <TabIcon tab="vorlagen" class="size-6 shrink-0 text-primary" />
-              <p class="text-sm"><strong>Vorlagen-Links öffnen die App:</strong> Tippst du auf einen geteilten Link, öffnet sich ResQDocs und fragt, ob du die Vorlage übernehmen willst. Beim Überschreiben bleibt sie an ihrem Platz.</p>
-            </div>
-          </div>
-          <div class="card bg-base-100 shadow-sm">
-            <div class="card-body flex-row items-start gap-3 p-4">
-              <span class="w-6 shrink-0 text-center text-base text-primary" aria-hidden="true">✎</span>
-              <p class="text-sm"><strong>„individuell“ in Auswahllisten:</strong> steht am Ende der Liste. Ein Tipp öffnet das Textfeld mit deiner aktuellen Auswahl.</p>
+              <span class="w-6 shrink-0 text-center text-base text-accent" aria-hidden="true">↑</span>
+              <p class="text-sm"><strong>Neue Bridge-Firmware 0.4.0:</strong> Das Update kommt per WLAN über die App. Sobald du mit der Bridge verbunden bist, erscheint oben ein Hinweis.</p>
             </div>
           </div>
           <div class="card bg-base-100 shadow-sm">
             <div class="card-body flex-row items-start gap-3 p-4">
               <TabIcon tab="einstellungen" class="size-6 shrink-0 text-primary" />
-              <p class="text-sm"><strong>Sicherungen:</strong> übersichtlichere Liste. Auf Wunsch löscht die App alte Sicherungen nach einer Frist, die du unter <TabRef tab="einstellungen" /> festlegst.</p>
+              <p class="text-sm"><strong>Tippgeschwindigkeit:</strong> feinere Stufen und schneller als bisher, einstellbar unter <TabRef tab="einstellungen" />.</p>
             </div>
           </div>
-          <p class="text-center text-xs text-base-content/60">Außerdem können Funktionen in der Vorlage auf „nicht erhoben“ starten.</p>
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body flex-row items-start gap-3 p-4">
+              <span class="w-6 shrink-0 text-center text-base text-secondary" aria-hidden="true">▣</span>
+              <p class="text-sm"><strong>Scanner:</strong> Beim Medikationsplan startet die Kamera ohne Zoom, der ganze Code passt ins Bild.</p>
+            </div>
+          </div>
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body flex-row items-start gap-3 p-4">
+              <TabIcon tab="vorlagen" class="size-6 shrink-0 text-primary" />
+              <p class="text-sm"><strong>Auswahllisten:</strong> Bei einer Mehrfachauswahl kann der Standardwert weichen, sobald du etwas anderes wählst. „individuell“ gibt es auf Wunsch mit großem Textfeld für längere Texte. Beides stellst du in den Eigenschaften des Feldes ein.</p>
+            </div>
+          </div>
+          <p class="text-center text-xs text-base-content/60">Außerdem bleibt der Bildschirm an, solange die Bridge tippt.</p>
         </div>
 
         <!-- Seite „Begriffe“: die Teile einer Vorlage, mit denselben Zeichen wie im Aufbau und im Bausteine-Tab -->

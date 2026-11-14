@@ -41,9 +41,10 @@ function sanitize(s: Partial<AppSettings> | null | undefined): AppSettings {
     caseDraftTtlHours: Number.isFinite(Number(s?.caseDraftTtlHours))
       ? Math.max(1, Math.min(5, Math.round(Number(s?.caseDraftTtlHours))))
       : DEFAULT_SETTINGS.caseDraftTtlHours,
-    // Tippgeschwindigkeit (delayMs an die Bridge): nur 20–150 ms, sonst Default 60.
+    // Tippgeschwindigkeit (delayMs an die Bridge): nur 10–55 ms wie der Regler, sonst Standard 45.
+    // Altwerte darueber (z. B. der fruehere Standard 60) werden zu 55, damit Anzeige und Gesendetes passen.
     typingDelayMs: Number.isFinite(Number(s?.typingDelayMs))
-      ? Math.max(20, Math.min(150, Math.round(Number(s?.typingDelayMs))))
+      ? Math.max(10, Math.min(55, Math.round(Number(s?.typingDelayMs))))
       : DEFAULT_SETTINGS.typingDelayMs,
   }
 }

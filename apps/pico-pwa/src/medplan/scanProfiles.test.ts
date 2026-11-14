@@ -46,3 +46,15 @@ test('alle Profile: Decoder-Optionen ausdruecklich gesetzt, tryDenoise aus, Code
     assert.ok(p.formats.length > 0 && p.title && p.hint, name)
   }
 })
+
+test('Start-Zoom-Verzoegerung: nur beim Medikationsplan, Packung und QR-Code zoomen sofort', () => {
+  // Der BMP-Code wird nur vollstaendig im Bild dekodiert; ein hoher Start-Zoom zeigt anfangs nur ein Kaestchen.
+  assert.equal(BMP_PROFILE.startZoomDelayMs, 2500)
+  assert.equal(PACKAGE_PROFILE.startZoomDelayMs ?? 0, 0)
+  assert.equal(QR_PROFILE.startZoomDelayMs ?? 0, 0)
+  // Die nativen Seiten begrenzen auf 0...10000 ms.
+  for (const p of [BMP_PROFILE, PACKAGE_PROFILE, QR_PROFILE]) {
+    const d = p.startZoomDelayMs ?? 0
+    assert.ok(Number.isInteger(d) && d >= 0 && d <= 10_000, p.title)
+  }
+})

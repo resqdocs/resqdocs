@@ -65,15 +65,23 @@ export const INFO = {
   },
   options: {
     title: 'Auswahl-Optionen',
-    text: 'Mit Optionen wird das Feld im {einsatz} zur Auswahlliste, die markierte Option ist vorausgewählt. Ohne Optionen bleibt es ein normales Textfeld.',
+    text: 'Mit Optionen wird das Feld im {einsatz} zur Auswahlliste, die markierte Option ist vorausgewählt. Ohne Optionen bleibt es ein normales Textfeld. Bei Mehrfachauswahl gibt es je Option das Häkchen „allein“: Eine solche Option steht nie zusammen mit anderen. Wählst du sie, werden die anderen abgewählt; wählst du eine andere, verschwindet sie. Typisch für „keine“ oder „unauffällig“.',
   },
   allowCustom: {
     title: '„individuell“ erlauben',
     text: 'Hängt an die Liste den Eintrag ✎ individuell an. Ein Tipp darauf macht im {einsatz} aus der Liste ein Textfeld, gefüllt mit dem, was gerade ausgewählt ist, und du schreibst frei weiter. Der Schalter vor dem Titel (✓ → ✎) führt an dieselbe Stelle.',
   },
+  customMultiline: {
+    title: 'Großes Textfeld bei „individuell“',
+    text: 'Wählst du im {einsatz} „individuell“, schreibst du in einem großen Textfeld statt in einer Zeile. Sinnvoll für längere Texte. Im Protokolltext steht in beiden Fällen dasselbe.',
+  },
   multiple: {
     title: 'Mehrfachauswahl',
-    text: 'Im {einsatz} lassen sich mehrere Optionen ankreuzen. Mit „excl.“ markierst du Optionen wie „keine“, die alle anderen ausschließen.',
+    text: 'Im {einsatz} lassen sich mehrere Optionen ankreuzen. Mit „allein“ markierst du Optionen wie „keine“, die nie zusammen mit anderen stehen.',
+  },
+  defaultYield: {
+    title: 'Standardwert weicht',
+    text: 'Wählst du im {einsatz} eine weitere Option, verschwindet der Standardwert aus der Auswahl. Sinnvoll, wenn er eine pauschale Aussage ist, die jede genauere Angabe ersetzt, z. B. der Normalbefund beim EKG. Wählst du den Standardwert wieder, werden die anderen abgewählt.',
   },
   defaultEmpty: {
     title: 'Startet ohne Auswahl',

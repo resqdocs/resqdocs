@@ -40,7 +40,7 @@ async function onSync(): Promise<void> {
           <button class="btn btn-primary btn-xs" type="button" :disabled="lookup.state.busy" @click="onSync">
             Jetzt aktualisieren
           </button>
-          <button class="btn btn-ghost btn-xs" type="button" @click="notice.dismiss()">Später</button>
+          <button class="btn btn-ghost btn-xs border border-info-content/50 text-info-content" type="button" @click="notice.dismiss()">Später</button>
           <span v-if="lookup.state.busy" class="loading loading-spinner loading-xs" aria-label="lädt" />
         </div>
 

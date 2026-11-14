@@ -57,6 +57,8 @@ data class ScanOptions(
     val tryDenoise: Boolean,
     /** Kantenlaenge des erwarteten Codes in mm - steuert den Start-Zoom. */
     val codeSizeMm: Float,
+    /** Verzoegerter Start-Zoom in ms (0 = sofort): erst 1-fach, nach dieser Zeit ohne Treffer der Start-Zoom. */
+    val startZoomDelayMs: Long,
     val title: String,
     val hint: String,
     val cancelLabel: String,
@@ -82,6 +84,7 @@ data class ScanOptions(
         intent.putExtra(K_FORMATS, formats.toTypedArray())
         intent.putExtra(K_TRY, booleanArrayOf(tryHarder, tryRotate, tryInvert, tryDownscale, tryDenoise))
         intent.putExtra(K_CODE_SIZE, codeSizeMm)
+        intent.putExtra(K_ZOOM_DELAY, startZoomDelayMs)
         intent.putExtra(K_TEXTS, arrayOf(title, hint, cancelLabel, torchLabel))
         intent.putExtra(K_DIAG, showDiagnostics)
         intent.putExtra(K_THEME, theme.toIntArray())
@@ -91,6 +94,7 @@ data class ScanOptions(
         private const val K_FORMATS = "scan.formats"
         private const val K_TRY = "scan.try"
         private const val K_CODE_SIZE = "scan.codeSizeMm"
+        private const val K_ZOOM_DELAY = "scan.startZoomDelayMs"
         private const val K_TEXTS = "scan.texts"
         private const val K_DIAG = "scan.diag"
         private const val K_THEME = "scan.theme"
@@ -114,6 +118,7 @@ data class ScanOptions(
                 tryDownscale = d?.optBoolean("tryDownscale", true) ?: true,
                 tryDenoise = d?.optBoolean("tryDenoise", false) ?: false,
                 codeSizeMm = (call.getFloat("codeSizeMm") ?: 40f).coerceIn(5f, 200f),
+                startZoomDelayMs = (call.getInt("startZoomDelayMs") ?: 0).coerceIn(0, 10_000).toLong(),
                 title = call.getString("title") ?: "Code scannen",
                 hint = call.getString("hint") ?: "Code in den Rahmen halten",
                 cancelLabel = call.getString("cancelLabel") ?: "Abbrechen",
@@ -130,6 +135,7 @@ data class ScanOptions(
                 formats = intent.getStringArrayExtra(K_FORMATS)?.toList() ?: listOf("DataMatrix"),
                 tryHarder = t[0], tryRotate = t[1], tryInvert = t[2], tryDownscale = t[3], tryDenoise = t[4],
                 codeSizeMm = intent.getFloatExtra(K_CODE_SIZE, 40f),
+                startZoomDelayMs = intent.getLongExtra(K_ZOOM_DELAY, 0L),
                 title = texts[0], hint = texts[1], cancelLabel = texts[2], torchLabel = texts[3],
                 showDiagnostics = intent.getBooleanExtra(K_DIAG, false),
                 theme = ScanTheme.fromIntArray(intent.getIntArrayExtra(K_THEME)),

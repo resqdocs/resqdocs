@@ -3,7 +3,7 @@
 //
 // Datenschutz: Text ausschließlich im Body von POST /type (nie in der URL);
 // Fehler werden auf den HTTP-Status normalisiert — KEIN Payload-Logging.
-import type { HttpAdapter, OtaBeginResult, OtaManifest, PicoClient, PicoConfigResult, PicoStatus } from './picoTypes'
+import type { HttpAdapter, OtaBeginResult, OtaManifest, PicoClient, PicoConfigResult, PicoStatus, TypingStatus } from './picoTypes'
 
 const CONNECT_TIMEOUT = 5000
 const READ_TIMEOUT = 20000 // Tippen dauert (Per-Char-Delay) → großzügig (S2)
@@ -14,6 +14,12 @@ const READ_TIMEOUT = 20000 // Tippen dauert (Per-Char-Delay) → großzügig (S2
 // braucht der Sendeweg das volle Budget. Darum als connectTimeout DAS gedachte Read-Budget uebergeben.
 const TYPE_TIMEOUT = READ_TIMEOUT
 const HEALTH_TIMEOUT = 3000
+// Fortschrittsabfrage: kurz, damit ein verlassenes WLAN schnell als „keine Verbindung" erkannt wird.
+const TYPE_STATUS_TIMEOUT = 2500
+// Bridge meldet 503 busy, wenn ihre Warteschlange voll ist (sehr lange Texte in mehreren Teilen):
+// warten und denselben Teil erneut schicken. 400 Versuche x 1,5 s = 10 Minuten.
+export const TYPE_BUSY_RETRY_MS = 1500
+export const TYPE_BUSY_MAX_RETRIES = 400
 const OTA_CHUNK_TIMEOUT = 10000 // LittleFS-Schreiben pro Chunk
 const OTA_COMMIT_TIMEOUT = 30000 // SHA-256 + Ed25519 über ~400 KB auf dem Pico
 
@@ -58,17 +64,47 @@ function parseStatus(data: unknown): PicoStatus {
   }
   // Nur setzen, wenn die Firmware das Feld kennt (alte 0.2.0 → undefined = BOOTSEL-Hinweis).
   if (typeof r.otaSupported === 'boolean') status.otaSupported = r.otaSupported
+  const typing = parseTyping(r.typing)
+  if (typing) status.typing = typing
   if (!status.name || !status.apiVersion) throw new Error('Status unvollständig')
   return status
+}
+
+/** Tipp-Fortschritt streng pruefen; alles Unerwartete → null (wie „Firmware kennt es nicht"). */
+export function parseTyping(data: unknown): TypingStatus | null {
+  let o: unknown = data
+  if (typeof data === 'string') {
+    try {
+      o = JSON.parse(data)
+    } catch {
+      return null
+    }
+  }
+  if (!o || typeof o !== 'object') return null
+  const r = o as Record<string, unknown>
+  const nat = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null)
+  const done = nat(r.done)
+  const total = nat(r.total)
+  const delayMs = nat(r.delayMs)
+  const jobId = nat(r.jobId)
+  if (done === null || total === null || delayMs === null || jobId === null) return null
+  if (r.state !== 'idle' && r.state !== 'typing' && r.state !== 'paused') return null
+  if (r.lastEnd !== 'none' && r.lastEnd !== 'done' && r.lastEnd !== 'cancelled') return null
+  return { state: r.state, done: Math.min(done, total), total, delayMs, jobId, lastEnd: r.lastEnd }
 }
 
 function parseBody(data: unknown): Record<string, unknown> | null {
   return (typeof data === 'string' ? JSON.parse(data) : data) as Record<string, unknown> | null
 }
 
-/** baseUrl als Wert oder Getter (für live aktualisierbare Einstellung). */
-export function createPicoClient(http: HttpAdapter, baseUrl: string | (() => string)): PicoClient {
+/** baseUrl als Wert oder Getter (für live aktualisierbare Einstellung). `sleep` ist fuer Tests ersetzbar. */
+export function createPicoClient(
+  http: HttpAdapter,
+  baseUrl: string | (() => string),
+  opts: { sleep?: (ms: number) => Promise<void> } = {},
+): PicoClient {
   const base = (): string => (typeof baseUrl === 'function' ? baseUrl() : baseUrl).replace(/\/+$/, '')
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)))
 
   return {
     async health() {
@@ -91,7 +127,14 @@ export function createPicoClient(http: HttpAdapter, baseUrl: string | (() => str
       const extra = typeof delayMs === 'number' ? { delayMs } : {}
       let typedTotal = 0
       for (const chunk of chunkByCodePoints(text, TYPE_CHUNK_LIMIT)) {
-        const res = await http.post(`${base()}/type`, { text: chunk, os, ...extra }, { connectTimeout: TYPE_TIMEOUT, readTimeout: TYPE_TIMEOUT })
+        const send = () => http.post(`${base()}/type`, { text: chunk, os, ...extra }, { connectTimeout: TYPE_TIMEOUT, readTimeout: TYPE_TIMEOUT })
+        let res = await send()
+        // Ab Firmware 0.4.0 tippt die Bridge weiter, waehrend sie den naechsten Teil annimmt. Ist ihre
+        // Warteschlange voll, antwortet sie 503 busy: warten, denselben Teil erneut schicken.
+        for (let tries = 0; res.status === 503 && tries < TYPE_BUSY_MAX_RETRIES; tries++) {
+          await sleep(TYPE_BUSY_RETRY_MS)
+          res = await send()
+        }
         if (!isOk(res.status)) {
           const partial = typedTotal > 0 ? `, ${typedTotal} Zeichen bereits getippt` : ''
           throw new Error(`Senden fehlgeschlagen (HTTP ${res.status}${partial})`)
@@ -100,6 +143,18 @@ export function createPicoClient(http: HttpAdapter, baseUrl: string | (() => str
         typedTotal += Number.isFinite(typed) ? typed : 0
       }
       return { typed: typedTotal }
+    },
+    async typeStatus() {
+      const res = await http.get(`${base()}/type/status`, { connectTimeout: TYPE_STATUS_TIMEOUT, readTimeout: TYPE_STATUS_TIMEOUT })
+      if (res.status === 404) return null // Firmware vor 0.4.0
+      if (!isOk(res.status)) throw new Error(`Fortschritt nicht abrufbar (HTTP ${res.status})`)
+      return parseTyping(res.data)
+    },
+    async typeControl(action) {
+      const res = await http.post(`${base()}/type/${action}`, {}, { connectTimeout: TYPE_STATUS_TIMEOUT, readTimeout: TYPE_STATUS_TIMEOUT })
+      if (res.status === 404 || res.status === 409) return null // aeltere Firmware bzw. kein laufender Auftrag
+      if (!isOk(res.status)) throw new Error(`Steuerung fehlgeschlagen (HTTP ${res.status})`)
+      return parseTyping(res.data)
     },
     async setConfig({ ssidId }): Promise<PicoConfigResult> {
       // Vorvalidierung: ungültige ID erzeugt KEINEN Request (Server bleibt maßgeblich).

@@ -14,7 +14,28 @@ export interface PicoStatus {
   defaultOs: string
   /** true ab 0.3.0 mit gemountetem LittleFS; undefined bei aelterer Firmware. */
   otaSupported?: boolean
+  /** Tipp-Fortschritt (ab Firmware 0.4.0); undefined bei aelterer Firmware. */
+  typing?: TypingStatus
 }
+
+/**
+ * Fortschritt des Tipp-Auftrags auf der Bridge (GET /type/status, ab Firmware 0.4.0).
+ * Enthaelt NUR Zahlen und Zustand, nie Text.
+ */
+export interface TypingStatus {
+  state: 'idle' | 'typing' | 'paused'
+  /** getippte Zeichen des Auftrags */
+  done: number
+  /** Zeichen des Auftrags insgesamt */
+  total: number
+  delayMs: number
+  /** zaehlt je neuem Auftrag hoch */
+  jobId: number
+  /** wie der letzte Auftrag endete */
+  lastEnd: 'none' | 'done' | 'cancelled'
+}
+
+export type TypingControl = 'pause' | 'resume' | 'cancel'
 
 /** Signiertes Firmware-Manifest (scripts/ota/sign.mjs). */
 export interface OtaManifest {
@@ -45,6 +66,10 @@ export interface PicoClient {
   /** POST /type { text, os, delayMs? } → Anzahl getippter Zeichen. Text NUR im Body.
    * delayMs optional (Tippgeschwindigkeit, ms/Zeichen); fehlt → Firmware-Default 60. */
   typeText(input: { text: string; os: string; delayMs?: number }): Promise<{ typed: number }>
+  /** GET /type/status → Fortschritt. null = die Firmware kennt den Endpunkt nicht (vor 0.4.0). Wirft bei Netzfehler. */
+  typeStatus(): Promise<TypingStatus | null>
+  /** POST /type/pause|resume|cancel → neuer Zustand. null = kein laufender Auftrag oder aeltere Firmware. */
+  typeControl(action: TypingControl): Promise<TypingStatus | null>
   /** POST /config { ssidId } → { ok, restartRequired }. Wirft bei ungültiger ID OHNE Request. */
   setConfig(input: { ssidId: string }): Promise<PicoConfigResult>
   /** POST /ota/begin { size, sha256, sig } → { ok, chunkMax }. */

@@ -39,6 +39,8 @@ function onInput(e: Event): void {
 function close(): void {
   dialog.value?.close()
 }
+// Von aussen oeffnen (Einsatz: Eintrag „individuell" fuehrt direkt ins Schreiben).
+defineExpose({ open })
 </script>
 
 <template>
