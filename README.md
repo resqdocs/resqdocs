@@ -55,7 +55,7 @@ App und Landing Page sind logisch und technisch getrennt und werden separat geba
 
 ## Builds (Maintainer)
 
-Alle Befehle inklusive `git pull` und `npm install` - einfach komplett kopieren.
+Alle Befehle inklusive `git pull` und `npm ci` - einfach komplett kopieren.
 Repo-Pfad ggf. anpassen.
 
 **iOS** (öffnet garantiert die `.xcworkspace`, nie das `.xcodeproj` - robust):
@@ -77,7 +77,7 @@ cd apps/pico-pwa && npm run android
 
 ```bash
 cd ~/ResQDocs && git checkout dev && git pull
-cd apps/pico-pwa && npm install && npm run build && npx cap sync android
+cd apps/pico-pwa && npm ci && npm run build && npx cap sync android
 cd android && ./gradlew assembleDebug && open app/build/outputs/apk/debug/
 ```
 

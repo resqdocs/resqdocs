@@ -128,10 +128,10 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - **Startet ohne Auswahl?** (`defaultEmpty`, ab App 1.6.0, nur mit `multiple`) — Nichts ist vorausgewählt; ohne Auswahl gibt das Feld nichts aus. *Beispiel: Einsatzcodes, bei denen eine Vorauswahl etwas Falsches dokumentieren würde.*
 
 ### Nur Funktionen
-- **Welche Funktionen gibt es?** Medikationsplan (`medikamentenplan`): Medikamentenliste, in der App auch per Scan. Kontakte/Ärzte (`aerzte`): Liste aus Ärzten und Angehörigen. Pack-Years (`packYears`, ab App 1.1.0): Rechner aus Zigaretten pro Tag und Jahren. NEWS2 (`news2`, ab App 1.1.0): Score aus den Vitalwerten.
+- **Welche Funktionen gibt es?** Medikationsplan (`medikamentenplan`): Medikamentenliste, in der App auch per Scan. Kontakte/Ärzte (`aerzte`): Liste aus Ärzten und Angehörigen. Pack-Years (`packYears`, ab App 1.1.0): Rechner aus Zigaretten pro Tag und Jahren. NEWS2 (`news2`, ab App 1.1.0): Score aus den Vitalwerten. LAMS (`lams`, ab App 1.9.0): Score 0–5 aus Gesicht, Armhalteversuch und Händedruck, gibt die Befunde mit aus. FAST4D (`fast4d`, ab App 1.9.0): Schlaganfall-Screening aus sieben Befunden (unauffällig / auffällig / nicht prüfbar) plus Zeitangabe, positiv ab einem auffälligen Befund; kein Punktescore.
 - **Text, wenn nichts erfasst ist?** (`default`, ab App 1.1.1) — Steht in der Ausgabe, wenn die Funktion keine Einträge oder kein Ergebnis hat. *Beispiel: „keine Dauermedikation bekannt“.*
 - **Darf nicht still entfallen?** (`required`, ab App 1.2.0) — Wie beim Pflichtfeld.
-- **Erst bei Bedarf zuschalten?** Funktionen haben kein `defaultExcluded`. Lege die Funktion dafür in einen eigenen Abschnitt mit `excludable` und `defaultExcluded`.
+- **Erst bei Bedarf einschalten?** (`defaultExcluded`, ab App 1.9.0) — Die Funktion startet auf „nicht erhoben“ und kommt erst in die Ausgabe, wenn der Nutzer sie einschaltet oder Daten erfasst. Nicht zusammen mit `required`. Für ältere App-Versionen: Lege die Funktion in einen eigenen Abschnitt mit `excludable` und `defaultExcluded`.
 - **Einträge untereinander oder in einer Zeile?** (`config.rowLayout`) — Untereinander (`block`) oder kompakt in einer Zeile (`inline`). *Beispiel: vier Medikamente untereinander — oder „Aspirin · Paracetamol · Ibuprofen".*
 - **Trennzeichen zwischen den Einträgen?** (`rowSeparator`) — Was zwischen den Einträgen steht, wenn sie in einer Zeile sind. Standard ist der Mittelpunkt „ · " (hebt sich vom Komma in „Name Stärke, Schema" ab). *Beispiel: ein Semikolon „; " stattdessen.*
 
@@ -140,7 +140,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 Die App rendert die Vorlage zu Klartext. Regeln:
 
 - **Reihenfolge:** Knoten erscheinen in Dokument-Reihenfolge (Array-Reihenfolge der `children`).
-- **Titel anzeigen:** nur wenn `showTitle: true` gesetzt ist — das gilt für **alle drei** Knotentypen; fehlt `showTitle`, erscheint kein Titel. **Container**-Titel stehen auf eigener Zeile (mit `titleInline: true` inline vor dem Inhalt). **Field**: Titel + Wert auf **einer** Zeile; bei `titleInline: false` ODER `multiline: true` rutscht der Titel auf eine eigene (Banner-)Zeile. **FunctionNode**: Titel auf eigener Zeile.
+- **Titel anzeigen:** nur wenn `showTitle: true` gesetzt ist — das gilt für **alle drei** Knotentypen; fehlt `showTitle`, erscheint kein Titel. **Container**-Titel stehen auf eigener Zeile (mit `titleInline: true` inline vor dem Inhalt). **Field**: Titel + Wert auf **einer** Zeile; bei `titleInline: false` ODER `multiline: true` rutscht der Titel auf eine eigene (Banner-)Zeile. **FunctionNode**: Titel auf eigener Zeile (mit `titleInline: true` inline vor dem Ergebnis).
 - **Titel-Format:** Setze bei `showTitle: true` immer ein explizites `heading` (wie in allen Beispielen: Feld `"suffix": ": "`, Abschnitt leere Werte). **Ohne `heading` gilt ein Vorschau-Fallback mit `prefix "## "` und ohne Trenner zwischen Titel und Wert** („## Puls80") — für fertige Vorlagen unerwünscht.
 - **Banner (`heading`):** wirkt nur, wenn der Titel auf eigener Zeile steht: erst `prefix` + Titel + `suffix`, **danach** die Füllzeichen (`fill`) — bei `fillMode: "inclusive"` bis zur Gesamtbreite `width`, bei `"exclusive"` genau `width` Füllzeichen.
 - **Leere Felder:** ein betiteltes Feld ohne Wert behält seine Beschriftung als Skelett („RR: ") — der Nutzer füllt es im Einsatz. Nur unbetitelte leere Felder entfallen.
@@ -148,7 +148,7 @@ Die App rendert die Vorlage zu Klartext. Regeln:
 - **Nicht erhoben (`excludable`):** ein als „−" markierter Container entfällt komplett (inkl. Kinder) in der Ausgabe.
 - **`emptyText`:** Ersatztext, wenn der Container angezeigt wird, seine Kinder aber nichts ausgeben.
 - **Feld-Wert:** im Standard der `default` (bzw. `options[0]`, mit `defaultEmpty` nichts); `options` macht das Feld zu einem Select; `allowCustom` erlaubt zusätzlich Freitext; `multiline` ist mehrzeiliger Freitext.
-- **FunctionNode:** Medikationsplan/Ärzte rendern ihre Zeilen; `config.rowLayout` = `block` (untereinander, optional `rowPrefix`/`rowSuffix` je Zeile) oder `inline` (eine Zeile, getrennt mit `rowSeparator`). Pack-Years und NEWS2 geben ihr Ergebnis aus; ohne Einträge oder Ergebnis erscheint der `default`.
+- **FunctionNode:** Medikationsplan/Ärzte rendern ihre Zeilen; `config.rowLayout` = `block` (untereinander, optional `rowPrefix`/`rowSuffix` je Zeile) oder `inline` (eine Zeile, getrennt mit `rowSeparator`). Pack-Years, NEWS2, LAMS und FAST4D geben ihr Ergebnis aus; ohne Einträge oder Ergebnis erscheint der `default`. LAMS und FAST4D lesen sich am besten als eine Zeile („LAMS 4/5 (…)“, „FAST4D positiv (…)“): `titleInline: true` und `heading` mit `"prefix": ""`, `"suffix": " "`.
 
 ### Durchgerechnetes Beispiel (JSON → exakte Ausgabe)
 

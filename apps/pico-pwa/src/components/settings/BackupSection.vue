@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useBackup } from '@/backup/useBackup'
-import { rotationFor } from '@/backup/backupSettings'
+import { rotationFor, clampMaxAge, MAX_AGE_MIN, MAX_AGE_MAX } from '@/backup/backupSettings'
 import type { BackupRate, RetentionPreset } from '@/backup/backupSettings'
 
 /**
@@ -44,6 +44,34 @@ function absTime(ms: number): string {
 }
 function originLabel(o?: string): string {
   return o === 'manual' ? 'Manuell' : o === 'pre-restore' ? 'Vor Wiederherstellung' : 'Automatisch'
+}
+
+// Lange Listen bleiben überschaubar: zuerst nur die neuesten Stände, der Rest hinter „Ältere anzeigen".
+const VISIBLE = 3
+const showAllLocal = ref(false)
+const showAllCloud = ref(false)
+const openCloud = ref<string | null>(null) // id des aufgeklappten Cloud-Stands
+const localShown = computed(() => (showAllLocal.value ? backup.history.value : backup.history.value.slice(0, VISIBLE)))
+const cloudShown = computed(() => (showAllCloud.value ? backup.cloudFiles.value : backup.cloudFiles.value.slice(0, VISIBLE)))
+function toggleCloud(id: string): void {
+  openCloud.value = openCloud.value === id ? null : id
+  confirmCloudReplace.value = null
+  confirmCloudDelete.value = null
+}
+async function setMaxAgeEnabled(on: boolean): Promise<void> {
+  await backup.updateSettings({ ...backup.settings.value, maxAgeEnabled: on })
+}
+// Freie Eingabe; beim Verlassen des Felds auf den erlaubten Rahmen gebracht und das Feld darauf zurückgesetzt.
+// Leer oder keine Zahl -> bisheriger Wert bleibt (nie stillschweigend eine kürzere Frist).
+async function setMaxAgeDays(input: HTMLInputElement): Promise<void> {
+  const raw = input.value.trim()
+  if (raw === '' || !Number.isFinite(Number(raw))) {
+    input.value = String(backup.settings.value.maxAgeDays)
+    return
+  }
+  const days = clampMaxAge(raw)
+  input.value = String(days)
+  await backup.updateSettings({ ...backup.settings.value, maxAgeDays: days })
 }
 
 const lastAt = computed(() => backup.history.value[0]?.createdAt ?? null)
@@ -342,6 +370,42 @@ async function cloudDelete(id: string): Promise<void> {
             @change="setCustom('weeklyWeeks', Number(($event.target as HTMLInputElement).value))" />
         </label>
       </div>
+
+      <!-- Optionale Altersgrenze: Standard aus. Frist frei wählbar (MAX_AGE_MIN..MAX_AGE_MAX Tage).
+           Löscht unwiderruflich, deshalb ausdrücklich einzuschalten. -->
+      <label class="mt-3 flex min-h-11 items-center gap-3 border-t border-base-300 pt-3">
+        <input
+          type="checkbox"
+          class="toggle toggle-primary"
+          :checked="backup.settings.value.maxAgeEnabled"
+          @change="setMaxAgeEnabled(($event.target as HTMLInputElement).checked)"
+        />
+        <span class="text-sm font-medium">Alte Sicherungen automatisch löschen</span>
+      </label>
+      <label v-if="backup.settings.value.maxAgeEnabled" class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+        <span>Löschen nach</span>
+        <input
+          type="number"
+          inputmode="numeric"
+          :min="MAX_AGE_MIN"
+          :max="MAX_AGE_MAX"
+          step="1"
+          class="input input-bordered input-sm min-h-11 w-24 tabular-nums"
+          :value="backup.settings.value.maxAgeDays"
+          aria-label="Frist in Tagen"
+          @change="setMaxAgeDays($event.target as HTMLInputElement)"
+        />
+        <span>Tagen</span>
+        <span class="text-xs text-base-content/50">({{ MAX_AGE_MIN }} bis {{ MAX_AGE_MAX }} Tage)</span>
+      </label>
+      <p class="mt-1 text-xs text-base-content/60">
+        <template v-if="backup.settings.value.maxAgeEnabled">
+          Sicherungen, die älter als <strong>{{ backup.settings.value.maxAgeDays }} Tage</strong> sind, werden beim
+          nächsten Sichern <strong>endgültig gelöscht</strong>, lokal und die Cloud-Sicherungen dieses Geräts. Die
+          neueste und die größte Sicherung bleiben immer erhalten.
+        </template>
+        <template v-else>Aus: Sicherungen werden nur über die Aufbewahrung oben ausgedünnt.</template>
+      </p>
     </div>
 
     <!-- Verlauf -->
@@ -349,7 +413,7 @@ async function cloudDelete(id: string): Promise<void> {
       <p class="text-sm font-medium">Verlauf</p>
       <p v-if="backup.history.value.length === 0" class="mt-1 text-xs text-base-content/60">Noch keine Sicherungen.</p>
       <ul v-else class="mt-2 flex flex-col gap-2">
-        <li v-for="s in backup.history.value" :key="s.name" class="rounded-md bg-base-100 p-2">
+        <li v-for="s in localShown" :key="s.name" class="rounded-md bg-base-100 p-2">
           <button
             type="button"
             class="flex w-full flex-col gap-1 text-left"
@@ -407,6 +471,15 @@ async function cloudDelete(id: string): Promise<void> {
           </div>
         </li>
       </ul>
+      <button
+        v-if="backup.history.value.length > VISIBLE"
+        type="button"
+        class="btn btn-ghost btn-sm mt-2 min-h-11 w-full"
+        :aria-expanded="showAllLocal"
+        @click="showAllLocal = !showAllLocal"
+      >
+        {{ showAllLocal ? 'Weniger anzeigen' : `Ältere anzeigen (${backup.history.value.length - VISIBLE})` }}
+      </button>
     </div>
 
     <!-- Cloud: eigenes Konto, eigene Geräte -->
@@ -492,17 +565,24 @@ async function cloudDelete(id: string): Promise<void> {
         </button>
       </div>
       <ul v-if="backup.cloudEnabled.value && backup.cloudFiles.value.length" class="mt-2 flex flex-col gap-2">
-        <li v-for="c in backup.cloudFiles.value" :key="c.id" class="rounded-md bg-base-100 p-2">
-          <div class="flex flex-wrap items-center justify-between gap-2">
+        <li v-for="c in cloudShown" :key="c.id" class="rounded-md bg-base-100 p-2">
+          <!-- Kompakte Zeile wie im lokalen Verlauf; die Aktionen erscheinen erst nach dem Antippen. -->
+          <button
+            type="button"
+            class="flex min-h-11 w-full items-center justify-between gap-2 text-left"
+            :aria-expanded="openCloud === c.id"
+            @click="toggleCloud(c.id)"
+          >
             <span class="flex flex-col">
               <span class="text-sm">{{ absTime(c.createdAt) }}</span>
               <span class="text-xs text-base-content/60">{{ c.total }} Einträge · Gerät {{ c.deviceId }}</span>
             </span>
-            <span class="flex flex-wrap gap-1">
-              <button class="btn btn-outline btn-xs min-h-11" type="button" :disabled="cloudBusy" @click="cloudRestore(c.id)">Hinzufügen</button>
-              <button class="btn btn-outline btn-warning btn-xs min-h-11" type="button" :disabled="cloudBusy" @click="confirmCloudReplace = c.id; confirmCloudDelete = null">Exakt herstellen</button>
-              <button class="btn btn-ghost btn-xs min-h-11" type="button" :disabled="cloudBusy" @click="confirmCloudDelete = c.id; confirmCloudReplace = null" aria-label="Cloud-Sicherung löschen">✕</button>
-            </span>
+            <span class="text-base-content/50" aria-hidden="true">{{ openCloud === c.id ? '▾' : '▸' }}</span>
+          </button>
+          <div v-if="openCloud === c.id && confirmCloudReplace !== c.id && confirmCloudDelete !== c.id" class="mt-2 flex flex-wrap gap-2 border-t border-base-300 pt-2">
+            <button class="btn btn-outline btn-sm min-h-11" type="button" :disabled="cloudBusy" @click="cloudRestore(c.id)">Hinzufügen</button>
+            <button class="btn btn-outline btn-warning btn-sm min-h-11" type="button" :disabled="cloudBusy" @click="confirmCloudReplace = c.id; confirmCloudDelete = null">Exakt herstellen …</button>
+            <button class="btn btn-ghost btn-sm min-h-11 text-error" type="button" :disabled="cloudBusy" @click="confirmCloudDelete = c.id; confirmCloudReplace = null">Löschen …</button>
           </div>
           <div v-if="confirmCloudReplace === c.id" class="mt-2 rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm">
             <p>„Exakt herstellen" <strong>ersetzt deine aktuellen Daten</strong> durch diesen Cloud-Stand
@@ -526,7 +606,16 @@ async function cloudDelete(id: string): Promise<void> {
           </div>
         </li>
       </ul>
-      <p v-else-if="backup.cloudEnabled.value" class="mt-2 text-xs text-base-content/60">Noch keine Cloud-Sicherungen.</p>
+      <button
+        v-if="backup.cloudEnabled.value && backup.cloudFiles.value.length > VISIBLE"
+        type="button"
+        class="btn btn-ghost btn-sm mt-2 min-h-11 w-full"
+        :aria-expanded="showAllCloud"
+        @click="showAllCloud = !showAllCloud"
+      >
+        {{ showAllCloud ? 'Weniger anzeigen' : `Ältere anzeigen (${backup.cloudFiles.value.length - VISIBLE})` }}
+      </button>
+      <p v-if="backup.cloudEnabled.value && !backup.cloudFiles.value.length" class="mt-2 text-xs text-base-content/60">Noch keine Cloud-Sicherungen.</p>
       </template>
       <p v-else class="mt-2 text-xs text-base-content/60">
         Cloud-Sicherung ist nur in der App (iPhone/iPad oder Android) verfügbar. Der lokale Verlauf sowie

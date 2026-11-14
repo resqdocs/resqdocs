@@ -7,7 +7,7 @@
 
 import type { Container, Field, FunctionNode, Heading, Node, FieldFill } from './model.ts'
 import { DEFAULT_HEADING, DEFAULT_SEPARATOR } from './model.ts'
-import { fillValue, defaultFill } from './fill.ts'
+import { fillValue, defaultFill, functionStatus } from './fill.ts'
 import { FUNCTION_REGISTRY } from './functions/registry.ts'
 
 type Values = Record<string, FieldFill>
@@ -91,7 +91,8 @@ function renderFunctionR(node: FunctionNode, values: Values): Rendered | null {
   // Nicht erhoben (grau −): Funktion inkl. Titel entfaellt komplett (analog Container excluded).
   // AUSNAHME: eine Pflicht-Funktion darf nicht still verschwinden (required) -> faellt auf
   // Ergebnis/Standardtext zurueck statt zu entfallen (deckt sich mit isFunctionFilled/Pflicht-Anzeige).
-  if (fill?.state === 'function' && fill.status === 'excluded' && !node.required) return null
+  // functionStatus loest auch den Ausgangszustand auf (UNO Reverse: ohne Eintrag „nicht erhoben").
+  if (functionStatus(node, fill) === 'excluded' && !node.required) return null
   // Freitext (✎ custom) ueberschreibt Zeilen/Standardtext; sonst die Zeilen aus der Registry (unbekannt:
   // keine), sonst der Standardtext-Fallback (node.default).
   const body = custom ? (fill.text ?? '') : (def?.renderBody(fill, node.config) ?? '') // config steuert das Zeilen-Layout

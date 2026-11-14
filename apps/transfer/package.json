@@ -7,6 +7,6 @@
   "description": "ResQDocs Vorlagen-Transfer: minimaler E2E-Ephemeral-Blob-Dienst (Server sieht nur Chiffrat).",
   "scripts": {
     "start": "node --experimental-strip-types --experimental-sqlite src/server.ts",
-    "test": "node --test --experimental-strip-types --experimental-sqlite src/ids.test.ts src/rateLimiter.test.ts src/store.test.ts src/server.test.ts"
+    "test": "node --test --experimental-strip-types --experimental-sqlite src/ids.test.ts src/rateLimiter.test.ts src/store.test.ts src/appLinks.test.ts src/server.test.ts"
   }
 }

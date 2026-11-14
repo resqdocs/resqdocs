@@ -112,16 +112,26 @@ export function resolveImportTarget(protocols: Container[], tree: Container): Im
 }
 
 /** Eine per NAMEN gefundene Vorlage (existingId) durch den Import-Baum ersetzen — der EINZIGE Ueberschreib-Weg
- *  (id-basiertes Ersetzen gibt es bewusst nicht mehr: geraeteuebergreifende id-Kollision wuerde die falsche
- *  Vorlage treffen). Der Import-Baum traegt i. d. R. eine ANDERE Kennung als die getroffene Vorlage. Loesung:
- *  alte Vorlage entfernen, dann den Baum kollisionssicher importieren (re-id-et gegen den REST der Bibliothek,
- *  falls Knoten-ids kollidieren) — der Name bleibt, keine verwaisten/kollidierenden ids. */
+ *  (id-basiertes TREFFEN gibt es bewusst nicht: geraeteuebergreifende id-Kollision wuerde die falsche Vorlage
+ *  treffen). Die ersetzte Vorlage BEHAELT ihre lokale Kennung und ihren Platz in der Liste: daran haengen
+ *  die persoenliche Standard-Vorlage, „zuletzt benutzt" und der laufende Einsatz. Uebernaehme sie die
+ *  Kennung des Import-Baums (oder bei Kollision eine frische), zeigten diese Verweise ins Leere und der
+ *  Einsatz fiele nach dem naechsten Start auf die ERSTE Vorlage der Liste zurueck — fuer den Nutzer sieht
+ *  das aus, als haette das Ueberschreiben nicht gewirkt. Die Kennung der Import-Wurzel ist deshalb egal;
+ *  nur die INNEREN Knoten duerfen weder mit dem Rest der Bibliothek noch mit der lokalen Kennung
+ *  kollidieren, sonst wird der Baum frisch ge-id-et. Unbekannte existingId -> als neue Vorlage. */
 export function overwriteProtocolById(
   protocols: Container[],
   existingId: string,
   tree: Container,
   nextId: () => string,
 ): { protocols: Container[]; added: Container } {
+  const index = protocols.findIndex((p) => p.id === existingId)
+  if (index < 0) return importProtocol(protocols, tree, nextId, false)
   const rest = protocols.filter((p) => p.id !== existingId)
-  return importProtocol(rest, tree, nextId, false)
+  const innerIds = tree.children.flatMap((c) => collectIds(c))
+  const collides = innerIds.some((id) => id === existingId || rest.some((p) => !!findNode(p, id)))
+  const base = collides ? (reId(tree, nextId) as Container) : tree
+  const added: Container = { ...base, id: existingId }
+  return { protocols: [...rest.slice(0, index), added, ...rest.slice(index)], added }
 }

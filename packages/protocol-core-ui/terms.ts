@@ -30,7 +30,7 @@ export interface InfoText {
 
 const SECTION = 'Fasst zusammengehörige Felder unter einer Überschrift zusammen, z. B. „Anamnese“. Abschnitte lassen sich ineinander verschachteln.'
 const FIELD = 'Eine einzelne Angabe in der Vorlage, z. B. „Atmung“: frei eingeben oder aus einer Liste wählen.'
-const FUNCTION = 'Fertige Eingabehilfe für Aufwendigeres: Medikationsplan, Kontakte/Ärzte, Pack-Years und NEWS2.'
+const FUNCTION = 'Fertige Eingabehilfe für Aufwendigeres: Medikationsplan, Kontakte/Ärzte, Pack-Years, NEWS2, LAMS und FAST4D.'
 const SNIPPET = 'Fertiger Text, den du einmal anlegst und immer wieder nutzt. In der Vorlage wird daraus ein Feld mit diesem Text, im {einsatz} landet er direkt im Feld.'
 const SAVED_SECTION = 'Ein Abschnitt samt Inhalt, den du für andere Vorlagen gespeichert hast. Eingefügt wird immer eine Kopie: Spätere Änderungen wirken nicht auf bereits eingefügte Kopien.'
 
@@ -69,7 +69,7 @@ export const INFO = {
   },
   allowCustom: {
     title: '„individuell“ erlauben',
-    text: 'Hängt an die Liste die Option „individuell“ an. Damit lässt sich im {einsatz} eigener Text eingeben.',
+    text: 'Hängt an die Liste den Eintrag ✎ individuell an. Ein Tipp darauf macht im {einsatz} aus der Liste ein Textfeld, gefüllt mit dem, was gerade ausgewählt ist, und du schreibst frei weiter. Der Schalter vor dem Titel (✓ → ✎) führt an dieselbe Stelle.',
   },
   multiple: {
     title: 'Mehrfachauswahl',
@@ -86,6 +86,28 @@ export const INFO = {
   fieldStartsExcluded: {
     title: 'Startet auf „nicht erhoben“',
     text: 'Das Feld ist im {einsatz} zunächst aus und steht nicht im Protokolltext. Erst wenn du es einschaltest, kommt es dazu. Für Angaben, die man nur in bestimmten Lagen braucht.',
+  },
+  functionStartsExcluded: {
+    title: 'Startet auf „nicht erhoben“',
+    text: 'Die Funktion ist im {einsatz} zunächst aus und steht nicht im Protokolltext. Erst wenn du sie einschaltest, kommt sie dazu. Für Angaben, die man nur in bestimmten Lagen braucht.',
+  },
+  fast4dColors: {
+    title: 'Farben bei FAST4D',
+    text: 'Die Farbe siehst nur du in der App. Im Protokolltext steht sie nicht.',
+    items: [
+      { term: 'Grün', text: 'Alle sieben Zeichen sind unauffällig.' },
+      { term: 'Gelb', text: 'Mindestens ein Zeichen ist auffällig.' },
+      { term: 'Ohne Farbe', text: 'Nichts ist auffällig, aber nicht alles war prüfbar.' },
+    ],
+  },
+  lamsColors: {
+    title: 'Farben bei LAMS',
+    text: 'Die Farbe siehst nur du in der App. Im Protokolltext steht sie nicht.',
+    items: [
+      { term: 'Grün', text: '0 Punkte.' },
+      { term: 'Gelb', text: '1 bis 3 Punkte.' },
+      { term: 'Rot', text: 'Ab 4 Punkten. Im Text steht dann der Hinweis auf einen proximalen Verschluss (LVO).' },
+    ],
   },
   sectionStartsExcluded: {
     title: 'Startet auf „nicht erhoben“',

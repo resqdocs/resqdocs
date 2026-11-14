@@ -1,9 +1,10 @@
 <script lang="ts">
 /** Hint-ID der Tour. Eine neue ID zeigt die Tour nach dem Update allen einmal erneut:
- *  'v3' stellt die neuen Begriffe und die ⓘ-Erklaerungen vor. */
-export const TAB_GUIDE_HINT_ID = 'tab-guide-v3'
-/** Wer diese ID schon hat, kannte die App vorher und bekommt zuerst die Seite „Neu“. */
-const PREVIOUS_HINT_ID = 'tab-guide-v2'
+ *  'v3' stellte mit 1.8.0 die neuen Begriffe und die ⓘ-Erklaerungen vor, 'v4' zeigt mit 1.9.0,
+ *  was in dieser Version neu ist. */
+export const TAB_GUIDE_HINT_ID = 'tab-guide-v4'
+/** Wer eine dieser IDs schon hat, kannte die App vorher und bekommt zuerst die Seite „Neu“. */
+const PREVIOUS_HINT_IDS = ['tab-guide-v2', 'tab-guide-v3']
 </script>
 
 <script setup lang="ts">
@@ -45,10 +46,11 @@ const visible = computed(
 )
 
 const step = ref(0)
-// Bisherige Nutzer sehen zuerst, was neu ist; bei einer Neuinstallation waere „heisst jetzt“ nur verwirrend.
+// Bisherige Nutzer sehen zuerst, was neu ist; danach dieselbe Tour wie bei einer Neuinstallation
+// („So ist eine Vorlage aufgebaut“ nach den Vorlagen).
 const pages = computed(() =>
-  storage.settings.dismissedHints.includes(PREVIOUS_HINT_ID)
-    ? ['neu', 'begriffe', 'willkommen', 'bridge', 'einsatz', 'vorlagen', 'privat']
+  PREVIOUS_HINT_IDS.some((id) => storage.settings.dismissedHints.includes(id))
+    ? ['neu', 'willkommen', 'bridge', 'einsatz', 'vorlagen', 'begriffe', 'privat']
     : ['willkommen', 'bridge', 'einsatz', 'vorlagen', 'begriffe', 'privat'],
 )
 const page = computed(() => pages.value[step.value])
@@ -104,35 +106,34 @@ function onTouchEnd(e: TouchEvent): void {
       <div
         class="mx-auto flex min-h-full w-full max-w-md flex-col pb-[max(24px,env(safe-area-inset-bottom))] pl-[max(24px,env(safe-area-inset-left))] pr-[max(24px,env(safe-area-inset-right))] pt-[max(56px,calc(env(safe-area-inset-top)+2.5rem))] sm:max-w-lg"
       >
-        <!-- Seite „Neu“: nur fuer bisherige Nutzer, einmal nach dem Update -->
+        <!-- Seite „Neu“: nur fuer bisherige Nutzer, einmal nach dem Update (Inhalt 1.9.0) -->
         <div v-if="page === 'neu'" class="flex flex-1 flex-col justify-center gap-4">
-          <h1 class="text-center text-xl font-bold">Neu: Die App erklärt sich besser</h1>
+          <h1 class="text-center text-xl font-bold">Neu in dieser Version</h1>
           <div class="card bg-base-100 shadow-sm">
             <div class="card-body flex-row items-start gap-3 p-4">
-              <span class="rounded-lg bg-primary/10 p-2 text-primary">
-                <InfoIcon class="size-6" />
-              </span>
-              <p class="text-sm"><strong>Erklärungen per Tipp:</strong> Tippe auf das <InfoIcon class="inline-block size-[1.15em] align-[-0.2em] text-primary" /> neben einem Begriff, und die App erklärt ihn dir.</p>
+              <span class="w-6 shrink-0 text-center text-base text-accent" aria-hidden="true">⊕</span>
+              <p class="text-sm"><strong>FAST4D und LAMS:</strong> zwei neue Funktionen für Schlaganfall-Zeichen. Befunde im Eingabeblatt antippen, das Ergebnis steht als eine Zeile im Protokolltext.</p>
             </div>
           </div>
           <div class="card bg-base-100 shadow-sm">
-            <div class="card-body gap-2 p-4">
-              <p class="text-sm"><strong>Neue Namen, gleiche Funktion:</strong></p>
-              <ul class="flex flex-col gap-1 text-sm">
-                <li>Container <span aria-hidden="true">→</span> <strong>Abschnitt</strong></li>
-                <li>Block <span aria-hidden="true">→</span> <strong>Gespeicherter Abschnitt</strong></li>
-                <li>Snippet <span aria-hidden="true">→</span> <strong>Textbaustein</strong></li>
-                <li>Medikamentenplan <span aria-hidden="true">→</span> <strong>Medikationsplan</strong></li>
-                <li>Ausgabe <span aria-hidden="true">→</span> <strong>Protokolltext</strong></li>
-              </ul>
-              <p class="text-xs text-base-content/60">Deine Vorlagen bleiben, wie sie sind.</p>
+            <div class="card-body flex-row items-start gap-3 p-4">
+              <TabIcon tab="vorlagen" class="size-6 shrink-0 text-primary" />
+              <p class="text-sm"><strong>Vorlagen-Links öffnen die App:</strong> Tippst du auf einen geteilten Link, öffnet sich ResQDocs und fragt, ob du die Vorlage übernehmen willst. Beim Überschreiben bleibt sie an ihrem Platz.</p>
             </div>
           </div>
           <div class="card bg-base-100 shadow-sm">
-            <div class="card-body p-4">
-              <p class="text-sm"><strong>Klare Verweise:</strong> Steht im Text <TabRef tab="einsatz" />, ist der Tab unten in der Leiste gemeint.</p>
+            <div class="card-body flex-row items-start gap-3 p-4">
+              <span class="w-6 shrink-0 text-center text-base text-primary" aria-hidden="true">✎</span>
+              <p class="text-sm"><strong>„individuell“ in Auswahllisten:</strong> steht am Ende der Liste. Ein Tipp öffnet das Textfeld mit deiner aktuellen Auswahl.</p>
             </div>
           </div>
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body flex-row items-start gap-3 p-4">
+              <TabIcon tab="einstellungen" class="size-6 shrink-0 text-primary" />
+              <p class="text-sm"><strong>Sicherungen:</strong> übersichtlichere Liste. Auf Wunsch löscht die App alte Sicherungen nach einer Frist, die du unter <TabRef tab="einstellungen" /> festlegst.</p>
+            </div>
+          </div>
+          <p class="text-center text-xs text-base-content/60">Außerdem können Funktionen in der Vorlage auf „nicht erhoben“ starten.</p>
         </div>
 
         <!-- Seite „Begriffe“: die Teile einer Vorlage, mit denselben Zeichen wie im Aufbau und im Bausteine-Tab -->
@@ -255,7 +256,7 @@ function onTouchEnd(e: TouchEvent): void {
                   </svg>
                 </span>
                 <p class="text-sm">
-                  Medikationsplan mit Scan, NEWS2 und Pack-Years fügst du als <strong>Funktionen</strong> in deine Vorlage ein.
+                  Medikationsplan mit Scan, NEWS2, LAMS, FAST4D und Pack-Years fügst du als <strong>Funktionen</strong> in deine Vorlage ein.
                 </p>
               </div>
             </div>

@@ -17,6 +17,15 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     public void onCreate(Bundle savedInstanceState) {
         // Nativer Code-Scanner (CameraX + ZXing-C++, GMS-frei) — VOR super.onCreate registrieren.
         registerPlugin(app.resqdocs.scanner.ScannerPlugin.class);
+        // Ein angetippter Link gehoert zu genau EINEM Start. Stellt Android die Activity spaeter wieder her
+        // (Prozess beendet, Start aus „Letzte Apps"), haengt derselbe VIEW-Intent noch daran und wuerde
+        // erneut zum Import angeboten. In diesen Faellen die Daten vom Intent nehmen, bevor Capacitor ihn liest.
+        Intent intent = getIntent();
+        boolean restored = savedInstanceState != null
+                || (intent != null && (intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0);
+        if (restored && intent != null && intent.getData() != null) {
+            intent.setData(null);
+        }
         super.onCreate(savedInstanceState);
     }
 

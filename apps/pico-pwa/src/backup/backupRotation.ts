@@ -38,6 +38,10 @@ export interface RotationConfig {
   recent: number
   dailyDays: number
   weeklyWeeks: number
+  /** Optionale Altersgrenze in Tagen: Staende, die aelter sind, werden geloescht - auch wenn die Staffelung
+   *  sie behalten wuerde. null/undefined/0 = aus (Standard). Der neueste und der reichhaltigste Stand
+   *  bleiben trotzdem immer erhalten. */
+  maxAgeDays?: number | null
 }
 // Time-Machine-Staffelung auf Vorlagengröße skaliert (letzte 10 + 30 Tage + 12 Wochen, ~50 Stände Deckel).
 export const DEFAULT_ROTATION: RotationConfig = { recent: 10, dailyDays: 30, weeklyWeeks: 12 }
@@ -117,6 +121,17 @@ function richest(snaps: SnapshotMeta[]): SnapshotMeta | null {
   return best
 }
 
+/** Altersgrenze anwenden: aus `keep` faellt alles, was aelter als `maxAgeDays` (gemessen an `now`) ist.
+ *  Geschuetzt bleiben `protect` (neuester Stand, reichhaltigster Stand). Ohne Grenze unveraendert. */
+function applyMaxAge(keep: Set<string>, all: SnapshotMeta[], cfg: RotationConfig, now: number, protect: Set<string>): void {
+  const days = cfg.maxAgeDays
+  if (!days || !Number.isFinite(days) || days <= 0) return
+  const limit = now - days * DAY_MS
+  for (const s of all) {
+    if (s.createdAt < limit && !protect.has(s.name)) keep.delete(s.name)
+  }
+}
+
 /** Plant Schreiben + Prune. `existing` = vorhandene Snapshots; `candidate` = der neue Stand. */
 export function planBackup(
   existing: SnapshotMeta[],
@@ -129,7 +144,19 @@ export function planBackup(
   // Dedup: inhaltsgleich zum neuesten Stand -> nicht schreiben (spart Flash-Verschleiß). force überspringt das
   // (Sicherheits-Snapshot vor einem Restore MUSS existieren, damit man garantiert zurückspringen kann).
   if (!force && sortedExisting.length > 0 && sortedExisting[0].hash === candidate.hash) {
-    return { write: false, skipReason: 'unverändert', prune: [], keep: sortedExisting.map((s) => s.name) }
+    // Auch ohne neuen Stand greift die Altersgrenze (sonst blieben bei unveraenderten Daten alte Staende
+    // fuer immer liegen). Ohne Grenze: prune leer, wie bisher.
+    const keepSkip = new Set(sortedExisting.map((s) => s.name))
+    const protect = new Set([sortedExisting[0].name])
+    const bestSkip = richest(sortedExisting)
+    if (bestSkip) protect.add(bestSkip.name)
+    applyMaxAge(keepSkip, sortedExisting, cfg, candidate.createdAt, protect)
+    return {
+      write: false,
+      skipReason: 'unverändert',
+      prune: sortedExisting.filter((s) => !keepSkip.has(s.name)).map((s) => s.name),
+      keep: [...keepSkip],
+    }
   }
 
   const all: SnapshotMeta[] = [
@@ -153,6 +180,11 @@ export function planBackup(
   // rotations-immun -> „frei zwischen Ständen springen" ohne dass der Rückweg wegrotiert (git-ORIG_HEAD-Prinzip).
   for (const s of all.filter((x) => x.origin === 'pre-restore').slice(0, PRE_RESTORE_PINS)) keep.add(s.name)
   keep.add(candidate.name) // der neue Stand wird immer behalten
+  // Optionale Altersgrenze zuletzt: sie schlaegt Staffelung und Pre-Restore-Pins, nie aber den neuen und den
+  // reichhaltigsten Stand (Anti-Regressions-Guard bleibt unangetastet).
+  const protect = new Set([candidate.name])
+  if (best) protect.add(best.name)
+  applyMaxAge(keep, all, cfg, candidate.createdAt, protect)
 
   const prune = all.filter((s) => !keep.has(s.name)).map((s) => s.name)
   return { write: true, prune, keep: [...keep] }

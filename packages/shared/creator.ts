@@ -13,9 +13,12 @@ export function createField(id: string): Field {
   return { type: 'field', id }
 }
 /** Funktions-Blatt (z. B. Medikamentenplan). Default-Titel = Registry-Label, damit Editor UND Einsatz
- *  denselben Namen zeigen (sonst Editor=id „n2", Einsatz=Fallback). showTitle an. Frei umbenennbar. */
+ *  denselben Namen zeigen (sonst Editor=id „n2", Einsatz=Fallback). showTitle an. Frei umbenennbar.
+ *  Die Registry kann je Kind eine Start-Formatierung des Titels mitgeben (createDefaults, z. B. LAMS:
+ *  Titel inline ohne Markdown-Praefix) - nur beim Anlegen, danach frei aenderbar. */
 export function createFunction(id: string, kind: FunctionKind = 'medikamentenplan'): FunctionNode {
-  return { type: 'function', id, functionKind: kind, showTitle: true, title: FUNCTION_REGISTRY[kind].label }
+  const def = FUNCTION_REGISTRY[kind]
+  return { type: 'function', id, functionKind: kind, showTitle: true, title: def.label, ...def.createDefaults?.() }
 }
 
 /** Tiefensuche ueber ALLE Knoten (Container + Field): Knoten mit id finden (oder null). */

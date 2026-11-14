@@ -64,3 +64,52 @@ test('GFS über 10 Tage: die 3 neuesten immer behalten, keep/prune disjunkt + vo
   assert.equal(plan.keep.some((n) => plan.prune.includes(n)), false, 'keep/prune disjunkt')
   for (const n of ['neu', 'd9', 'd8']) assert.ok(plan.keep.includes(n), `die neuesten bleiben (${n})`)
 })
+
+// --- Optionale Altersgrenze (maxAgeDays) ---
+const snap = (name: string, createdAt: number, total = 5, hash = name): { name: string; createdAt: number; hash: string; total: number } => ({ name, createdAt, hash, total })
+
+test('maxAgeDays: aus (null) -> Verhalten wie bisher, nichts wird wegen Alter gelöscht', () => {
+  const now = 400 * DAY
+  const existing = [snap('alt', now - 300 * DAY), snap('neu', now - DAY)]
+  const plan = planBackup(existing, snap('kandidat', now, 5, 'x'), { recent: 10, dailyDays: 30, weeklyWeeks: 12, maxAgeDays: null })
+  assert.deepEqual(plan.prune, [])
+})
+
+test('maxAgeDays: Stände über der Frist werden gelöscht, auch wenn die Staffelung sie behielte', () => {
+  const now = 400 * DAY
+  const existing = [snap('alt', now - 40 * DAY), snap('grenze', now - 29 * DAY), snap('neu', now - DAY)]
+  const plan = planBackup(existing, snap('kandidat', now, 5, 'x'), { recent: 10, dailyDays: 30, weeklyWeeks: 12, maxAgeDays: 30 })
+  assert.deepEqual(plan.prune, ['alt'])
+  assert.ok(plan.keep.includes('grenze') && plan.keep.includes('neu') && plan.keep.includes('kandidat'))
+})
+
+test('maxAgeDays: die reichhaltigste Sicherung bleibt trotz Alter (Anti-Regressions-Guard)', () => {
+  const now = 400 * DAY
+  const existing = [snap('reich-alt', now - 200 * DAY, 99), snap('arm-alt', now - 100 * DAY, 1)]
+  const plan = planBackup(existing, snap('kandidat', now, 2, 'x'), { recent: 10, dailyDays: 30, weeklyWeeks: 12, maxAgeDays: 30 })
+  assert.deepEqual(plan.prune, ['arm-alt'])
+  assert.ok(plan.keep.includes('reich-alt'))
+})
+
+test('maxAgeDays: schlägt auch gepinnte Pre-Restore-Stände', () => {
+  const now = 400 * DAY
+  const existing = [{ ...snap('pre', now - 60 * DAY), origin: 'pre-restore' as const }, snap('neu', now - DAY, 9)]
+  const plan = planBackup(existing, snap('kandidat', now, 9, 'x'), { recent: 10, dailyDays: 30, weeklyWeeks: 12, maxAgeDays: 30 })
+  assert.deepEqual(plan.prune, ['pre'])
+})
+
+test('maxAgeDays: unveränderter Inhalt -> kein Schreiben, abgelaufene Stände fallen trotzdem weg; der neueste bleibt', () => {
+  const now = 400 * DAY
+  const existing = [snap('alt', now - 90 * DAY, 5, 'a'), snap('einzig-neu', now - 50 * DAY, 5, 'gleich')]
+  const plan = planBackup(existing, snap('kandidat', now, 5, 'gleich'), { recent: 10, dailyDays: 30, weeklyWeeks: 12, maxAgeDays: 30 })
+  assert.equal(plan.write, false)
+  assert.deepEqual(plan.prune, ['alt'])
+  assert.deepEqual(plan.keep, ['einzig-neu'])
+})
+
+test('maxAgeDays: unverändert und ohne Frist -> prune leer (wie bisher)', () => {
+  const now = 400 * DAY
+  const plan = planBackup([snap('alt', now - 90 * DAY, 5, 'gleich')], snap('kandidat', now, 5, 'gleich'))
+  assert.equal(plan.write, false)
+  assert.deepEqual(plan.prune, [])
+})

@@ -99,6 +99,10 @@ export const RECEIVER_HTML = `<!doctype html>
 
   <div id="ready" class="hide">
     <p>Ein Transfer wartet auf dich.</p>
+    <div id="appRow" class="hide">
+      <div class="row"><button id="appBtn" class="primary">In der ResQDocs-App öffnen</button></div>
+      <p class="foot">Die App fragt vor dem Import nach. Dafür muss die aktuelle ResQDocs-App auf diesem Gerät installiert sein.</p>
+    </div>
     <div class="row"><button id="fetchBtn" class="primary">Vorlage abrufen</button></div>
     <p class="foot">Hinweis: Bei der Einstellung „1× lesen" wird der Inhalt nach diesem Abruf auf dem Server gelöscht.</p>
   </div>
@@ -187,6 +191,15 @@ async function run(){
 }
 
 $('fetchBtn').addEventListener('click', function(){ void run(); });
+// Uebergabe an die App ueber ihr eigenes Schema: ein Tipp auf einen Link DERSELBEN Seite loest keine
+// Universal-/App-Link-Zuordnung aus. Das Fragment geht unveraendert mit; abgerufen wird hier nichts
+// (die App ruft erst nach Bestaetigung ab -> „1x lesen" bleibt unverbraucht).
+var APP_SCHEME_URL = 'resqdocs://receive';
+var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+$('appBtn').addEventListener('click', function(){
+  var parsed = RQD.parseFragment(location.hash || '');
+  if (parsed) location.href = APP_SCHEME_URL + '#' + parsed.id + '.' + parsed.key;
+});
 $('dlBtn').addEventListener('click', function(){
   var blob = new Blob([lastText], { type: 'application/json' });
   var url = URL.createObjectURL(blob);
@@ -209,7 +222,10 @@ $('editorBtn').addEventListener('click', function(){
 });
 
 // Beim Laden NICHT automatisch abrufen (Burn-Schutz): nur den passenden Zustand zeigen.
-if (RQD.parseFragment(location.hash || '')) show('ready'); else show('nolink');
+if (RQD.parseFragment(location.hash || '')) {
+  if (isMobile) { $('appRow').className = ''; $('fetchBtn').className = ''; }
+  show('ready');
+} else show('nolink');
 </script>
 </body>
 </html>`

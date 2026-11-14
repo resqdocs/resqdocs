@@ -108,7 +108,8 @@ function sanitizeValues(v: unknown): Record<string, FieldFill> {
 /** Funktions-Zeilen strikt auf bekannte Felder reduzieren (leere raus). Deckt ALLE Zeilen-Typen ab:
  *  Medikament {name, staerke?, dosierung?, kommentar?, pzn?}, Arzt {name, rolle?, ort?, telefon?,
  *  arztnummer?} UND Score-Zeilen (z. B. Pack-Years {cigarettesPerDay?, years?} - reine Zahlen, KEIN
- *  Namen-Feld). DSGVO: striktes Allowlisting - NUR diese Felder gelangen in den Entwurf, keine
+ *  Namen-Feld; LAMS {lamsFace?, lamsArm?, lamsGrip?} - Punktwerte im festen Bereich; FAST4D {fast…} - Befunde
+ *  neg|pos|na, Seite, Zeitart und Uhrzeit HH:MM). DSGVO: striktes Allowlisting - NUR diese Felder gelangen in den Entwurf, keine
  *  Scan-Rohdaten. Da der Entwurf den functionKind je Zeile nicht kennt, behalten wir die Union aller
  *  bekannten Felder (harmlos: jede Registry liest nur ihre eigenen). Behalten wird jede Zeile mit
  *  IRGENDEINER Eingabe (hasData-Semantik: auch namenlos mit Daten = Nutzerarbeit) -
@@ -116,6 +117,26 @@ function sanitizeValues(v: unknown): Record<string, FieldFill> {
 const STRING_FIELDS = ['name', 'staerke', 'dosierung', 'kommentar', 'pzn', 'ort', 'telefon', 'arztnummer'] as const
 const NUMBER_FIELDS = ['cigarettesPerDay', 'years', 'rr', 'spo2', 'systolic', 'pulse', 'temp'] as const
 const BOOL_FIELDS = ['onOxygen', 'scale2'] as const
+/** Befund-Felder mit festem Wertebereich (LAMS-Punkte, FAST4D-Befunde/-Seite/-Zeitart): nur exakt
+ *  diese Werte gelangen in den Entwurf. */
+const FAST4D_BEFUND = ['neg', 'pos', 'na'] as const
+const ENUM_FIELDS: Record<string, readonly (string | number)[]> = {
+  lamsFace: [0, 1],
+  lamsArm: [0, 1, 2],
+  lamsGrip: [0, 1, 2],
+  fastFace: FAST4D_BEFUND,
+  fastArm: FAST4D_BEFUND,
+  fastSpeech: FAST4D_BEFUND,
+  fastDiplopia: FAST4D_BEFUND,
+  fastField: FAST4D_BEFUND,
+  fastVertigo: FAST4D_BEFUND,
+  fastAtaxia: FAST4D_BEFUND,
+  fastFaceSide: ['re', 'li'],
+  fastArmSide: ['re', 'li'],
+  fastTimeMode: ['onset', 'lsw', 'unknown'],
+}
+/** FAST4D-Uhrzeit: ausschliesslich HH:MM (kein Freitext im Entwurf). */
+const UHRZEIT = /^([01]\d|2[0-3]):[0-5]\d$/
 function sanitizeRows(v: unknown): FunctionRow[] {
   if (!Array.isArray(v)) return []
   const out: FunctionRow[] = []
@@ -132,6 +153,9 @@ function sanitizeRows(v: unknown): FunctionRow[] {
     for (const k of NUMBER_FIELDS) if (typeof r[k] === 'number' && Number.isFinite(r[k])) row[k] = r[k]
     // Boolean-Score-Felder (NEWS2: O2-Gabe, SpO2-Skala 2)
     for (const k of BOOL_FIELDS) if (typeof r[k] === 'boolean') row[k] = r[k]
+    // Befund-Felder mit festem Wertebereich (LAMS, FAST4D)
+    for (const [k, erlaubt] of Object.entries(ENUM_FIELDS)) if (erlaubt.includes(r[k] as string | number)) row[k] = r[k]
+    if (typeof r.fastTime === 'string' && UHRZEIT.test(r.fastTime)) row.fastTime = r.fastTime
     // Leer? (keine nicht-leeren Strings UND keine Zahlen) -> keine Nutzerarbeit, raus. Ein alleiniger
     // Boolean (Toggle ohne Vitalwerte) zaehlt bewusst NICHT als Erfassung.
     const hatWert = Object.values(row).some((x) => (typeof x === 'string' ? x.trim() !== '' : typeof x === 'number'))

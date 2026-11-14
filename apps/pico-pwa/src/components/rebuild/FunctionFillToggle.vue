@@ -12,7 +12,7 @@ import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
 
-const status = computed(() => caseValues.getFunctionStatus(props.node.id))
+const status = computed(() => caseValues.getFunctionStatus(props.node.id, props.node))
 const label = computed(() => (props.node.title && props.node.title.trim()) || props.node.id)
 
 onMounted(() => {

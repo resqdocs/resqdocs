@@ -124,3 +124,37 @@ test('orderByOptions/multiFill: doppelte Options-Strings verdoppeln die Ausgabe 
   assert.deepEqual(toggleMultiOption(['A'], 'B', dupField), ['A', 'B']) // kein 'A','A'
   assert.deepEqual(multiFill(dupField, ['A', 'A', 'B']), { state: 'custom', value: 'A und B', values: ['A', 'B'] })
 })
+
+// --- ✎ „individuell" startet mit der aktuellen Auswahl -------------------------------------------
+import { individuellPrefill } from './fill.ts'
+
+const abdomen: Field = { type: 'field', id: 'abd', multiple: true, allowCustom: true, options: ['unauffällig', 'Abwehrspannung', 'Druckschmerz'] }
+const lage: Field = { type: 'field', id: 'lage', allowCustom: true, options: ['sitzend', 'liegend'], default: 'liegend' }
+
+test('individuellPrefill Mehrfachauswahl: der ✎-Text startet mit der verketteten Auswahl', () => {
+  assert.equal(individuellPrefill(abdomen, undefined), 'unauffällig') // confirmed = Standard-Option
+  assert.equal(individuellPrefill(abdomen, multiFill(abdomen, ['Druckschmerz'])), 'Druckschmerz')
+  assert.equal(individuellPrefill(abdomen, multiFill(abdomen, ['Druckschmerz', 'Abwehrspannung'])), 'Abwehrspannung und Druckschmerz')
+})
+
+test('individuellPrefill Einfachauswahl: Standard-Option bzw. gewaehlte Option', () => {
+  assert.equal(individuellPrefill(lage, undefined), 'liegend')
+  assert.equal(individuellPrefill(lage, { state: 'custom', value: 'sitzend' }), 'sitzend')
+})
+
+test('individuellPrefill: der Wechsel auf ✎ aendert die Ausgabe nicht', () => {
+  for (const fill of [undefined, multiFill(abdomen, ['Druckschmerz']), multiFill(abdomen, ['Abwehrspannung', 'Druckschmerz'])]) {
+    const text = individuellPrefill(abdomen, fill)
+    assert.equal(fillValue(abdomen, { state: 'custom', value: text }), fillValue(abdomen, fill))
+  }
+})
+
+test('individuellPrefill: eigener und gemerkter Text gehen vor, getippter Text geht nie verloren', () => {
+  assert.equal(individuellPrefill(abdomen, { state: 'custom', value: 'Narbe rechts' }), 'Narbe rechts')
+  assert.equal(individuellPrefill(abdomen, { state: 'confirmed', prevValue: 'Narbe rechts' }, 'Narbe rechts'), 'Narbe rechts')
+})
+
+test('individuellPrefill: ohne Auswahl bleibt der ✎-Text leer', () => {
+  assert.equal(individuellPrefill(abdomen, { state: 'excluded' }), '')
+  assert.equal(individuellPrefill({ ...abdomen, defaultEmpty: true }, undefined), '')
+})

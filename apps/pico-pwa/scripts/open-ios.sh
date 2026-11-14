@@ -14,7 +14,7 @@
 # man anschliessend in der Beta baut - genau die Sorte Misch-Zustand, aus der
 # der Fehler "Unable to resolve module Capacitor" entstanden ist.
 #
-# Schritte: Toolchain waehlen -> deps -> Web-Build -> cap sync -> pod install ->
+# Schritte: Toolchain waehlen -> deps (npm ci) -> Web-Build -> cap sync -> pod install ->
 # Xcode beenden (sonst stellt es ggf. das falsche Projektfenster wieder her) ->
 # DerivedData der App raeumen (Reste eines xcodeproj-Fehlbuilds) -> Workspace oeffnen.
 set -euo pipefail
@@ -53,8 +53,16 @@ xcodebuild -version 2>/dev/null | sed 's/^/    /' || {
 echo "==> Versions-Konsistenz prüfen"
 node scripts/check-version-consistency.mjs
 
-echo "==> npm install"
-npm install
+# npm ci statt npm install: installiert exakt nach Lockfile und schreibt es nie um. Ein npm install
+# mit aelterem npm (< 12) hat die Lockfile bei jedem Build veraendert und Branch-Wechsel blockiert.
+NPM_MAJOR="$(npm -v | cut -d. -f1)"
+if [ "$NPM_MAJOR" -lt 12 ]; then
+  echo "✗ npm $(npm -v) gefunden, das Projekt braucht npm 12 oder neuer (package.json: engines)." >&2
+  echo "  Aktualisieren: npm install -g npm@latest" >&2
+  exit 1
+fi
+echo "==> npm ci"
+npm ci
 
 echo "==> Web-Build"
 npm run build
