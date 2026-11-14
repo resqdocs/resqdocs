@@ -175,6 +175,52 @@ test('sanitizeValues (via parseDraft): Score-Zeile - Pack-Years {cigarettesPerDa
   assert.deepEqual(d.values.leer, { state: 'function', rows: [] })
 })
 
+test('sanitizeValues (via parseDraft): LAMS-Zeile überlebt (auch 0 Punkte); Werte außerhalb des Bereichs raus', () => {
+  const raw = {
+    protocolId: 'p',
+    createdAt: T0,
+    lastTouchedAt: T0,
+    expiresAt: T0 + HOUR,
+    ttlHours: 3,
+    values: {
+      voll: { state: 'function', rows: [{ lamsFace: 1, lamsArm: 2, lamsGrip: 0, geheim: 'x' }] },
+      null0: { state: 'function', rows: [{ lamsFace: 0, lamsArm: 0, lamsGrip: 0 }] },
+      falsch: { state: 'function', rows: [{ lamsFace: 2, lamsArm: 3, lamsGrip: '1' }] },
+    },
+  }
+  const d = parseDraft(raw)!
+  assert.deepEqual(d.values.voll, { state: 'function', rows: [{ lamsFace: 1, lamsArm: 2, lamsGrip: 0 }] })
+  // 0 Punkte je Befund = erhobener Normalbefund, darf NICHT als leere Zeile entfallen
+  assert.deepEqual(d.values.null0, { state: 'function', rows: [{ lamsFace: 0, lamsArm: 0, lamsGrip: 0 }] })
+  // Gesicht 2, Arm 3, Haendedruck als String -> kein gueltiger Wert -> Zeile leer -> raus
+  assert.deepEqual(d.values.falsch, { state: 'function', rows: [] })
+})
+
+test('sanitizeValues (via parseDraft): FAST4D-Zeile überlebt mit Seite und Zeit; Fremdwerte und Freitext-Zeit raus', () => {
+  const voll = {
+    fastFace: 'pos', fastArm: 'pos', fastSpeech: 'neg', fastDiplopia: 'pos', fastField: 'neg', fastVertigo: 'neg', fastAtaxia: 'na',
+    fastFaceSide: 're', fastArmSide: 'li', fastTimeMode: 'onset', fastTime: '14:30',
+  }
+  const raw = {
+    protocolId: 'p',
+    createdAt: T0,
+    lastTouchedAt: T0,
+    expiresAt: T0 + HOUR,
+    ttlHours: 3,
+    values: {
+      voll: { state: 'function', rows: [{ ...voll, geheim: 'x' }] },
+      falsch: { state: 'function', rows: [{ fastFace: 'ja', fastFaceSide: 'rechts', fastTimeMode: 'gestern', fastTime: 'gegen halb drei' }] },
+      zeit: { state: 'function', rows: [{ fastSpeech: 'neg', fastTime: '24:00' }] },
+    },
+  }
+  const d = parseDraft(raw)!
+  assert.deepEqual(d.values.voll, { state: 'function', rows: [voll] })
+  // kein einziger gueltiger Wert -> Zeile leer -> raus (insbesondere kein Freitext ueber fastTime)
+  assert.deepEqual(d.values.falsch, { state: 'function', rows: [] })
+  // ungueltige Uhrzeit entfaellt, der gueltige Befund bleibt
+  assert.deepEqual(d.values.zeit, { state: 'function', rows: [{ fastSpeech: 'neg' }] })
+})
+
 test('sanitizeValues (via parseDraft): Funktions-Status custom+Freitext und excluded ueberleben den Roundtrip', () => {
   const raw = {
     protocolId: 'p',

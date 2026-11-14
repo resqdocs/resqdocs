@@ -102,6 +102,31 @@ test('FunctionNode mit Config + titleInline: JSON-Roundtrip verlustfrei', () => 
   assert.deepEqual(JSON.parse(JSON.stringify(fn)), fn)
 })
 
+test('createFunction: LAMS startet mit Inline-Titel -> eine Zeile „LAMS 4/5 (…)"; Bestandsfunktionen unverändert', () => {
+  const fn = createFunction('l', 'lams')
+  assert.equal(fn.title, 'LAMS')
+  assert.equal(fn.titleInline, true)
+  assert.deepEqual(JSON.parse(JSON.stringify(fn)), fn) // Roundtrip inkl. heading
+  let r = createContainer('r')
+  r = addChild(r, 'r', fn)
+  const out = render(r, { l: { state: 'function', rows: [{ lamsFace: 1, lamsArm: 2, lamsGrip: 1 }] } })
+  assert.equal(out, 'LAMS 4/5 (Fazialisparese, Arm fällt sofort, Händedruck schwach) - V. a. proximalen Verschluss (LVO)')
+  // jede neue Funktion bekommt ihr eigenes heading-Objekt
+  assert.notEqual(createFunction('a', 'lams').heading, createFunction('b', 'lams').heading)
+  // NEWS2 & Co. behalten den Banner-Titel (kein titleInline/heading beim Anlegen)
+  assert.deepEqual(createFunction('n', 'news2'), { type: 'function', id: 'n', functionKind: 'news2', showTitle: true, title: 'NEWS2' })
+})
+
+test('createFunction: FAST4D startet mit Inline-Titel -> eine Zeile „FAST4D positiv (…)"', () => {
+  const fn = createFunction('f', 'fast4d')
+  assert.equal(fn.title, 'FAST4D')
+  assert.equal(fn.titleInline, true)
+  let r = createContainer('r')
+  r = addChild(r, 'r', fn)
+  const row = { fastFace: 'pos', fastFaceSide: 'li', fastArm: 'neg', fastSpeech: 'neg', fastDiplopia: 'neg', fastField: 'neg', fastVertigo: 'neg', fastAtaxia: 'neg', fastTimeMode: 'unknown' } as const
+  assert.equal(render(r, { f: { state: 'function', rows: [row] } }), 'FAST4D positiv (1/7): Fazialisparese links. Symptombeginn unklar.')
+})
+
 test('parentOf / isDescendant', () => {
   let r = createContainer('r')
   r = addChild(r, 'r', createContainer('a'))

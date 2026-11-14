@@ -344,22 +344,22 @@ async function saveAsBaustein(): Promise<void> {
       <label
         v-if="node.type === 'field' || node.type === 'function'"
         class="flex w-full items-center gap-2 py-0"
-        :class="node.type === 'field' && node.defaultExcluded ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
-        :title="node.type === 'field' && node.defaultExcluded ? 'Nicht zusammen mit „Startet auf \u201anicht erhoben\u2018\u201c moeglich.' : undefined"
+        :class="node.defaultExcluded ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
+        :title="node.defaultExcluded ? 'Nicht zusammen mit „Startet auf \u201anicht erhoben\u2018\u201c moeglich.' : undefined"
       >
-        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.required === true" :disabled="node.type === 'field' && node.defaultExcluded === true" @change="set({ required: ($event.target as HTMLInputElement).checked || undefined })" />
+        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.required === true" :disabled="node.defaultExcluded === true" @change="set({ required: ($event.target as HTMLInputElement).checked || undefined })" />
         <span class="text-sm">Pflichtfeld <span class="whitespace-nowrap text-base-content/50">(✓ / ✎, kein „nicht erhoben")</span></span>
         <InfoTip :info="INFO.required" class="ml-auto" />
       </label>
 
-      <!-- FELD: UNO Reverse. Das Feld startet im Einsatz auf „nicht erhoben" statt auf „bestaetigt" und
-           erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Fuer Felder, die man
-           nur in bestimmten Lagen braucht.
+      <!-- FELD/FUNKTION: UNO Reverse. Der Knoten startet im Einsatz auf „nicht erhoben" statt auf
+           „bestaetigt" und erscheint erst in der Ausgabe, wenn der Anwender ihn bewusst einschaltet.
+           Fuer Felder und Funktionen, die man nur in bestimmten Lagen braucht.
            Schliesst sich mit „Pflichtfeld" aus: ein Pflichtfeld darf nicht still entfallen. Statt den
            Widerspruch zuzulassen und spaeter aufzuloesen, ist der jeweils andere Schalter gesperrt -
            so kann er gar nicht erst entstehen. -->
       <label
-        v-if="node.type === 'field'"
+        v-if="node.type === 'field' || node.type === 'function'"
         class="flex w-full items-center gap-2 py-0"
         :class="node.required ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
         :title="node.required ? 'Nicht zusammen mit „Pflichtfeld\u201c moeglich - ein Pflichtfeld darf nicht still entfallen.' : undefined"
@@ -372,7 +372,7 @@ async function saveAsBaustein(): Promise<void> {
           @change="set({ defaultExcluded: ($event.target as HTMLInputElement).checked || undefined })"
         />
         <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/50">(nur bei Bedarf einschalten)</span></span>
-        <InfoTip :info="INFO.fieldStartsExcluded" class="ml-auto" />
+        <InfoTip :info="node.type === 'function' ? INFO.functionStartsExcluded : INFO.fieldStartsExcluded" class="ml-auto" />
       </label>
 
       <!-- CONTAINER: einklappbar + als „nicht erhoben" markierbar (Basis).

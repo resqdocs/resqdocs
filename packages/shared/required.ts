@@ -3,13 +3,13 @@
 // NICHT „ein Wert wird erzwungen". „Erfuellt" = das Blatt liefert nicht-leeren Ausgabetext.
 // Rein -> node-getestet. Renderer/Modell-Ausgabe bleiben unveraendert.
 import type { Node, Field, FunctionNode, FieldFill } from './model.ts'
-import { defaultFill, isFilled } from './fill.ts'
+import { defaultFill, isFilled, functionStatus } from './fill.ts'
 import { FUNCTION_REGISTRY } from './functions/registry.ts'
 
 /** Liefert die Funktion nicht-leeren Ausgabetext? Zeilen (hasData) ODER Freitext (custom) ODER
  *  Standardtext (node.default) - deckt sich mit renderBody, damit Badge und Ausgabe nie widersprechen. */
 export function isFunctionFilled(node: FunctionNode, fill: FieldFill | undefined): boolean {
-  const status = fill?.state === 'function' ? (fill.status ?? 'confirmed') : 'confirmed'
+  const status = functionStatus(node, fill)
   if (status === 'excluded') return false // bei required per UI verhindert; defensiv: nicht erfuellt
   if (status === 'custom') return fill?.state === 'function' && (fill.text ?? '').trim() !== ''
   const hasData = FUNCTION_REGISTRY[node.functionKind]?.hasData(fill) ?? false

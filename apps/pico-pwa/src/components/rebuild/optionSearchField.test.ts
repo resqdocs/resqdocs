@@ -59,3 +59,30 @@ test('ein offenes Dropdown hebt seine Karte ueber die folgenden Abschnitte - unt
   const dz = Number(dock[1].match(/\bz-(?:\[)?(\d+)\]?/)?.[1] ?? 1)
   assert.ok(dz > z, `Dock z-index ${dz} muss ueber der angehobenen Karte (${z}) liegen`)
 })
+
+test('der Eintrag „individuell" steht in JEDER Listen-Darstellung und fuehrt direkt in den ✎-Modus', () => {
+  // individuell ist eine Option der Liste, nicht nur der Schalter vor dem Titel.
+  // Sechs Darstellungen: offene Liste, Dropdown, durchsuchbare Liste - je Einfach- und Mehrfachauswahl.
+  const all: Node[] = []
+  const walk = (n: Node): void => {
+    if (n.type === ELEMENT) all.push(n)
+    for (const c of n.children ?? []) walk(c)
+  }
+  walk(descriptor.template.ast)
+  const on = (el: Node, event: string): string =>
+    (el.props ?? []).find((p: Node) => p.type === DIRECTIVE && p.name === 'on' && p.arg?.content === event)?.exp?.content ?? ''
+  const buttons = all.filter((el) => el.tag === 'button' && on(el, 'click') === 'openIndividuell')
+  assert.equal(buttons.length, 3, 'offene Liste (Einfach + Mehrfach) und Mehrfach-Dropdown')
+  const lists = all.filter((el) => el.tag === 'OptionSearchList')
+  for (const l of lists) assert.equal(on(l, 'custom'), 'openIndividuell', 'durchsuchbare Liste meldet den Eintrag')
+  const nativeOption = all.filter((el) => el.tag === 'option' && hasAttr(el, 'value'))
+  assert.equal(nativeOption.length, 1, 'natives Dropdown der Einfachauswahl fuehrt den Eintrag als value -1')
+  const script = descriptor.scriptSetup?.content ?? ''
+  assert.match(script, /if \(i < 0\) openIndividuell\(\)/)
+})
+
+test('abgehakte letzte Option: die Mehrfachauswahl bleibt offen statt einzuklappen', () => {
+  const script = descriptor.scriptSetup?.content ?? ''
+  assert.match(script, /emptiedByUncheck\.value = next\.state === 'excluded' && !props\.node\.required/)
+  assert.match(source, /<div v-if="showMultiOptions" class="pl-9">/)
+})

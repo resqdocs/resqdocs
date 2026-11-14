@@ -47,7 +47,7 @@ Immer zuerst die Web-Assets bauen und kopieren:
 
 ```bash
 cd apps/pico-pwa
-npm install
+npm ci
 npm run build
 npx cap sync android      # kopiert dist/ + aktualisiert native Plugins
 ```

@@ -112,7 +112,7 @@ export interface Field {
 
 /** Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan).
  *  functionKind = innerer Diskriminator (waechst), aufgeloest ueber die Funktions-Registry. Immer Block. */
-export type FunctionKind = 'medikamentenplan' | 'aerzte' | 'packYears' | 'news2'
+export type FunctionKind = 'medikamentenplan' | 'aerzte' | 'packYears' | 'news2' | 'lams' | 'fast4d'
 
 /** Zeilen-Layout-Konfiguration einer Funktion (pro functionKind in der Registry interpretiert). Alle
  *  Felder optional + primitiv -> JSON-Roundtrip trivial; fehlt -> heutiges Verhalten (block, ohne pre/suf). */
@@ -159,6 +159,11 @@ export interface FunctionNode {
    *  „Erfuellt" = die Funktion liefert nicht-leeren Ausgabetext (Zeilen ODER Freitext ODER Standardtext).
    *  Rein additiv, kein Submit-Gate; nur visuelle „noch offen"-Markierung. */
   required?: boolean
+  /** UNO Reverse (analog Field.defaultExcluded): die Funktion startet im Einsatz auf „nicht erhoben"
+   *  (−) und erscheint erst in der Ausgabe, wenn der Anwender sie einschaltet oder Daten erfasst.
+   *  Schliesst sich mit `required` aus; der Editor verhindert die Kombination. Aendert NUR den
+   *  Ausgangszustand (fehlender Eintrag im Werte-Store), siehe functionStatus in fill.ts. */
+  defaultExcluded?: boolean
 }
 
 export type Node = Container | Field | FunctionNode
@@ -217,10 +222,42 @@ export interface NEWS2Row {
   scale2?: boolean
 }
 
+/** Eingabe der Funktion „LAMS" (Los Angeles Motor Scale): genau EINE Zeile pro Score-Knoten. Drei
+ *  Befunde als Punktwerte: Gesicht 0-1, Armhalteversuch 0-2, Haendedruck 0-2. Summe + LVO-Hinweis ab 4
+ *  werden abgeleitet (Registry ruft scores.lams), nie gespeichert. Feldnamen mit Praefix, weil der
+ *  Entwurf den functionKind je Zeile nicht kennt (caseDraft.sanitizeRows = Union aller Felder). */
+export interface LAMSRow {
+  lamsFace?: 0 | 1
+  lamsArm?: 0 | 1 | 2
+  lamsGrip?: 0 | 1 | 2
+}
+
+/** Befund eines FAST4D-Zeichens: unauffaellig / auffaellig / nicht pruefbar. */
+export type Fast4dBefund = 'neg' | 'pos' | 'na'
+
+/** Eingabe der Funktion „FAST4D" (Schlaganfall-Screening): genau EINE Zeile pro Knoten. Sieben Befunde
+ *  (Face, Arm, Speech + Doppelbilder, Gesichtsfelddefekt, Dreh-/Schwankschwindel, Dysmetrie/Ataxie),
+ *  optional die Seite fuer Face/Arm und die Zeitangabe (Symptombeginn / zuletzt gesund gesehen /
+ *  unklar + Uhrzeit HH:MM). Die Zeit wird erfasst, zaehlt aber nicht zum Ergebnis. Positiv/negativ
+ *  wird abgeleitet (Registry ruft scores.fast4d), nie gespeichert. Feldnamen mit Praefix wie LAMSRow. */
+export interface FAST4DRow {
+  fastFace?: Fast4dBefund
+  fastArm?: Fast4dBefund
+  fastSpeech?: Fast4dBefund
+  fastDiplopia?: Fast4dBefund
+  fastField?: Fast4dBefund
+  fastVertigo?: Fast4dBefund
+  fastAtaxia?: Fast4dBefund
+  fastFaceSide?: 're' | 'li'
+  fastArmSide?: 're' | 'li'
+  fastTimeMode?: 'onset' | 'lsw' | 'unknown'
+  fastTime?: string
+}
+
 /** Zeilen-Typ einer Funktion - je functionKind verschieden, als Union (rueckwaerts-kompatibel:
  *  MedikamenteRow bleibt der erste Fall). Registry/Komponente kastellieren je Kind zur Laufzeit.
  *  Score-Funktionen (packYears) halten genau EINE Zeile mit ihren Eingaben (kein Namen-Feld). */
-export type FunctionRow = MedikamenteRow | ArztRow | PackYearsRow | NEWS2Row
+export type FunctionRow = MedikamenteRow | ArztRow | PackYearsRow | NEWS2Row | LAMSRow | FAST4DRow
 
 /** Ausfuell-Zustand eines BLATTS im Einsatz. Feld = Tri-State; Funktion = eigene Daten (rows).
  *  Fehlt -> 'confirmed' (Standardwert). */

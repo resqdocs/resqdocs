@@ -22,8 +22,11 @@ const props = defineProps<{
   /** Einfachauswahl: gewaehlte Option. */
   selectedOption?: string | null
   required?: boolean
+  /** Gesetzt = fester Eintrag unter der Liste (z. B. „individuell"), unabhaengig von Suche und Scrollstand
+   *  immer sichtbar. Antippen meldet `custom` und schliesst die Liste. */
+  customLabel?: string
 }>()
-const emit = defineEmits<{ toggle: [opt: string]; pick: [opt: string] }>()
+const emit = defineEmits<{ toggle: [opt: string]; pick: [opt: string]; custom: [] }>()
 
 const detailsEl = ref<HTMLDetailsElement | null>(null)
 const searchInput = ref<HTMLInputElement | null>(null)
@@ -37,13 +40,14 @@ const query = ref('')
 // Scroll-Aenderung (Tastatur faehrt ein/aus, Seite scrollt).
 const LIST_MIN_PX = 120
 const LIST_MAX_PX = 256
+const CUSTOM_ROW_PX = 48 // fester Eintrag unter der Liste (min-h-11 + Rand) - muss mit in den sichtbaren Bereich
 function fitToViewport(): void {
   const list = listEl.value
   if (!detailsEl.value?.open || !list) return
   const vv = window.visualViewport
   const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight
   const dockTop = document.querySelector<HTMLElement>('.dock')?.getBoundingClientRect().top ?? viewBottom
-  const room = Math.min(viewBottom, dockTop) - 8 - list.getBoundingClientRect().top
+  const room = Math.min(viewBottom, dockTop) - 8 - (props.customLabel ? CUSTOM_ROW_PX : 0) - list.getBoundingClientRect().top
   listMaxPx.value = Math.round(Math.max(LIST_MIN_PX, Math.min(LIST_MAX_PX, room)))
 }
 let listening = false
@@ -94,6 +98,10 @@ function pick(opt: string): void {
   emit('pick', opt)
   close()
 }
+function pickCustom(): void {
+  emit('custom')
+  close()
+}
 </script>
 
 <template>
@@ -136,6 +144,10 @@ function pick(opt: string): void {
         </li>
         <li v-if="!visible.length" class="px-2 py-1 text-sm italic text-base-content/50">Keine Treffer</li>
       </ul>
+      <button v-if="customLabel" type="button" class="flex min-h-11 w-full items-center gap-2 border-t border-base-300 px-3 text-left text-sm" @click="pickCustom">
+        <span class="w-4 shrink-0" aria-hidden="true">✎</span>
+        <span>{{ customLabel }}</span>
+      </button>
     </div>
   </details>
 </template>

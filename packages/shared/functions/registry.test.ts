@@ -132,6 +132,86 @@ test('news2: „NEWS2 Score (Risiko …) - Kernwerte"; unvollständig -> leer; s
   assert.equal(def.accent!(fill([{ rr: 22 }])), undefined)
 })
 
+test('lams: „Score/5 (Befunde)" + LVO-Hinweis ab 4; unvollständig -> leer; Ampel 0/1-3/ab 4', () => {
+  const def = FUNCTION_REGISTRY.lams
+  const fill = (rows: unknown[]): FieldFill => ({ state: 'function', rows } as FieldFill)
+  assert.equal(def.label, 'LAMS')
+  assert.equal(def.singleLine, true)
+  // kein „LAMS"-Praefix im Body (der Knoten-Titel liefert es)
+  assert.equal(def.renderBody(fill([{ lamsFace: 1, lamsArm: 2, lamsGrip: 1 }])), '4/5 (Fazialisparese, Arm fällt sofort, Händedruck schwach) - V. a. proximalen Verschluss (LVO)')
+  assert.equal(def.renderBody(fill([{ lamsFace: 1, lamsArm: 1, lamsGrip: 1 }])), '3/5 (Fazialisparese, Arm sinkt ab, Händedruck schwach)')
+  assert.equal(def.renderBody(fill([{ lamsFace: 0, lamsArm: 0, lamsGrip: 0 }])), '0/5 (Gesicht o. B., Arm o. B., Händedruck normal)')
+  assert.equal(def.hasData(fill([{ lamsFace: 0, lamsArm: 0, lamsGrip: 0 }])), true) // 0 ist ein erhobener Befund
+  // unvollstaendig bzw. ausserhalb des Bereichs -> keine Ausgabe/Daten, KEIN Wurf (lams wuerde werfen)
+  assert.equal(def.renderBody(fill([{ lamsFace: 1, lamsArm: 2 }])), '')
+  assert.equal(def.hasData(fill([{ lamsFace: 1, lamsGrip: 2 }])), false)
+  assert.equal(def.renderBody(fill([{ lamsFace: 2, lamsArm: 0, lamsGrip: 0 }])), '')
+  assert.equal(def.renderBody(fill([])), '')
+  assert.equal(def.hasData(undefined), false)
+  // sampleFill (Editor-Vorschau) -> vollstaendig, zeigt den LVO-Hinweis
+  assert.match(def.renderBody(def.sampleFill!()), /^4\/5 .*LVO\)$/)
+  // accent (Einsatz-Ampel, rein visuell)
+  assert.equal(def.accent!(fill([{ lamsFace: 0, lamsArm: 0, lamsGrip: 0 }])), 'success')
+  assert.equal(def.accent!(fill([{ lamsFace: 1, lamsArm: 0, lamsGrip: 0 }])), 'warning')
+  assert.equal(def.accent!(fill([{ lamsFace: 1, lamsArm: 1, lamsGrip: 1 }])), 'warning')
+  assert.equal(def.accent!(fill([{ lamsFace: 0, lamsArm: 2, lamsGrip: 2 }])), 'error')
+  assert.equal(def.accent!(fill([{ lamsFace: 1 }])), undefined)
+})
+
+test('fast4d: positiv ab einem Befund, Befunde mit Seite, nicht prüfbar, Zeit; unvollständig -> leer; Ampel ohne Rot', () => {
+  const def = FUNCTION_REGISTRY.fast4d
+  const fill = (rows: object[]): FieldFill => ({ state: 'function', rows }) as FieldFill
+  const neg = { fastFace: 'neg', fastArm: 'neg', fastSpeech: 'neg', fastDiplopia: 'neg', fastField: 'neg', fastVertigo: 'neg', fastAtaxia: 'neg' }
+  const na = { fastFace: 'na', fastArm: 'na', fastSpeech: 'na', fastDiplopia: 'na', fastField: 'na', fastVertigo: 'na', fastAtaxia: 'na' }
+  assert.equal(def.label, 'FAST4D')
+  assert.equal(def.singleLine, true)
+  // kein „FAST4D"-Praefix im Body (der Knoten-Titel liefert es)
+  assert.equal(def.renderBody(fill([neg])), 'negativ.')
+  assert.equal(def.renderBody(fill([{ ...neg, fastVertigo: 'pos' }])), 'positiv (1/7): Dreh-/Schwankschwindel.')
+  assert.equal(
+    def.renderBody(fill([{ ...neg, fastFace: 'pos', fastFaceSide: 're', fastArm: 'pos', fastArmSide: 're', fastDiplopia: 'pos', fastAtaxia: 'na', fastTimeMode: 'onset', fastTime: '14:30' }])),
+    'positiv (3/7): Fazialisparese rechts, Armabsinken rechts, Doppelbilder; nicht prüfbar: Dysmetrie/Ataxie. Symptombeginn 14:30.',
+  )
+  assert.equal(def.renderBody(fill([{ ...neg, fastTimeMode: 'lsw', fastTime: '06:05' }])), 'negativ. Zuletzt gesund gesehen 06:05.')
+  assert.equal(def.renderBody(fill([{ ...neg, fastTimeMode: 'unknown' }])), 'negativ. Symptombeginn unklar.')
+  assert.equal(def.renderBody(fill([na])), 'nicht prüfbar.')
+  // die Zeit zaehlt nicht mit: negativ bleibt negativ, auch mit Zeitangabe
+  assert.equal(def.accent!(fill([{ ...neg, fastTimeMode: 'onset', fastTime: '14:30' }])), 'success')
+  // unvollstaendig bzw. unbekannter Wert -> keine Ausgabe/Daten, KEIN Wurf (fast4d wuerde werfen)
+  const { fastAtaxia: _weg, ...sechs } = neg
+  assert.equal(def.renderBody(fill([sechs])), '')
+  assert.equal(def.hasData(fill([sechs])), false)
+  assert.equal(def.renderBody(fill([{ ...neg, fastFace: 'ja' }])), '')
+  assert.equal(def.hasData(undefined), false)
+  assert.equal(def.hasData(fill([neg])), true) // durchgehend unauffaellig ist ein erhobener Befund
+  // sampleFill (Editor-Vorschau) -> vollstaendig, zeigt Befunde, „nicht prüfbar" und die Zeit
+  assert.equal(def.renderBody(def.sampleFill!()), 'positiv (3/7): Fazialisparese rechts, Armabsinken rechts, Doppelbilder; nicht prüfbar: Dysmetrie/Ataxie. Symptombeginn 14:30.')
+  // accent (Einsatz-Ampel): negativ gruen, positiv gelb - auch bei 7/7 kein Rot (keine belegte Schwelle)
+  assert.equal(def.accent!(fill([neg])), 'success')
+  assert.equal(def.accent!(fill([{ ...neg, fastSpeech: 'pos' }])), 'warning')
+  const allePos = Object.fromEntries(Object.keys(neg).map((k) => [k, 'pos']))
+  assert.equal(def.accent!(fill([allePos])), 'warning')
+  assert.equal(def.accent!(fill([na])), undefined)
+  // gruen NUR bei sieben unauffaelligen Zeichen: nichts auffaellig, aber etwas nicht pruefbar -> keine Farbe
+  assert.equal(def.accent!(fill([{ ...neg, fastAtaxia: 'na' }])), undefined)
+  assert.equal(def.accent!(fill([{ ...na, fastFace: 'neg' }])), undefined)
+  // auffaellig schlaegt nicht pruefbar: gelb bleibt gelb
+  assert.equal(def.accent!(fill([{ ...na, fastFace: 'pos' }])), 'warning')
+  assert.equal(def.accent!(fill([sechs])), undefined)
+})
+
+test('createDefaults: Befund-Scores starten mit Inline-Titel ohne Markdown-Präfix; jede Instanz eigenes heading', () => {
+  const a = FUNCTION_REGISTRY.lams.createDefaults!()
+  const b = FUNCTION_REGISTRY.lams.createDefaults!()
+  assert.equal(a.titleInline, true)
+  assert.equal(a.heading?.prefix, '')
+  assert.equal(a.heading?.suffix, ' ')
+  assert.notEqual(a.heading, b.heading) // keine geteilte Referenz zwischen Knoten
+  assert.deepEqual(FUNCTION_REGISTRY.fast4d.createDefaults!(), a)
+  // Bestandsfunktionen bleiben beim Banner-Titel
+  for (const kind of ['medikamentenplan', 'aerzte', 'packYears', 'news2'] as const) assert.equal(FUNCTION_REGISTRY[kind].createDefaults, undefined)
+})
+
 // --- Funktion „Ärzte" ---
 const aerzteDef = FUNCTION_REGISTRY.aerzte
 const fillA = (rows: ArztRow[]): FieldFill => ({ state: 'function', rows })
@@ -204,6 +284,7 @@ test('singleLine-Vertrag: jede einzeilige Score-Funktion rendert NIE einen Zeile
     { state: 'function', rows: [{}] } as FieldFill,
     { state: 'function', rows: [{ cigarettesPerDay: 30, years: 15 }] } as FieldFill,
     { state: 'function', rows: [{ cigarettesPerDay: 40 }] } as FieldFill,
+    { state: 'function', rows: [{ lamsFace: 1, lamsArm: 2, lamsGrip: 2 }] } as FieldFill,
   ]
   for (const [kind, def] of Object.entries(FUNCTION_REGISTRY)) {
     if (!def.singleLine) continue

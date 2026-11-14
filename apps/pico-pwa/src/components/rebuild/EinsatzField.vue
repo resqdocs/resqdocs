@@ -11,10 +11,10 @@
  *   excluded. Ein Tap fuer alles, kein vorgeschalteter Modus-Tap.
  * Modell/Renderer unveraendert - der Renderer rendert nur den String.
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import type { Field } from '@resqdocs/protocol-core/model'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
-import { multiSelected, toggleMultiOption, multiFill, joinFieldValues } from '@resqdocs/protocol-core/fill'
+import { multiSelected, toggleMultiOption, multiFill, joinFieldValues, individuellPrefill } from '@resqdocs/protocol-core/fill'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import TriStateToggle from '@/components/TriStateToggle.vue'
 import RequiredMark from '@/components/RequiredMark.vue'
@@ -140,17 +140,28 @@ function pickOption(opt: string): void {
 }
 function pickIndividuell(): void {
   individuellRef.value = true
-  // vorhandenen individuell-Freitext behalten, sonst den ruhend gemerkten Text (Wiederherstellung), sonst leer
-  const keep = fill.value.state === 'custom' && !options.value.includes(fill.value.value) ? fill.value.value : preservedText.value
-  caseValues.setCustom(props.node.id, keep)
+  // vorhandenen individuell-Freitext behalten, sonst den ruhend gemerkten Text (Wiederherstellung), sonst
+  // die AKTUELLE AUSWAHL als Text: ✎ schreibt an der Auswahl weiter statt leer zu starten (Ausgabe bleibt gleich).
+  caseValues.setCustom(props.node.id, individuellPrefill(props.node, fill.value, preservedText.value))
+}
+// Eintrag „individuell" am Ende der Liste: fuehrt DIREKT ins Bearbeiten -
+// ✎ mit der aktuellen Auswahl als Text, Cursor im Feld. Derselbe Zustand wie ueber den Schalter vor dem Titel.
+const INDIVIDUELL = 'individuell'
+const individuellInput = ref<HTMLInputElement | null>(null)
+function openIndividuell(): void {
+  emptiedByUncheck.value = false
+  pickIndividuell()
+  void nextTick(() => individuellInput.value?.focus())
 }
 function pickExcluded(): void {
   caseValues.set(props.node.id, { state: 'excluded' })
 }
-// Auswahl im ✓-Modus: das Dropdown/die Radios fuehren NUR Wert-Optionen; „individuell" (✎) und
-// „nicht erhoben" (−) laufen ueber den Tri-State-Toggle, nicht mehr ueber vergrabene Sentinel-Optionen.
+// Auswahl im ✓-Modus: Wert-Optionen plus (bei allowCustom) der Eintrag „individuell" am Ende, der in den
+// ✎-Modus fuehrt. „nicht erhoben" (−) laeuft weiter nur ueber den Tri-State-Toggle.
 function onSelectChange(e: Event): void {
-  pickOption(options.value[Number((e.target as HTMLSelectElement).value)])
+  const i = Number((e.target as HTMLSelectElement).value)
+  if (i < 0) openIndividuell() // Eintrag „individuell" (value -1)
+  else pickOption(options.value[i])
 }
 
 // Tri-State am Select — einheitlich mit dem Freitext-Feld: ✓ = Auswahl (Optionen sichtbar),
@@ -179,11 +190,37 @@ const selectedOptionSet = computed(() => new Set(selectedOptions.value))
 // leeres Abwaehlen zurueck auf die Standard-Menge (sonst Sackgasse, da bei required kein −-Toggle).
 function toggleMulti(opt: string): void {
   const next = multiFill(props.node, toggleMultiOption(selectedSet.value, opt, props.node))
-  caseValues.setFill(props.node.id, props.node.required && next.state === 'excluded' ? { state: 'confirmed' } : next)
+  emptiedByUncheck.value = next.state === 'excluded' && !props.node.required
+  ownMultiWrite = true
+  try {
+    caseValues.setFill(props.node.id, props.node.required && next.state === 'excluded' ? { state: 'confirmed' } : next)
+  } finally {
+    ownMultiWrite = false
+  }
 }
+// Letzte Option ABGEHAKT: die Daten stehen wie bisher auf „nicht erhoben" (leere Auswahl, Ausgabe
+// und gespeicherte Faelle unveraendert), aber die Liste bleibt OFFEN. Sonst haengt es an der Reihenfolge:
+// erst eine andere Option waehlen und dann den Standard abhaken ging, umgekehrt war die Liste weg.
+// Nur fuer dieses Abhaken - wer ueber den Schalter auf − stellt, bekommt die Liste wie gehabt eingeklappt.
+const emptiedByUncheck = ref(false)
+// Der Merker gilt nur fuer genau diesen Zustand. Aendert sich der Wert von aussen (neuer Einsatz,
+// wiederhergestellter Entwurf), klappt die Liste wieder wie gewohnt ein. Synchron, damit das eigene
+// Schreiben in toggleMulti (ownMultiWrite) den Merker nicht selbst wieder loescht.
+let ownMultiWrite = false
+watch(
+  fill,
+  () => {
+    if (!ownMultiWrite) emptiedByUncheck.value = false
+  },
+  { flush: 'sync' },
+)
+const showMultiOptions = computed(
+  () => selectTriState.value === 'confirmed' || (emptiedByUncheck.value && selectTriState.value === 'excluded'),
+)
 // Tri-State identisch zum Single-Select: ✓ Auswahl (Checkboxen) / ✎ individuell (eigener Freitext, wie
 // vorher — KEIN Feld unter den Checkboxen) / − nicht erhoben. „individuell" reicht ueber pickIndividuell.
 function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
+  emptiedByUncheck.value = false
   if (next === 'custom') {
     pickIndividuell() // ✎: eigener Freitext (custom OHNE values), genau wie beim Single-Select
     return
@@ -224,7 +261,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
       </div>
 
       <!-- ✓ Mehrfachauswahl: Checkboxen bei ≤6 (gleiches Raster wie die Radios), Multi-Dropdown bei >6 -->
-      <div v-if="selectTriState === 'confirmed'" class="pl-9">
+      <div v-if="showMultiOptions" class="pl-9">
         <div v-if="!useDropdown" role="group" :aria-label="label" class="flex flex-col gap-1">
           <label v-for="opt in options" :key="opt" class="flex cursor-pointer items-center gap-2 text-sm">
             <input type="checkbox" class="checkbox checkbox-sm shrink-0" :checked="selectedOptionSet.has(opt)" @change="toggleMulti(opt)" />
@@ -239,7 +276,9 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
           :selected="selectedOptions"
           :summary="selectedOptions.length ? joinFieldValues(selectedOptions) : 'auswählen …'"
           :required="node.required"
+          :custom-label="node.allowCustom ? INDIVIDUELL : undefined"
           @toggle="toggleMulti"
+          @custom="openIndividuell"
         />
         <details v-else class="dropdown w-full">
           <summary class="select select-sm flex w-full items-center" :aria-label="label">
@@ -252,13 +291,26 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
                 <span>{{ opt }}</span>
               </label>
             </li>
+            <li v-if="node.allowCustom">
+              <button type="button" class="flex items-center gap-2 text-left" @click="openIndividuell">
+                <span class="grid size-5 shrink-0 place-items-center" aria-hidden="true">✎</span>
+                <span>{{ INDIVIDUELL }}</span>
+              </button>
+            </li>
           </ul>
         </details>
+        <!-- Eintrag „individuell" als letzte Zeile der offenen Liste (bei Dropdown/Suche steckt er IN der Liste) -->
+        <button v-if="node.allowCustom && !useDropdown" type="button" class="mt-1 flex min-h-8 cursor-pointer items-center gap-2 text-left text-sm" @click="openIndividuell">
+          <span class="grid size-5 shrink-0 place-items-center" aria-hidden="true">✎</span>
+          <span>{{ INDIVIDUELL }}</span>
+        </button>
+        <!-- Liste offen, aber nichts angekreuzt (letzte Option abgehakt): sagen, was das bedeutet -->
+        <p v-if="selectTriState === 'excluded'" class="mt-1 text-sm italic text-base-content/50">nichts ausgewählt — nicht erhoben</p>
       </div>
 
       <!-- ✎ individuell: eigener Freitext — genau wie beim Single-Select (kein Feld unter den Checkboxen) -->
       <div v-else-if="selectTriState === 'custom'" class="pl-9">
-        <input class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
+        <input ref="individuellInput" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
       </div>
 
       <!-- − nicht erhoben -->
@@ -290,16 +342,23 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
           :selected-option="selectedOption"
           :summary="selectedOption ?? 'auswählen …'"
           :required="node.required"
+          :custom-label="node.allowCustom ? INDIVIDUELL : undefined"
           @pick="pickOption"
+          @custom="openIndividuell"
         />
         <select v-else class="select select-sm w-full" :value="String(options.indexOf(selectedOption ?? ''))" :aria-label="label" :aria-required="node.required || undefined" @change="onSelectChange">
           <option v-for="(opt, i) in options" :key="i" :value="i">{{ opt }}</option>
+          <option v-if="node.allowCustom" value="-1">✎ {{ INDIVIDUELL }}</option>
         </select>
+        <button v-if="node.allowCustom && !useDropdown" type="button" class="mt-1 flex min-h-8 cursor-pointer items-center gap-2 text-left text-sm" @click="openIndividuell">
+          <span class="grid size-5 shrink-0 place-items-center" aria-hidden="true">✎</span>
+          <span>{{ INDIVIDUELL }}</span>
+        </button>
       </div>
 
       <!-- ✎ individuell: eigener Freitext -->
       <div v-else-if="selectTriState === 'custom'" class="pl-9">
-        <input class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
+        <input ref="individuellInput" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
       </div>
 
       <!-- − nicht erhoben -->

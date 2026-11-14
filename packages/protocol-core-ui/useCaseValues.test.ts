@@ -51,7 +51,7 @@ test('Funktion: getippter Freitext wird beim custom->excluded/confirmed bewahrt,
   cv.setFunctionStatus('mp', 'excluded') // versehentlicher Toggle-Tap
   assert.equal(cv.getFunctionPrevText('mp'), 'freitext')
   assert.deepEqual(cv.getRows('mp'), [{ name: 'ASS' }]) // Zeilen ueberleben ohnehin
-  assert.equal(cv.getFunctionStatus('mp'), 'excluded')
+  assert.equal(cv.getFunctionStatus('mp', null), 'excluded')
 })
 
 test('Funktion: gemerkter Freitext ueberlebt excluded->confirmed', () => {
@@ -101,4 +101,25 @@ test('cycle: startet beim Ausgangszustand des Knotens', () => {
   cv.values.value = {}
   cv.cycle('f', 'Standard', node) // excluded -> confirmed (einschalten)
   assert.equal(cv.get('f', node).state, 'confirmed')
+})
+
+test('getFunctionStatus: ohne Eintrag gilt der Ausgangszustand der Funktion', () => {
+  const cv = useCaseValues()
+  cv.reset()
+  assert.equal(cv.getFunctionStatus('fn', null), 'confirmed', 'ohne Knoten der bisherige Standard')
+  assert.equal(cv.getFunctionStatus('fn', { defaultExcluded: true }), 'excluded')
+  assert.deepEqual(cv.values.value, {}, 'der Ausgangszustand wird nie in den Store geschrieben')
+})
+
+test('Funktion mit UNO Reverse: EIN Schalter-Tipp oder erfasste Zeilen schalten sie ein', () => {
+  const node = { defaultExcluded: true }
+  const cv = useCaseValues()
+  cv.reset()
+  cv.setFunctionStatus('fn', 'confirmed') // der Tipp auf − im Einsatz
+  assert.equal(cv.getFunctionStatus('fn', node), 'confirmed')
+  cv.setFunctionStatus('fn', 'excluded')
+  assert.equal(cv.getFunctionStatus('fn', node), 'excluded')
+  cv.reset()
+  cv.setRows('fn', [{ name: 'ASS' }]) // z. B. ein Scan
+  assert.equal(cv.getFunctionStatus('fn', node), 'confirmed')
 })

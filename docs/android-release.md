@@ -49,7 +49,7 @@ Keystore-Dateien (`*.jks`, `*.keystore`, `keystore.properties`) sind in
 1. **Projekt aktuell machen & öffnen** (Terminal):
    ```bash
    cd ~/ResQDocs && git checkout dev && git pull && \
-   cd apps/pico-pwa && npm install && npm run build && \
+   cd apps/pico-pwa && npm ci && npm run build && \
    npx cap sync android && npx cap open android
    ```
    `npm run build` + `npx cap sync android` **vor** dem Öffnen — sonst landet ein

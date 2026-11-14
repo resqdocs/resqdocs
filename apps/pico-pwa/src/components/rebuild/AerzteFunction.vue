@@ -40,9 +40,9 @@ const preservedText = computed(() => caseValues.getFunctionPrevText(props.node.i
 function restorePreserved(): void {
   caseValues.setFunctionText(props.node.id, caseValues.getFunctionPrevText(props.node.id) || (props.node.default ?? ''))
 }
-const excluded = computed(() => caseValues.getFunctionStatus(props.node.id) === 'excluded') // Tri-State (Slice 2): nicht erhoben
+const excluded = computed(() => caseValues.getFunctionStatus(props.node.id, props.node) === 'excluded') // Tri-State (Slice 2): nicht erhoben
 // Tri-State (Slice 3): ✎ Freitext - ein eigener Text ersetzt in der Ausgabe die Zeilen (Zeilen bleiben erhalten).
-const custom = computed(() => caseValues.getFunctionStatus(props.node.id) === 'custom')
+const custom = computed(() => caseValues.getFunctionStatus(props.node.id, props.node) === 'custom')
 const customText = computed(() => caseValues.getFunctionText(props.node.id))
 function setCustomText(v: string): void {
   caseValues.setFunctionText(props.node.id, v)
@@ -178,7 +178,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
       caseValues.setRows(id, [...existing.filter(medikamentRowHasData), ...meds])
       // Cross-Scan bringt echte Daten -> NUR „nicht erhoben" aufheben. Einen ✎-Freitext NICHT antasten:
       // setFunctionStatus('confirmed') wuerde dessen text stumm verwerfen (Slice 3). rows sind via setRows schon erhalten.
-      if (caseValues.getFunctionStatus(id) === 'excluded') caseValues.setFunctionStatus(id, 'confirmed')
+      if (caseValues.getFunctionStatus(id, medNodes[0]) === 'excluded') caseValues.setFunctionStatus(id, 'confirmed')
     }
   }
   editingIndex.value = null

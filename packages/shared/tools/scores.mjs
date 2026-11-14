@@ -2,7 +2,7 @@
 //
 // MEDIZINISCHE SCHWELLENWERTE: nach den publizierten Originalquellen
 // implementiert. PRIMÄRQUELLEN mit konkreten Fundstellen: docs/medical-sources.md
-// (RCP NEWS2 2017, Llanes/Saver LAMS, WHO TRS 894, DocCheck/Einthoven). Vor Release fachlich
+// (RCP NEWS2 2017, Llanes/Saver LAMS, Claudi FAST4D 2024, WHO TRS 894, DocCheck/Einthoven). Vor Release fachlich
 // (Rettungsdienst) gegen die offiziellen Tabellen gegenzuprüfen - die App
 // bleibt Hilfsmittel, keine Bewertung (docs/disclaimer.md).
 //
@@ -73,11 +73,63 @@ export function lams({ face, arm, grip }) {
   const score = f + a + g;
   const lvoSuspected = score >= 4;
   const detail = `${LAMS_FACE[f]}, ${LAMS_ARM[a]}, ${LAMS_GRIP[g]}`;
-  return {
-    score,
-    lvoSuspected,
-    text: `LAMS ${score}/5 (${detail})${lvoSuspected ? ' - V. a. proximalen Verschluss (LVO)' : ''}`,
-  };
+  // body (Funktion): ohne „LAMS"-Praefix - das Label liefert der Titel des Funktions-Knotens.
+  // text (Alt-Tool): unveraendert mit Praefix.
+  const body = `${score}/5 (${detail})${lvoSuspected ? ' - V. a. proximalen Verschluss (LVO)' : ''}`;
+  return { score, lvoSuspected, text: `LAMS ${body}`, body };
+}
+
+// --- FAST4D -----------------------------------------------------------------------
+// Claudi et al., J Clin Med 2024;13(17):5033: FAST erweitert um vier Zeichen der hinteren
+// Zirkulation (Doppelbilder, Gesichtsfelddefekt, Dreh-/Schwankschwindel, Dysmetrie/Ataxie).
+// KEIN Punktescore: jedes Zeichen ist auffaellig oder unauffaellig, FAST4D gilt als positiv
+// ab EINEM auffaelligen Zeichen. Die Zeit (Symptombeginn) wird dokumentiert, aber nicht gewertet.
+// Bewusst OHNE Schwelle/Zuweisungshinweis: die Studie nennt keinen Cut-off (docs/medical-sources.md).
+
+const FAST4D_ITEMS = [
+  ['face', 'Fazialisparese'],
+  ['arm', 'Armabsinken'],
+  ['speech', 'Sprachstörung'],
+  ['diplopia', 'Doppelbilder'],
+  ['field', 'Gesichtsfelddefekt'],
+  ['vertigo', 'Dreh-/Schwankschwindel'],
+  ['ataxia', 'Dysmetrie/Ataxie'],
+];
+const FAST4D_SIDE = { re: ' rechts', li: ' links' };
+const FAST4D_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * FAST4D-Ergebnis.
+ * @param {object} v - face, arm, speech, diplopia, field, vertigo, ataxia: 'neg' | 'pos' | 'na'
+ *                     (unauffaellig | auffaellig | nicht pruefbar); faceSide/armSide: 're' | 'li' (optional,
+ *                     nur bei auffaelligem Befund); timeMode: 'onset' | 'lsw' | 'unknown' (optional);
+ *                     time: 'HH:MM' (optional, bei onset/lsw)
+ */
+export function fast4d(v) {
+  for (const [key] of FAST4D_ITEMS) {
+    if (!['neg', 'pos', 'na'].includes(v[key])) throw new Error(`FAST4D: ${key} muss neg|pos|na sein`);
+  }
+  const sideOf = (key) => (key === 'face' ? v.faceSide : key === 'arm' ? v.armSide : undefined);
+  const findings = FAST4D_ITEMS.filter(([key]) => v[key] === 'pos').map(([key, out]) => out + (FAST4D_SIDE[sideOf(key)] ?? ''));
+  const notTestable = FAST4D_ITEMS.filter(([key]) => v[key] === 'na').map(([, out]) => out);
+  const count = findings.length;
+  const positive = count > 0;
+  const untestable = notTestable.length === FAST4D_ITEMS.length;
+
+  const time = typeof v.time === 'string' && FAST4D_TIME.test(v.time) ? v.time : '';
+  const timeText =
+    v.timeMode === 'unknown' ? 'Symptombeginn unklar.' :
+    v.timeMode === 'onset' && time ? `Symptombeginn ${time}.` :
+    v.timeMode === 'lsw' && time ? `Zuletzt gesund gesehen ${time}.` : '';
+
+  let body;
+  if (untestable) body = 'nicht prüfbar.';
+  else if (positive) body = `positiv (${count}/7): ${findings.join(', ')}${notTestable.length ? `; nicht prüfbar: ${notTestable.join(', ')}` : ''}.`;
+  else body = `negativ${notTestable.length ? ` (nicht prüfbar: ${notTestable.join(', ')})` : ''}.`;
+  if (timeText) body += ` ${timeText}`;
+
+  // body (Funktion): ohne „FAST4D"-Praefix - das Label liefert der Titel des Funktions-Knotens.
+  return { positive, count, untestable, findings, notTestable, timeText, text: `FAST4D ${body}`, body };
 }
 
 // --- NEWS2 ----------------------------------------------------------------------

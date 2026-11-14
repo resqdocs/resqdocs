@@ -9,8 +9,8 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import type { Container, Field, FieldFill } from './model.ts'
-import { defaultFill, isDefaultFill, fillValue, isFilled, multiSelected, DEFAULT_FILL, EXCLUDED_FILL } from './fill.ts'
+import type { Container, Field, FieldFill, FunctionNode } from './model.ts'
+import { defaultFill, isDefaultFill, fillValue, isFilled, multiSelected, functionStatus, DEFAULT_FILL, EXCLUDED_FILL } from './fill.ts'
 import { countDeviations } from './deviations.ts'
 import { render } from './render.ts' // render(root, values) - values ist das FLACHE Record<id, FieldFill>
 import { isRequiredOpen, countOpenRequired } from './required.ts'
@@ -201,4 +201,55 @@ test('isFilled und multiSelected loesen den Ausgangszustand ebenfalls knotenabha
   assert.equal(isFilled(uno), false, 'ohne Eintrag ist ein UNO-Feld nicht erfuellt')
   assert.deepEqual(multiSelected(uno), [], 'und es hat nichts ausgewaehlt')
   assert.equal(isFilled(feld()), true, 'normales Feld unveraendert')
+})
+
+// --- Funktion (Medikationsplan, Kontakte, Rechner) ------------------------------------------------
+// Der Status einer Funktion lebt in der 'function'-Fill. Ohne Eintrag gilt der Ausgangszustand des
+// Knotens - genau dort setzt UNO Reverse an (functionStatus).
+
+const funktion = (over: Partial<FunctionNode> = {}): FunctionNode => ({
+  type: 'function', id: 'fn', functionKind: 'medikamentenplan', title: 'Medikation', showTitle: true, default: 'keine Dauermedikation', ...over,
+})
+const mitFunktion = (fn: FunctionNode): Container => ({ type: 'container', id: 'root', children: [fn] })
+const zeilen: FieldFill = { state: 'function', rows: [{ name: 'ASS' }] }
+// Titel (im Standard-Ueberschriftenformat) plus Standardtext
+const MIT_TITEL = /Medikation\nkeine Dauermedikation$/
+
+test('Funktion: functionStatus loest den Ausgangszustand des Knotens auf', () => {
+  assert.equal(functionStatus(funktion(), undefined), 'confirmed')
+  assert.equal(functionStatus(funktion({ defaultExcluded: true }), undefined), 'excluded')
+  // ein vorhandener Eintrag gewinnt immer - auch das bewusste Einschalten (kein status = erhoben)
+  assert.equal(functionStatus(funktion({ defaultExcluded: true }), { state: 'function', rows: [] }), 'confirmed')
+  assert.equal(functionStatus(funktion({ defaultExcluded: true }), { state: 'function', rows: [], status: 'custom', text: 'x' }), 'custom')
+  assert.equal(functionStatus(funktion(), { state: 'function', rows: [], status: 'excluded' }), 'excluded')
+})
+
+test('Funktion: startet mit defaultExcluded ausserhalb der Ausgabe, auch der Titel und der Standardtext', () => {
+  assert.match(render(mitFunktion(funktion()), leer), MIT_TITEL)
+  assert.equal(render(mitFunktion(funktion({ defaultExcluded: true })), leer), '')
+})
+
+test('Funktion: eingeschaltet oder mit erfassten Zeilen erscheint sie wie jede andere', () => {
+  const fn = funktion({ defaultExcluded: true })
+  assert.match(render(mitFunktion(fn), { fn: { state: 'function', rows: [] } }), MIT_TITEL)
+  assert.match(render(mitFunktion(fn), { fn: zeilen }), /ASS/)
+  assert.match(render(mitFunktion(fn), { fn: { state: 'function', rows: [], status: 'custom', text: 'laut Plan' } }), /laut Plan/)
+})
+
+test('Funktion: der Ausgangszustand zaehlt nicht als Abweichung, das Einschalten schon', () => {
+  const fn = funktion({ defaultExcluded: true })
+  assert.equal(countDeviations(mitFunktion(fn), leer), 0)
+  assert.equal(countDeviations(mitFunktion(fn), { fn: { state: 'function', rows: [], status: 'excluded' } }), 0)
+  assert.equal(countDeviations(mitFunktion(fn), { fn: { state: 'function', rows: [] } }), 1)
+  assert.equal(countDeviations(mitFunktion(fn), { fn: zeilen }), 1)
+  // ohne UNO Reverse bleibt alles beim Bestand
+  assert.equal(countDeviations(mitFunktion(funktion()), leer), 0)
+  assert.equal(countDeviations(mitFunktion(funktion()), { fn: { state: 'function', rows: [], status: 'excluded' } }), 1)
+  assert.equal(countDeviations(mitFunktion(funktion()), { fn: zeilen }), 1)
+})
+
+test('Funktion: eine Pflicht-Funktion entfaellt trotz defaultExcluded nicht still (Fremd-Import)', () => {
+  const fn = funktion({ defaultExcluded: true, required: true })
+  assert.match(render(mitFunktion(fn), leer), MIT_TITEL)
+  assert.equal(isRequiredOpen(funktion({ defaultExcluded: true, required: true, default: undefined }), undefined), true)
 })

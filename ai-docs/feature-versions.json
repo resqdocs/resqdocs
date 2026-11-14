@@ -66,6 +66,15 @@
       "minVersion": "1.5.0"
     },
     {
+      "prop": "defaultExcluded",
+      "on": "function",
+      "de": "Startet auf „nicht erhoben\"",
+      "en": "Starts as \"not assessed\"",
+      "note_de": "Die Funktion startet im Einsatz auf „nicht erhoben\" und erscheint erst in der Ausgabe, wenn der Anwender sie einschaltet oder Daten erfasst. Nicht zusammen mit required.",
+      "note_en": "The function starts as \"not assessed\" and only appears in the output once the user switches it on or enters data. Mutually exclusive with required.",
+      "minVersion": "1.9.0"
+    },
+    {
       "prop": "defaultEmpty",
       "on": "field",
       "de": "Startet ohne Auswahl",
@@ -99,6 +108,18 @@
       "de": "NEWS2",
       "en": "NEWS2",
       "minVersion": "1.1.0"
+    },
+    {
+      "kind": "lams",
+      "de": "LAMS",
+      "en": "LAMS",
+      "minVersion": "1.9.0"
+    },
+    {
+      "kind": "fast4d",
+      "de": "FAST4D",
+      "en": "FAST4D",
+      "minVersion": "1.9.0"
     }
   ]
 }

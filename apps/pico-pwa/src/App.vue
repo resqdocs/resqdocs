@@ -21,6 +21,8 @@ import { PZN_DICTIONARY_ENABLED } from '@/medications/featureFlags'
 import { useAppUpdateNotice } from '@/appUpdate/useAppUpdateNotice'
 import { useReworkCaseDraft } from '@/rebuild/useReworkCaseDraft'
 import { useUsageNotice } from '@/composables/useUsageNotice'
+import { useDisclaimer } from '@/composables/useDisclaimer'
+import { startIncomingOpen, setIncomingHold, incomingOpen } from '@/composables/useIncomingOpen'
 
 // Rework-Repositories auf die native Capacitor/SQLite-Schicht verdrahten (Web bleibt Memory). MUSS vor
 // dem ersten Aufloesen (protocolPersistence.init / useBlockLibrary) laufen -> synchron im Setup.
@@ -100,6 +102,26 @@ function selectTab(tab: Tab): void {
   activeTab.value = tab
   void nextTick(() => window.scrollTo({ top: scrollPositions[tab] })) // Ziel-Tab wiederherstellen
 }
+
+// Angetippter Transfer-Link / geteilte Vorlagen-Datei (nativ): erst anbieten, wenn die Bibliothek geladen
+// und kein Start-Gate offen ist, dann auf den Vorlagen-Tab. Nachfrage und Import: LibraryBar/TemplateIO.
+// Die Einfuehrung zaehlt mit: sie erscheint nach einem Update allen einmal, die Nachfrage laege sonst
+// ueber ihr. Abgerufen wird vorher nichts, das Warten verbraucht also keinen Link.
+const disclaimer = useDisclaimer()
+startIncomingOpen(import.meta.env.VITE_TRANSFER_URL as string | undefined)
+watchEffect(() => {
+  setIncomingHold(
+    !protocolPersistence.libraryLoaded.value ||
+      !disclaimer.ready.value ||
+      disclaimer.needsAck.value ||
+      usageNotice.visible.value ||
+      !storage.settingsLoaded.value ||
+      !storage.settings.dismissedHints.includes(TAB_GUIDE_HINT_ID),
+  )
+})
+watch(incomingOpen, (item) => {
+  if (item && activeTab.value !== 'protokolle') selectTab('protokolle')
+})
 
 // Geteilter Verbindungszustand: EINE Quelle für den Header-Indikator. Beim
 // App-Start und beim Öffnen des Einsatz-Tabs sparsam geprüft (kein Polling).

@@ -128,10 +128,10 @@ Three node types: **Container** (section with children), **Field** (input field)
 - **Start without a selection?** (`defaultEmpty`, from app 1.6.0, only with `multiple`) — Nothing is preselected; without a selection the field outputs nothing. *Example: dispatch codes, where a preselection would document something wrong.*
 
 ### Functions only
-- **Which functions exist?** Medication list (`medikamentenplan`): list of medications, in the app also by scanning. Contacts/doctors (`aerzte`): list of doctors and relatives. Pack-years (`packYears`, from app 1.1.0): calculator from cigarettes per day and years. NEWS2 (`news2`, from app 1.1.0): score from the vital signs.
+- **Which functions exist?** Medication list (`medikamentenplan`): list of medications, in the app also by scanning. Contacts/doctors (`aerzte`): list of doctors and relatives. Pack-years (`packYears`, from app 1.1.0): calculator from cigarettes per day and years. NEWS2 (`news2`, from app 1.1.0): score from the vital signs. LAMS (`lams`, from app 1.9.0): score 0–5 from face, arm drift and grip strength, output includes the findings. FAST4D (`fast4d`, from app 1.9.0): stroke screening from seven findings (normal / abnormal / not testable) plus a time, positive from one abnormal finding; not a points score.
 - **Text when nothing is recorded?** (`default`, from app 1.1.1) — Shown in the output when the function has no entries or no result. *Example: "keine Dauermedikation bekannt".*
 - **Must not be skipped silently?** (`required`, from app 1.2.0) — Same as a required field.
-- **Switch on only when needed?** Functions have no `defaultExcluded`. Put the function into its own section with `excludable` and `defaultExcluded`.
+- **Switch on only when needed?** (`defaultExcluded`, from app 1.9.0) — The function starts as "not collected" and only enters the output when the user switches it on or enters data. Not together with `required`. For older app versions: put the function into its own section with `excludable` and `defaultExcluded`.
 - **Entries stacked or on one line?** (`config.rowLayout`) — Stacked (`block`) or compact on one line (`inline`).
 - **Separator between entries?** (`rowSeparator`) — What sits between entries on one line. Default is the middle dot " · " (distinct from the comma in "Name Strength, Schema"). *Example: a semicolon "; " instead.*
 
@@ -140,7 +140,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 The app renders the template to plain text. Rules:
 
 - **Order:** nodes appear in document order (array order of `children`).
-- **Titles:** only if `showTitle: true` is set — for **all three** node types; without `showTitle` no title appears. **Container** titles get their own line (`titleInline: true` puts the title inline before the content). **Field**: title + value on **one** line; with `titleInline: false` OR `multiline: true` the title moves to its own (banner) line. **FunctionNode**: title on its own line.
+- **Titles:** only if `showTitle: true` is set — for **all three** node types; without `showTitle` no title appears. **Container** titles get their own line (`titleInline: true` puts the title inline before the content). **Field**: title + value on **one** line; with `titleInline: false` OR `multiline: true` the title moves to its own (banner) line. **FunctionNode**: title on its own line (`titleInline: true` puts it inline before the result).
 - **Title format:** with `showTitle: true` always set an explicit `heading` (as in all examples: field `"suffix": ": "`, section empty values). **Without `heading` a preview fallback applies with `prefix "## "` and no separator between title and value** ("## Pulse80") — unwanted in finished templates.
 - **Banner (`heading`):** only applies when the title is on its own line: first `prefix` + title + `suffix`, **then** the fill characters (`fill`) — with `fillMode: "inclusive"` up to total width `width`, with `"exclusive"` exactly `width` fill characters.
 - **Empty fields:** a titled field without a value keeps its label as a skeleton ("BP: ") — the user fills it during the mission. Only untitled empty fields disappear.
@@ -148,7 +148,7 @@ The app renders the template to plain text. Rules:
 - **Not assessed (`excludable`):** a container marked "−" disappears entirely (including children) from the output.
 - **`emptyText`:** substitute text when the container is shown but its children output nothing.
 - **Field value:** by default the `default` (or `options[0]`, with `defaultEmpty` nothing); `options` turns the field into a select; `allowCustom` additionally allows free text; `multiline` is multi-line free text.
-- **FunctionNode:** medication list / doctors render their rows; `config.rowLayout` = `block` (stacked, optional `rowPrefix`/`rowSuffix` per row) or `inline` (one line, joined with `rowSeparator`). Pack-years and NEWS2 output their result; without entries or a result the `default` appears.
+- **FunctionNode:** medication list / doctors render their rows; `config.rowLayout` = `block` (stacked, optional `rowPrefix`/`rowSuffix` per row) or `inline` (one line, joined with `rowSeparator`). Pack-years, NEWS2, LAMS and FAST4D output their result; without entries or a result the `default` appears. LAMS and FAST4D read best as one line ("LAMS 4/5 (…)", "FAST4D positiv (…)"): `titleInline: true` and a `heading` with `"prefix": ""`, `"suffix": " "`.
 
 ### Worked example (JSON → exact output)
 

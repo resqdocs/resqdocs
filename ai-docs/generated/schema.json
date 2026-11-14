@@ -278,6 +278,10 @@
         "required": {
           "type": "boolean",
           "description": "Pflicht (analog Field.required): der −-Zustand (nicht erhoben) entfaellt im Einsatz; ✓/✎ bleiben. „Erfuellt\" = die Funktion liefert nicht-leeren Ausgabetext (Zeilen ODER Freitext ODER Standardtext). Rein additiv, kein Submit-Gate; nur visuelle „noch offen\"-Markierung."
+        },
+        "defaultExcluded": {
+          "type": "boolean",
+          "description": "UNO Reverse (analog Field.defaultExcluded): die Funktion startet im Einsatz auf „nicht erhoben\" (−) und erscheint erst in der Ausgabe, wenn der Anwender sie einschaltet oder Daten erfasst. Schliesst sich mit `required` aus; der Editor verhindert die Kombination. Aendert NUR den Ausgangszustand (fehlender Eintrag im Werte-Store), siehe functionStatus in fill.ts."
         }
       },
       "required": [
@@ -293,7 +297,9 @@
         "medikamentenplan",
         "aerzte",
         "packYears",
-        "news2"
+        "news2",
+        "lams",
+        "fast4d"
       ],
       "description": "Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan). functionKind = innerer Diskriminator (waechst), aufgeloest ueber die Funktions-Registry. Immer Block."
     },

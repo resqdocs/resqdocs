@@ -10,7 +10,7 @@
 
 ## Voraussetzungen
 
-- Node-Toolchain + `npm install` im `apps/pico-pwa`.
+- Node-Toolchain + `npm ci` im `apps/pico-pwa`.
 - Capacitor-CLI ist vorhanden (`@capacitor/cli`, devDependency). App-Config: `capacitor.config.ts`
   (`appId: app.resqdocs`, `webDir: dist`).
 - **iOS:** macOS + Xcode (CocoaPods erforderlich: `brew install cocoapods` (ML-Kit-Plugin hat kein SPM)).
@@ -27,7 +27,7 @@ Vor jedem nativen Lauf den Web-Build synchronisieren:
 
 ```bash
 cd apps/pico-pwa
-npm install                   # einmalig pro Maschine
+npm ci                        # einmalig pro Maschine
 npm run build                 # erzeugt dist/ (webDir)
 npx cap sync ios              # kopiert dist/ + native Plugins
 ```
