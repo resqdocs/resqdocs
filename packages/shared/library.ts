@@ -4,6 +4,7 @@
 
 import type { Container, Node } from './model.ts'
 import { findNode } from './creator.ts'
+import { remapDependencyIds } from './dependencies.ts'
 
 /** Kollidiert id mit einem Knoten in IRGENDEINEM Baum? (baumuebergreifende Eindeutigkeit) */
 export function collidesId(protocols: Container[], id: string): boolean {
@@ -12,8 +13,15 @@ export function collidesId(protocols: Container[], id: string): boolean {
 
 /** Alle Knoten-IDs eines Teilbaums frisch vergeben (fuer Duplikate), via injizierten Generator. */
 export function reId(node: Node, nextId: () => string): Node {
+  // Abhaengigkeiten INNERHALB des Teilbaums zeigen danach auf die neuen Kennungen. Verweise nach
+  // ausserhalb bleiben stehen (im Zielbaum ggf. wirkungslos; der Editor weist darauf hin).
+  const renamed = new Map<string, string>()
+  return remapDependencyIds(reIdIn(node, nextId, renamed), renamed)
+}
+function reIdIn(node: Node, nextId: () => string, renamed: Map<string, string>): Node {
   const id = nextId()
-  if (node.type === 'container') return { ...node, id, children: node.children.map((c) => reId(c, nextId)) }
+  renamed.set(node.id, id)
+  if (node.type === 'container') return { ...node, id, children: node.children.map((c) => reIdIn(c, nextId, renamed)) }
   return { ...node, id }
 }
 

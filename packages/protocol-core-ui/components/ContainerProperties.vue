@@ -3,15 +3,17 @@
  *  Tree-API, schreibt ueber reine Creator-Ops (tree.update). daisyUI-5 fieldset = Label oben,
  *  volle Breite. id-Umbenennen migriert den Einsatz-Wert (siehe EditorView.update). */
 import { computed, inject, ref, watch } from 'vue'
-import type { Container, Node, Heading, FunctionConfig } from '@resqdocs/protocol-core/model'
+import type { Condition, ConditionalDefault, Container, Field, Node, Heading, FunctionConfig } from '@resqdocs/protocol-core/model'
 import { DEFAULT_HEADING, DEFAULT_SEPARATOR } from '@resqdocs/protocol-core/model'
 import { FUNCTION_REGISTRY, FUNCTION_ROW_INLINE_SEPARATOR } from '@resqdocs/protocol-core/functions/registry'
 import { findNode, findPath, suggestFreeId } from '@resqdocs/protocol-core/creator'
 import { sanitizeId } from '@resqdocs/protocol-core/ids'
 import { appendOptions } from '@resqdocs/protocol-core/optionList'
+import { dependencyCandidates } from '@resqdocs/protocol-core/dependencies'
 import { useTreeEditor } from '../treeEditor.ts'
 import ConfirmDialog from './ConfirmDialog.vue'
 import InfoTip from './InfoTip.vue'
+import ConditionEditor from './ConditionEditor.vue'
 import { INFO } from '../terms.ts'
 import { defaultYields, withDefaultYield, moveDefaultYield } from '../defaultYield.ts'
 import { allowedFunctionKindsKey } from '../injection.ts'
@@ -60,6 +62,92 @@ function setSeparator(raw: string): void {
 function set(patch: Record<string, unknown>): void {
   if (node.value) tree.update(node.value.id, patch)
 }
+
+// --- Abhaengigkeit. Zwei Regelarten, beide ueber Bedingungen „im Auswahlfeld X ist eine dieser Optionen gewaehlt":
+//  - Erscheinen (dependsOn): das Element erscheint im Einsatz nur, wenn die Bedingungen zutreffen. Setzt
+//    „Startet auf nicht erhoben" voraus (bei Abschnitten zusaetzlich „markierbar"): so bleibt das Element in
+//    aelteren App-Versionen, die die Regel nicht kennen, aus und laesst sich dort von Hand einschalten.
+//  - Inhalt (defaultWhen, nur Felder): solange eine Bedingung zutrifft, gilt ein anderer Standardwert.
+const MAX_CONDITIONS = 3
+const MAX_DEFAULT_RULES = 5
+const fieldLabel = (f: Field): string => f.title?.trim() || f.id
+const fieldNode = computed<Field | null>(() => (node.value?.type === 'field' ? node.value : null))
+const depCandidates = computed<Field[]>(() => (node.value && !isRoot.value ? dependencyCandidates(props.root, node.value) : []))
+const depConditions = computed<Condition[]>(() => node.value?.dependsOn?.conditions ?? [])
+const defaultRules = computed<ConditionalDefault[]>(() => fieldNode.value?.defaultWhen ?? [])
+/** Eigene Optionen des Feldes: bei einem Auswahlfeld muss der abhaengige Standardwert eine davon sein. */
+const ownOptions = computed<string[]>(() => [...new Set((fieldNode.value?.options ?? []).filter((o) => o !== ''))])
+function conditionSource(c: Condition): Field | null {
+  const found = c.fieldId ? findNode(props.root, c.fieldId) : null
+  return found && found.type === 'field' && found.options?.some((o) => o !== '') ? found : null
+}
+/** Eine Regel zeigt auf ein Feld, das es nicht mehr gibt oder das kein Auswahlfeld mehr ist. */
+const depBroken = computed(() => [...depConditions.value, ...defaultRules.value].some((c) => !conditionSource(c)))
+const depSummary = computed<string>(() => {
+  const parts: string[] = []
+  const first = depConditions.value[0]
+  if (first) {
+    const source = conditionSource(first)
+    const more = depConditions.value.length > 1 ? ` +${depConditions.value.length - 1}` : ''
+    parts.push(source ? `${fieldLabel(source)}: ${first.options.join(', ') || 'noch keine Option'}${more}` : 'Feld fehlt')
+  }
+  if (defaultRules.value.length) parts.push(defaultRules.value.length === 1 ? '1 Standardwert-Regel' : `${defaultRules.value.length} Standardwert-Regeln`)
+  return parts.length ? parts.join(' · ') : 'keine'
+})
+/** Pflichtfeld und Erscheinen-Regel schliessen sich aus (wie Pflichtfeld und „Startet auf nicht erhoben"). */
+const depBlockedByRequired = computed(() => !!node.value && node.value.type !== 'container' && node.value.required === true)
+function setDependency(on: boolean): void {
+  const n = node.value
+  if (!n) return
+  if (!on) return set({ dependsOn: undefined })
+  const first = depCandidates.value[0]
+  if (!first) return
+  set({ dependsOn: { conditions: [{ fieldId: first.id, options: [] }] }, defaultExcluded: true, ...(n.type === 'container' ? { excludable: true } : {}) })
+}
+function setConditions(conditions: Condition[]): void {
+  const dep = node.value?.dependsOn
+  if (!dep) return
+  if (!conditions.length) return set({ dependsOn: undefined })
+  // „Eine genügt" ergibt nur mit mehreren Bedingungen Sinn.
+  set({ dependsOn: dep.match === 'any' && conditions.length > 1 ? { conditions, match: 'any' } : { conditions } })
+}
+function updateCondition(i: number, condition: Condition): void {
+  setConditions(depConditions.value.map((c, k) => (k === i ? condition : c)))
+}
+function addCondition(): void {
+  const first = depCandidates.value[0]
+  if (first) setConditions([...depConditions.value, { fieldId: first.id, options: [] }])
+}
+function removeCondition(i: number): void {
+  setConditions(depConditions.value.filter((_, k) => k !== i))
+}
+function setMatchAny(on: boolean): void {
+  set({ dependsOn: on ? { conditions: depConditions.value, match: 'any' } : { conditions: depConditions.value } })
+}
+function setDefaultRules(rules: ConditionalDefault[]): void {
+  set({ defaultWhen: rules.length ? rules : undefined })
+}
+function addDefaultRule(): void {
+  const first = depCandidates.value[0]
+  if (first) setDefaultRules([...defaultRules.value, { fieldId: first.id, options: [], value: ownOptions.value[0] ?? '' }])
+}
+function updateDefaultRule(i: number, patch: Partial<ConditionalDefault>): void {
+  setDefaultRules(defaultRules.value.map((r, k) => (k === i ? { ...r, ...patch } : r)))
+}
+function removeDefaultRule(i: number): void {
+  setDefaultRules(defaultRules.value.filter((_, k) => k !== i))
+}
+
+// --- Kopfzeilen der aufklappbaren Bereiche: kurze Vorschau, damit man zugeklappt sieht, was drinsteht.
+const listSummary = computed<string>(() => {
+  const f = fieldNode.value
+  const count = (f?.options ?? []).filter((o) => o !== '').length
+  if (!f || !count) return 'keine'
+  const parts = [count === 1 ? '1 Option' : `${count} Optionen`]
+  if (f.multiple) parts.push('Mehrfachauswahl')
+  if (f.allowCustom) parts.push('individuell')
+  return parts.join(' · ')
+})
 function setHeading(patch: Partial<Heading>): void {
   if (node.value) tree.update(node.value.id, { heading: { ...heading.value, ...patch } })
 }
@@ -258,6 +346,16 @@ async function saveAsBaustein(): Promise<void> {
         <InfoTip :info="node.type === 'function' ? INFO.function : node.type === 'field' ? INFO.field : INFO.section" />
       </div>
 
+      <!-- ALLGEMEIN (eigener aufklappbarer Bereich, offen): das, was man fast immer einstellt - Titel,
+           Standardwert, Pflichtfeld, „nicht erhoben". Gleiches <details>-Muster wie „Erweitert" (siehe dort). -->
+      <details open class="group rounded-lg bg-base-200/50">
+        <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          <span class="shrink-0">Allgemein</span>
+          <InfoTip :info="INFO.general" />
+          <span class="min-w-0 flex-1 truncate text-xs text-base-content/50">{{ node.title?.trim() || 'ohne Titel' }}</span>
+          <span class="shrink-0 text-base-content/50 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+        </summary>
+        <div class="flex flex-col gap-3 px-4 pb-4">
       <!-- BASIS: Titel - der Name, den man pflegt. Die interne id liegt unter „Erweitert". -->
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Titel</legend>
@@ -272,6 +370,35 @@ async function saveAsBaustein(): Promise<void> {
         <input v-else class="input w-full" :value="node.default ?? ''" placeholder="z. B. unauffällig" @input="set({ default: ($event.target as HTMLInputElement).value })" />
       </fieldset>
 
+      <!-- FUNKTION (alle Arten): Standardtext-Fallback in der Ausgabe (node.default), wenn die Funktion nichts
+           ausgibt - Listen ohne Einträge bzw. Rechner ohne Ergebnis. Erfasste Werte/Zeilen haben Vorrang. -->
+      <fieldset v-if="node.type === 'function'" class="fieldset">
+        <legend class="fieldset-legend">Standardwert (wenn leer / nicht erhoben)</legend>
+        <input class="input w-full" :value="node.default ?? ''" :placeholder="isListFunction ? 'z. B. keine Dauermedikation bekannt' : 'z. B. Score nicht erhoben'" @input="set({ default: ($event.target as HTMLInputElement).value || undefined })" />
+        <p class="text-xs text-base-content/50">Steht im Protokolltext, wenn die Funktion nichts ausgibt (keine Einträge / kein Ergebnis). Erfasste Werte haben Vorrang.</p>
+      </fieldset>
+
+      <!-- BASIS: Ueberschrift/Titel in der Ausgabe (showTitle). Beim Feld = „Abschnitt mit Ueberschrift".
+           Nur bei vorhandenem Titel: ohne Titel gibt es nichts zu zeigen -> Option ausgeblendet. -->
+      <label v-if="hasTitle" class="flex w-full cursor-pointer items-center gap-2 py-0">
+        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.showTitle === true" @change="set({ showTitle: ($event.target as HTMLInputElement).checked })" />
+        <span class="text-sm">Titel im Protokolltext zeigen</span>
+        <InfoTip :info="INFO.showTitle" class="ml-auto" />
+      </label>
+
+      <!-- FELD/FUNKTION: Pflichtfeld. Im Einsatz entfaellt der −-Zustand (nicht erhoben); ✓/✎ bleiben.
+           Ein leeres Pflichtfeld wird nur visuell als „noch offen" markiert (kein Zwang, keine Sperre). -->
+      <label
+        v-if="node.type === 'field' || node.type === 'function'"
+        class="flex w-full items-center gap-2 py-0"
+        :class="node.defaultExcluded ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
+        :title="node.defaultExcluded ? 'Nicht zusammen mit „Startet auf \u201anicht erhoben\u2018\u201c moeglich.' : undefined"
+      >
+        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.required === true" :disabled="node.defaultExcluded === true" @change="set({ required: ($event.target as HTMLInputElement).checked || undefined })" />
+        <span class="text-sm">Pflichtfeld <span class="whitespace-nowrap text-base-content/50">(✓ / ✎, kein „nicht erhoben")</span></span>
+        <InfoTip :info="INFO.required" class="ml-auto" />
+      </label>
+
       <!-- FELD: mehrzeilig (nur ohne Optionen; mit Optionen = Select, kein Freitext -> ausgeblendet) -->
       <label v-if="node.type === 'field' && !(node.options && node.options.length)" class="flex w-full cursor-pointer items-center gap-2 py-0">
         <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.multiline === true" @change="set({ multiline: ($event.target as HTMLInputElement).checked })" />
@@ -279,9 +406,92 @@ async function saveAsBaustein(): Promise<void> {
         <InfoTip :info="INFO.multiline" class="ml-auto" />
       </label>
 
-      <!-- FELD: Auswahl-Optionen (Select). Gesetzt -> das Feld ist ein Select. „als Standard" = Radio.
+      <!-- FELD/FUNKTION: UNO Reverse. Der Knoten startet im Einsatz auf „nicht erhoben" statt auf
+           „bestaetigt" und erscheint erst in der Ausgabe, wenn der Anwender ihn bewusst einschaltet.
+           Fuer Felder und Funktionen, die man nur in bestimmten Lagen braucht.
+           Schliesst sich mit „Pflichtfeld" aus: ein Pflichtfeld darf nicht still entfallen. Statt den
+           Widerspruch zuzulassen und spaeter aufzuloesen, ist der jeweils andere Schalter gesperrt -
+           so kann er gar nicht erst entstehen. -->
+      <label
+        v-if="node.type === 'field' || node.type === 'function'"
+        class="flex w-full items-center gap-2 py-0"
+        :class="node.required || node.dependsOn ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
+        :title="node.dependsOn ? 'Wird von der Abhängigkeit vorausgesetzt.' : node.required ? 'Nicht zusammen mit „Pflichtfeld\u201c moeglich - ein Pflichtfeld darf nicht still entfallen.' : undefined"
+      >
+        <input
+          type="checkbox"
+          class="toggle toggle-sm shrink-0"
+          :checked="node.defaultExcluded === true"
+          :disabled="node.required === true || !!node.dependsOn"
+          @change="set({ defaultExcluded: ($event.target as HTMLInputElement).checked || undefined })"
+        />
+        <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/50">(nur bei Bedarf einschalten)</span></span>
+        <InfoTip :info="node.type === 'function' ? INFO.functionStartsExcluded : INFO.fieldStartsExcluded" class="ml-auto" />
+      </label>
+
+      <!-- CONTAINER: einklappbar + als „nicht erhoben" markierbar (Basis).
+           NICHT am Wurzel-Container: die Wurzel wird im Einsatz nie als Sektion gerendert (EinsatzView zeigt nur
+           die Kinder), also greift weder Einklappen (EinsatzSection) noch „nicht erhoben" (Zustand nur pro Sektion
+           setzbar) — beide waeren an der ersten Ebene wirkungslos. -->
+      <label v-if="node.type === 'container' && !isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
+        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.collapsible === true" @change="set({ collapsible: ($event.target as HTMLInputElement).checked })" />
+        <span class="text-sm">einklappbar</span>
+        <InfoTip :info="INFO.collapsible" class="ml-auto" />
+      </label>
+      <label
+        v-if="node.type === 'container' && !isRoot"
+        class="flex w-full items-center gap-2 py-0"
+        :class="node.defaultExcluded ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
+        :title="node.defaultExcluded ? 'Wird von „Startet auf \u201anicht erhoben\u2018\u201c vorausgesetzt.' : undefined"
+      >
+        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.excludable === true" :disabled="node.defaultExcluded === true" @change="set({ excludable: ($event.target as HTMLInputElement).checked })" />
+        <span class="text-sm">Als „nicht erhoben" markierbar <span class="whitespace-nowrap">(✓ / −)</span></span>
+        <InfoTip :info="INFO.excludable" class="ml-auto" />
+      </label>
+      <!-- CONTAINER: UNO Reverse. Der ganze Abschnitt startet auf „nicht erhoben" und erscheint erst,
+           wenn der Anwender ihn zuschaltet - ein Tipp statt jedes Feld einzeln.
+           Setzt „Als nicht erhoben markierbar" automatisch mit: ohne den ✓/−-Schalter liesse sich der
+           Abschnitt gar nicht wieder einschalten, das Flag waere wirkungslos. Deshalb auch die Sperre
+           andersherum - excludable laesst sich nicht abschalten, solange UNO Reverse an ist. -->
+      <label
+        v-if="node.type === 'container' && !isRoot"
+        class="flex w-full items-center gap-2 py-0"
+        :class="node.dependsOn ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
+        :title="node.dependsOn ? 'Wird von der Abhängigkeit vorausgesetzt.' : undefined"
+      >
+        <input
+          type="checkbox"
+          class="toggle toggle-sm shrink-0"
+          :checked="node.defaultExcluded === true"
+          :disabled="!!node.dependsOn"
+          @change="set(($event.target as HTMLInputElement).checked ? { defaultExcluded: true, excludable: true } : { defaultExcluded: undefined })"
+        />
+        <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/50">(nur bei Bedarf zuschalten)</span></span>
+        <InfoTip :info="INFO.sectionStartsExcluded" class="ml-auto" />
+      </label>
+
+      <!-- CONTAINER (nicht Wurzel): den Teilbaum als wiederverwendbaren Baustein in der Bibliothek ablegen -->
+      <div v-if="node.type === 'container' && !isRoot" class="space-y-1">
+        <div class="flex items-center gap-1">
+          <button type="button" class="btn btn-outline btn-sm" @click="saveAsBaustein">Für andere Vorlagen speichern</button>
+          <InfoTip :info="isOnlineEditor ? INFO.saveForOtherTemplatesEditor : INFO.saveForOtherTemplates" class="ml-1" />
+        </div>
+        <p v-if="saveOutcome" class="text-xs" :class="saveOutcome.ok ? 'text-success' : 'text-error'">{{ saveOutcome.msg }}</p>
+      </div>
+        </div>
+      </details>
+
+      <!-- LISTENOPTIONEN (eigener aufklappbarer Bereich): alles rund um die Auswahlliste eines Feldes.
+           FELD: Auswahl-Optionen (Select). Gesetzt -> das Feld ist ein Select. „als Standard" = Radio.
            Bei „mehrzeilig" ausgeblendet: Select (Optionen) und Textarea schliessen sich aus. -->
-      <div v-if="node.type === 'field' && !node.multiline" class="space-y-2 rounded-lg bg-base-200/50 p-3">
+      <details v-if="node.type === 'field' && !node.multiline" class="group rounded-lg bg-base-200/50">
+        <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          <span class="shrink-0">Listenoptionen</span>
+          <InfoTip :info="INFO.listOptions" />
+          <span class="min-w-0 flex-1 truncate text-xs text-base-content/50">{{ listSummary }}</span>
+          <span class="shrink-0 text-base-content/50 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+        </summary>
+        <div class="space-y-2 px-4 pb-4">
         <span class="text-xs font-semibold text-base-content/60">Auswahl-Optionen <span class="font-normal text-base-content/40">(leer = einfaches Feld)</span> <InfoTip :info="INFO.options" /></span>
         <div v-for="(opt, i) in (node.options ?? [])" :key="i" class="flex items-center gap-1">
           <input v-if="!(node.multiple && node.defaultEmpty) && new Set((node.options ?? []).filter((o) => o !== '')).size > 1" type="radio" class="radio radio-xs shrink-0" :name="`default-${node.id}`" :checked="effectiveFieldDefault === opt" :aria-label="`als Standardwert: ${opt}`" title="als Standard" @change="setDefaultOption(opt)" />
@@ -347,103 +557,86 @@ async function saveAsBaustein(): Promise<void> {
           <span class="text-sm">Standardwert weicht <span class="text-base-content/50">(verschwindet, sobald etwas anderes gewählt wird)</span></span>
           <InfoTip :info="INFO.defaultYield" class="ml-auto" />
         </label>
-      </div>
-
-      <!-- FUNKTION (alle Arten): Standardtext-Fallback in der Ausgabe (node.default), wenn die Funktion nichts
-           ausgibt - Listen ohne Einträge bzw. Rechner ohne Ergebnis. Erfasste Werte/Zeilen haben Vorrang. -->
-      <fieldset v-if="node.type === 'function'" class="fieldset">
-        <legend class="fieldset-legend">Standardwert (wenn leer / nicht erhoben)</legend>
-        <input class="input w-full" :value="node.default ?? ''" :placeholder="isListFunction ? 'z. B. keine Dauermedikation bekannt' : 'z. B. Score nicht erhoben'" @input="set({ default: ($event.target as HTMLInputElement).value || undefined })" />
-        <p class="text-xs text-base-content/50">Steht im Protokolltext, wenn die Funktion nichts ausgibt (keine Einträge / kein Ergebnis). Erfasste Werte haben Vorrang.</p>
-      </fieldset>
-
-      <!-- BASIS: Ueberschrift/Titel in der Ausgabe (showTitle). Beim Feld = „Abschnitt mit Ueberschrift".
-           Nur bei vorhandenem Titel: ohne Titel gibt es nichts zu zeigen -> Option ausgeblendet. -->
-      <label v-if="hasTitle" class="flex w-full cursor-pointer items-center gap-2 py-0">
-        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.showTitle === true" @change="set({ showTitle: ($event.target as HTMLInputElement).checked })" />
-        <span class="text-sm">Titel im Protokolltext zeigen</span>
-        <InfoTip :info="INFO.showTitle" class="ml-auto" />
-      </label>
-
-      <!-- FELD/FUNKTION: Pflichtfeld. Im Einsatz entfaellt der −-Zustand (nicht erhoben); ✓/✎ bleiben.
-           Ein leeres Pflichtfeld wird nur visuell als „noch offen" markiert (kein Zwang, keine Sperre). -->
-      <label
-        v-if="node.type === 'field' || node.type === 'function'"
-        class="flex w-full items-center gap-2 py-0"
-        :class="node.defaultExcluded ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
-        :title="node.defaultExcluded ? 'Nicht zusammen mit „Startet auf \u201anicht erhoben\u2018\u201c moeglich.' : undefined"
-      >
-        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.required === true" :disabled="node.defaultExcluded === true" @change="set({ required: ($event.target as HTMLInputElement).checked || undefined })" />
-        <span class="text-sm">Pflichtfeld <span class="whitespace-nowrap text-base-content/50">(✓ / ✎, kein „nicht erhoben")</span></span>
-        <InfoTip :info="INFO.required" class="ml-auto" />
-      </label>
-
-      <!-- FELD/FUNKTION: UNO Reverse. Der Knoten startet im Einsatz auf „nicht erhoben" statt auf
-           „bestaetigt" und erscheint erst in der Ausgabe, wenn der Anwender ihn bewusst einschaltet.
-           Fuer Felder und Funktionen, die man nur in bestimmten Lagen braucht.
-           Schliesst sich mit „Pflichtfeld" aus: ein Pflichtfeld darf nicht still entfallen. Statt den
-           Widerspruch zuzulassen und spaeter aufzuloesen, ist der jeweils andere Schalter gesperrt -
-           so kann er gar nicht erst entstehen. -->
-      <label
-        v-if="node.type === 'field' || node.type === 'function'"
-        class="flex w-full items-center gap-2 py-0"
-        :class="node.required ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
-        :title="node.required ? 'Nicht zusammen mit „Pflichtfeld\u201c moeglich - ein Pflichtfeld darf nicht still entfallen.' : undefined"
-      >
-        <input
-          type="checkbox"
-          class="toggle toggle-sm shrink-0"
-          :checked="node.defaultExcluded === true"
-          :disabled="node.required === true"
-          @change="set({ defaultExcluded: ($event.target as HTMLInputElement).checked || undefined })"
-        />
-        <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/50">(nur bei Bedarf einschalten)</span></span>
-        <InfoTip :info="node.type === 'function' ? INFO.functionStartsExcluded : INFO.fieldStartsExcluded" class="ml-auto" />
-      </label>
-
-      <!-- CONTAINER: einklappbar + als „nicht erhoben" markierbar (Basis).
-           NICHT am Wurzel-Container: die Wurzel wird im Einsatz nie als Sektion gerendert (EinsatzView zeigt nur
-           die Kinder), also greift weder Einklappen (EinsatzSection) noch „nicht erhoben" (Zustand nur pro Sektion
-           setzbar) — beide waeren an der ersten Ebene wirkungslos. -->
-      <label v-if="node.type === 'container' && !isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
-        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.collapsible === true" @change="set({ collapsible: ($event.target as HTMLInputElement).checked })" />
-        <span class="text-sm">einklappbar</span>
-        <InfoTip :info="INFO.collapsible" class="ml-auto" />
-      </label>
-      <label
-        v-if="node.type === 'container' && !isRoot"
-        class="flex w-full items-center gap-2 py-0"
-        :class="node.defaultExcluded ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
-        :title="node.defaultExcluded ? 'Wird von „Startet auf \u201anicht erhoben\u2018\u201c vorausgesetzt.' : undefined"
-      >
-        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.excludable === true" :disabled="node.defaultExcluded === true" @change="set({ excludable: ($event.target as HTMLInputElement).checked })" />
-        <span class="text-sm">Als „nicht erhoben" markierbar <span class="whitespace-nowrap">(✓ / −)</span></span>
-        <InfoTip :info="INFO.excludable" class="ml-auto" />
-      </label>
-      <!-- CONTAINER: UNO Reverse. Der ganze Abschnitt startet auf „nicht erhoben" und erscheint erst,
-           wenn der Anwender ihn zuschaltet - ein Tipp statt jedes Feld einzeln.
-           Setzt „Als nicht erhoben markierbar" automatisch mit: ohne den ✓/−-Schalter liesse sich der
-           Abschnitt gar nicht wieder einschalten, das Flag waere wirkungslos. Deshalb auch die Sperre
-           andersherum - excludable laesst sich nicht abschalten, solange UNO Reverse an ist. -->
-      <label v-if="node.type === 'container' && !isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
-        <input
-          type="checkbox"
-          class="toggle toggle-sm shrink-0"
-          :checked="node.defaultExcluded === true"
-          @change="set(($event.target as HTMLInputElement).checked ? { defaultExcluded: true, excludable: true } : { defaultExcluded: undefined })"
-        />
-        <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/50">(nur bei Bedarf zuschalten)</span></span>
-        <InfoTip :info="INFO.sectionStartsExcluded" class="ml-auto" />
-      </label>
-
-      <!-- CONTAINER (nicht Wurzel): den Teilbaum als wiederverwendbaren Baustein in der Bibliothek ablegen -->
-      <div v-if="node.type === 'container' && !isRoot" class="space-y-1">
-        <div class="flex items-center gap-1">
-          <button type="button" class="btn btn-outline btn-sm" @click="saveAsBaustein">Für andere Vorlagen speichern</button>
-          <InfoTip :info="isOnlineEditor ? INFO.saveForOtherTemplatesEditor : INFO.saveForOtherTemplates" class="ml-1" />
         </div>
-        <p v-if="saveOutcome" class="text-xs" :class="saveOutcome.ok ? 'text-success' : 'text-error'">{{ saveOutcome.msg }}</p>
-      </div>
+      </details>
+
+      <!-- ABHAENGIGKEIT: eigener aufklappbarer Bereich ueber „Erweitert" (gleiches <details>-Muster, siehe dort).
+           Der Kopf zeigt die Regeln als Vorschau. Nicht an der Wurzel - die ist im Einsatz kein eigenes Element. -->
+      <details v-if="!isRoot" class="group rounded-lg bg-base-200/50">
+        <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          <span class="shrink-0">Abhängigkeit</span>
+          <InfoTip :info="INFO.dependency" />
+          <span class="min-w-0 flex-1 truncate text-xs " :class="depBroken ? 'text-error' : 'text-base-content/50'">{{ depSummary }}</span>
+          <span class="shrink-0 text-base-content/50 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+        </summary>
+        <div class="space-y-4 px-4 pb-4">
+          <!-- ERSCHEINEN: das Element ist im Einsatz ausgeblendet, bis die Bedingungen zutreffen. -->
+          <div class="space-y-3">
+            <label
+              class="flex w-full items-center gap-2 py-0"
+              :class="!node.dependsOn && (depBlockedByRequired || !depCandidates.length) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
+              :title="!node.dependsOn && depBlockedByRequired ? 'Nicht zusammen mit „Pflichtfeld\u201c möglich.' : undefined"
+            >
+              <input
+                type="checkbox"
+                class="toggle toggle-sm shrink-0"
+                :checked="!!node.dependsOn"
+                :disabled="!node.dependsOn && (depBlockedByRequired || !depCandidates.length)"
+                @change="setDependency(($event.target as HTMLInputElement).checked)"
+              />
+              <span class="text-sm">Nur anzeigen, wenn eine Bedingung zutrifft</span>
+              <InfoTip :info="INFO.dependencyVisible" class="ml-auto" />
+            </label>
+            <p v-if="!depCandidates.length && !node.dependsOn" class="text-xs text-base-content/60">
+              In dieser Vorlage gibt es noch kein anderes Feld mit Auswahl-Optionen, von dem dieses Element abhängen könnte.
+            </p>
+            <template v-if="node.dependsOn">
+              <div v-for="(c, i) in depConditions" :key="i" class="space-y-2 rounded-lg border border-base-300 p-3">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-semibold text-base-content/60">Bedingung {{ i + 1 }}</span>
+                  <button v-if="depConditions.length > 1" type="button" class="btn btn-ghost btn-xs text-error" @click="removeCondition(i)">Entfernen</button>
+                </div>
+                <ConditionEditor :root="root" :condition="c" :choices="depCandidates" options-label="Trifft zu, wenn eine davon gewählt ist" @update="updateCondition(i, $event)" />
+              </div>
+              <button v-if="depConditions.length < MAX_CONDITIONS" type="button" class="btn btn-ghost btn-xs" @click="addCondition">＋ Weitere Bedingung</button>
+              <label v-if="depConditions.length > 1" class="flex w-full cursor-pointer items-center gap-2 py-0">
+                <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.dependsOn.match === 'any'" @change="setMatchAny(($event.target as HTMLInputElement).checked)" />
+                <span class="text-sm">Eine Bedingung genügt <span class="text-base-content/50">(sonst müssen alle zutreffen)</span></span>
+                <InfoTip :info="INFO.dependencyAny" class="ml-auto" />
+              </label>
+            </template>
+          </div>
+
+          <!-- INHALT (nur Felder): solange eine Bedingung zutrifft, gilt ein anderer Standardwert. -->
+          <div v-if="fieldNode" class="space-y-3 border-t border-base-300 pt-3">
+            <div class="flex items-center gap-1">
+              <span class="text-sm">Anderer Standardwert</span>
+              <InfoTip :info="INFO.defaultWhen" class="ml-auto" />
+            </div>
+            <div v-for="(r, i) in defaultRules" :key="i" class="space-y-2 rounded-lg border border-base-300 p-3">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-semibold text-base-content/60">Regel {{ i + 1 }}</span>
+                <button type="button" class="btn btn-ghost btn-xs text-error" @click="removeDefaultRule(i)">Entfernen</button>
+              </div>
+              <ConditionEditor :root="root" :condition="r" :choices="depCandidates" options-label="Gilt, wenn eine davon gewählt ist" @update="updateDefaultRule(i, $event)" />
+              <fieldset class="fieldset">
+                <legend class="fieldset-legend">Standardwert in diesem Fall</legend>
+                <select v-if="ownOptions.length" class="select w-full" :value="ownOptions.includes(r.value) ? r.value : ''" @change="updateDefaultRule(i, { value: ($event.target as HTMLSelectElement).value })">
+                  <option v-if="!ownOptions.includes(r.value)" value="" disabled>Option wählen …</option>
+                  <option v-for="o in ownOptions" :key="o" :value="o">{{ o }}</option>
+                </select>
+                <textarea v-else-if="fieldNode.multiline" class="textarea w-full" rows="3" :value="r.value" @input="updateDefaultRule(i, { value: ($event.target as HTMLTextAreaElement).value })" />
+                <input v-else class="input w-full" :value="r.value" @input="updateDefaultRule(i, { value: ($event.target as HTMLInputElement).value })" />
+              </fieldset>
+            </div>
+            <p v-if="!depCandidates.length && !defaultRules.length" class="text-xs text-base-content/60">
+              Dafür braucht es ein anderes Feld mit Auswahl-Optionen.
+            </p>
+            <button v-if="defaultRules.length < MAX_DEFAULT_RULES" type="button" class="btn btn-ghost btn-xs" :disabled="!depCandidates.length" @click="addDefaultRule">＋ Regel hinzufügen</button>
+            <p v-if="defaultRules.length > 1" class="text-xs text-base-content/50">Treffen mehrere Regeln zu, gilt die oberste.</p>
+          </div>
+        </div>
+      </details>
 
       <!-- ERWEITERT (Progressive Disclosure): selten Gebrauchtes eingeklappt - interne id, Titel-Format,
            Layout/Trenner, Ausgabe-Optionen. Default zu; Kopf zeigt die id als Vorschau. -->

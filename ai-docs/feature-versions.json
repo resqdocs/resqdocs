@@ -91,6 +91,24 @@
       "note_de": "Bei einer Auswahlliste mit allowCustom: Die eigene Eingabe ist ein großes Textfeld statt einer Zeile, für längere Texte. Ältere App-Versionen zeigen die einzeilige Eingabe; die Ausgabe ist dieselbe.",
       "note_en": "On a select with allowCustom: the custom input is a large text field instead of a single line, for longer texts. Older app versions show the single-line input; the output is the same.",
       "minVersion": "1.10.0"
+    },
+    {
+      "prop": "dependsOn",
+      "on": "field, container, function",
+      "de": "Abhängigkeit",
+      "en": "Dependency",
+      "note_de": "Das Element erscheint im Einsatz erst, wenn die Bedingungen zutreffen; vorher ist es ausgeblendet und steht nicht in der Ausgabe. Form: { \"conditions\": [ { \"fieldId\": \"<id eines Feldes mit options>\", \"options\": [\"<exakter Options-Text>\"] } ] }. Eine Bedingung trifft zu, wenn im Feld eine der options gewählt ist. Mehrere Bedingungen (höchstens drei) müssen alle zutreffen; mit \"match\": \"any\" genügt eine. Immer zusammen mit defaultExcluded: true setzen (am Container zusätzlich excludable: true), nicht zusammen mit required. Ältere App-Versionen ignorieren die Angabe: dort startet das Element auf „nicht erhoben\" und wird von Hand eingeschaltet.",
+      "note_en": "The element only appears during a case once the conditions are met; until then it is hidden and not in the output. Shape: { \"conditions\": [ { \"fieldId\": \"<id of a field with options>\", \"options\": [\"<exact option text>\"] } ] }. A condition is met when one of the options is chosen in that field. Several conditions (at most three) must all be met; with \"match\": \"any\" one is enough. Always set together with defaultExcluded: true (on a container also excludable: true), not together with required. Older app versions ignore it: there the element starts as \"not assessed\" and is switched on by hand.",
+      "minVersion": "1.11.0"
+    },
+    {
+      "prop": "defaultWhen",
+      "on": "field",
+      "de": "Anderer Standardwert",
+      "en": "Conditional default",
+      "note_de": "Solange eine Bedingung zutrifft, gilt ein anderer Standardwert als default. Form: [ { \"fieldId\": \"<id eines Feldes mit options>\", \"options\": [\"<exakter Options-Text>\"], \"value\": \"<Standardwert in diesem Fall>\" } ]. Die erste zutreffende Regel gilt (höchstens fünf). Hat das Feld selbst options, muss value eine davon sein. Eigene Eingaben des Anwenders gehen vor. Ältere App-Versionen ignorieren die Angabe und nehmen default.",
+      "note_en": "While a condition is met, a different default applies instead of default. Shape: [ { \"fieldId\": \"<id of a field with options>\", \"options\": [\"<exact option text>\"], \"value\": \"<default in this case>\" } ]. The first matching rule applies (at most five). If the field itself has options, value must be one of them. The user's own input takes precedence. Older app versions ignore it and use default.",
+      "minVersion": "1.11.0"
     }
   ],
   "functions": [
