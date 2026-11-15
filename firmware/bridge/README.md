@@ -20,6 +20,8 @@ bridge_s2/              PRODUKTIV: S2-Bridge — REST-API (docs/pico-api.md)
   JsonMini.h            dependency-freier JSON-Extraktor (String + UInt) + UTF-8-Zaehler
   OtaUpdate.h           OTA-Session + Verifikation (SHA-256 + Ed25519)
   TypeJob.h             Tipp-Auftrag: zeichenweise tippen, Fortschritt, Anhalten/Fortsetzen/Abbrechen
+  ButtonPress.h         Knopf (BOOTSEL) entprellt als kurzer Druck auswerten
+  StoredTemplate.h      ein gespeicherter Text, den der Knopf ohne Handy tippt
   OtaPublicKey.h        Ed25519-Public-Key (von scripts/ota/keygen.mjs generiert)
 build/                  .uf2/.bin-Output (compile-check)
 dist/                   versionierte .uf2 (BOOTSEL) + signierte .bin/.manifest (OTA)

@@ -3,6 +3,28 @@
 
 export type FillMode = 'inclusive' | 'exclusive'
 
+/** Eine Bedingung: im Auswahlfeld `fieldId` ist eine der `options` gewaehlt. */
+export interface Condition {
+  fieldId: string
+  options: string[]
+}
+
+/**
+ * Abhaengigkeit: das Element wird nur erhoben, wenn die Bedingungen zutreffen (dependencies.ts).
+ * Ohne `match` muessen ALLE zutreffen, mit `match: 'any'` genuegt eine. Aeltere App-Versionen
+ * ignorieren die Angabe; damit das Element dort nicht ungewollt erscheint, gehoert `defaultExcluded`
+ * dazu (bei Abschnitten zusaetzlich `excludable`).
+ */
+export interface Dependency {
+  conditions: Condition[]
+  match?: 'any'
+}
+
+/** Anderer Standardwert eines Feldes, solange die Bedingung zutrifft (dependencies.ts). */
+export interface ConditionalDefault extends Condition {
+  value: string
+}
+
 /** Ueberschriften-/Titel-Format: prefix/suffix unabhaengig, Fuellzeichen + Breite (nur Container-
  *  Banner), Bezug inklusive/exklusive. Beim FELD wirken nur prefix/suffix (kein Banner). */
 export interface Heading {
@@ -35,6 +57,8 @@ export interface Container {
    *  nicht wieder einschalten. Aendert NUR den Ausgangszustand, nicht die Vorlage selbst - im Editor
    *  bleibt der Abschnitt vollstaendig sichtbar. */
   defaultExcluded?: boolean
+  /** Abhaengigkeit von Auswahlfeldern (siehe Dependency). */
+  dependsOn?: Dependency
   /** Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen). */
   inline?: boolean
   /** Kein Feld-Trenner VOR diesem Element (klebt ans vorherige inline-Element). */
@@ -112,6 +136,12 @@ export interface Field {
    *  verhindert die Kombination. Aendert NUR den Ausgangszustand - die Vorlage bleibt vollstaendig,
    *  das Weglassen ist reiner Einsatz-Zustand. */
   defaultExcluded?: boolean
+  /** Abhaengigkeit von Auswahlfeldern (siehe Dependency). */
+  dependsOn?: Dependency
+  /** Abhaengiger Standardwert: die ERSTE zutreffende Regel ersetzt `default`, solange das Feld auf
+   *  dem Standardwert steht. Bei einem Auswahlfeld muss `value` eine seiner Optionen sein. Aeltere
+   *  App-Versionen ignorieren die Angabe und nehmen `default`. */
+  defaultWhen?: ConditionalDefault[]
 }
 
 /** Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan).
@@ -168,6 +198,8 @@ export interface FunctionNode {
    *  Schliesst sich mit `required` aus; der Editor verhindert die Kombination. Aendert NUR den
    *  Ausgangszustand (fehlender Eintrag im Werte-Store), siehe functionStatus in fill.ts. */
   defaultExcluded?: boolean
+  /** Abhaengigkeit von Auswahlfeldern (siehe Dependency). */
+  dependsOn?: Dependency
 }
 
 export type Node = Container | Field | FunctionNode
@@ -266,10 +298,12 @@ export type FunctionRow = MedikamenteRow | ArztRow | PackYearsRow | NEWS2Row | L
 /** Ausfuell-Zustand eines BLATTS im Einsatz. Feld = Tri-State; Funktion = eigene Daten (rows).
  *  Fehlt -> 'confirmed' (Standardwert). */
 export type FieldFill =
-  | { state: 'confirmed'; prevValue?: string } // Standardwert wird verwendet; prevValue = ruhend gemerkter, zuletzt getippter Freitext
+  | { state: 'confirmed'; prevValue?: string; auto?: true } // Standardwert wird verwendet; prevValue = ruhend gemerkter, zuletzt getippter Freitext
   | { state: 'custom'; value: string; values?: string[] } // bearbeiteter Wert; values gesetzt = Mehrfachauswahl (value = gerenderter Fliesstext, damit auch alte Apps beim Lesen den korrekten Text bekommen)
-  | { state: 'excluded'; prevValue?: string; prevValues?: string[] } // nicht erhoben -> entfaellt in der Ausgabe; prevValue = ruhend gemerkter Freitext, prevValues = ruhend gemerkte Multi-Auswahl
-  | { state: 'function'; rows: FunctionRow[]; status?: 'confirmed' | 'custom' | 'excluded'; text?: string; prevText?: string } // Funktions-Zeilen + Tri-State-Status + Freitext (custom) NEBEN den Zeilen; status fehlt -> confirmed (rueckwaerts-kompatibel); prevText = ruhend gemerkter Freitext
+  | { state: 'excluded'; prevValue?: string; prevValues?: string[]; auto?: true } // nicht erhoben -> entfaellt in der Ausgabe; prevValue = ruhend gemerkter Freitext, prevValues = ruhend gemerkte Multi-Auswahl
+  | { state: 'function'; rows: FunctionRow[]; status?: 'confirmed' | 'custom' | 'excluded'; text?: string; prevText?: string; auto?: true } // Funktions-Zeilen + Tri-State-Status + Freitext (custom) NEBEN den Zeilen; status fehlt -> confirmed (rueckwaerts-kompatibel); prevText = ruhend gemerkter Freitext
+// auto = von einer Abhaengigkeit gesetzt, nicht vom Anwender (dependencies.ts). Jede Eingabe des Anwenders
+// schreibt einen Zustand OHNE auto; daran erkennt die Regel, dass sie das Element nicht mehr anfassen darf.
 // prevValue/prevText sind RUHENDE Wiederherstellungs-Puffer: sie bewahren den zuletzt via ✎ getippten
 // Freitext beim versehentlichen Verlassen von 'custom', damit er beim Zurueckschalten auf ✎ verbatim
 // zurueckkommt. Sie erscheinen NIE in der Ausgabe (Renderer/fillValue ignorieren sie) - excluded bleibt

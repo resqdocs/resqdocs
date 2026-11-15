@@ -3,7 +3,7 @@
 //
 // Datenschutz: Text ausschließlich im Body von POST /type (nie in der URL);
 // Fehler werden auf den HTTP-Status normalisiert — KEIN Payload-Logging.
-import type { HttpAdapter, OtaBeginResult, OtaManifest, PicoClient, PicoConfigResult, PicoStatus, TypingStatus } from './picoTypes'
+import type { HttpAdapter, OtaBeginResult, OtaManifest, PicoClient, PicoConfigResult, PicoStatus, StoredTextInfo, TypingStatus } from './picoTypes'
 
 const CONNECT_TIMEOUT = 5000
 const READ_TIMEOUT = 20000 // Tippen dauert (Per-Char-Delay) → großzügig (S2)
@@ -68,6 +68,54 @@ function parseStatus(data: unknown): PicoStatus {
   if (typing) status.typing = typing
   if (!status.name || !status.apiVersion) throw new Error('Status unvollständig')
   return status
+}
+
+/** Die Bridge verlangt den gedrueckten Knopf (403 button_required): Text ablegen, holen oder entfernen. */
+export class ButtonRequiredError extends Error {
+  constructor() {
+    super('Knopf an der Bridge gedrückt halten')
+    this.name = 'ButtonRequiredError'
+  }
+}
+
+/** Die Bridge lehnt den Text ab (422 not_allowed): Steuerzeichen oder Befehlsmuster. */
+export class TextNotAllowedError extends Error {
+  readonly reason: 'control' | 'command'
+  constructor(reason: 'control' | 'command') {
+    super(
+      reason === 'control'
+        ? 'Die Bridge lehnt den Text ab: Er enthält ein Steuerzeichen. Erlaubt sind nur Schrift und Zeilenumbrüche.'
+        : 'Die Bridge lehnt den Text ab: Befehle, Programmaufrufe und Internetadressen tippt der Knopf nicht.',
+    )
+    this.name = 'TextNotAllowedError'
+    this.reason = reason
+  }
+}
+
+/** Angaben zum abgelegten Text streng pruefen; Unerwartetes → null. */
+export function parseStoredInfo(data: unknown): StoredTextInfo | null {
+  let o: unknown = data
+  if (typeof data === 'string') {
+    try {
+      o = JSON.parse(data)
+    } catch {
+      return null
+    }
+  }
+  if (!o || typeof o !== 'object') return null
+  const r = o as Record<string, unknown>
+  if (typeof r.present !== 'boolean') return null
+  const nat = (v: unknown): number => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : 0)
+  return {
+    present: r.present,
+    name: typeof r.name === 'string' ? r.name : '',
+    chars: nat(r.chars),
+    os: typeof r.os === 'string' ? r.os : 'win_de',
+    delayMs: nat(r.delayMs),
+    savedAt: nat(r.savedAt),
+    buttonHeld: r.buttonHeld === true,
+    blocked: r.blocked === true,
+  }
 }
 
 /** Tipp-Fortschritt streng pruefen; alles Unerwartete → null (wie „Firmware kennt es nicht"). */
@@ -155,6 +203,37 @@ export function createPicoClient(
       if (res.status === 404 || res.status === 409) return null // aeltere Firmware bzw. kein laufender Auftrag
       if (!isOk(res.status)) throw new Error(`Steuerung fehlgeschlagen (HTTP ${res.status})`)
       return parseTyping(res.data)
+    },
+    // --- Text fuer den Knopf (Firmware ab 0.5.0). Der Text geht nur im Body bzw. als Antwort,
+    // nie in die URL, und wird nicht geloggt.
+    async storedInfo() {
+      const res = await http.get(`${base()}/stored`, { connectTimeout: CONNECT_TIMEOUT, readTimeout: CONNECT_TIMEOUT })
+      if (res.status === 404) return null // Firmware vor 0.5.0
+      if (!isOk(res.status)) throw new Error(`Abfrage fehlgeschlagen (HTTP ${res.status})`)
+      return parseStoredInfo(res.data)
+    },
+    async storedText() {
+      const res = await http.get(`${base()}/stored/text`, { connectTimeout: CONNECT_TIMEOUT, readTimeout: CONNECT_TIMEOUT, responseType: 'text' })
+      if (res.status === 403) throw new ButtonRequiredError()
+      if (res.status === 404) return ''
+      if (!isOk(res.status)) throw new Error(`Laden fehlgeschlagen (HTTP ${res.status})`)
+      return typeof res.data === 'string' ? res.data : ''
+    },
+    async storeText({ text, os, delayMs, savedAt, name }) {
+      if (Array.from(text).length > TYPE_CHUNK_LIMIT) throw new Error(`Der Text ist zu lang (höchstens ${TYPE_CHUNK_LIMIT} Zeichen)`)
+      const body = { text, os, delayMs, savedAt, ...(name ? { name } : {}) }
+      const res = await http.post(`${base()}/stored`, body, { connectTimeout: TYPE_TIMEOUT, readTimeout: TYPE_TIMEOUT })
+      if (res.status === 403) throw new ButtonRequiredError()
+      if (res.status === 409) throw new Error('Die Bridge tippt gerade. Bitte warten und erneut speichern.')
+      if (res.status === 422) throw new TextNotAllowedError(parseBody(res.data)?.reason === 'control' ? 'control' : 'command')
+      if (!isOk(res.status)) throw new Error(`Speichern fehlgeschlagen (HTTP ${res.status})`)
+      const chars = Number(parseBody(res.data)?.chars ?? 0)
+      return { chars: Number.isFinite(chars) ? chars : 0 }
+    },
+    async clearStored() {
+      const res = await http.post(`${base()}/stored/clear`, {}, { connectTimeout: CONNECT_TIMEOUT, readTimeout: CONNECT_TIMEOUT })
+      if (res.status === 403) throw new ButtonRequiredError()
+      if (!isOk(res.status)) throw new Error(`Entfernen fehlgeschlagen (HTTP ${res.status})`)
     },
     async setConfig({ ssidId }): Promise<PicoConfigResult> {
       // Vorvalidierung: ungültige ID erzeugt KEINEN Request (Server bleibt maßgeblich).

@@ -7,6 +7,8 @@ import { PZN_DICTIONARY_ENABLED } from '@/medications/featureFlags'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
 import AppSettingsSection from './AppSettingsSection.vue'
 import DeviceSection from './DeviceSection.vue'
+import VersionHistoryPage from './VersionHistoryPage.vue'
+import BridgeButtonTextSection from './BridgeButtonTextSection.vue'
 import PznSection from './PznSection.vue'
 import PznLibraryPage from './PznLibraryPage.vue'
 import ScannerSection from './ScannerSection.vue'
@@ -47,7 +49,7 @@ onMounted(() => {
   void refreshPznCount()
 })
 
-type Page = 'overview' | 'device' | 'pznLibrary'
+type Page = 'overview' | 'device' | 'pznLibrary' | 'versions'
 const page = ref<Page>('overview')
 watch(page, (p) => {
   if (p === 'overview') void refreshPznCount()
@@ -58,12 +60,16 @@ watch(page, (p) => {
   <!-- Eigene Unterseite: PZN-Bibliothek -->
   <PznLibraryPage v-if="page === 'pznLibrary'" @back="page = 'overview'" />
 
+  <!-- Eigene Unterseite: Versionsverlauf -->
+  <VersionHistoryPage v-else-if="page === 'versions'" :app-version="appVersion" @back="page = 'overview'" />
+
   <!-- Eigene Unterseite: Bridge/Gerät (großer Bereich, aus der Übersicht ausgelagert — Muster wie PZN). -->
   <div v-else-if="page === 'device'" class="flex flex-col gap-4">
     <button type="button" class="btn btn-ghost btn-sm min-h-11 self-start gap-1 px-2" @click="page = 'overview'">
       <span aria-hidden="true">‹</span> Einstellungen
     </button>
     <DeviceSection />
+    <BridgeButtonTextSection />
   </div>
 
   <div v-else class="flex flex-col gap-4">
@@ -136,6 +142,25 @@ watch(page, (p) => {
         <BackupSection />
       </div>
     </div>
+
+    <!-- Navi-Zeile zum Versionsverlauf: was mit welcher Version dazugekommen ist. -->
+    <button
+      type="button"
+      class="card bg-base-100 text-left shadow transition hover:bg-base-200"
+      aria-label="Versionsverlauf öffnen"
+      @click="page = 'versions'"
+    >
+      <div class="card-body flex-row items-center justify-between gap-3 p-4">
+        <div class="flex flex-col">
+          <span class="font-medium">Versionsverlauf</span>
+          <span class="text-xs text-base-content/60">Was mit welcher Version dazugekommen ist</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="badge badge-ghost badge-sm">{{ appVersion }}</span>
+          <span class="text-base-content/40" aria-hidden="true">›</span>
+        </div>
+      </div>
+    </button>
 
     <div class="collapse collapse-arrow bg-base-100 shadow">
       <input type="checkbox" aria-label="Info und Rechtliches ein- oder ausklappen" />

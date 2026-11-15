@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { createPicoClient, isValidSsidId, parseTyping, TYPE_CHUNK_LIMIT, OTA_CHUNK_FALLBACK, TYPE_BUSY_RETRY_MS, TYPE_BUSY_MAX_RETRIES } from './picoClient.ts'
+import { createPicoClient, isValidSsidId, parseTyping, parseStoredInfo, ButtonRequiredError, TextNotAllowedError, TYPE_CHUNK_LIMIT, OTA_CHUNK_FALLBACK, TYPE_BUSY_RETRY_MS, TYPE_BUSY_MAX_RETRIES } from './picoClient.ts'
 import type { HttpAdapter, HttpResponse } from './picoTypes.ts'
 
 interface Call { method: string; url: string; body?: unknown; opts?: { connectTimeout?: number; readTimeout?: number } }
@@ -351,4 +351,74 @@ test('typeText(): bleibt die Bridge dauerhaft busy, endet es mit einem Fehler st
   const client = createPicoClient(adapter, BASE, { sleep: async () => {} })
   await assert.rejects(() => client.typeText({ text: 'abc', os: 'win_de' }), /HTTP 503/)
   assert.equal(adapter.calls.length, TYPE_BUSY_MAX_RETRIES + 1)
+})
+
+// --- Text fuer den Knopf an der Bridge (Firmware ab 0.5.0) -----------------------------------
+
+const stored = { present: true, name: '', chars: 420, os: 'win_de', delayMs: 45, savedAt: 1794000000, buttonHeld: false, blocked: false }
+
+test('storedInfo(): Angaben ohne Inhalt; aeltere Firmware (404) → null', async () => {
+  const neu = createFakeHttpAdapter(() => ({ status: 200, data: stored }))
+  assert.deepEqual(await createPicoClient(neu, BASE).storedInfo(), stored)
+  assert.equal(neu.calls[0].url, `${BASE}/stored`)
+  const alt = createPicoClient(createFakeHttpAdapter(() => ({ status: 404, data: { error: 'not_found' } })), BASE)
+  assert.equal(await alt.storedInfo(), null)
+})
+
+test('storedText(): holt den Text als Rohtext; ohne gedrueckten Knopf ButtonRequiredError', async () => {
+  const ok = createFakeHttpAdapter(() => ({ status: 200, data: 'Zeile 1\nZeile 2 „äöü“' }))
+  assert.equal(await createPicoClient(ok, BASE).storedText(), 'Zeile 1\nZeile 2 „äöü“')
+  assert.equal(ok.calls[0].url, `${BASE}/stored/text`)
+  assert.equal((ok.calls[0].opts as { responseType?: string }).responseType, 'text')
+  const zu = createPicoClient(createFakeHttpAdapter(() => ({ status: 403, data: { error: 'button_required' } })), BASE)
+  await assert.rejects(() => zu.storedText(), ButtonRequiredError)
+  const leer = createPicoClient(createFakeHttpAdapter(() => ({ status: 404, data: { error: 'not_found' } })), BASE)
+  assert.equal(await leer.storedText(), '')
+})
+
+test('storeText(): Text nur im Body, mit Tastatur und Tippgeschwindigkeit; 403 → ButtonRequiredError', async () => {
+  const adapter = createFakeHttpAdapter(() => ({ status: 200, data: { ok: true, chars: 5 } }))
+  const r = await createPicoClient(adapter, BASE).storeText({ text: 'Hallo', os: 'ios', delayMs: 45, savedAt: 1794000000 })
+  assert.deepEqual(r, { chars: 5 })
+  assert.equal(adapter.calls[0].url, `${BASE}/stored`)
+  assert.ok(!adapter.calls[0].url.includes('Hallo'), 'Text nie in der URL')
+  assert.deepEqual(adapter.calls[0].body, { text: 'Hallo', os: 'ios', delayMs: 45, savedAt: 1794000000 })
+  const zu = createPicoClient(createFakeHttpAdapter(() => ({ status: 403, data: { error: 'button_required' } })), BASE)
+  await assert.rejects(() => zu.storeText({ text: 'x', os: 'ios', delayMs: 45, savedAt: 1 }), ButtonRequiredError)
+  // 422: die Bridge lehnt den Inhalt ab; die Meldung nennt die Art, nie den Text.
+  for (const reason of ['control', 'command'] as const) {
+    const nein = createPicoClient(createFakeHttpAdapter(() => ({ status: 422, data: { error: 'not_allowed', reason } })), BASE)
+    await assert.rejects(
+      () => nein.storeText({ text: 'geheim', os: 'ios', delayMs: 45, savedAt: 1 }),
+      (e: unknown) => e instanceof TextNotAllowedError && e.reason === reason && !e.message.includes('geheim'),
+    )
+  }
+})
+
+test('storeText(): zu langer Text wird ohne Request abgelehnt; Fehler nennen den Text nicht', async () => {
+  const adapter = createFakeHttpAdapter(() => ({ status: 200, data: { ok: true } }))
+  const client = createPicoClient(adapter, BASE)
+  await assert.rejects(() => client.storeText({ text: 'a'.repeat(TYPE_CHUNK_LIMIT + 1), os: 'ios', delayMs: 45, savedAt: 1 }), /zu lang/)
+  assert.equal(adapter.calls.length, 0)
+  const kaputt = createPicoClient(createFakeHttpAdapter(() => ({ status: 507, data: null })), BASE)
+  await assert.rejects(
+    () => kaputt.storeText({ text: 'Geheimer Patientenname', os: 'ios', delayMs: 45, savedAt: 1 }),
+    (e: Error) => /HTTP 507/.test(e.message) && !e.message.includes('Geheimer'),
+  )
+})
+
+test('clearStored(): leerer Body; 403 → ButtonRequiredError', async () => {
+  const adapter = createFakeHttpAdapter(() => ({ status: 200, data: { ok: true } }))
+  await createPicoClient(adapter, BASE).clearStored()
+  assert.equal(adapter.calls[0].url, `${BASE}/stored/clear`)
+  assert.deepEqual(adapter.calls[0].body, {})
+  const zu = createPicoClient(createFakeHttpAdapter(() => ({ status: 403, data: { error: 'button_required' } })), BASE)
+  await assert.rejects(() => zu.clearStored(), ButtonRequiredError)
+})
+
+test('parseStoredInfo(): Unerwartetes → null, fehlende Zahlen → 0', () => {
+  assert.deepEqual(parseStoredInfo(JSON.stringify(stored)), stored)
+  assert.equal(parseStoredInfo({ name: 'x' }), null)
+  assert.equal(parseStoredInfo('kein json'), null)
+  assert.deepEqual(parseStoredInfo({ present: false }), { present: false, name: '', chars: 0, os: 'win_de', delayMs: 0, savedAt: 0, buttonHeld: false, blocked: false })
 })

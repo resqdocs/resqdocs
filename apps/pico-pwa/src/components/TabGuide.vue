@@ -1,14 +1,15 @@
 <script lang="ts">
 /** Hint-ID der Tour. Eine neue ID zeigt die Tour nach dem Update allen einmal erneut:
  *  'v3' stellte mit 1.8.0 die neuen Begriffe und die ⓘ-Erklaerungen vor, 'v4' zeigte mit 1.9.0,
- *  was neu war, 'v5' zeigt es mit 1.10.0. */
-export const TAB_GUIDE_HINT_ID = 'tab-guide-v5'
+ *  was neu war, 'v5' mit 1.10.0. 'v6' zeigt mit 1.11.0 die Neuerungen aus 1.9.0, 1.10.0 und 1.11.0
+ *  gemeinsam: die drei Versionen kamen so kurz hintereinander, dass viele sie nicht einzeln gesehen haben. */
+export const TAB_GUIDE_HINT_ID = 'tab-guide-v6'
 /** Wer eine dieser IDs schon hat, kannte die App vorher und bekommt zuerst die Seite „Neu“. */
-const PREVIOUS_HINT_IDS = ['tab-guide-v2', 'tab-guide-v3', 'tab-guide-v4']
+const PREVIOUS_HINT_IDS = ['tab-guide-v2', 'tab-guide-v3', 'tab-guide-v4', 'tab-guide-v5']
 </script>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import InfoIcon from '@resqdocs/protocol-core-ui/components/InfoIcon.vue'
 import TabIcon from '@resqdocs/protocol-core-ui/components/TabIcon.vue'
 import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
@@ -63,6 +64,42 @@ function dismiss(): void {
   }
   step.value = 0 // beim naechsten Abruf (?-Symbol) wieder vorn beginnen
 }
+// Jede Seite beginnt oben - sonst bliebe man nach einer langen Seite mitten in der naechsten stehen.
+const scroller = ref<HTMLElement | null>(null)
+watch(step, () => void nextTick(() => scroller.value?.scrollTo({ top: 0 })))
+
+/** Seite „Neu“: die letzten drei Versionen, neueste zuerst. Kurz gehalten; alles Weitere steht im Versionsverlauf. */
+const NEWS: ReadonlyArray<{ version: string; items: ReadonlyArray<{ lead: string; text: string }> }> = [
+  {
+    version: '1.11.0',
+    items: [
+      { lead: 'Die Bridge tippt auch ohne Handy:', text: 'Sie speichert einen festen Text und tippt ihn, wenn du ihren Knopf drückst. Einrichten über das Stick-Symbol oben rechts oder im Einsatz mit „Auf Knopf speichern“.' },
+      { lead: 'Neue Bridge-Firmware 0.5.1:', text: 'Das Update kommt per WLAN über die App. Sobald du mit der Bridge verbunden bist, erscheint oben ein Hinweis.' },
+      { lead: 'Abhängigkeiten in Vorlagen:', text: 'Felder und Abschnitte erscheinen erst, wenn in einem anderen Feld eine bestimmte Option gewählt ist. Ein Feld kann je nach Auswahl auch einen anderen Standardwert bekommen.' },
+      { lead: 'Aufgeräumte Eigenschaften:', text: 'Die Einstellungen eines Feldes sind in aufklappbare Bereiche sortiert.' },
+      { lead: 'Versionsverlauf:', text: 'Unter Einstellungen steht, was mit welcher Version dazugekommen ist.' },
+    ],
+  },
+  {
+    version: '1.10.0',
+    items: [
+      { lead: 'Fortschritt beim Tippen:', text: 'Nach dem Senden siehst du, wie weit die Bridge ist. Mit „Stoppen“, „Weitertippen“ und „Abbrechen“ steuerst du das Tippen.' },
+      { lead: 'Tippgeschwindigkeit:', text: 'feinere Stufen und schneller als bisher.' },
+      { lead: 'Scanner:', text: 'Beim Medikationsplan startet die Kamera ohne Zoom, der ganze Code passt ins Bild.' },
+      { lead: 'Auswahllisten:', text: 'Der Standardwert kann weichen, sobald du etwas anderes wählst. „individuell“ gibt es auf Wunsch mit großem Textfeld.' },
+    ],
+  },
+  {
+    version: '1.9.0',
+    items: [
+      { lead: 'FAST4D und LAMS:', text: 'zwei Funktionen für die Schlaganfall-Erhebung. Befunde antippen, das Ergebnis steht als eine Zeile im Protokolltext.' },
+      { lead: 'Funktionen starten auf Wunsch auf „nicht erhoben“', text: 'und kommen erst ins Protokoll, wenn du sie einschaltest.' },
+      { lead: 'Vorlagen teilen:', text: 'Ein angetippter Vorlagen-Link öffnet die App und fragt vor dem Import nach.' },
+      { lead: 'Sicherungen:', text: 'Alte Sicherungen lassen sich nach einer selbst gewählten Frist automatisch löschen.' },
+    ],
+  },
+]
+
 function next(): void {
   if (step.value < LAST.value) step.value++
 }
@@ -86,6 +123,7 @@ function onTouchEnd(e: TouchEvent): void {
   <Teleport to="body">
     <div
       v-if="visible"
+      ref="scroller"
       class="fixed inset-0 z-40 overflow-y-auto bg-base-200"
       role="dialog"
       aria-modal="true"
@@ -104,42 +142,26 @@ function onTouchEnd(e: TouchEvent): void {
         Überspringen
       </button>
       <div
-        class="mx-auto flex min-h-full w-full max-w-md flex-col pb-[max(24px,env(safe-area-inset-bottom))] pl-[max(24px,env(safe-area-inset-left))] pr-[max(24px,env(safe-area-inset-right))] pt-[max(56px,calc(env(safe-area-inset-top)+2.5rem))] sm:max-w-lg"
+        class="mx-auto flex min-h-full w-full max-w-md flex-col pl-[max(24px,env(safe-area-inset-left))] pr-[max(24px,env(safe-area-inset-right))] pt-[max(56px,calc(env(safe-area-inset-top)+2.5rem))] sm:max-w-lg"
       >
-        <!-- Seite „Neu“: nur fuer bisherige Nutzer, einmal nach dem Update (Inhalt 1.9.0) -->
-        <div v-if="page === 'neu'" class="flex flex-1 flex-col justify-center gap-4">
-          <h1 class="text-center text-xl font-bold">Neu in dieser Version</h1>
-          <div class="card bg-base-100 shadow-sm">
-            <div class="card-body flex-row items-start gap-3 p-4">
-              <TabIcon tab="einsatz" class="size-6 shrink-0 text-primary" />
-              <p class="text-sm"><strong>Fortschritt beim Tippen:</strong> Nach dem Senden siehst du, wie weit die Bridge ist und wie lange es noch dauert. Mit „Stoppen“, „Weitertippen“ und „Abbrechen“ steuerst du das Tippen.</p>
-            </div>
+        <!-- Seite „Neu“: nur fuer bisherige Nutzer, einmal nach dem Update. Zeigt die letzten drei Versionen
+             (siehe NEWS). Lang - deshalb oben ausgerichtet; die Navigation klebt unten, der Inhalt scrollt dahinter. -->
+        <div v-if="page === 'neu'" class="flex flex-1 flex-col gap-4 pb-2">
+          <div class="flex flex-col gap-1 text-center">
+            <h1 class="text-xl font-bold">Neu in den letzten Versionen</h1>
+            <p class="text-sm text-base-content/70">Drei Updates kurz hintereinander. Das ist dazugekommen:</p>
           </div>
-          <div class="card bg-base-100 shadow-sm">
-            <div class="card-body flex-row items-start gap-3 p-4">
-              <span class="w-6 shrink-0 text-center text-base text-accent" aria-hidden="true">↑</span>
-              <p class="text-sm"><strong>Neue Bridge-Firmware 0.4.0:</strong> Das Update kommt per WLAN über die App. Sobald du mit der Bridge verbunden bist, erscheint oben ein Hinweis.</p>
-            </div>
-          </div>
-          <div class="card bg-base-100 shadow-sm">
-            <div class="card-body flex-row items-start gap-3 p-4">
-              <TabIcon tab="einstellungen" class="size-6 shrink-0 text-primary" />
-              <p class="text-sm"><strong>Tippgeschwindigkeit:</strong> feinere Stufen und schneller als bisher, einstellbar unter <TabRef tab="einstellungen" />.</p>
-            </div>
-          </div>
-          <div class="card bg-base-100 shadow-sm">
-            <div class="card-body flex-row items-start gap-3 p-4">
-              <span class="w-6 shrink-0 text-center text-base text-secondary" aria-hidden="true">▣</span>
-              <p class="text-sm"><strong>Scanner:</strong> Beim Medikationsplan startet die Kamera ohne Zoom, der ganze Code passt ins Bild.</p>
-            </div>
-          </div>
-          <div class="card bg-base-100 shadow-sm">
-            <div class="card-body flex-row items-start gap-3 p-4">
-              <TabIcon tab="vorlagen" class="size-6 shrink-0 text-primary" />
-              <p class="text-sm"><strong>Auswahllisten:</strong> Bei einer Mehrfachauswahl kann der Standardwert weichen, sobald du etwas anderes wählst. „individuell“ gibt es auf Wunsch mit großem Textfeld für längere Texte. Beides stellst du in den Eigenschaften des Feldes ein.</p>
-            </div>
-          </div>
-          <p class="text-center text-xs text-base-content/60">Außerdem bleibt der Bildschirm an, solange die Bridge tippt.</p>
+          <section v-for="n in NEWS" :key="n.version" class="flex flex-col gap-2">
+            <h2 class="flex items-center gap-2 text-sm font-semibold">
+              <span class="badge badge-primary badge-sm tabular-nums">{{ n.version }}</span>
+            </h2>
+            <ul class="card flex flex-col gap-3 bg-base-100 p-4 shadow-sm">
+              <li v-for="item in n.items" :key="item.lead" class="flex items-start gap-3 text-sm">
+                <span class="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true"></span>
+                <span><strong>{{ item.lead }}</strong> {{ item.text }}</span>
+              </li>
+            </ul>
+          </section>
         </div>
 
         <!-- Seite „Begriffe“: die Teile einer Vorlage, mit denselben Zeichen wie im Aufbau und im Bausteine-Tab -->
@@ -288,8 +310,15 @@ function onTouchEnd(e: TouchEvent): void {
           </p>
         </div>
 
-        <!-- Fortschritts-Dots + Navigation -->
-        <div class="flex flex-col gap-3 pt-4">
+        <p class="pt-4 text-center text-xs text-base-content/50">
+          Diese Einführung findest du jederzeit über das ?-Symbol oben rechts.
+        </p>
+
+        <!-- Fortschritts-Dots + Navigation: kleben am unteren Rand (sticky), der Inhalt scrollt dahinter.
+             So ist „Weiter“ auch auf langen Seiten immer zu sehen. Leicht durchscheinend mit Unschaerfe und
+             feiner Linie, damit man erkennt, dass darunter noch etwas kommt. Negative Seitenraender heben
+             den Spaltenabstand auf, damit die Leiste ueber die ganze Spaltenbreite reicht. -->
+        <div class="sticky bottom-0 z-10 -mx-6 mt-3 flex flex-col gap-3 border-t border-base-300/70 bg-base-200/90 px-6 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
           <div class="flex justify-center gap-2" aria-hidden="true">
             <span
               v-for="i in LAST + 1"
@@ -303,9 +332,6 @@ function onTouchEnd(e: TouchEvent): void {
             <button v-if="step < LAST" class="btn btn-primary min-h-11 flex-1" type="button" @click="next">Weiter</button>
             <button v-else class="btn btn-primary min-h-11 flex-1" type="button" @click="dismiss">Los geht's</button>
           </div>
-          <p class="text-center text-xs text-base-content/50">
-            Diese Einführung findest du jederzeit über das ?-Symbol oben rechts.
-          </p>
         </div>
       </div>
     </div>

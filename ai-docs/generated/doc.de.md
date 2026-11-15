@@ -44,6 +44,8 @@ Zusätzlich sind einzelne **Eigenschaften** erst ab einer Mindestversion verfüg
 | Startet auf „nicht erhoben" | `defaultExcluded` | Funktionen (Die Funktion startet im Einsatz auf „nicht erhoben" und erscheint erst in der Ausgabe, wenn der Anwender sie einschaltet oder Daten erfasst. Nicht zusammen mit required.) | 1.9.0 |
 | Startet ohne Auswahl | `defaultEmpty` | field (Bei Mehrfachauswahl: keine Option ist vorausgewählt (z. B. Einsatzcodes). Ohne die Eigenschaft gilt die Standard-Option bzw. die oberste. Eine leere Auswahl gibt nichts aus; ein Pflichtfeld bleibt bis zur Auswahl offen.) | 1.6.0 |
 | „individuell" als großes Textfeld | `customMultiline` | field (Bei einer Auswahlliste mit allowCustom: Die eigene Eingabe ist ein großes Textfeld statt einer Zeile, für längere Texte. Ältere App-Versionen zeigen die einzeilige Eingabe; die Ausgabe ist dieselbe.) | 1.10.0 |
+| Abhängigkeit | `dependsOn` | field, container, function (Das Element erscheint im Einsatz erst, wenn die Bedingungen zutreffen; vorher ist es ausgeblendet und steht nicht in der Ausgabe. Form: { "conditions": [ { "fieldId": "<id eines Feldes mit options>", "options": ["<exakter Options-Text>"] } ] }. Eine Bedingung trifft zu, wenn im Feld eine der options gewählt ist. Mehrere Bedingungen (höchstens drei) müssen alle zutreffen; mit "match": "any" genügt eine. Immer zusammen mit defaultExcluded: true setzen (am Container zusätzlich excludable: true), nicht zusammen mit required. Ältere App-Versionen ignorieren die Angabe: dort startet das Element auf „nicht erhoben" und wird von Hand eingeschaltet.) | 1.11.0 |
+| Anderer Standardwert | `defaultWhen` | field (Solange eine Bedingung zutrifft, gilt ein anderer Standardwert als default. Form: [ { "fieldId": "<id eines Feldes mit options>", "options": ["<exakter Options-Text>"], "value": "<Standardwert in diesem Fall>" } ]. Die erste zutreffende Regel gilt (höchstens fünf). Hat das Feld selbst options, muss value eine davon sein. Eigene Eingaben des Anwenders gehen vor. Ältere App-Versionen ignorieren die Angabe und nehmen default.) | 1.11.0 |
 
 **Gate-Regel:** Ein `functionKind` ist verfügbar **nur, wenn seine Mindestversion ≤ der Nutzer-Version** ist. Sonst biete ihn nicht an; fragt der Nutzer danach, sag „das braucht mindestens Version X". **Schreibe niemals** einen `functionKind` ins JSON, den die genannte Version nicht kennt. Container und Felder gehen ab Version 1.0.0 immer. Nennt der Nutzer eine Version **vor 1.0.0** (oder keine), nimm die Basis an — nur `container` + `field`, keine Funktionen — und weise darauf hin, dass Funktionen und der Vorlagen-Import selbst mindestens 1.0.0 brauchen.
 
@@ -123,6 +125,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `collapsible` (boolean): Option: im Einsatz einklappbar.
 - `excludable` (boolean): Option: im Einsatz als „nicht erhoben" (excluded) markierbar -> 2-stufiger Status (✓ / −). Bei − entfaellt der ganze Container (inkl. Kinder) in der Ausgabe.
 - `defaultExcluded` (boolean): UNO Reverse: der Container startet im Einsatz auf „nicht erhoben" statt auf „bestaetigt" und erscheint erst, wenn der Anwender ihn bewusst einschaltet. Fuer Abschnitte, die man nur in bestimmten Lagen braucht (z. B. ein neurologischer Befund) - ein Tipp schaltet den ganzen Teilbaum zu, statt jedes Feld einzeln. Nur zusammen mit `excludable` sinnvoll: ohne den ✓/−-Schalter liesse sich der Container gar nicht wieder einschalten. Aendert NUR den Ausgangszustand, nicht die Vorlage selbst - im Editor bleibt der Abschnitt vollstaendig sichtbar.
+- `dependsOn` (Dependency): Abhaengigkeit von Auswahlfeldern (siehe Dependency).
 - `inline` (boolean): Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen).
 - `noSeparatorBefore` (boolean): Kein Feld-Trenner VOR diesem Element (klebt ans vorherige inline-Element).
 - `blankLineBefore` (boolean): Optische Leerzeile (Absatz) VOR diesem Element - nur wirksam, wenn darueber etwas ausgegeben wird UND das Element eine eigene Titel-/Banner-Zeile hat (Banner-Knoten; sonst still ohne Wirkung). Gedacht fuer Banner/Trenner, um Abschnitte sichtbar zu trennen.
@@ -150,6 +153,8 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `multiline` (boolean): Freitext mehrzeilig erfassen: im ✎-Modus ein grosses Textfeld (Sheet) statt einzeiligem <input> - fuer lange Eingaben (Anamnese, Verlauf). Nur OHNE options wirksam (Select hat keine Freitext-Haupteingabe). Wert bleibt ein String (mit Zeilenumbruechen); Renderer unveraendert.
 - `required` (boolean): Pflichtfeld: das Feld „darf nicht still verschwinden". Im Einsatz entfaellt der −-Zustand (nicht erhoben); es bleiben ✓ (Auswahl/Standard) und ✎ (eigener Wert). „Nicht erhebbar" wird bei Bedarf sichtbar via ✎ dokumentiert, nicht per −. Rein additiv, kein Submit-Gate; der Renderer bleibt unveraendert. Ein leeres Pflichtfeld wird nur visuell als „noch offen" markiert.
 - `defaultExcluded` (boolean): UNO Reverse: das Feld startet im Einsatz auf „nicht erhoben" (−) statt auf „bestaetigt" (✓) und erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Fuer Felder, die man nur in bestimmten Lagen braucht. Schliesst sich mit `required` aus (ein Pflichtfeld darf nicht still entfallen); der Editor verhindert die Kombination. Aendert NUR den Ausgangszustand - die Vorlage bleibt vollstaendig, das Weglassen ist reiner Einsatz-Zustand.
+- `dependsOn` (Dependency): Abhaengigkeit von Auswahlfeldern (siehe Dependency).
+- `defaultWhen` (Liste): Abhaengiger Standardwert: die ERSTE zutreffende Regel ersetzt `default`, solange das Feld auf dem Standardwert steht. Bei einem Auswahlfeld muss `value` eine seiner Optionen sein. Aeltere App-Versionen ignorieren die Angabe und nehmen `default`.
 
 #### FunctionNode — Spezial-Funktion (functionKind: "medikamentenplan", "aerzte", "packYears", "news2", "lams", "fast4d")
 - `type` (immer "function") — Pflicht
@@ -166,6 +171,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `default` (string): Standardtext: Fallback-Body, wenn die Funktion im Einsatz nichts ausgibt (analog Field.default / Container.emptyText) - Listen-Funktionen ohne Eintraege ODER Rechner ohne Ergebnis. Erfasste Werte/Zeilen haben Vorrang. Gilt fuer ALLE functionKinds.
 - `required` (boolean): Pflicht (analog Field.required): der −-Zustand (nicht erhoben) entfaellt im Einsatz; ✓/✎ bleiben. „Erfuellt" = die Funktion liefert nicht-leeren Ausgabetext (Zeilen ODER Freitext ODER Standardtext). Rein additiv, kein Submit-Gate; nur visuelle „noch offen"-Markierung.
 - `defaultExcluded` (boolean): UNO Reverse (analog Field.defaultExcluded): die Funktion startet im Einsatz auf „nicht erhoben" (−) und erscheint erst in der Ausgabe, wenn der Anwender sie einschaltet oder Daten erfasst. Schliesst sich mit `required` aus; der Editor verhindert die Kombination. Aendert NUR den Ausgangszustand (fehlender Eintrag im Werte-Store), siehe functionStatus in fill.ts.
+- `dependsOn` (Dependency): Abhaengigkeit von Auswahlfeldern (siehe Dependency).
 
 #### Heading — Titel-/Banner-Format (optional, fuer das Feld "heading"; wenn gesetzt, IMMER mit allen 5 Eigenschaften)
 - `prefix` (string) — Pflicht
@@ -245,6 +251,10 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
           "type": "boolean",
           "description": "UNO Reverse: der Container startet im Einsatz auf „nicht erhoben\" statt auf „bestaetigt\" und erscheint erst, wenn der Anwender ihn bewusst einschaltet. Fuer Abschnitte, die man nur in bestimmten Lagen braucht (z. B. ein neurologischer Befund) - ein Tipp schaltet den ganzen Teilbaum zu, statt jedes Feld einzeln. Nur zusammen mit `excludable` sinnvoll: ohne den ✓/−-Schalter liesse sich der Container gar nicht wieder einschalten. Aendert NUR den Ausgangszustand, nicht die Vorlage selbst - im Editor bleibt der Abschnitt vollstaendig sichtbar."
         },
+        "dependsOn": {
+          "$ref": "#/definitions/Dependency",
+          "description": "Abhaengigkeit von Auswahlfeldern (siehe Dependency)."
+        },
         "inline": {
           "type": "boolean",
           "description": "Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen)."
@@ -314,6 +324,46 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
         "inclusive",
         "exclusive"
       ]
+    },
+    "Dependency": {
+      "type": "object",
+      "properties": {
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Condition"
+          }
+        },
+        "match": {
+          "type": "string",
+          "const": "any"
+        }
+      },
+      "required": [
+        "conditions"
+      ],
+      "additionalProperties": false,
+      "description": "Abhaengigkeit: das Element wird nur erhoben, wenn die Bedingungen zutreffen (dependencies.ts). Ohne `match` muessen ALLE zutreffen, mit `match: 'any'` genuegt eine. Aeltere App-Versionen ignorieren die Angabe; damit das Element dort nicht ungewollt erscheint, gehoert `defaultExcluded` dazu (bei Abschnitten zusaetzlich `excludable`)."
+    },
+    "Condition": {
+      "type": "object",
+      "properties": {
+        "fieldId": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "fieldId",
+        "options"
+      ],
+      "additionalProperties": false,
+      "description": "Eine Bedingung: im Auswahlfeld `fieldId` ist eine der `options` gewaehlt."
     },
     "Node": {
       "anyOf": [
@@ -410,6 +460,17 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
         "defaultExcluded": {
           "type": "boolean",
           "description": "UNO Reverse: das Feld startet im Einsatz auf „nicht erhoben\" (−) statt auf „bestaetigt\" (✓) und erscheint erst in der Ausgabe, wenn der Anwender es bewusst einschaltet. Fuer Felder, die man nur in bestimmten Lagen braucht. Schliesst sich mit `required` aus (ein Pflichtfeld darf nicht still entfallen); der Editor verhindert die Kombination. Aendert NUR den Ausgangszustand - die Vorlage bleibt vollstaendig, das Weglassen ist reiner Einsatz-Zustand."
+        },
+        "dependsOn": {
+          "$ref": "#/definitions/Dependency",
+          "description": "Abhaengigkeit von Auswahlfeldern (siehe Dependency)."
+        },
+        "defaultWhen": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ConditionalDefault"
+          },
+          "description": "Abhaengiger Standardwert: die ERSTE zutreffende Regel ersetzt `default`, solange das Feld auf dem Standardwert steht. Bei einem Auswahlfeld muss `value` eine seiner Optionen sein. Aeltere App-Versionen ignorieren die Angabe und nehmen `default`."
         }
       },
       "required": [
@@ -417,6 +478,30 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
         "id"
       ],
       "additionalProperties": false
+    },
+    "ConditionalDefault": {
+      "type": "object",
+      "properties": {
+        "fieldId": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "fieldId",
+        "options",
+        "value"
+      ],
+      "additionalProperties": false,
+      "description": "Anderer Standardwert eines Feldes, solange die Bedingung zutrifft (dependencies.ts)."
     },
     "FunctionNode": {
       "type": "object",
@@ -473,6 +558,10 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
         "defaultExcluded": {
           "type": "boolean",
           "description": "UNO Reverse (analog Field.defaultExcluded): die Funktion startet im Einsatz auf „nicht erhoben\" (−) und erscheint erst in der Ausgabe, wenn der Anwender sie einschaltet oder Daten erfasst. Schliesst sich mit `required` aus; der Editor verhindert die Kombination. Aendert NUR den Ausgangszustand (fehlender Eintrag im Werte-Store), siehe functionStatus in fill.ts."
+        },
+        "dependsOn": {
+          "$ref": "#/definitions/Dependency",
+          "description": "Abhaengigkeit von Auswahlfeldern (siehe Dependency)."
         }
       },
       "required": [
@@ -549,6 +638,8 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - **Großes, mehrzeiliges Textfeld?** (`multiline`) — Für längere Texte mit Zeilenumbrüchen. *Beispiel: „Anamnese" mit mehreren Sätzen.*
 - **Pflichtfeld?** (`required`, ab App 1.2.0) — Das Feld lässt sich im Einsatz nicht auf „nicht erhoben“ stellen; solange es leer ist, wird es als offen markiert. *Beispiel: „Aktuelle Anamnese“.* Nicht zusammen mit `defaultExcluded`. Bei einer Einfachauswahl ohne `default` gilt die erste Option als Wert, das Feld ist dann nie leer.
 - **Erst bei Bedarf einschalten?** (`defaultExcluded`, ab App 1.5.0) — Das Feld startet auf „nicht erhoben“ und kommt erst in die Ausgabe, wenn der Nutzer es einschaltet. *Beispiel: ein Feld, das man nur in bestimmten Lagen braucht.*
+- **Nur zeigen, wenn woanders etwas Bestimmtes gewählt ist?** (`dependsOn`, ab App 1.11.0) — Feld, Abschnitt oder Funktion erscheint im Einsatz erst, wenn in einem Auswahlfeld eine bestimmte Option gewählt ist: `"dependsOn": { "conditions": [ { "fieldId": "<id des Auswahlfeldes>", "options": ["<exakter Options-Text>"] } ] }`. Mehrere Bedingungen (höchstens drei) müssen alle zutreffen; mit `"match": "any"` genügt eine. Immer zusammen mit `defaultExcluded: true` (am Abschnitt zusätzlich `excludable: true`), nicht zusammen mit `required`. *Beispiel: Abschnitt „Reanimation“ nur, wenn im Feld „Reanimation durchgeführt“ die Option „ja“ gewählt ist.* Ältere App-Versionen ignorieren die Angabe; dort schaltet man das Element von Hand ein.
+- **Anderer Standardwert je nach Auswahl?** (`defaultWhen`, ab App 1.11.0, nur Felder) — Solange in einem Auswahlfeld eine bestimmte Option gewählt ist, gilt ein anderer Standardwert: `"defaultWhen": [ { "fieldId": "<id des Auswahlfeldes>", "options": ["<exakter Options-Text>"], "value": "<Standardwert in diesem Fall>" } ]`. Die erste zutreffende Regel gilt. Hat das Feld selbst `options`, muss `value` eine davon sein. *Beispiel: Bei „Transport: Verbleib“ lautet der Standardwert der Übergabe „Patient verbleibt vor Ort“.* Ältere App-Versionen nehmen immer `default`.
 - **Startet ohne Auswahl?** (`defaultEmpty`, ab App 1.6.0, nur mit `multiple`) — Nichts ist vorausgewählt; ohne Auswahl gibt das Feld nichts aus. *Beispiel: Einsatzcodes, bei denen eine Vorauswahl etwas Falsches dokumentieren würde.*
 
 ### Nur Funktionen

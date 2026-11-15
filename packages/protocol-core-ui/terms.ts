@@ -91,6 +91,30 @@ export const INFO = {
     title: 'Pflichtfeld',
     text: 'Lässt sich im {einsatz} nicht auf „nicht erhoben“ stellen. Du bestätigst den Wert (✓) oder trägst einen eigenen ein (✎). Ist es noch leer, wird es als offen markiert; gesperrt wird nichts.',
   },
+  general: {
+    title: 'Allgemein',
+    text: 'Das, was du fast immer einstellst: Titel, Standardwert, ob das Element Pflicht ist und ob es im {einsatz} von Anfang an erhoben wird.',
+  },
+  listOptions: {
+    title: 'Listenoptionen',
+    text: 'Alles rund um die Auswahlliste eines Feldes: die Optionen selbst, welche vorausgewählt ist, ob mehrere wählbar sind und ob man mit „individuell“ frei schreiben darf. Ohne Optionen bleibt das Feld ein normales Textfeld.',
+  },
+  dependency: {
+    title: 'Abhängigkeit',
+    text: 'Macht dieses Element von der Auswahl in einem anderen Feld abhängig. Es gibt zwei Arten: Das Element erscheint im {einsatz} nur unter einer Bedingung, oder ein Feld bekommt je nach Auswahl einen anderen Standardwert. Bedingung ist immer: In einem Feld mit Auswahl-Optionen ist eine bestimmte Option gewählt.',
+  },
+  dependencyVisible: {
+    title: 'Nur anzeigen, wenn eine Bedingung zutrifft',
+    text: 'Das Element ist im {einsatz} ausgeblendet und steht nicht im Protokolltext, bis die Bedingung zutrifft. Beispiel: Der Abschnitt „Reanimation“ erscheint nur, wenn im Feld „Reanimation durchgeführt“ die Option „ja“ gewählt ist. Änderst du das Element im {einsatz} selbst, bleibt es für diesen Einsatz so. Ältere App-Versionen kennen die Bedingung nicht: Dort startet das Element auf „nicht erhoben“ und lässt sich von Hand einschalten.',
+  },
+  dependencyAny: {
+    title: 'Eine Bedingung genügt',
+    text: 'Aus: Das Element erscheint erst, wenn alle Bedingungen zutreffen. An: Es erscheint, sobald eine davon zutrifft.',
+  },
+  defaultWhen: {
+    title: 'Anderer Standardwert',
+    text: 'Solange die Bedingung zutrifft, steht im {einsatz} ein anderer Standardwert im Feld. Beispiel: Bei „Transport: Verbleib“ lautet der Standardwert der Übergabe „Patient verbleibt vor Ort“. Hast du im {einsatz} selbst etwas eingetragen, bleibt dein Text. Bei einem Feld mit Auswahl-Optionen wählst du die Option, die dann vorausgewählt ist. Ältere App-Versionen nehmen immer den normalen Standardwert.',
+  },
   fieldStartsExcluded: {
     title: 'Startet auf „nicht erhoben“',
     text: 'Das Feld ist im {einsatz} zunächst aus und steht nicht im Protokolltext. Erst wenn du es einschaltest, kommt es dazu. Für Angaben, die man nur in bestimmten Lagen braucht.',

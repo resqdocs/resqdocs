@@ -181,7 +181,7 @@ const collapsed = ref(false)
         <div v-else class="flex items-center gap-1">
           <button
             type="button"
-            class="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 text-left text-sm"
+            class="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 text-left text-sm"
             :class="p.id === editorActiveId ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-base-200'"
             :aria-current="p.id === editorActiveId ? 'true' : undefined"
             @click="switchTo(p.id)"
@@ -189,10 +189,18 @@ const collapsed = ref(false)
             <span v-if="p.id === editorActiveId" class="shrink-0" aria-hidden="true">✓</span>
             <span class="min-w-0 flex-1 truncate">{{ (p.title && p.title.trim()) || p.id }}</span>
           </button>
-          <button type="button" class="btn btn-ghost btn-sm min-h-11 w-11 shrink-0 px-0" :aria-label="`${(p.title && p.title.trim()) || p.id} teilen (Link und QR)`" title="Teilen (Link & QR)" @click="rowShare(p.id)">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
+          <!-- Teilen und Menue: 48-px-Tippflaeche, 20-px-Icon, OHNE eigenen Hintergrund und in gedaempfter Farbe -
+               mit Hintergrund in jeder Zeile draengten sie sich vor den Namen. Das Menue bleibt bei den drei
+               Punkten (ein Zahnrad wurde probiert und verworfen), aber als Icon in derselben Groesse wie Teilen
+               statt als kleines Textzeichen. -->
+          <button type="button" class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0 text-base-content/60" :aria-label="`${(p.title && p.title.trim()) || p.id} teilen (Link und QR)`" title="Teilen (Link & QR)" @click="rowShare(p.id)">
+            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
           </button>
-          <button type="button" class="btn btn-ghost btn-sm min-h-11 w-11 shrink-0 px-0 text-lg leading-none" :aria-label="`Aktionen für ${(p.title && p.title.trim()) || p.id}`" @click="openSheet(p.id)">⋮</button>
+          <button type="button" class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0 text-base-content/60" :aria-label="`Aktionen für ${(p.title && p.title.trim()) || p.id}`" title="Aktionen" @click="openSheet(p.id)">
+            <svg class="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="12" cy="5" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="12" cy="19" r="1.9" />
+            </svg>
+          </button>
         </div>
       </li>
       <!-- Drei Entstehungswege einer NEUEN Vorlage (Bibliotheks-Ebene): leer · per verschluesseltem

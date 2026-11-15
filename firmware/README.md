@@ -111,13 +111,13 @@ bash firmware/bridge/build-reproducible.sh
 
 | Feld | Wert |
 |------|------|
-| FW_VERSION (Quelle, `bridge_s2/bridge_s2.ino`) | `0.4.0` |
-| Manifest-Version (`…/assets/firmware/bridge_s2.manifest.json`) | `0.4.0` |
+| FW_VERSION (Quelle, `bridge_s2/bridge_s2.ino`) | `0.5.1` |
+| Manifest-Version (`…/assets/firmware/bridge_s2.manifest.json`) | `0.5.1` |
 | Toolchain | arduino-pico Core `6.3.2`, Crypto `0.4.0`, pfadneutral (`build-reproducible.sh`) |
-| Größe | `425356` Bytes |
-| sha256 | `01eb4703956bb830323592bf982e5b995bc9b5236c31f86f119278342cfdc892` |
+| Größe | `430612` Bytes |
+| sha256 | `259faaf4568ffcc0d6ae63bfed36b80a7c9e833e6e0e47892c78108152956dea` |
 | Signatur | Ed25519 über den sha256-Digest (`sigB64` im Manifest; Public Key in `bridge_s2/OtaPublicKey.h`) |
-| Quell-Commit (Binary signiert) | `522cdd4` (Quellstand `fd847cf`) |
+| Quell-Commit (Binary signiert) | `b7e8340` (Quellstand `61dc3b5`) |
 | Reproduzierbarkeit | Bit-identisch auf zwei Rechnern gebaut (macOS und Linux, gleiche sha256) |
 
 Die `.uf2`-Dateien unter `dist/` sind der BOOTSEL-Weg (anderes Format, gleicher Quellstand);
