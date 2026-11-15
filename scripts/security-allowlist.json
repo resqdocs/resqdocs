@@ -296,6 +296,23 @@
       "term": "prompt",
       "contains": "prompt lichtreagibel",
       "reason": "Medizinischer Fachbegriff im Standardprotokoll, kein KI-Prompt"
+    },
+    {
+      "file": "ai-docs/feature-versions.json",
+      "term": "match",
+      "contains": "any",
+      "reason": "Eigenschaft \"match\" der Abhaengigkeits-Regel im Vorlagenformat (alle Bedingungen oder eine), kein Signing-Werkzeug"
+    },
+    {
+      "file": "ai-docs/generated/schema.json",
+      "term": "match",
+      "reason": "Eigenschaft \"match\" der Abhaengigkeits-Regel im erzeugten Vorlagen-Schema, kein Signing-Werkzeug"
+    },
+    {
+      "file": "firmware/test/storedguard/vectors.tsv",
+      "term": "ip",
+      "contains": "/dev/tcp/10.0.0.1",
+      "reason": "fiktive Adresse in einem Testbeispiel fuer abgelehnte Befehle, keine reale Infrastruktur"
     }
   ]
 }
