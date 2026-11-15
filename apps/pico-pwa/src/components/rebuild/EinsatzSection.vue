@@ -12,6 +12,7 @@
 import { computed, ref } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
+import { useDependencyHidden } from '@resqdocs/protocol-core-ui/useDependencies'
 import { countDeviations } from '@resqdocs/protocol-core/deviations'
 import { countOpenRequired } from '@resqdocs/protocol-core/required'
 import EinsatzField from './EinsatzField.vue'
@@ -22,6 +23,9 @@ import ContainerFillToggle from './ContainerFillToggle.vue'
 
 const props = defineProps<{ node: Container; depth: number; insideCollapse: boolean }>()
 const caseValues = useCaseValues()
+// Elemente, die eine Abhaengigkeit gerade ausblendet, erscheinen nicht im Formular.
+const dependencyHidden = useDependencyHidden()
+const visibleChildren = computed(() => props.node.children.filter((child) => !dependencyHidden.value.has(child.id)))
 
 // excludable + „nicht erhoben" -> ganze Sektion gedimmt, Kinder weg (entfallen in der Ausgabe).
 const excluded = computed(() => Boolean(props.node.excludable) && caseValues.get(props.node.id, props.node).state === 'excluded')
@@ -79,7 +83,7 @@ const headingClass = computed(() => {
     </summary>
     <div class="collapse-content">
       <div class="flex flex-col gap-1.5 pt-1">
-        <template v-for="child in node.children" :key="child.id">
+        <template v-for="child in visibleChildren" :key="child.id">
           <EinsatzSection v-if="child.type === 'container'" :node="child" :depth="depth + 1" :inside-collapse="childInside" />
           <MedplanFunction v-else-if="child.type === 'function' && child.functionKind === 'medikamentenplan'" :node="child" />
           <AerzteFunction v-else-if="child.type === 'function' && child.functionKind === 'aerzte'" :node="child" />
@@ -101,7 +105,7 @@ const headingClass = computed(() => {
       <span v-if="openRequired > 0" class="badge badge-warning badge-sm gap-0.5 shrink-0" :title="`${openRequired} Pflichtfeld${openRequired === 1 ? '' : 'er'} noch offen`"><span aria-hidden="true">*</span>{{ openRequired }}<span class="sr-only"> Pflichtfeld(er) noch offen</span></span>
     </div>
     <template v-if="node.children.length">
-      <template v-for="child in node.children" :key="child.id">
+      <template v-for="child in visibleChildren" :key="child.id">
         <EinsatzSection v-if="child.type === 'container'" :node="child" :depth="depth + 1" :inside-collapse="childInside" />
         <MedplanFunction v-else-if="child.type === 'function' && child.functionKind === 'medikamentenplan'" :node="child" />
         <AerzteFunction v-else-if="child.type === 'function' && child.functionKind === 'aerzte'" :node="child" />

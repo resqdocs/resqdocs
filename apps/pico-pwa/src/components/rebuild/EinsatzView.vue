@@ -16,10 +16,13 @@ import type { PluginListenerHandle } from '@capacitor/core'
 import { useReworkCaseDraft } from '@/rebuild/useReworkCaseDraft'
 import { CASE_DRAFT_DELETED_NOTICE, nextDraftDebounceWait, type ReworkCaseDraft } from '@resqdocs/protocol-core/caseDraft'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
+import { useDependencySync, useDependencyHidden } from '@resqdocs/protocol-core-ui/useDependencies'
+import { hasManualInput, manualValues } from '@resqdocs/protocol-core/dependencies'
 import { usePicoApi, type OsMode } from '@/composables/usePicoApi'
 import { useTypingProgress } from '@/pico/useTypingProgress'
 import { countChars } from '@/pico/typingProgress'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
+import { requestButtonText } from '@/pico/buttonTextEntry'
 import { useStorage } from '@/storage/useStorage'
 import { render } from '@resqdocs/protocol-core/render'
 import { countOpenRequired } from '@resqdocs/protocol-core/required'
@@ -31,7 +34,11 @@ import ScoreFunction from './ScoreFunction.vue'
 import OutputText from '@resqdocs/protocol-core-ui/components/OutputText.vue'
 import { entscheideUeberEntwurf } from '@/composables/caseDraftGuard'
 
-const { einsatzRoot: root, protocols, einsatzActiveId, selectEinsatz } = useProtocolTree()
+const { einsatzRoot: definitionRoot, protocols, einsatzActiveId, selectEinsatz } = useProtocolTree()
+// Abhaengigkeiten der Vorlage: Werte laufend abgleichen (ein Element erscheint erst, wenn in einem
+// Auswahlfeld eine bestimmte Option gewaehlt ist) und die Vorlage mit den gerade geltenden Standardwerten
+// verwenden. `root` ist ab hier diese wirksame Vorlage; die gespeicherte bleibt unberuehrt.
+const root = useDependencySync(definitionRoot)
 const { libraryLoaded, libraryError } = useProtocolPersistence()
 const caseValues = useCaseValues()
 const view = ref<'ausfuellen' | 'vorschau'>('ausfuellen')
@@ -51,7 +58,9 @@ const draftSaveError = ref(false)
 /** Entwurf schreiben und einen Fehlschlag SICHTBAR machen statt ihn zu schlucken. */
 function saveDraftGuarded(): void {
   void caseDraft
-    .save(einsatzActiveId.value, caseValues.values.value)
+    // Nur was der Anwender selbst erfasst hat: von einer Abhaengigkeit geschaltete Zustaende ergeben sich
+    // beim Fortsetzen neu aus der Vorlage und gehoeren nicht in den Entwurf.
+    .save(einsatzActiveId.value, manualValues(caseValues.values.value))
     .then(() => {
       draftSaveError.value = false
     })
@@ -107,6 +116,9 @@ function onAppHidden(): void {
 }
 let appStateListener: PluginListenerHandle | null = null
 // Vorschau = reiner Renderer ueber Definition + Einsatz-Werte (Tri-State je Feld).
+// Elemente, die eine Abhaengigkeit gerade ausblendet, erscheinen nicht im Formular.
+const dependencyHidden = useDependencyHidden()
+const visibleChildren = computed(() => root.value.children.filter((child) => !dependencyHidden.value.has(child.id)))
 const text = computed(() => render(root.value, caseValues.values.value))
 
 // Pflichtfeld-Vollstaendigkeit: informativ, NIE blockierend (Senden bleibt immer moeglich).
@@ -222,7 +234,6 @@ async function senden(): Promise<void> {
 const collapsed = ref(true) // eingeklappt-Default: aktive Vorlage immer sichtbar
 const titleOf = (p?: { title?: string; id: string }): string => (p && ((p.title && p.title.trim()) || p.id)) || ''
 const activeTitle = computed(() => titleOf(protocols.value.find((p) => p.id === einsatzActiveId.value)))
-const isDefault = computed(() => storage.settings.defaultProtocolId === einsatzActiveId.value)
 
 // Default-Vorauswahl: persoenlicher Standard -> zuletzt benutzt -> erste. Greift, sobald Settings UND
 // Bibliothek geladen sind - und NUR bis der Nutzer bewusst wechselt (sonst wuerde es seine Wahl ueberschreiben).
@@ -273,7 +284,8 @@ watch([() => storage.settingsLoaded.value, () => libraryLoaded.value, protocols,
 // Wechsel mit Verwerfen-Confirm (nur wenn schon Eingaben da). pendingId = transienter Dialog-Zustand.
 // Konservativ: JEDE Interaktion (auch ein blosses ✓-Bestaetigen materialisiert einen Key) zaehlt als
 // Eingabe -> beim Wechsel wird gefragt, damit die Review-/Bestaetigungs-Arbeit nicht ungewarnt verloren geht.
-const hasInput = computed(() => Object.keys(caseValues.values.value).length > 0)
+// Von einer Abhaengigkeit geschaltete Zustaende sind keine Eingabe.
+const hasInput = computed(() => hasManualInput(caseValues.values.value))
 const pendingId = ref<string | null>(null)
 const pendingTitle = computed(() => titleOf(protocols.value.find((p) => p.id === pendingId.value)))
 function applySwitch(id: string): void {
@@ -301,15 +313,24 @@ function confirmSwitch(): void {
 function cancelSwitch(): void {
   pendingId.value = null // Auswahl bleibt auf der aktiven Vorlage (Markierung folgt einsatzActiveId)
 }
-function toggleDefault(): void {
-  void storage.saveSettings({ defaultProtocolId: isDefault.value ? null : einsatzActiveId.value })
+/** Stern einer Vorlage: diese als Standard-Vorlage festlegen; ein Tipp auf den Stern der Standard-Vorlage hebt es auf. */
+function setDefault(id: string): void {
+  void storage.saveSettings({ defaultProtocolId: storage.settings.defaultProtocolId === id ? null : id })
 }
 
 // Auto-Save des temporaeren Entwurfs (debounced). Resume (setAll) loest KEIN Save aus; leerer Stand
 // (Abschluss/Wechsel) loescht den Entwurf (in caseDraft.save).
+// Schaltet nur eine Abhaengigkeit etwas um, ohne dass der Anwender je etwas erfasst hat, gibt es nichts zu
+// sichern. Wichtig beim Start: der Abgleich laeuft sofort, der gespeicherte Entwurf wird aber erst danach
+// geladen - ein Speichern des leeren Stands wuerde ihn loeschen.
+let hadManualInput = false
 watch(
   caseValues.values,
-  () => {
+  (now) => {
+    const manual = hasManualInput(now)
+    const nothingToSave = !manual && !hadManualInput
+    hadManualInput = manual
+    if (nothingToSave) return
     if (restoring) return // Resume-Save ueberspringen (TTL nicht verlaengern)
     scheduleDraftSave()
   },
@@ -370,17 +391,36 @@ onUnmounted(() => {
               <span class="truncate font-semibold">{{ activeTitle }}</span>
             </button>
             <template v-if="!collapsed">
-              <ul class="mt-1 flex flex-col gap-1" role="radiogroup" aria-label="Vorlage wählen">
-                <li v-for="p in protocols" :key="p.id">
-                  <button type="button" role="radio" :aria-checked="p.id === einsatzActiveId" class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm" :class="p.id === einsatzActiveId ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-base-200'" @click="choose(p.id)">
-                    <span v-if="p.id === einsatzActiveId" aria-hidden="true">✓</span>
-                    <span class="truncate">{{ titleOf(p) }}</span>
-                    <span v-if="p.id === storage.settings.defaultProtocolId" class="badge badge-ghost badge-sm ml-auto">Standard</span>
+              <!-- Zurueckhaltend gestaltet: Sterne ohne Hintergrund, leer und blass, nur der gesetzte ist gefuellt und
+                   farbig. Kein zusaetzliches Schild - der gefuellte Stern samt Erklaerzeile genuegt.
+                   Je Zeile: links die Vorlage waehlen, rechts der Stern fuer die Standard-Vorlage. Der Stern steht
+                   an JEDER Vorlage und schaltet genau diese um - frueher gab es darunter einen einzelnen
+                   Textknopf, bei dem nicht zu sehen war, auf welche Vorlage er wirkt. -->
+              <ul class="mt-1 flex flex-col gap-1" aria-label="Vorlage wählen">
+                <li v-for="p in protocols" :key="p.id" class="flex items-center gap-1">
+                  <button type="button" :aria-current="p.id === einsatzActiveId ? 'true' : undefined" class="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 text-left text-sm" :class="p.id === einsatzActiveId ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-base-200'" @click="choose(p.id)">
+                    <span v-if="p.id === einsatzActiveId" class="shrink-0" aria-hidden="true">✓</span>
+                    <span class="min-w-0 flex-1 truncate">{{ titleOf(p) }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0"
+                    :class="p.id === storage.settings.defaultProtocolId ? 'text-primary' : 'text-base-content/30'"
+                    :aria-pressed="p.id === storage.settings.defaultProtocolId"
+                    :aria-label="p.id === storage.settings.defaultProtocolId ? `${titleOf(p)} ist die Standard-Vorlage. Antippen hebt das auf.` : `${titleOf(p)} als Standard-Vorlage festlegen`"
+                    :title="p.id === storage.settings.defaultProtocolId ? 'Standard-Vorlage (antippen hebt auf)' : 'Als Standard-Vorlage festlegen'"
+                    @click="setDefault(p.id)"
+                  >
+                    <svg class="size-6" viewBox="0 0 24 24" :fill="p.id === storage.settings.defaultProtocolId ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" />
+                    </svg>
                   </button>
                 </li>
               </ul>
-              <!-- ausserhalb der radiogroup (kein Radio) -->
-              <button type="button" class="btn btn-ghost btn-xs mt-1" @click="toggleDefault">{{ isDefault ? 'Nicht mehr als Standard-Vorlage' : 'Als Standard-Vorlage merken' }}</button>
+              <p class="mt-2 flex items-start gap-1.5 px-1 text-xs text-base-content/60">
+                <svg class="mt-px size-3.5 shrink-0 text-primary" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" /></svg>
+                <span>Standard-Vorlage: Mit ihr startet jeder neue Einsatz.</span>
+              </p>
             </template>
           </div>
 
@@ -403,7 +443,7 @@ onUnmounted(() => {
             <span>{{ openRequired === 1 ? 'Pflichtfeld' : 'Pflichtfelder' }} noch offen — zum ersten springen</span>
           </button>
           <div v-if="root.children.length" class="flex flex-col gap-6">
-            <template v-for="child in root.children" :key="resetKey + '-' + child.id">
+            <template v-for="child in visibleChildren" :key="resetKey + '-' + child.id">
               <EinsatzSection v-if="child.type === 'container'" :node="child" :depth="0" :inside-collapse="false" />
               <MedplanFunction v-else-if="child.type === 'function' && child.functionKind === 'medikamentenplan'" :node="child" />
               <AerzteFunction v-else-if="child.type === 'function' && child.functionKind === 'aerzte'" :node="child" />
@@ -438,6 +478,24 @@ onUnmounted(() => {
         </button>
         <p v-if="sendMsg" class="text-center text-xs" :class="sendMsg.kind === 'ok' ? 'text-success' : 'text-error'" role="status" aria-live="polite">{{ sendMsg.text }}</p>
         <p v-else-if="reachable !== true" class="text-center text-xs text-base-content/50">Bridge nicht verbunden — Senden gesperrt.</p>
+        <!-- Den Protokolltext als festen Text fuer den Knopf an der Bridge ablegen (Geruest mit den Werten,
+             die immer gleich sind). Oeffnet das Textfeld; gespeichert wird erst dort, mit gedruecktem Knopf. -->
+        <!-- Gleiches Stick-Icon wie in der Kopfleiste: so erklaert sich die kurze Beschriftung. -->
+        <button
+          type="button"
+          class="btn btn-outline min-h-11 w-full gap-2"
+          aria-label="Als Text für den Knopf an der Bridge speichern"
+          :disabled="!text.trim()"
+          @click="requestButtonText({ prefill: text })"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" class="size-5" aria-hidden="true">
+            <path d="M8.75 16.75h6.5v5.5h-6.5z" />
+            <path d="M10.6 18.7h1.1V20h-1.1zM12.3 18.7h1.1V20h-1.1z" fill="currentColor" stroke="none" />
+            <rect x="6.25" y="1.75" width="11.5" height="15" rx="3" />
+            <circle cx="12" cy="8.5" r="2.6" fill="currentColor" stroke="none" />
+          </svg>
+          Auf Knopf speichern
+        </button>
 
         <div class="divider my-1 w-full"></div>
 

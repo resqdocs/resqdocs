@@ -5,12 +5,16 @@ import type { Node, FieldFill } from './model.ts'
 import { defaultFill, isDefaultFill, functionStatus } from './fill.ts'
 import { FUNCTION_REGISTRY } from './functions/registry.ts'
 
+/** Von einer Abhaengigkeit gesetzt (dependencies.ts): keine Abweichung des Anwenders. */
+const isAuto = (fill: FieldFill | undefined): boolean => !!fill && (fill as { auto?: unknown }).auto === true
+
 export function countDeviations(node: Node, values: Record<string, FieldFill>): number {
   if (node.type === 'field') {
     // Gezaehlt wird die Abweichung vom AUSGANGSZUSTAND, nicht „ist es bestaetigt". Bei UNO Reverse
     // (defaultExcluded) ist „nicht erhoben" der Normalfall und zaehlt 0; das bewusste EINSCHALTEN
     // ist dort die Abweichung. Sonst zaehlte ein Protokoll mit zehn solchen Feldern zehn
     // Abweichungen, ohne dass der Anwender etwas getan haette.
+    if (isAuto(values[node.id])) return 0 // von einer Abhaengigkeit geschaltet, nicht vom Anwender
     return isDefaultFill(node, values[node.id]) ? 0 : 1
   }
   // Funktion (Blatt, kein children): „hat erfasste Daten" = EINE Quelle (Registry hasData, filtert
@@ -20,13 +24,14 @@ export function countDeviations(node: Node, values: Record<string, FieldFill>): 
     // Wie beim Feld zaehlt die Abweichung vom AUSGANGSZUSTAND: Freitext immer; „nicht erhoben" nur,
     // wenn die Funktion nicht ohnehin so startet (UNO Reverse) - dort ist das EINSCHALTEN die Abweichung.
     const status = functionStatus(node, f)
+    if (isAuto(f)) return 0 // von einer Abhaengigkeit geschaltet; eigene Daten schreiben einen Zustand ohne auto
     if (status === 'custom' || status !== functionStatus(node, undefined)) return 1
     if (status === 'excluded') return 0
     return FUNCTION_REGISTRY[node.functionKind]?.hasData(f) ? 1 : 0
   }
   // Container: vom Ausgangszustand abweichend markiert = 1 Abweichung (die Kinder entfallen dann
   // ohnehin bzw. wurden bewusst zugeschaltet); sonst summieren.
-  if (node.excludable && !isDefaultFill(node, values[node.id])) return 1
+  if (node.excludable && !isAuto(values[node.id]) && !isDefaultFill(node, values[node.id])) return 1
   // Steht der Container in seinem Ausgangszustand „nicht erhoben", entfaellt er samt Kindern - die
   // koennen dann keine Abweichung beitragen. Bewusst ueber den ZUSTAND, nicht ueber „kein Eintrag":
   // toggleExcluded schreibt beim Ausschalten immer einen expliziten Eintrag, ein Test auf Abwesenheit

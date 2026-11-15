@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount, watch, watchEffect, nextTick } from 'v
 import BausteineTab from '@/components/library/BausteineTab.vue'
 import TabIcon from '@resqdocs/protocol-core-ui/components/TabIcon.vue'
 import SettingsTab from '@/components/settings/SettingsTab.vue'
+import BridgeButtonTextDialog from '@/components/BridgeButtonTextDialog.vue'
 import DisclaimerGate from '@/components/DisclaimerGate.vue'
 import UsageNoticeModal from '@/components/UsageNoticeModal.vue'
 import FirmwareNoticeBanner from '@/components/FirmwareNoticeBanner.vue'
@@ -14,6 +15,7 @@ import EinsatzView from '@/components/rebuild/EinsatzView.vue'
 import EditorView from '@/components/rebuild/EditorView.vue'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
 import { useTypingProgress } from '@/pico/useTypingProgress'
+import { requestButtonText } from '@/pico/buttonTextEntry'
 import { useStorage } from '@/storage/useStorage'
 import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
 import { configureNativeRepositories } from '@/rebuild/configureNativeRepositories'
@@ -182,6 +184,25 @@ onBeforeUnmount(() => {
         <img src="/brand-dark.svg" alt="ResQDocs" class="brand-logo brand-logo-dark h-[45px] w-auto" />
       </div>
       <div class="flex flex-none items-center gap-1 px-2">
+        <!-- Text fuer den Knopf an der Bridge: oeffnet das Textfeld direkt (sonst unter Einstellungen > Bridge).
+             Icon = die Bridge als aufrechter USB-Stick mit ihrem Knopf, in getoenter Blase (gleiche Groesse wie
+             der Verbindungs-Indikator rechts daneben). Liegend gezeichnet liest sich der Stick als Kamera. -->
+        <button
+          type="button"
+          class="grid min-h-11 min-w-11 shrink-0 cursor-pointer place-items-center rounded-full"
+          aria-label="Text für den Knopf an der Bridge"
+          title="Text für den Knopf an der Bridge"
+          @click="requestButtonText()"
+        >
+          <span class="grid size-8 place-items-center rounded-full bg-primary/15 text-primary" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" class="size-[22px]">
+              <path d="M8.75 16.75h6.5v5.5h-6.5z" />
+              <path d="M10.6 18.7h1.1V20h-1.1zM12.3 18.7h1.1V20h-1.1z" fill="currentColor" stroke="none" />
+              <rect x="6.25" y="1.75" width="11.5" height="15" rx="3" />
+              <circle cx="12" cy="8.5" r="2.6" fill="currentColor" stroke="none" />
+            </svg>
+          </span>
+        </button>
         <!-- Bridge-Indikator als WLAN-Icon: Farbe NUR nach Verbindungszustand (gruen verbunden /
              rot nicht) -> kein Grau-Flackern beim Poll; feste Groesse -> springt nicht. Icon: verbunden = WLAN,
              keine Bridge = WLAN durchgestrichen, waehrend der Pruefung = Spinner. -->
@@ -254,6 +275,8 @@ onBeforeUnmount(() => {
          z-10 wie die Kopfzeile: daisyUI setzt das Dock nur auf z-index 1 - eine Einsatz-Karte mit offenem
          Dropdown (z-index 4, style.css) lag sonst ueber der Tab-Leiste. -->
     <TypingProgressBar />
+    <!-- Textfeld fuer den Knopf an der Bridge: einmal eingehaengt, von Kopfleiste, Bridge-Seite und Einsatz geoeffnet. -->
+    <BridgeButtonTextDialog />
 
     <nav class="dock z-10 border-t border-base-300 bg-base-100">
       <button type="button" :class="{ 'dock-active text-primary': activeTab === 'einsatz' }" @click="selectTab('einsatz')">

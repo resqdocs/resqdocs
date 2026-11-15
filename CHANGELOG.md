@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.11.0] - 2026-11-15
+
+### Added
+
+- Text for the bridge button: the bridge stores one fixed text and types it at the press of its button, without a phone; a second press cancels. It is set up through the stick icon in the header or from a case
+- Bridge firmware 0.5.1: new endpoints to store, read and remove that text, allowed only while the button is held; the text is checked before storing and before every typing run (no control characters except line breaks, no command patterns); the update is delivered over Wi-Fi through the app
+- Dependencies in templates: fields, sections and functions only appear during a case once a specific option is chosen in another field; up to three conditions, all of them or any one
+- Conditional default values: a field can get a different default depending on the selection in another field
+- Version history in the settings, built from the release notes
+- The default template is set with a star per row in the template selection of a case
+
+### Changed
+
+- Element properties are grouped into collapsible sections: general, list options, dependency, advanced
+- The "what is new" page shows the last three versions; its navigation stays visible at the bottom
+- Template list: share and menu have a larger touch target
+- Release notes live in one place and are the single source for the app, the release page and the website
+
 ## [1.10.0] - 2026-11-14
 
 ### Added

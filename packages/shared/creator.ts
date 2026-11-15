@@ -5,6 +5,7 @@
 
 import type { Container, Field, FunctionNode, FunctionKind, Node, FieldFill } from './model.ts'
 import { FUNCTION_REGISTRY } from './functions/registry.ts'
+import { remapDependencyIds } from './dependencies.ts'
 
 export function createContainer(id: string): Container {
   return { type: 'container', id, children: [] }
@@ -112,7 +113,11 @@ function mapChildren(node: Container, fn: (n: Node) => Node): Container {
 /** Immutabel: Knoten (Container ODER Field) per id flach patchen. type bleibt erhalten.
  *  No-Op -> selbe Referenz. */
 export function updateNode(root: Container, id: string, patch: Record<string, unknown>): Container {
-  return updateIn(root, id, patch) as Container
+  const next = updateIn(root, id, patch) as Container
+  // Kennung geaendert: Abhaengigkeiten anderer Elemente, die auf dieses Feld zeigen, ziehen mit.
+  const newId = patch.id
+  if (typeof newId === 'string' && newId !== id && next !== root) return remapDependencyIds(next, new Map([[id, newId]]))
+  return next
 }
 function updateIn(node: Node, id: string, patch: Record<string, unknown>): Node {
   if (node.id === id) return { ...node, ...patch, type: node.type } as Node

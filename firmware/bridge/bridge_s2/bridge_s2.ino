@@ -13,6 +13,10 @@
                                              (Limit 16384 je Request; laeuft ein Auftrag, wird angehaengt)
     GET  /type/status  -> 200 { state, done, total, delayMs, jobId, lastEnd }   (nur Zahlen)
     POST /type/pause | /type/resume | /type/cancel -> 200 { ...wie /type/status } | 409 { error:"no_job" }
+    GET  /stored       -> 200 { present, name, chars, os, delayMs, savedAt, buttonHeld }  (kein Inhalt)
+    GET  /stored/text  -> 200 text/plain (der abgelegte Text) | 403 { error:"button_required" } | 404
+    POST /stored       { text, name?, os?, delayMs?, savedAt? } -> 200 { ok, chars } | 403 { error:"button_required" }
+    POST /stored/clear {} -> 200 { ok } | 403 { error:"button_required" }
     POST /config  { ssidId }     -> 200 { ok, restartRequired } | 400 { error }
     POST /ota/begin  { size, sha256, sig } -> 200 { ok, chunkMax } | Fehler
     POST /ota/chunk  { offset, dataB64 }   -> 200 { received } | Fehler
@@ -29,6 +33,10 @@
   wird NICHT geloggt, NICHT gespeichert; reine transiente Durchleitung zum Typer.
   Getippt wird zeichenweise (TypeJob.h): der Fortschritt ist abfragbar (nur Zahlen), das Tippen
   laeuft aber ohne Verbindung zu Ende.
+
+  Knopf (BOOTSEL, ab 0.5.0): ein kurzer Druck tippt die abgelegte Vorlage (StoredTemplate.h) ohne
+  Handy; ein Druck waehrend des Tippens bricht ab. Abgelegt wird nur Vorlagentext ohne Patientendaten.
+  Ablegen, Entfernen UND Auslesen gehen nur mit gedruecktem Knopf.
 
   CORS: permissive Header, damit der Web-Dev-Browser (Vite) testen kann; die
   native App (CapacitorHttp) braucht sie nicht.
@@ -47,11 +55,14 @@
 #include "JsonMini.h"
 #include "OtaUpdate.h"
 #include "TypeJob.h"
+#include "ButtonPress.h"
+#include "StoredTemplate.h"
+#include "StoredGuard.h"
 
 using namespace rq;
 
-static const char* FW_VERSION  = "0.4.0";  // 0.4.0: arduino-pico 6.3.2, Tipp-Fortschritt mit Stoppen/Weitertippen/Abbrechen, Tippen ab 5 ms
-static const char* API_VERSION = "0.2.0";  // 0.2.0: Tipp-Fortschritt + Anhalten/Fortsetzen/Abbrechen (additiv)
+static const char* FW_VERSION  = "0.5.1";  // 0.5.1: Knopf-Text wird vor dem Speichern und Tippen geprüft
+static const char* API_VERSION = "0.3.0";  // 0.3.0: abgelegte Vorlage + Knopf (additiv); 0.2.0: Tipp-Fortschritt
 static const char* AP_PREFIX   = "ResQDocs-";
 static const char* AP_PASS     = "resqdocs2026";  // fix/oeffentlich (S2)
 static const uint32_t TYPE_MAX_CHARS = 16384;     // S2: pro Request; App chunkt
@@ -63,6 +74,11 @@ static bool   ready = false;     // USB-HID initialisiert
 
 // Web -> Typer (Koexistenz-Seam): Handler nimmt an, loop() tippt zeichenweise (TypeJob.h).
 static TypeJob typeJob;
+// Knopf + abgelegte Vorlage (Angaben im RAM, Text bleibt im Dateisystem).
+static ButtonPress button;
+static StoredInfo storedInfo;
+static uint32_t lastButtonPoll = 0;
+static const uint32_t BUTTON_POLL_MS = 25;  // BOOTSEL lesen sperrt kurz die Interrupts -> nicht in jeder Runde
 static bool restartAp = false;   // /config: AP nach der Antwort neu starten
 static bool otaReboot = false;   // /ota/commit: Reboot nach der Antwort
 static bool otaAvailable = false;  // LittleFS gemountet (Flash-Split vorhanden)
@@ -170,6 +186,90 @@ static void handleTypeResume() {
 static void handleTypeCancel() {
   if (!typeJob.cancel()) { sendJson(409, "{\"error\":\"no_job\"}"); return; }
   sendJson(200, typeJob.json());
+}
+
+// --- Abgelegte Vorlage (StoredTemplate.h) ----------------------------------------------------
+
+// Angaben neu lesen und den abgelegten Text pruefen (StoredGuard.h). Ein Text, der die Pruefung nicht
+// besteht (z. B. von einer Firmware vor der Pruefung abgelegt), bleibt liegen, wird aber nie getippt.
+static bool storedBlocked = false;
+static void storedRefresh() {
+  storedInfo = storedRead();
+  storedBlocked = false;
+  if (!storedInfo.present) return;
+  const String text = storedLoad();  // KEIN Logging des Inhalts
+  storedBlocked = storedGuardCheck(text.c_str(), text.length()) != GuardVerdict::OK;
+}
+
+static void handleStoredGet() { sendJson(200, storedJson(storedInfo, button.held(), storedBlocked)); }
+
+// Text zum Bearbeiten in der App holen - nur mit gedruecktem Knopf, als text/plain (kein JSON-Escaping).
+static void handleStoredText() {
+  if (!button.held()) { sendJson(403, "{\"error\":\"button_required\"}"); return; }
+  if (!storedInfo.present) { sendJson(404, "{\"error\":\"not_found\"}"); return; }
+  const String text = storedLoad();  // KEIN Logging des Inhalts
+  button.suppress();                 // dieses Halten war die Bestaetigung, kein Tipp-Druck
+  addCors();
+  server.send(200, "text/plain; charset=utf-8", text);
+}
+
+// Ablegen. Der gedrueckte Knopf beweist, dass man den Stick in der Hand hat.
+static void handleStoredPut() {
+  if (!otaAvailable) { sendJson(500, "{\"error\":\"fs_error\"}"); return; }
+  if (typeJob.active()) { sendJson(409, "{\"error\":\"busy\"}"); return; }
+  if (!button.held()) { sendJson(403, "{\"error\":\"button_required\"}"); return; }
+  const String body = server.arg("plain");
+  String text;
+  if (!jsonExtractString(body, "text", text) || text.length() == 0) {
+    sendJson(400, "{\"error\":\"invalid_body\"}");
+    return;
+  }
+  StoredInfo info;
+  info.chars = utf8Length(text);
+  if (info.chars > TYPE_MAX_CHARS) { sendJson(400, "{\"error\":\"text_too_long\"}"); return; }
+  // Kein Befehl, kein Steuerzeichen: der Knopf tippt nur Text. Antwort nennt nur die Art, nie Inhalt.
+  const GuardVerdict verdict = storedGuardCheck(text.c_str(), text.length());
+  if (verdict != GuardVerdict::OK) {
+    sendJson(422, String("{\"error\":\"not_allowed\",\"reason\":\"") + guardReason(verdict) + "\"}");
+    return;
+  }
+  String name, os;
+  if (jsonExtractString(body, "name", name)) info.name = storedCleanName(name);
+  if (jsonExtractString(body, "os", os) && storedOsValid(os)) info.os = os;
+  uint32_t n = 0;
+  if (jsonExtractUInt(body, "delayMs", n)) info.delayMs = (uint16_t)(n < 5 ? 5 : (n > 150 ? 150 : n));
+  if (jsonExtractUInt(body, "savedAt", n)) info.savedAt = n;
+  if (!storedSave(text, info)) {
+    storedRefresh();
+    sendJson(507, "{\"error\":\"insufficient_storage\"}");
+    return;
+  }
+  storedRefresh();
+  button.suppress();  // dieses Halten war die Bestaetigung, kein Tipp-Druck
+  sendJson(200, String("{\"ok\":true,\"chars\":") + storedInfo.chars + "}");
+}
+
+static void handleStoredClear() {
+  if (!otaAvailable) { sendJson(500, "{\"error\":\"fs_error\"}"); return; }
+  if (!button.held()) { sendJson(403, "{\"error\":\"button_required\"}"); return; }
+  storedClear();
+  storedInfo = StoredInfo();
+  storedBlocked = false;
+  button.suppress();
+  sendJson(200, "{\"ok\":true}");
+}
+
+// Kurzer Knopfdruck: laufendes Tippen abbrechen, sonst die abgelegte Vorlage tippen.
+static void onButtonPress() {
+  if (typeJob.active()) { typeJob.cancel(); return; }
+  if (otaSession.active) return;      // waehrend ein Firmware-Update hochgeladen wird, nicht tippen
+  if (!storedInfo.present || storedBlocked) return;
+  const String text = storedLoad();  // KEIN Logging des Inhalts
+  if (text.length() == 0) return;
+  // Vor jedem Tippen erneut pruefen - nicht dem Stand vom Start vertrauen.
+  if (storedGuardCheck(text.c_str(), text.length()) != GuardVerdict::OK) { storedBlocked = true; return; }
+  if (!typeJob.accept(text, storedInfo.chars, storedInfo.delayMs)) return;
+  typerSetMode(osFromString(storedInfo.os));
 }
 
 static void handleConfig() {
@@ -320,6 +420,8 @@ void setup() {
   otaAvailable = otaSetup();
   if (!otaAvailable) {
     Serial.println("WARNUNG: LittleFS nicht verfuegbar - OTA inaktiv (Flash-Split pruefen)");
+  } else {
+    storedRefresh();  // abgelegte Vorlage (nur Angaben) samt Pruefung
   }
 
   // 3) S2-Routen (kein HTML-Formular mehr).
@@ -330,6 +432,10 @@ void setup() {
   server.on("/type/pause", HTTP_POST, handleTypePause);
   server.on("/type/resume", HTTP_POST, handleTypeResume);
   server.on("/type/cancel", HTTP_POST, handleTypeCancel);
+  server.on("/stored", HTTP_GET, handleStoredGet);
+  server.on("/stored/text", HTTP_GET, handleStoredText);
+  server.on("/stored", HTTP_POST, handleStoredPut);
+  server.on("/stored/clear", HTTP_POST, handleStoredClear);
   server.on("/config", HTTP_POST, handleConfig);
   server.on("/ota/begin", HTTP_POST, handleOtaBegin);
   server.on("/ota/chunk", HTTP_POST, handleOtaChunk);
@@ -338,6 +444,8 @@ void setup() {
   server.on("/type/pause", HTTP_OPTIONS, handleOptions);
   server.on("/type/resume", HTTP_OPTIONS, handleOptions);
   server.on("/type/cancel", HTTP_OPTIONS, handleOptions);
+  server.on("/stored", HTTP_OPTIONS, handleOptions);
+  server.on("/stored/clear", HTTP_OPTIONS, handleOptions);
   server.on("/config", HTTP_OPTIONS, handleOptions);
   server.on("/ota/begin", HTTP_OPTIONS, handleOptions);
   server.on("/ota/chunk", HTTP_OPTIONS, handleOptions);
@@ -370,6 +478,13 @@ void loop() {
     startAp();
     Serial.print("AP neu gestartet: ");
     Serial.println(fullSsid());
+  }
+
+  // Knopf abfragen (entprellt). Ein kurzer Druck tippt die abgelegte Vorlage bzw. bricht das Tippen ab.
+  const uint32_t nowMs = millis();
+  if ((uint32_t)(nowMs - lastButtonPoll) >= BUTTON_POLL_MS) {
+    lastButtonPoll = nowMs;
+    if (button.tick(BOOTSEL, nowMs)) onButtonPress();
   }
 
   typeJob.tick();  // hoechstens ein Zeichen, dann wieder der Webserver

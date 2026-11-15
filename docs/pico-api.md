@@ -101,6 +101,40 @@ Laufenden Auftrag anhalten, fortsetzen oder abbrechen. Body leer (`{}`).
 - Solange ein Auftrag läuft oder angehalten ist, antworten `POST /config` und `POST /ota/begin` mit
   `409 { "error":"busy" }`.
 
+### Text für den Knopf: `GET /stored` · `GET /stored/text` · `POST /stored` · `POST /stored/clear` (ab 0.5.0)
+Die Bridge kann **einen** Text speichern und ihn auf Knopfdruck ohne Handy tippen. Ein kurzer Druck auf
+ihren Knopf (BOOTSEL) startet das Tippen, ein weiterer Druck bricht es ab; ein laufender Auftrag aus der App
+wird durch den Knopf ebenfalls abgebrochen.
+```
+GET  /stored        200  { "present":bool, "name":"…", "chars":<int>, "os":"win_de"|"mac_de"|"ios",
+                           "delayMs":<int>, "savedAt":<unix s>, "buttonHeld":bool, "blocked":bool }   (kein Inhalt)
+GET  /stored/text   200  text/plain; charset=utf-8  (der gespeicherte Text)
+                    403  { "error":"button_required" }   404  { "error":"not_found" }
+POST /stored        Request: { "text":"…", "name":"…"?, "os":"…"?, "delayMs":<int>?, "savedAt":<unix s>? }
+                    200  { "ok":true, "chars":<int> }
+                    400  { "error":"invalid_body" | "text_too_long" }   403  { "error":"button_required" }
+                    409  { "error":"busy" }   507  { "error":"insufficient_storage" }
+                    422  { "error":"not_allowed", "reason":"control" | "command" }
+POST /stored/clear  200  { "ok":true }   403  { "error":"button_required" }
+```
+- **Knopf als Nachweis:** Speichern, Entfernen **und Auslesen** gehen nur, während der Knopf an der Bridge
+  gedrückt ist. Das WLAN-Passwort ist öffentlich dokumentiert; so kann nur ändern oder lesen, wer die Bridge
+  in der Hand hat. Ohne Knopf gibt `GET /stored` nur Länge und Zeitpunkt aus.
+- **Nur Text, keine Befehle:** Die Bridge prüft den Text beim Speichern und vor jedem Tippen per Knopf
+  (`StoredGuard.h`). Abgelehnt werden Steuerzeichen außer dem Zeilenumbruch (`reason:"control"`, also auch
+  Tabulator) sowie Programmaufrufe, Shell-Verkettungen und Internetadressen (`reason:"command"`). Die
+  Antwort nennt nur die Art, nie den Inhalt. Ein gespeicherter Text, der die Prüfung nicht besteht, meldet
+  `"blocked":true` und wird nicht getippt. Unabhängig davon tippt die Bridge ausschließlich Schriftzeichen
+  mit Umschalt/AltGr; Windows-/Befehlstaste, Strg, Alt und Funktionstasten kann sie nicht drücken. Die
+  Musterliste ist eine Sperrliste und nicht vollständig.
+- **Kein Platz für Patientendaten:** Der Text ist als Gerüst gedacht (z. B. eine Vorlage mit Standardwerten).
+  Er liegt dauerhaft im Dateisystem der Bridge, bis er ersetzt oder entfernt wird, und übersteht ein
+  Firmware-Update. Höchstens 16384 Zeichen.
+- Getippt wird mit der beim Speichern mitgegebenen Tastatur (`os`) und Tippgeschwindigkeit (`delayMs`).
+- Das Gedrückthalten zum Speichern oder Laden löst beim Loslassen **kein** Tippen aus. Ein Druck zählt nur,
+  wenn er höchstens 1,5 Sekunden dauert.
+- Firmware vor 0.5.0 kennt die Endpunkte nicht (`404`); die App blendet die Funktion dann aus.
+
 ### `POST /config`
 Geräte-Konfiguration setzen (aktuell: SSID-`<id>`).
 ```
@@ -178,6 +212,7 @@ GET  /status     -> 200 { name, fwVersion, apiVersion, ready, defaultOs, otaSupp
 GET  /type/status                  -> 200 { state, done, total, delayMs, jobId, lastEnd }      (ab 0.4.0)
 POST /type/pause|resume|cancel {}  -> 200 { …wie /type/status } | 409 { error }                (ab 0.4.0)
 POST /type       { text, os?, delayMs? } -> 200 { typed } | 400 { error } | 503 { error } | 5xx { error }   (Limit 16384, App chunkt)
+GET  /stored | GET /stored/text | POST /stored | POST /stored/clear   (Text für den Knopf, ab 0.5.0)
 POST /config     { ssidId }        -> 200 { ok, restartRequired } | 400 { error }
 POST /ota/begin  { size, sha256, sig } -> 200 { ok, chunkMax } | 400/507/500 { error }
 POST /ota/chunk  { offset, dataB64 }   -> 200 { received } | 400/409/413/500 { error }
