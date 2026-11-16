@@ -147,6 +147,30 @@
       "de": "FAST4D",
       "en": "FAST4D",
       "minVersion": "1.9.0"
+    },
+    {
+      "kind": "zops",
+      "de": "ZOPS",
+      "en": "ZOPS",
+      "minVersion": "1.12.0"
+    },
+    {
+      "kind": "sgarbossa",
+      "de": "Sgarbossa (mod. nach Smith)",
+      "en": "Sgarbossa (Smith-modified)",
+      "minVersion": "1.12.0"
+    },
+    {
+      "kind": "egsys",
+      "de": "EGSYS",
+      "en": "EGSYS",
+      "minVersion": "1.12.0"
+    },
+    {
+      "kind": "bmi",
+      "de": "BMI",
+      "en": "BMI",
+      "minVersion": "1.12.0"
     }
   ]
 }

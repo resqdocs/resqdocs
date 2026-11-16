@@ -297,10 +297,14 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
     <button v-if="rows.length" type="button" class="btn btn-ghost btn-sm mb-1 min-h-11 self-end text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
     <p v-if="!rows.length" class="text-xs italic text-base-content/50">Noch nichts erfasst.</p>
 
-    <!-- Aktionsleiste: manuell anlegen + Plan scannen (zieht den ausstellenden Arzt aus dem BMP). -->
-    <div class="flex gap-2">
-      <button type="button" class="btn btn-primary btn-sm min-h-11 grow gap-1" @click="addRow"><span aria-hidden="true">＋</span> Eintrag</button>
-      <button type="button" class="btn btn-outline btn-sm min-h-11 grow gap-2" @click="bmpOpen = true">
+    <!-- Aktionsleiste: manuell anlegen + Plan scannen (zieht den ausstellenden Arzt aus dem BMP).
+         flex-wrap + whitespace-normal: „Arzt aus Medikationsplan scannen" passt bei grosser Schrift nicht
+         neben „Eintrag" - ohne Umbruch wurde die ganze Seite breiter als das Display (Geraetefund).
+         shrink + min-w-0: daisyUI setzt .btn auf flex-shrink:0; ohne die beiden bliebe ein einzelner Knopf,
+         der allein breiter als die Zeile ist, trotzdem zu breit. -->
+    <div class="flex flex-wrap gap-2" data-aktionsleiste>
+      <button type="button" class="btn btn-primary btn-sm h-auto min-h-11 min-w-0 shrink grow gap-1 whitespace-normal py-2 leading-tight" @click="addRow"><span aria-hidden="true">＋</span> Eintrag</button>
+      <button type="button" class="btn btn-outline btn-sm h-auto min-h-11 min-w-0 shrink grow gap-2 whitespace-normal py-2 leading-tight" @click="bmpOpen = true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5 shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
         Arzt aus Medikationsplan scannen
       </button>
