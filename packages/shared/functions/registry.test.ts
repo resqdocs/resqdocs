@@ -200,6 +200,150 @@ test('fast4d: positiv ab einem Befund, Befunde mit Seite, nicht prüfbar, Zeit; 
   assert.equal(def.accent!(fill([sechs])), undefined)
 })
 
+test('zops: nur die Abweichung, unvollständig -> leer; Ampel ohne Rot', () => {
+  const def = FUNCTION_REGISTRY.zops
+  const fill = (rows: object[]): FieldFill => ({ state: 'function', rows }) as FieldFill
+  const ok = { zopsTime: 'ok', zopsPlace: 'ok', zopsPerson: 'ok', zopsSituation: 'ok' }
+  assert.equal(def.label, 'ZOPS')
+  assert.equal(def.singleLine, true)
+  // kein „ZOPS"-Praefix im Body (der Knoten-Titel liefert es)
+  assert.equal(def.renderBody(fill([ok])), 'orientiert.')
+  assert.equal(def.renderBody(fill([{ ...ok, zopsTime: 'no' }])), 'nicht orientiert zu: Zeit.')
+  assert.equal(def.renderBody(fill([{ ...ok, zopsTime: 'no', zopsSituation: 'na' }])), 'nicht orientiert zu: Zeit; nicht prüfbar: Situation.')
+  // unvollständig oder fremde Werte: keine Ausgabe, keine Daten, keine Farbe
+  for (const rows of [[], [{}], [{ zopsTime: 'ok', zopsPlace: 'ok', zopsPerson: 'ok' }], [{ ...ok, zopsPlace: 'neg' }]]) {
+    assert.equal(def.renderBody(fill(rows)), '')
+    assert.equal(def.hasData(fill(rows)), false)
+    assert.equal(def.accent!(fill(rows)), undefined)
+  }
+  assert.equal(def.hasData(fill([ok])), true)
+  assert.equal(def.accent!(fill([ok])), 'success')
+  assert.equal(def.accent!(fill([{ ...ok, zopsPerson: 'no' }])), 'warning')
+  assert.equal(def.accent!(fill([{ zopsTime: 'no', zopsPlace: 'no', zopsPerson: 'no', zopsSituation: 'no' }])), 'warning') // nie Rot
+  assert.equal(def.accent!(fill([{ ...ok, zopsSituation: 'na' }])), undefined) // nicht alles prüfbar: kein Grün
+  // Vorschau im Editor zeigt Abweichung und „nicht prüfbar"
+  assert.equal(def.renderBody(def.sampleFill!()), 'nicht orientiert zu: Zeit; nicht prüfbar: Situation.')
+})
+
+test('sgarbossa: positiv ab einem Kriterium; negativ nie grün, kein Hinweis im Einsatz', () => {
+  const def = FUNCTION_REGISTRY.sgarbossa
+  const fill = (rows: object[]): FieldFill => ({ state: 'function', rows }) as FieldFill
+  const neg = { sgbConcordantElevation: 'neg', sgbConcordantDepression: 'neg', sgbDiscordantElevation: 'neg' }
+  assert.equal(def.label, 'Sgarbossa (mod. nach Smith)')
+  assert.equal(def.singleLine, true)
+  assert.equal(def.renderBody(fill([neg])), 'negativ.')
+  assert.equal(def.renderBody(fill([{ ...neg, sgbDiscordantElevation: 'pos' }])), 'positiv: diskordante ST-Hebung (ST/S ab 0,25).')
+  // Negativ: keine Farbe (nie Grün); der Hinweis gehört ins Eingabeblatt und steht nie im Text.
+  assert.equal(def.accent!(fill([neg])), undefined)
+  assert.ok(!def.renderBody(fill([neg])).includes('Koronarverschluss'))
+  // Positiv: rot.
+  assert.equal(def.accent!(fill([{ ...neg, sgbConcordantElevation: 'pos' }])), 'error')
+  // Nichts beurteilbar: keine Farbe.
+  const na = { sgbConcordantElevation: 'na', sgbConcordantDepression: 'na', sgbDiscordantElevation: 'na' }
+  assert.equal(def.renderBody(fill([na])), 'nicht beurteilbar.')
+  assert.equal(def.accent!(fill([na])), undefined)
+  // Unvollständig oder fremde Werte: nichts.
+  for (const rows of [[], [{}], [{ sgbConcordantElevation: 'neg', sgbConcordantDepression: 'neg' }], [{ ...neg, sgbDiscordantElevation: 'ok' }]]) {
+    assert.equal(def.renderBody(fill(rows)), '')
+    assert.equal(def.hasData(fill(rows)), false)
+    assert.equal(def.accent!(fill(rows)), undefined)
+  }
+  assert.equal(def.renderBody(def.sampleFill!()), 'positiv: konkordante ST-Hebung; nicht beurteilbar: diskordante ST-Hebung (ST/S ab 0,25).')
+  // Keine andere Funktion bringt einen Hinweis mit.
+})
+
+test('egsys: ab 3 Punkten rot, darunter ohne Farbe und nie grün', () => {
+  const def = FUNCTION_REGISTRY.egsys
+  const fill = (rows: object[]): FieldFill => ({ state: 'function', rows }) as FieldFill
+  const no = { egsysPalpitations: 'no', egsysHeartDisease: 'no', egsysEffort: 'no', egsysSupine: 'no', egsysTriggers: 'no', egsysProdromes: 'no' }
+  assert.equal(def.label, 'EGSYS')
+  assert.equal(def.singleLine, true)
+  assert.equal(def.renderBody(fill([no])), '0 Punkte.')
+  assert.equal(def.accent!(fill([no])), undefined) // nie Grün
+  assert.ok(!def.renderBody(fill([no])).includes('schließt'))
+  const hoch = { ...no, egsysPalpitations: 'yes' }
+  assert.equal(def.renderBody(fill([hoch])), '4 Punkte (Palpitationen vor Synkope) - kardiale Synkope wahrscheinlich.')
+  assert.equal(def.accent!(fill([hoch])), 'error')
+  // 2 Punkte: unter der Schwelle
+  assert.equal(def.accent!(fill([{ ...no, egsysSupine: 'yes' }])), undefined)
+  // Unvollständig oder fremde Werte (auch echte Booleans): nichts.
+  for (const rows of [[], [{}], [{ ...no, egsysProdromes: undefined }], [{ ...no, egsysEffort: true }], [{ ...no, egsysEffort: 'ja' }]]) {
+    assert.equal(def.renderBody(fill(rows)), '')
+    assert.equal(def.hasData(fill(rows)), false)
+    assert.equal(def.accent!(fill(rows)), undefined)
+  }
+  assert.equal(def.renderBody(def.sampleFill!()), '7 Punkte (Palpitationen vor Synkope, Herzerkrankung/EKG auffällig) - kardiale Synkope wahrscheinlich.')
+  // Eigener Text aus der Vorlage (config.thresholdText); der Editor kennt Standard und Beschriftung.
+  assert.equal(def.renderBody(fill([hoch]), { thresholdText: '- Kardiologie verständigen' }), '4 Punkte (Palpitationen vor Synkope) - Kardiologie verständigen.')
+  assert.equal(def.renderBody(fill([{ ...no, egsysSupine: 'yes' }]), { thresholdText: '- Kardiologie verständigen' }), '2 Punkte (Synkope im Liegen).')
+  assert.deepEqual(def.thresholdText, { standard: '- kardiale Synkope wahrscheinlich', label: 'Text ab 3 Punkten' })
+  assert.deepEqual(def.lineEnd, { standard: '.', label: 'Zeilenende' })
+  assert.equal(def.renderBody(fill([hoch]), { lineEnd: '' }), '4 Punkte (Palpitationen vor Synkope) - kardiale Synkope wahrscheinlich')
+  assert.equal(def.renderBody(fill([hoch]), { thresholdText: '- abklären', lineEnd: ';' }), '4 Punkte (Palpitationen vor Synkope) - abklären;')
+  // Jede einzeilige Funktion hat ein frei wählbares Zeilenende, Listen-Funktionen nicht.
+  for (const [kind, d] of Object.entries(FUNCTION_REGISTRY)) assert.equal(!!d.lineEnd, !!d.singleLine, kind)
+  for (const [kind, d] of Object.entries(FUNCTION_REGISTRY)) if (kind !== 'egsys') assert.equal(d.thresholdText, undefined, kind)
+})
+
+test('sgarbossa: Zeilenende frei wählbar wie bei EGSYS', () => {
+  const def = FUNCTION_REGISTRY.sgarbossa
+  const fill = (rows: object[]): FieldFill => ({ state: 'function', rows }) as FieldFill
+  const neg = { sgbConcordantElevation: 'neg', sgbConcordantDepression: 'neg', sgbDiscordantElevation: 'neg' }
+  assert.deepEqual(def.lineEnd, { standard: '.', label: 'Zeilenende' })
+  assert.equal(def.renderBody(fill([neg])), 'negativ.')
+  assert.equal(def.renderBody(fill([neg]), { lineEnd: ';' }), 'negativ;')
+  assert.equal(def.renderBody(fill([neg]), { lineEnd: '' }), 'negativ')
+  assert.equal(def.renderBody(fill([{ ...neg, sgbConcordantElevation: 'pos' }]), { lineEnd: '' }), 'positiv: konkordante ST-Hebung')
+  assert.equal(def.renderBody(fill([{ sgbConcordantElevation: 'na', sgbConcordantDepression: 'na', sgbDiscordantElevation: 'na' }]), { lineEnd: ' -' }), 'nicht beurteilbar -')
+})
+
+test('Zeilenende: Standard lässt jede Zeile wie bisher, eigene Angabe ersetzt das Ende', () => {
+  const fill = (row: object): FieldFill => ({ state: 'function', rows: [row] }) as FieldFill
+  const faelle: [string, object, string, string][] = [
+    ['packYears', { cigarettesPerDay: 30, years: 15 }, '', 'ca. 23 py (30/Tag, 15 J.)'],
+    ['news2', { rr: 16, spo2: 97, systolic: 125, pulse: 72, temp: 36.8, consciousness: 'A', onOxygen: false, scale2: false }, '', ''],
+    ['lams', { lamsFace: 1, lamsArm: 2, lamsGrip: 2 }, '', ''],
+    ['fast4d', { fastFace: 'neg', fastArm: 'neg', fastSpeech: 'neg', fastDiplopia: 'neg', fastField: 'neg', fastVertigo: 'neg', fastAtaxia: 'neg', fastTimeMode: 'onset', fastTime: '14:30' }, '.', 'negativ. Symptombeginn 14:30.'],
+    ['zops', { zopsTime: 'ok', zopsPlace: 'ok', zopsPerson: 'ok', zopsSituation: 'ok' }, '.', 'orientiert.'],
+  ]
+  for (const [kind, row, standard, beispiel] of faelle) {
+    const def = FUNCTION_REGISTRY[kind as keyof typeof FUNCTION_REGISTRY]
+    assert.deepEqual(def.lineEnd, { standard, label: 'Zeilenende' }, kind)
+    const ohne = def.renderBody(fill(row))
+    if (beispiel) assert.equal(ohne, beispiel, kind)
+    // Ohne Angabe und mit dem Standard: unverändert (rückwärts kompatibel).
+    assert.equal(def.renderBody(fill(row), {}), ohne, kind)
+    assert.equal(def.renderBody(fill(row), { lineEnd: standard }), ohne, kind)
+    // Eigenes Ende ersetzt das Standard-Ende genau einmal.
+    const basis = standard ? ohne.slice(0, -standard.length) : ohne
+    assert.equal(def.renderBody(fill(row), { lineEnd: ';' }), `${basis};`, kind)
+    assert.equal(def.renderBody(fill(row), { lineEnd: '' }), basis, kind)
+    // Ohne Ergebnis bleibt es leer, auch mit Zeilenende.
+    assert.equal(def.renderBody(fill({}), { lineEnd: ';' }), '', kind)
+  }
+})
+
+test('bmi: kg/m² mit WHO-Klasse, unvollständig oder unsinnig -> leer; keine Farbe; Zeilenende', () => {
+  const def = FUNCTION_REGISTRY.bmi
+  const fill = (rows: object[]): FieldFill => ({ state: 'function', rows }) as FieldFill
+  assert.equal(def.label, 'BMI')
+  assert.equal(def.singleLine, true)
+  assert.equal(def.renderBody(fill([{ bmiWeight: 80, bmiHeight: 180 }])), '24,7 (Normalgewicht; 80 kg, 180 cm)')
+  assert.equal(def.renderBody(fill([{ bmiWeight: 125, bmiHeight: 175 }])), '40,8 (Adipositas Grad III; 125 kg, 175 cm)')
+  for (const rows of [[], [{}], [{ bmiWeight: 80 }], [{ bmiWeight: 80, bmiHeight: 0 }], [{ bmiWeight: -1, bmiHeight: 180 }], [{ bmiWeight: Number.NaN, bmiHeight: 180 }]]) {
+    assert.equal(def.renderBody(fill(rows)), '')
+    assert.equal(def.hasData(fill(rows)), false)
+  }
+  assert.equal(def.hasData(fill([{ bmiWeight: 80, bmiHeight: 180 }])), true)
+  assert.equal(def.accent, undefined)
+  assert.equal(def.renderBody(fill([{ bmiWeight: 80, bmiHeight: 180 }]), { lineEnd: '.' }), '24,7 (Normalgewicht; 80 kg, 180 cm).')
+  assert.equal(def.renderBody(def.sampleFill!()), '24,7 (Normalgewicht; 80 kg, 180 cm)')
+})
+
+test('Hinweise wie „schließt … nicht aus" stehen nur im Eingabeblatt: keine Funktion liefert einen Einsatz-Hinweis', () => {
+  for (const [kind, d] of Object.entries(FUNCTION_REGISTRY)) assert.ok(!('note' in d), kind)
+})
+
 test('createDefaults: Befund-Scores starten mit Inline-Titel ohne Markdown-Präfix; jede Instanz eigenes heading', () => {
   const a = FUNCTION_REGISTRY.lams.createDefaults!()
   const b = FUNCTION_REGISTRY.lams.createDefaults!()
@@ -208,6 +352,10 @@ test('createDefaults: Befund-Scores starten mit Inline-Titel ohne Markdown-Präf
   assert.equal(a.heading?.suffix, ' ')
   assert.notEqual(a.heading, b.heading) // keine geteilte Referenz zwischen Knoten
   assert.deepEqual(FUNCTION_REGISTRY.fast4d.createDefaults!(), a)
+  assert.deepEqual(FUNCTION_REGISTRY.zops.createDefaults!(), a)
+  assert.deepEqual(FUNCTION_REGISTRY.sgarbossa.createDefaults!(), a)
+  assert.deepEqual(FUNCTION_REGISTRY.egsys.createDefaults!(), a)
+  assert.deepEqual(FUNCTION_REGISTRY.bmi.createDefaults!(), a)
   // Bestandsfunktionen bleiben beim Banner-Titel
   for (const kind of ['medikamentenplan', 'aerzte', 'packYears', 'news2'] as const) assert.equal(FUNCTION_REGISTRY[kind].createDefaults, undefined)
 })
@@ -285,6 +433,10 @@ test('singleLine-Vertrag: jede einzeilige Score-Funktion rendert NIE einen Zeile
     { state: 'function', rows: [{ cigarettesPerDay: 30, years: 15 }] } as FieldFill,
     { state: 'function', rows: [{ cigarettesPerDay: 40 }] } as FieldFill,
     { state: 'function', rows: [{ lamsFace: 1, lamsArm: 2, lamsGrip: 2 }] } as FieldFill,
+    { state: 'function', rows: [{ zopsTime: 'no', zopsPlace: 'no', zopsPerson: 'ok', zopsSituation: 'na' }] } as FieldFill,
+    { state: 'function', rows: [{ sgbConcordantElevation: 'pos', sgbConcordantDepression: 'pos', sgbDiscordantElevation: 'na' }] } as FieldFill,
+    { state: 'function', rows: [{ egsysPalpitations: 'yes', egsysHeartDisease: 'yes', egsysEffort: 'yes', egsysSupine: 'yes', egsysTriggers: 'yes', egsysProdromes: 'yes' }] } as FieldFill,
+    { state: 'function', rows: [{ bmiWeight: 80, bmiHeight: 180 }] } as FieldFill,
   ]
   for (const [kind, def] of Object.entries(FUNCTION_REGISTRY)) {
     if (!def.singleLine) continue

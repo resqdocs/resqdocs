@@ -221,6 +221,84 @@ test('sanitizeValues (via parseDraft): FAST4D-Zeile überlebt mit Seite und Zeit
   assert.deepEqual(d.values.zeit, { state: 'function', rows: [{ fastSpeech: 'neg' }] })
 })
 
+test('sanitizeValues (via parseDraft): ZOPS-Zeile überlebt; fremde Werte und Freitext raus', () => {
+  const voll = { zopsTime: 'no', zopsPlace: 'ok', zopsPerson: 'ok', zopsSituation: 'na' }
+  const raw = {
+    protocolId: 'p',
+    createdAt: T0,
+    lastTouchedAt: T0,
+    expiresAt: T0 + HOUR,
+    ttlHours: 3,
+    values: {
+      voll: { state: 'function', rows: [{ ...voll, zopsNotiz: 'weiß das Jahr nicht' }] },
+      falsch: { state: 'function', rows: [{ zopsTime: 'neg', zopsPlace: 'orientiert', zopsPerson: 1, zopsSituation: true }] },
+      teil: { state: 'function', rows: [{ zopsTime: 'ok', zopsPlace: 'vielleicht' }] },
+    },
+  }
+  const d = parseDraft(raw)!
+  assert.deepEqual(d.values.voll, { state: 'function', rows: [voll] })
+  // kein einziger gültiger Wert -> Zeile leer -> raus
+  assert.deepEqual(d.values.falsch, { state: 'function', rows: [] })
+  // der ungültige Wert entfällt, der gültige bleibt
+  assert.deepEqual(d.values.teil, { state: 'function', rows: [{ zopsTime: 'ok' }] })
+})
+
+test('sanitizeValues (via parseDraft): Sgarbossa-Zeile überlebt; fremde Werte raus', () => {
+  const voll = { sgbConcordantElevation: 'pos', sgbConcordantDepression: 'neg', sgbDiscordantElevation: 'na' }
+  const raw = {
+    protocolId: 'p',
+    createdAt: T0,
+    lastTouchedAt: T0,
+    expiresAt: T0 + HOUR,
+    ttlHours: 3,
+    values: {
+      voll: { state: 'function', rows: [{ ...voll, sgbNotiz: 'V2 unsicher' }] },
+      falsch: { state: 'function', rows: [{ sgbConcordantElevation: 'ja', sgbConcordantDepression: 3, sgbDiscordantElevation: 'ok' }] },
+    },
+  }
+  const d = parseDraft(raw)!
+  assert.deepEqual(d.values.voll, { state: 'function', rows: [voll] })
+  assert.deepEqual(d.values.falsch, { state: 'function', rows: [] })
+})
+
+test('sanitizeValues (via parseDraft): EGSYS-Zeile überlebt, auch mit lauter „Nein"; fremde Werte raus', () => {
+  const no = { egsysPalpitations: 'no', egsysHeartDisease: 'no', egsysEffort: 'no', egsysSupine: 'no', egsysTriggers: 'no', egsysProdromes: 'no' }
+  const raw = {
+    protocolId: 'p',
+    createdAt: T0,
+    lastTouchedAt: T0,
+    expiresAt: T0 + HOUR,
+    ttlHours: 3,
+    values: {
+      // Lauter „Nein" ist erhobene Arbeit und darf nicht als leere Zeile verschwinden.
+      nein: { state: 'function', rows: [no] },
+      voll: { state: 'function', rows: [{ ...no, egsysPalpitations: 'yes', egsysNotiz: 'seit Wochen' }] },
+      falsch: { state: 'function', rows: [{ egsysPalpitations: true, egsysHeartDisease: 'ja', egsysEffort: 1 }] },
+    },
+  }
+  const d = parseDraft(raw)!
+  assert.deepEqual(d.values.nein, { state: 'function', rows: [no] })
+  assert.deepEqual(d.values.voll, { state: 'function', rows: [{ ...no, egsysPalpitations: 'yes' }] })
+  assert.deepEqual(d.values.falsch, { state: 'function', rows: [] })
+})
+
+test('sanitizeValues (via parseDraft): BMI-Zeile überlebt als Zahlen; Text und Fremdfelder raus', () => {
+  const raw = {
+    protocolId: 'p',
+    createdAt: T0,
+    lastTouchedAt: T0,
+    expiresAt: T0 + HOUR,
+    ttlHours: 3,
+    values: {
+      voll: { state: 'function', rows: [{ bmiWeight: 80, bmiHeight: 180, bmiNotiz: 'geschätzt' }] },
+      text: { state: 'function', rows: [{ bmiWeight: '80', bmiHeight: 'groß' }] },
+    },
+  }
+  const d = parseDraft(raw)!
+  assert.deepEqual(d.values.voll, { state: 'function', rows: [{ bmiWeight: 80, bmiHeight: 180 }] })
+  assert.deepEqual(d.values.text, { state: 'function', rows: [] })
+})
+
 test('sanitizeValues (via parseDraft): Funktions-Status custom+Freitext und excluded ueberleben den Roundtrip', () => {
   const raw = {
     protocolId: 'p',

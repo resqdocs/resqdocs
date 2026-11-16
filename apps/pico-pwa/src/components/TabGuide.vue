@@ -71,6 +71,15 @@ watch(step, () => void nextTick(() => scroller.value?.scrollTo({ top: 0 })))
 /** Seite „Neu“: die letzten drei Versionen, neueste zuerst. Kurz gehalten; alles Weitere steht im Versionsverlauf. */
 const NEWS: ReadonlyArray<{ version: string; items: ReadonlyArray<{ lead: string; text: string }> }> = [
   {
+    version: '1.12.0',
+    items: [
+      { lead: 'Neue Funktionen:', text: 'ZOPS für die Orientierung, Sgarbossa-Kriterien (mod. nach Smith) und EGSYS-Score bei Synkope. Befunde antippen, das Ergebnis steht als eine Zeile im Protokolltext.' },
+      { lead: 'BMI-Rechner:', text: 'als Funktion: Gewicht und Größe eingeben, BMI und WHO-Klasse stehen im Protokolltext.' },
+      { lead: 'Funktionskonfiguration:', text: 'Einstellungen, die nur eine Funktion kennt, stehen in einem eigenen Bereich, zum Beispiel das Zeichen am Zeilenende oder bei EGSYS der Text ab 3 Punkten.' },
+      { lead: 'Große Schrift:', text: 'Die Knöpfe unter Kontakte/Ärzte und Medikationsplan brechen um, die Seite bleibt in der Bildschirmbreite.' },
+    ],
+  },
+  {
     version: '1.11.0',
     items: [
       { lead: 'Die Bridge tippt auch ohne Handy:', text: 'Sie speichert einen festen Text und tippt ihn, wenn du ihren Knopf drückst. Einrichten über das Stick-Symbol oben rechts oder im Einsatz mit „Auf Knopf speichern“.' },
@@ -87,15 +96,6 @@ const NEWS: ReadonlyArray<{ version: string; items: ReadonlyArray<{ lead: string
       { lead: 'Tippgeschwindigkeit:', text: 'feinere Stufen und schneller als bisher.' },
       { lead: 'Scanner:', text: 'Beim Medikationsplan startet die Kamera ohne Zoom, der ganze Code passt ins Bild.' },
       { lead: 'Auswahllisten:', text: 'Der Standardwert kann weichen, sobald du etwas anderes wählst. „individuell“ gibt es auf Wunsch mit großem Textfeld.' },
-    ],
-  },
-  {
-    version: '1.9.0',
-    items: [
-      { lead: 'FAST4D und LAMS:', text: 'zwei Funktionen für die Schlaganfall-Erhebung. Befunde antippen, das Ergebnis steht als eine Zeile im Protokolltext.' },
-      { lead: 'Funktionen starten auf Wunsch auf „nicht erhoben“', text: 'und kommen erst ins Protokoll, wenn du sie einschaltest.' },
-      { lead: 'Vorlagen teilen:', text: 'Ein angetippter Vorlagen-Link öffnet die App und fragt vor dem Import nach.' },
-      { lead: 'Sicherungen:', text: 'Alte Sicherungen lassen sich nach einer selbst gewählten Frist automatisch löschen.' },
     ],
   },
 ]
@@ -284,7 +284,7 @@ function onTouchEnd(e: TouchEvent): void {
                   </svg>
                 </span>
                 <p class="text-sm">
-                  Medikationsplan mit Scan, NEWS2, LAMS, FAST4D und Pack-Years fügst du als <strong>Funktionen</strong> in deine Vorlage ein.
+                  Medikationsplan mit Scan, NEWS2, LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS, BMI und Pack-Years fügst du als <strong>Funktionen</strong> in deine Vorlage ein.
                 </p>
               </div>
             </div>

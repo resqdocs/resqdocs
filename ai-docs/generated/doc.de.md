@@ -29,6 +29,10 @@ Grund: Manche Funktionen kommen erst mit App-Updates dazu. Eine **Funktion** (de
 | NEWS2 | `news2` | 1.1.0 |
 | LAMS | `lams` | 1.9.0 |
 | FAST4D | `fast4d` | 1.9.0 |
+| ZOPS | `zops` | 1.12.0 |
+| Sgarbossa (mod. nach Smith) | `sgarbossa` | 1.12.0 |
+| EGSYS | `egsys` | 1.12.0 |
+| BMI | `bmi` | 1.12.0 |
 
 Zusätzlich sind einzelne **Eigenschaften** erst ab einer Mindestversion verfügbar:
 
@@ -156,7 +160,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `dependsOn` (Dependency): Abhaengigkeit von Auswahlfeldern (siehe Dependency).
 - `defaultWhen` (Liste): Abhaengiger Standardwert: die ERSTE zutreffende Regel ersetzt `default`, solange das Feld auf dem Standardwert steht. Bei einem Auswahlfeld muss `value` eine seiner Optionen sein. Aeltere App-Versionen ignorieren die Angabe und nehmen `default`.
 
-#### FunctionNode — Spezial-Funktion (functionKind: "medikamentenplan", "aerzte", "packYears", "news2", "lams", "fast4d")
+#### FunctionNode — Spezial-Funktion (functionKind: "medikamentenplan", "aerzte", "packYears", "news2", "lams", "fast4d", "zops", "sgarbossa", "egsys", "bmi")
 - `type` (immer "function") — Pflicht
 - `id` (string) — Pflicht
 - `title` (string)
@@ -166,7 +170,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `inline` (boolean): Layout relativ zum vorhergehenden Geschwister: block (Default, neue Zeile) vs inline (anhaengen). Wirkt wie beim Feld: auch mehrzeilige Listen-Funktionen (Medikamentenplan/ Aerzte) koennen inline an die laufende Zeile - nur ein Titel-Banner (Titel auf eigener Zeile) bleibt Block.
 - `noSeparatorBefore` (boolean): Kein Feld-Trenner VOR dieser Funktion (klebt ans vorherige inline-Element).
 - `blankLineBefore` (boolean): Optische Leerzeile (Absatz) VOR der Funktion - nur bei Titel-Banner der Funktion und wenn darueber etwas ausgegeben wird (Basis-Regel oben; ohne Banner still ohne Wirkung, wie beim Feld).
-- `functionKind` (eines von "medikamentenplan", "aerzte", "packYears", "news2", "lams", "fast4d") — Pflicht
+- `functionKind` (eines von "medikamentenplan", "aerzte", "packYears", "news2", "lams", "fast4d", "zops", "sgarbossa", "egsys", "bmi") — Pflicht
 - `config` (FunctionConfig): Ausgabe-Formatierung der Funktions-Zeilen (Layout/Trenner/Praefix/Suffix).
 - `default` (string): Standardtext: Fallback-Body, wenn die Funktion im Einsatz nichts ausgibt (analog Field.default / Container.emptyText) - Listen-Funktionen ohne Eintraege ODER Rechner ohne Ergebnis. Erfasste Werte/Zeilen haben Vorrang. Gilt fuer ALLE functionKinds.
 - `required` (boolean): Pflicht (analog Field.required): der −-Zustand (nicht erhoben) entfaellt im Einsatz; ✓/✎ bleiben. „Erfuellt" = die Funktion liefert nicht-leeren Ausgabetext (Zeilen ODER Freitext ODER Standardtext). Rein additiv, kein Submit-Gate; nur visuelle „noch offen"-Markierung.
@@ -185,6 +189,8 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `rowSeparator` (string): Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> " · " (Mittelpunkt: hebt die Zeilengrenze vom Komma im Zeilenformat "Name Staerke, Schema" ab).
 - `rowPrefix` (string): Praefix je Zeile bei rowLayout='block'.
 - `rowSuffix` (string): Suffix je Zeile bei rowLayout='block'.
+- `thresholdText` (string): Text, den ein Score ab seiner Schwelle anhaengt (z. B. EGSYS ab 3 Punkten). Nur fuer Funktionen, die in der Registry `thresholdText` anbieten. Fehlt oder leer -> Standardtext der Funktion.
+- `lineEnd` (string): Zeichen am Ende der Ergebniszeile (alle einzeiligen Funktionen, Registry `lineEnd`). Fehlt -> Standard der Funktion (je nach Funktion '.' oder nichts); leer ('') -> nichts am Ende.
 
 **Nicht im Format:** Variablen, Platzhalter im Text, Bedingungen (z. B. `visibleIf`), wiederholbare Messwertgruppen und eine eigene Vitalwerte-Funktion gibt es nicht. Biete sie nicht an und bilde sie nicht nach; Messwerte sind normale Felder.
 
@@ -579,7 +585,11 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
         "packYears",
         "news2",
         "lams",
-        "fast4d"
+        "fast4d",
+        "zops",
+        "sgarbossa",
+        "egsys",
+        "bmi"
       ],
       "description": "Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan). functionKind = innerer Diskriminator (waechst), aufgeloest ueber die Funktions-Registry. Immer Block."
     },
@@ -605,6 +615,14 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
         "rowSuffix": {
           "type": "string",
           "description": "Suffix je Zeile bei rowLayout='block'."
+        },
+        "thresholdText": {
+          "type": "string",
+          "description": "Text, den ein Score ab seiner Schwelle anhaengt (z. B. EGSYS ab 3 Punkten). Nur fuer Funktionen, die in der Registry `thresholdText` anbieten. Fehlt oder leer -> Standardtext der Funktion."
+        },
+        "lineEnd": {
+          "type": "string",
+          "description": "Zeichen am Ende der Ergebniszeile (alle einzeiligen Funktionen, Registry `lineEnd`). Fehlt -> Standard der Funktion (je nach Funktion '.' oder nichts); leer ('') -> nichts am Ende."
         }
       },
       "additionalProperties": false,
@@ -643,7 +661,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - **Startet ohne Auswahl?** (`defaultEmpty`, ab App 1.6.0, nur mit `multiple`) — Nichts ist vorausgewählt; ohne Auswahl gibt das Feld nichts aus. *Beispiel: Einsatzcodes, bei denen eine Vorauswahl etwas Falsches dokumentieren würde.*
 
 ### Nur Funktionen
-- **Welche Funktionen gibt es?** Medikationsplan (`medikamentenplan`): Medikamentenliste, in der App auch per Scan. Kontakte/Ärzte (`aerzte`): Liste aus Ärzten und Angehörigen. Pack-Years (`packYears`, ab App 1.1.0): Rechner aus Zigaretten pro Tag und Jahren. NEWS2 (`news2`, ab App 1.1.0): Score aus den Vitalwerten. LAMS (`lams`, ab App 1.9.0): Score 0–5 aus Gesicht, Armhalteversuch und Händedruck, gibt die Befunde mit aus. FAST4D (`fast4d`, ab App 1.9.0): Schlaganfall-Screening aus sieben Befunden (unauffällig / auffällig / nicht prüfbar) plus Zeitangabe, positiv ab einem auffälligen Befund; kein Punktescore.
+- **Welche Funktionen gibt es?** Medikationsplan (`medikamentenplan`): Medikamentenliste, in der App auch per Scan. Kontakte/Ärzte (`aerzte`): Liste aus Ärzten und Angehörigen. Pack-Years (`packYears`, ab App 1.1.0): Rechner aus Zigaretten pro Tag und Jahren. NEWS2 (`news2`, ab App 1.1.0): Score aus den Vitalwerten. LAMS (`lams`, ab App 1.9.0): Score 0–5 aus Gesicht, Armhalteversuch und Händedruck, gibt die Befunde mit aus. FAST4D (`fast4d`, ab App 1.9.0): Schlaganfall-Screening aus sieben Befunden (unauffällig / auffällig / nicht prüfbar) plus Zeitangabe, positiv ab einem auffälligen Befund; kein Punktescore. ZOPS (`zops`, ab App 1.12.0): Orientierung zu Zeit, Ort, Person und Situation (orientiert / nicht orientiert / nicht prüfbar); die Ausgabe nennt nur die Abweichung, kein Punktwert. Sgarbossa (`sgarbossa`, ab App 1.12.0): EKG-Kriterien bei Linksschenkelblock in der Fassung nach Smith, drei Kriterien (erfüllt / nicht erfüllt / nicht beurteilbar), positiv ab einem erfüllten; kein Punktwert; Zeilenende über `config.lineEnd` (Standard „.“). EGSYS (`egsys`, ab App 1.12.0): Punktwert aus sechs Anamnese-Punkten bei Synkope (Ja/Nein), gibt die Befunde mit aus und hängt ab 3 Punkten einen Text an (Standard „- kardiale Synkope wahrscheinlich“, eigener Text über `config.thresholdText`); das Zeichen am Zeilenende legt `config.lineEnd` fest (Standard „.“, leer = nichts). BMI (`bmi`, ab App 1.12.0): Body-Mass-Index aus Gewicht (kg) und Größe (cm) mit WHO-Klasse für Erwachsene, z. B. „BMI 24,7 (Normalgewicht; 80 kg, 180 cm)“.
 - **Text, wenn nichts erfasst ist?** (`default`, ab App 1.1.1) — Steht in der Ausgabe, wenn die Funktion keine Einträge oder kein Ergebnis hat. *Beispiel: „keine Dauermedikation bekannt“.*
 - **Darf nicht still entfallen?** (`required`, ab App 1.2.0) — Wie beim Pflichtfeld.
 - **Erst bei Bedarf einschalten?** (`defaultExcluded`, ab App 1.9.0) — Die Funktion startet auf „nicht erhoben“ und kommt erst in die Ausgabe, wenn der Nutzer sie einschaltet oder Daten erfasst. Nicht zusammen mit `required`. Für ältere App-Versionen: Lege die Funktion in einen eigenen Abschnitt mit `excludable` und `defaultExcluded`.
@@ -663,7 +681,7 @@ Die App rendert die Vorlage zu Klartext. Regeln:
 - **Nicht erhoben (`excludable`):** ein als „−" markierter Container entfällt komplett (inkl. Kinder) in der Ausgabe.
 - **`emptyText`:** Ersatztext, wenn der Container angezeigt wird, seine Kinder aber nichts ausgeben.
 - **Feld-Wert:** im Standard der `default` (bzw. `options[0]`, mit `defaultEmpty` nichts); `options` macht das Feld zu einem Select; `allowCustom` erlaubt zusätzlich Freitext; `multiline` ist mehrzeiliger Freitext.
-- **FunctionNode:** Medikationsplan/Ärzte rendern ihre Zeilen; `config.rowLayout` = `block` (untereinander, optional `rowPrefix`/`rowSuffix` je Zeile) oder `inline` (eine Zeile, getrennt mit `rowSeparator`). Pack-Years, NEWS2, LAMS und FAST4D geben ihr Ergebnis aus; ohne Einträge oder Ergebnis erscheint der `default`. LAMS und FAST4D lesen sich am besten als eine Zeile („LAMS 4/5 (…)“, „FAST4D positiv (…)“): `titleInline: true` und `heading` mit `"prefix": ""`, `"suffix": " "`.
+- **FunctionNode:** Medikationsplan/Ärzte rendern ihre Zeilen; `config.rowLayout` = `block` (untereinander, optional `rowPrefix`/`rowSuffix` je Zeile) oder `inline` (eine Zeile, getrennt mit `rowSeparator`). Pack-Years, NEWS2, LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS und BMI geben ihr Ergebnis aus; das Zeichen am Ende ihrer Zeile legt `config.lineEnd` fest (fehlt = wie bisher, leer = nichts); ohne Einträge oder Ergebnis erscheint der `default`. LAMS, FAST4D, ZOPS, Sgarbossa und EGSYS lesen sich am besten als eine Zeile („LAMS 4/5 (…)“, „FAST4D positiv (…)“, „ZOPS orientiert.“, „Sgarbossa (mod. nach Smith) negativ.“): `titleInline: true` und `heading` mit `"prefix": ""`, `"suffix": " "`.
 
 ### Durchgerechnetes Beispiel (JSON → exakte Ausgabe)
 

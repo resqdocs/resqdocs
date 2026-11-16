@@ -1,0 +1,22 @@
+{
+  "name": "ResQDocs Vorlagen mit KI",
+  "short_name": "Vorlagen mit KI",
+  "description": "ResQDocs-Protokoll-Vorlagen mit deinem eigenen KI-Assistenten erstellen: Prompt kopieren, in ChatGPT, Claude oder Gemini einfügen, Vorlage importieren. Ohne Login.",
+  "lang": "de",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#ffffff",
+  "theme_color": "#1b2c56",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

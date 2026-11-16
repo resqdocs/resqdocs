@@ -2,9 +2,9 @@
 // Body-Render (Klartext der Daten, OHNE Titel) + hasData. Die Einsatz-Komponente (Vue) liegt getrennt
 // (EinsatzFunction.vue), damit der pure Kern (render.ts/deviations.ts) testbar bleibt. Erweiterbar:
 // eine neue Funktion = ein neuer FunctionKind + ein Eintrag hier (Kern bleibt unberuehrt).
-import type { FunctionKind, FunctionNode, FieldFill, MedikamenteRow, ArztRow, PackYearsRow, NEWS2Row, LAMSRow, FAST4DRow, FunctionRow, FunctionConfig } from '../model.ts'
+import type { FunctionKind, FunctionNode, FieldFill, MedikamenteRow, ArztRow, PackYearsRow, NEWS2Row, LAMSRow, FAST4DRow, ZOPSRow, SgarbossaRow, EGSYSRow, BMIRow, FunctionRow, FunctionConfig } from '../model.ts'
 import { DEFAULT_HEADING } from '../model.ts'
-import { packYears, packYearsShort, news2, lams, fast4d } from '../tools/scores.mjs'
+import { packYears, packYearsShort, bmi, news2, lams, fast4d, zops, sgarbossa, egsys, EGSYS_DEFAULT_TEXT } from '../tools/scores.mjs'
 
 /** Inline-Default fuer FUNKTIONS-Zeilen: Mittelpunkt statt DEFAULT_SEPARATOR ", " - das Komma ist
  *  seit dem Zeilenformat "Name Staerke, Schema" die Grenze INNERHALB einer Zeile; als
@@ -31,13 +31,28 @@ export interface FunctionDef {
    *  (NEWS2: niedrig->success, mittel->warning, hoch->error). Rein visuell in der App - die Text-/Export-
    *  Ausgabe traegt keine Farbe. Fehlt/undefined -> kein Farbakzent. */
   accent?(fill: FieldFill | undefined): 'success' | 'warning' | 'error' | undefined
+  /** Optional: Der Score haengt ab seiner Schwelle einen Text an, den die Vorlage aendern darf
+   *  (config.thresholdText). `standard` = Text ohne eigene Angabe, `label` = Beschriftung im Editor. */
+  thresholdText?: { standard: string; label: string }
+  /** Optional: Das Zeichen am Ende der Ergebniszeile darf die Vorlage waehlen (config.lineEnd).
+   *  `standard` gilt ohne eigene Angabe, `label` = Beschriftung im Editor. */
+  lineEnd?: { standard: string; label: string }
   /** Optionale Start-Formatierung des Titels beim ANLEGEN der Funktion (createFunction mischt sie ein).
    *  Als Funktion, damit jeder neue Knoten ein eigenes heading-Objekt bekommt (keine geteilte Referenz).
    *  Fehlt -> Titel als Banner in eigener Zeile (wie bisher). Im Editor frei aenderbar. */
   createDefaults?(): Partial<Pick<FunctionNode, 'titleInline' | 'heading'>>
 }
 
-/** Start-Formatierung der Befund-Scores (LAMS/FAST4D): Titel OHNE Markdown-Praefix inline vor dem
+/** Zeilenende aus der Vorlage (config.lineEnd) auf eine fertige Ergebniszeile anwenden: das Standard-
+ *  Ende der Funktion abschneiden und das gewaehlte anhaengen. Ohne Angabe bleibt die Zeile wie sie ist
+ *  (rueckwaerts kompatibel). Fuer Funktionen, deren Rechenkern das Zeilenende nicht selbst kennt. */
+function applyLineEnd(body: string, standard: string, config?: FunctionConfig): string {
+  if (!body || config?.lineEnd === undefined) return body
+  const base = standard && body.endsWith(standard) ? body.slice(0, -standard.length) : body
+  return base + config.lineEnd
+}
+
+/** Start-Formatierung der Befund-Funktionen (LAMS/FAST4D/ZOPS): Titel OHNE Markdown-Praefix inline vor dem
  *  Ergebnis -> eine Zeile „LAMS 4/5 (…)" statt Banner + Zeile. So steht die Zeile im Freitext des
  *  Protokolls wie von Hand geschrieben. */
 function inlineTitleDefaults(): Partial<Pick<FunctionNode, 'titleInline' | 'heading'>> {
@@ -188,14 +203,15 @@ function packYearsComplete(r: PackYearsRow | undefined): r is Required<PackYears
  *  aus dem FunctionNode (renderFunction). Rechenkern scores.packYears bleibt unveraendert. */
 const packYearsFn: FunctionDef = {
   label: 'Pack-Years',
+  lineEnd: { standard: '', label: 'Zeilenende' },
   singleLine: true,
   // Editor-Vorschau: 30 Zig./Tag × 15 J. = 22,5 -> „ca. 23 py" (zeigt das gerundete Format inkl. „ca.").
   sampleFill: () => ({ state: 'function', rows: [{ cigarettesPerDay: 30, years: 15 }] }),
-  renderBody(fill) {
+  renderBody(fill, config) {
     const r = scoreRow<PackYearsRow>(fill)
     if (!packYearsComplete(r)) return ''
     const { raw } = packYears({ cigarettesPerDay: r.cigarettesPerDay, years: r.years })
-    return `${packYearsShort(raw)} (${r.cigarettesPerDay}/Tag, ${r.years} J.)`
+    return applyLineEnd(`${packYearsShort(raw)} (${r.cigarettesPerDay}/Tag, ${r.years} J.)`, '', config)
   },
   hasData(fill) {
     return packYearsComplete(scoreRow<PackYearsRow>(fill))
@@ -217,14 +233,15 @@ function news2Complete(r: NEWS2Row | undefined): r is NEWS2Row & Required<Pick<N
  *  Der Titel kommt wie bei jedem Knoten aus dem FunctionNode (renderFunction). */
 const news2Fn: FunctionDef = {
   label: 'NEWS2',
+  lineEnd: { standard: '', label: 'Zeilenende' },
   singleLine: true,
   // Editor-Vorschau: moderate Beispielwerte -> „6 (Risiko mittel)".
   sampleFill: () => ({ state: 'function', rows: [{ rr: 22, spo2: 92, systolic: 108, pulse: 95, temp: 37.0, consciousness: 'A', onOxygen: false, scale2: false }] }),
-  renderBody(fill) {
+  renderBody(fill, config) {
     const r = scoreRow<NEWS2Row>(fill)
     if (!news2Complete(r)) return ''
     // .body = NUR Score + Risiko (die Vitalwerte stehen separat im Protokoll); der FunctionNode-Titel liefert das Label.
-    return news2({ rr: r.rr, spo2: r.spo2, systolic: r.systolic, pulse: r.pulse, temp: r.temp, consciousness: r.consciousness, onOxygen: r.onOxygen, scale2: r.scale2 }).body
+    return applyLineEnd(news2({ rr: r.rr, spo2: r.spo2, systolic: r.systolic, pulse: r.pulse, temp: r.temp, consciousness: r.consciousness, onOxygen: r.onOxygen, scale2: r.scale2 }).body, '', config)
   },
   hasData(fill) {
     return news2Complete(scoreRow<NEWS2Row>(fill))
@@ -250,14 +267,15 @@ function lamsComplete(r: LAMSRow | undefined): r is Required<LAMSRow> {
  *  (docs/medical-sources.md, Llanes 2004 / Nour 2018) und bleiben unveraendert. */
 const lamsFn: FunctionDef = {
   label: 'LAMS',
+  lineEnd: { standard: '', label: 'Zeilenende' },
   singleLine: true,
   createDefaults: inlineTitleDefaults,
   // Editor-Vorschau: 1 + 2 + 1 = 4 -> zeigt Befunde UND den LVO-Hinweis.
   sampleFill: () => ({ state: 'function', rows: [{ lamsFace: 1, lamsArm: 2, lamsGrip: 1 }] }),
-  renderBody(fill) {
+  renderBody(fill, config) {
     const r = scoreRow<LAMSRow>(fill)
     if (!lamsComplete(r)) return ''
-    return lams({ face: r.lamsFace, arm: r.lamsArm, grip: r.lamsGrip }).body
+    return applyLineEnd(lams({ face: r.lamsFace, arm: r.lamsArm, grip: r.lamsGrip }).body, '', config)
   },
   hasData(fill) {
     return lamsComplete(scoreRow<LAMSRow>(fill))
@@ -301,6 +319,7 @@ function fast4dResult(r: Fast4dCompleteRow): ReturnType<typeof fast4d> {
  *  …. Symptombeginn 14:30." Die Zeit steht in der Zeile, zaehlt aber nicht zum Ergebnis. */
 const fast4dFn: FunctionDef = {
   label: 'FAST4D',
+  lineEnd: { standard: '.', label: 'Zeilenende' },
   singleLine: true,
   createDefaults: inlineTitleDefaults,
   // Editor-Vorschau: zeigt Befunde mit Seite, „nicht prüfbar" und die Zeitangabe.
@@ -311,10 +330,10 @@ const fast4dFn: FunctionDef = {
       fastFaceSide: 're', fastArmSide: 're', fastTimeMode: 'onset', fastTime: '14:30',
     }],
   }),
-  renderBody(fill) {
+  renderBody(fill, config) {
     const r = scoreRow<FAST4DRow>(fill)
     if (!fast4dComplete(r)) return ''
-    return fast4dResult(r).body
+    return applyLineEnd(fast4dResult(r).body, '.', config)
   },
   hasData(fill) {
     return fast4dComplete(scoreRow<FAST4DRow>(fill))
@@ -332,6 +351,173 @@ const fast4dFn: FunctionDef = {
   },
 }
 
+const ZOPS_KEYS = ['zopsTime', 'zopsPlace', 'zopsPerson', 'zopsSituation'] as const
+type ZopsCompleteRow = ZOPSRow & Required<Pick<ZOPSRow, (typeof ZOPS_KEYS)[number]>>
+
+/** Vollstaendige ZOPS-Eingabe? (alle vier Punkte gewaehlt). scores.zops wirft sonst - darum VOR dem
+ *  Aufruf pruefen (wie fast4dComplete). */
+function zopsComplete(r: ZOPSRow | undefined): r is ZopsCompleteRow {
+  return !!r && ZOPS_KEYS.every((k) => ['ok', 'no', 'na'].includes(r[k] as string))
+}
+function zopsResult(r: ZopsCompleteRow): ReturnType<typeof zops> {
+  return zops({ time: r.zopsTime, place: r.zopsPlace, person: r.zopsPerson, situation: r.zopsSituation })
+}
+
+/** ZOPS (Orientierung zu Zeit, Ort, Person, Situation): vier Befunde, KEIN Punktwert, keine Schwelle.
+ *  Die Ausgabe nennt nur die Abweichung: „orientiert." im Normalfall, sonst „nicht orientiert zu: Zeit;
+ *  nicht prüfbar: Situation." (docs/medical-sources.md). */
+const zopsFn: FunctionDef = {
+  label: 'ZOPS',
+  lineEnd: { standard: '.', label: 'Zeilenende' },
+  singleLine: true,
+  createDefaults: inlineTitleDefaults,
+  // Editor-Vorschau: zeigt eine Abweichung und einen nicht pruefbaren Punkt.
+  sampleFill: () => ({
+    state: 'function',
+    rows: [{ zopsTime: 'no', zopsPlace: 'ok', zopsPerson: 'ok', zopsSituation: 'na' }],
+  }),
+  renderBody(fill, config) {
+    const r = scoreRow<ZOPSRow>(fill)
+    if (!zopsComplete(r)) return ''
+    return applyLineEnd(zopsResult(r).body, '.', config)
+  },
+  hasData(fill) {
+    return zopsComplete(scoreRow<ZOPSRow>(fill))
+  },
+  // Ampel wie bei FAST4D: mindestens ein Punkt nicht orientiert -> gelb; zu ALLEN vier orientiert ->
+  // gruen; nichts auffaellig, aber etwas nicht pruefbar -> keine Farbe. Kein Rot: es gibt keine
+  // Abstufung nach Anzahl. Nur App, nicht der Text.
+  accent(fill) {
+    const r = scoreRow<ZOPSRow>(fill)
+    if (!zopsComplete(r)) return undefined
+    const { oriented, notOriented } = zopsResult(r)
+    if (notOriented.length) return 'warning'
+    return oriented ? 'success' : undefined
+  },
+}
+
+const SGARBOSSA_KEYS = ['sgbConcordantElevation', 'sgbConcordantDepression', 'sgbDiscordantElevation'] as const
+type SgarbossaCompleteRow = SgarbossaRow & Required<Pick<SgarbossaRow, (typeof SGARBOSSA_KEYS)[number]>>
+
+/** Vollstaendige Sgarbossa-Eingabe? (alle drei Kriterien gewaehlt). scores.sgarbossa wirft sonst. */
+function sgarbossaComplete(r: SgarbossaRow | undefined): r is SgarbossaCompleteRow {
+  return !!r && SGARBOSSA_KEYS.every((k) => ['pos', 'neg', 'na'].includes(r[k] as string))
+}
+function sgarbossaResult(r: SgarbossaCompleteRow, config?: FunctionConfig): ReturnType<typeof sgarbossa> {
+  return sgarbossa({
+    concordantElevation: r.sgbConcordantElevation,
+    concordantDepression: r.sgbConcordantDepression,
+    discordantElevation: r.sgbDiscordantElevation,
+  }, config?.lineEnd)
+}
+
+/** Sgarbossa-Kriterien, modifiziert nach Smith (Infarktzeichen bei Linksschenkelblock oder
+ *  Schrittmacher-Rhythmus): drei gleichwertige Kriterien, positiv ab EINEM, kein Punktwert
+ *  (docs/medical-sources.md: Sgarbossa 1996, Smith 2012). Ein negatives Ergebnis schliesst einen
+ *  Verschluss nicht aus - darum wird negativ nie gruen, und das Eingabeblatt zeigt dann den Hinweis
+ *  (SGARBOSSA_NEGATIVE_HINT) bei der Auswertung. */
+const sgarbossaFn: FunctionDef = {
+  label: 'Sgarbossa (mod. nach Smith)',
+  singleLine: true,
+  createDefaults: inlineTitleDefaults,
+  lineEnd: { standard: '.', label: 'Zeilenende' },
+  // Editor-Vorschau: ein erfuelltes und ein nicht beurteilbares Kriterium.
+  sampleFill: () => ({
+    state: 'function',
+    rows: [{ sgbConcordantElevation: 'pos', sgbConcordantDepression: 'neg', sgbDiscordantElevation: 'na' }],
+  }),
+  renderBody(fill, config) {
+    const r = scoreRow<SgarbossaRow>(fill)
+    if (!sgarbossaComplete(r)) return ''
+    return sgarbossaResult(r, config).body
+  },
+  hasData(fill) {
+    return sgarbossaComplete(scoreRow<SgarbossaRow>(fill))
+  },
+  // Ampel: mindestens ein Kriterium erfuellt -> rot (belegte Regel: ein Kriterium genuegt). Negativ
+  // bekommt KEINE Farbe und nie Gruen: es schliesst einen Verschluss nicht aus. Nur App, nicht der Text.
+  accent(fill) {
+    const r = scoreRow<SgarbossaRow>(fill)
+    if (!sgarbossaComplete(r)) return undefined
+    return sgarbossaResult(r).positive ? 'error' : undefined
+  },
+}
+
+const EGSYS_KEYS = ['egsysPalpitations', 'egsysHeartDisease', 'egsysEffort', 'egsysSupine', 'egsysTriggers', 'egsysProdromes'] as const
+type EgsysCompleteRow = EGSYSRow & Required<Pick<EGSYSRow, (typeof EGSYS_KEYS)[number]>>
+
+/** Vollstaendige EGSYS-Eingabe? (alle sechs Punkte beantwortet). scores.egsys wirft sonst. */
+function egsysComplete(r: EGSYSRow | undefined): r is EgsysCompleteRow {
+  return !!r && EGSYS_KEYS.every((k) => r[k] === 'yes' || r[k] === 'no')
+}
+function egsysResult(r: EgsysCompleteRow, config?: FunctionConfig): ReturnType<typeof egsys> {
+  return egsys({
+    palpitations: r.egsysPalpitations,
+    heartDisease: r.egsysHeartDisease,
+    effort: r.egsysEffort,
+    supine: r.egsysSupine,
+    triggers: r.egsysTriggers,
+    prodromes: r.egsysProdromes,
+  }, config?.thresholdText, config?.lineEnd)
+}
+
+/** EGSYS (Synkope: Hinweise auf kardiale Ursache): sechs Anamnese-Punkte, Summe -2 bis +12, ab 3 Punkten
+ *  einen Text, standardmaessig „- kardiale Synkope wahrscheinlich", in der Vorlage frei aenderbar
+ *  (config.thresholdText; Del Rosso et al. 2008, docs/medical-sources.md). Ausgabe MIT Befunden wie bei
+ *  LAMS. Unter 3 Punkten ist nichts ausgeschlossen - darum gibt es kein Gruen, und das Eingabeblatt
+ *  zeigt dann den Hinweis (EGSYS_LOW_HINT) bei der Auswertung. */
+const egsysFn: FunctionDef = {
+  label: 'EGSYS',
+  singleLine: true,
+  createDefaults: inlineTitleDefaults,
+  thresholdText: { standard: EGSYS_DEFAULT_TEXT, label: 'Text ab 3 Punkten' },
+  lineEnd: { standard: '.', label: 'Zeilenende' },
+  // Editor-Vorschau: ueber der Schwelle, mit zwei Befunden.
+  sampleFill: () => ({
+    state: 'function',
+    rows: [{ egsysPalpitations: 'yes', egsysHeartDisease: 'yes', egsysEffort: 'no', egsysSupine: 'no', egsysTriggers: 'no', egsysProdromes: 'no' }],
+  }),
+  renderBody(fill, config) {
+    const r = scoreRow<EGSYSRow>(fill)
+    if (!egsysComplete(r)) return ''
+    return egsysResult(r, config).body
+  },
+  hasData(fill) {
+    return egsysComplete(scoreRow<EGSYSRow>(fill))
+  },
+  // Ampel: ab 3 Punkten rot (belegte Schwelle). Darunter KEINE Farbe und nie Gruen: ein niedriger Wert
+  // schliesst eine kardiale Synkope nicht aus. Nur App, nicht der Text.
+  accent(fill) {
+    const r = scoreRow<EGSYSRow>(fill)
+    if (!egsysComplete(r)) return undefined
+    return egsysResult(r).cardiacSuspected ? 'error' : undefined
+  },
+}
+
+/** Vollstaendige BMI-Eingabe? Gewicht und Groesse endlich und > 0. scores.bmi wirft sonst. */
+function bmiComplete(r: BMIRow | undefined): r is BMIRow & Required<BMIRow> {
+  return !!r && Number.isFinite(r.bmiWeight) && r.bmiWeight! > 0 && Number.isFinite(r.bmiHeight) && r.bmiHeight! > 0
+}
+
+/** BMI (Body-Mass-Index): kg/m² mit WHO-Klasse fuer Erwachsene (docs/medical-sources.md, WHO TRS 894).
+ *  Ausgabe wie der fruehere BMI-Rechner: „BMI 24,7 (Normalgewicht; 80 kg, 180 cm)". Keine Farbe: die
+ *  Klasse ist eine Einordnung, keine Warnstufe. */
+const bmiFn: FunctionDef = {
+  label: 'BMI',
+  singleLine: true,
+  createDefaults: inlineTitleDefaults,
+  lineEnd: { standard: '', label: 'Zeilenende' },
+  sampleFill: () => ({ state: 'function', rows: [{ bmiWeight: 80, bmiHeight: 180 }] }),
+  renderBody(fill, config) {
+    const r = scoreRow<BMIRow>(fill)
+    if (!bmiComplete(r)) return ''
+    return applyLineEnd(bmi({ weightKg: r.bmiWeight, heightCm: r.bmiHeight }).body, '', config)
+  },
+  hasData(fill) {
+    return bmiComplete(scoreRow<BMIRow>(fill))
+  },
+}
+
 export const FUNCTION_REGISTRY: Record<FunctionKind, FunctionDef> = {
   medikamentenplan,
   aerzte,
@@ -339,4 +525,8 @@ export const FUNCTION_REGISTRY: Record<FunctionKind, FunctionDef> = {
   news2: news2Fn,
   lams: lamsFn,
   fast4d: fast4dFn,
+  zops: zopsFn,
+  sgarbossa: sgarbossaFn,
+  egsys: egsysFn,
+  bmi: bmiFn,
 }

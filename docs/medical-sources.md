@@ -92,6 +92,129 @@
   - **Hilfstexte im Eingabeblatt** sind eigene Formulierungen, keine Übernahme
     aus Taschenkarten.
 
+## ZOPS
+
+ZOPS ist eine Merkhilfe für die Orientierung: **Z**eit, **O**rt, **P**erson, **S**ituation (auch als
+ZÖSP oder ZSOP geläufig). Es ist **kein Score**: Es gibt keinen Punktwert, keine Schwelle und keine
+Einstufung, die sich belegen ließe. Die App erfasst je Punkt nur, was erhoben wurde.
+
+**Fundstellen (Nachschlagewerke, keine Primärquelle; abgerufen 2026-11-15):**
+
+- DocCheck Flexikon, „ZOPS-Schema": Einsatz im Rettungsdienst zur Beurteilung der zeitlichen,
+  örtlichen, situativen und persönlichen Orientierung, mit Beispielfragen je Punkt
+  (<https://flexikon.doccheck.com/de/ZOPS-Schema>).
+- AMBOSS, SOP „Akute qualitative Bewusstseinsstörung": Orientierungsprüfung zeitlich, örtlich, zur
+  Person und zur Situation
+  (<https://www.amboss.com/de/wissen/akute-qualitative-bewusstseinsstorung-amboss-sop/>).
+
+**Bewusste App-Entscheidungen (Maintainer, 2026-11-15):**
+
+- Name und Reihenfolge: ZOPS (Zeit, Ort, Person, Situation).
+- Drei Stufen je Punkt: orientiert / nicht orientiert / nicht prüfbar. Kein Punkt ist vorbelegt.
+- Die Ausgabe nennt nur die Abweichung: „ZOPS orientiert." im Normalfall, sonst „ZOPS nicht orientiert
+  zu: Zeit; nicht prüfbar: Situation." Ist nichts auffällig, aber nicht alles prüfbar, steht genau da,
+  wozu die Orientierung feststeht („orientiert zu: Zeit, Ort, Person; nicht prüfbar: Situation.").
+- Kein Zähler („3/4") und kein Hinweis auf Ursachen oder Maßnahmen.
+- Hilfetexte im Eingabeblatt sind eigene Formulierungen (Beispielfragen), keine Zitate.
+- Farbe nur in der App, wie bei FAST4D: Grün, wenn zu allen vier Punkten orientiert; Gelb bei mindestens
+  einem „nicht orientiert"; ohne Farbe, wenn nichts auffällig, aber nicht alles prüfbar war. Kein Rot.
+
+
+## Sgarbossa (modifiziert nach Smith)
+
+EKG-Kriterien für einen akuten Infarkt bei Linksschenkelblock. Die App fragt die **modifizierte Fassung
+nach Smith** ab: drei gleichwertige Kriterien, **positiv ab einem erfüllten**, kein Punktwert.
+
+| Nr. | Kriterium | Quelle |
+|---|---|---|
+| 1 | Konkordante ST-Hebung von mindestens 1 mm | Sgarbossa 1996 |
+| 2 | ST-Senkung von mindestens 1 mm in V1, V2 oder V3 | Sgarbossa 1996 |
+| 3 | Diskordante ST-Hebung im Verhältnis zur S-Zacke, ST/S ≤ −0,25 (mindestens 25 % der S-Zacke, bei mindestens 1 mm diskordanter Abweichung) | Smith 2012 |
+
+**Quellen (Zusammenfassungen über Europe PMC gelesen, 2026-11-15):**
+
+- Sgarbossa EB, Pinski SL, Barbagelata A, et al. Electrocardiographic diagnosis of evolving acute
+  myocardial infarction in the presence of left bundle-branch block. N Engl J Med 1996;334:481-487.
+  PMID 8559200. Nennt die drei ursprünglichen Kriterien (drittes: diskordante ST-Hebung ab 5 mm) und
+  ein Punktesystem von 0 bis 10. Die Gewichte (5/3/2, positiv ab 3) stehen im Volltext, den wir nicht
+  einsehen konnten; die App nutzt sie nicht.
+- Smith SW, Dodd KW, Henry TD, Dvorak DM, Pearce LA. Diagnosis of ST-elevation myocardial infarction in
+  the presence of left bundle branch block with the ST-elevation to S-wave ratio in a modified Sgarbossa
+  rule. Ann Emerg Med 2012;60:766-776. PMID 22939607. Ersetzt das dritte Kriterium durch das
+  ST/S-Verhältnis, Grenzwert −0,25; „The revised rule is unweighted, requiring just 1 of 3 criteria."
+  33 EKGs mit Verschluss, 129 Kontrollen.
+- Meyers HP, Limkakeng AT, Jaffa EJ, et al. Validation of the modified Sgarbossa criteria for acute
+  coronary occlusion in the setting of left bundle branch block. Am Heart J 2015;170:1255-1264.
+  PMID 26678648. Sensitivität der modifizierten Kriterien 80 %, der ursprünglichen gewichteten 49 %.
+- Dodd KW, Zvosec DL, Hart MA, et al. Electrocardiographic Diagnosis of Acute Coronary Occlusion
+  Myocardial Infarction in Ventricular Paced Rhythm Using the Modified Sgarbossa Criteria. Ann Emerg Med
+  2021;78:517-529. PMID 34172301. Grundlage für den Hinweis „oder Schrittmacher-Rhythmus" im Blatt
+  (nur der Titel wurde geprüft, nicht die Ergebnisse).
+
+**Bewusste App-Entscheidungen (Maintainer, 2026-11-15):**
+
+- Fassung: modifiziert nach Smith. Die ursprünglichen Punkte gibt es in der App nicht.
+- **Pflicht-Hinweis, nur im Eingabeblatt:** „Negative Sgarbossa-Kriterien schließen einen akuten
+  Koronarverschluss nicht aus." Er steht unten bei der Auswertung, sobald das Ergebnis negativ ist;
+  nicht im Einsatz und nie im Protokolltext (Maintainer, 2026-11-16). Sachlicher Hintergrund: Bei Meyers 2015 erfüllte jeder
+  fünfte Verschluss kein Kriterium.
+- Der Rhythmus (Linksschenkelblock, Schrittmacher) wird nicht erfasst; das Blatt nennt nur, wofür die
+  Kriterien gelten. Wer es braucht, hängt die Funktion in der Vorlage per Abhängigkeit an ein Feld.
+- Drei Stufen je Kriterium: erfüllt / nicht erfüllt / nicht beurteilbar. Kein Kriterium ist vorbelegt.
+- Ausgabe: „Sgarbossa (mod. nach Smith) positiv: konkordante ST-Hebung." / „… negativ." Im Text steht
+  „ST/S ab 0,25" statt „≥ 25 %", weil die Bridge die Zeichen ≥ und % nicht sicher tippen kann.
+- Farbe nur in der App: Rot, sobald ein Kriterium erfüllt ist. Negativ hat **keine** Farbe und wird nie
+  grün, weil es keine Entwarnung ist.
+- Das Zeichen am Ende der Zeile ist frei wählbar (Standard „.“, leer = nichts; Maintainer, 2026-11-16).
+- Hilfetexte im Eingabeblatt sind eigene Formulierungen.
+
+
+## EGSYS
+
+Punktwert aus der Anamnese für die Frage, ob eine Synkope kardial bedingt ist (Evaluation of
+Guidelines in Syncope Study). Sechs Punkte, je Ja/Nein, Summe von −2 bis +12.
+
+| Punkt | Wert |
+|---|---|
+| Palpitationen vor der Synkope | +4 |
+| Herzerkrankung und/oder auffälliges EKG | +3 |
+| Synkope bei Belastung | +3 |
+| Synkope im Liegen | +2 |
+| Auslöser oder begünstigende Umstände | −1 |
+| Vegetative Prodromi | −1 |
+
+**Schwelle:** ab 3 Punkten steht ein Text hinter dem Ergebnis, standardmäßig „- kardiale Synkope
+wahrscheinlich". Der Text ist je Vorlage frei wählbar (Einstellung „Text ab 3 Punkten").
+
+**Quellen (über Europe PMC gelesen, 2026-11-15):**
+
+- Del Rosso A, Ungar A, Maggi R, et al. Clinical predictors of cardiac syncope at initial evaluation in
+  patients referred urgently to a general hospital: the EGSYS score. Heart 2008;94:1620-1626.
+  PMID 18519550. Zusammenfassung: 516 Patienten in 14 Notaufnahmen; „To each variable a score from +4 to
+  -1 was assigned"; „A score >=3 identified cardiac syncope with a sensitivity of 95%/92% and a
+  specificity of 61%/69% in the derivation and validation cohorts". Der Volltext war nicht einsehbar.
+- Kariman H, Harati S, Safari S, Baratloo A, Pishgahi M. Validation of EGSYS Score in Prediction of
+  Cardiogenic Syncope. Emerg Med Int 2015;2015:515370. PMID 26649200, frei zugänglich (PMC4663288).
+  Tabelle 2 (EGSYS-M) nennt die **Punktwerte je Punkt**, wie oben; „Total score ≥3 indicates patients at
+  risk for presence of cardiac cause." Dort bestätigt: Schwelle 3, Sensitivität 91,3 %.
+
+**Bewusste App-Entscheidungen (Maintainer, 2026-11-15):**
+
+- Eingabe Ja/Nein je Punkt, kein „nicht erhebbar". Kein Punkt ist vorbelegt.
+- Ausgabe mit Punkten, Befunden und Einordnung: „EGSYS 7 Punkte (Palpitationen vor Synkope,
+  Herzerkrankung/EKG auffällig) - kardiale Synkope wahrscheinlich." Unter 3 Punkten ohne Einordnung.
+- Der Text ab 3 Punkten ist je Vorlage frei wählbar; leer heißt Standard (Maintainer, 2026-11-16).
+- Das Zeichen am Ende der Zeile ist ebenfalls frei wählbar (Standard „.“, leer = nichts).
+- **Hinweis nur im Eingabeblatt** unter 3 Punkten: „Ein EGSYS unter 3 Punkten schließt eine kardiale
+  Synkope nicht aus." Unten bei der Auswertung, sobald das Ergebnis unter 3 Punkten liegt; nicht im
+  Einsatz und nie im Protokolltext (Maintainer, 2026-11-16). Sachlicher
+  Hintergrund: Die Sensitivität liegt bei 92 bis 95 %, nicht bei 100 %.
+- Farbe nur in der App: Rot ab 3 Punkten. Darunter **keine** Farbe und nie Grün.
+- Hilfetexte im Eingabeblatt sind eigene Formulierungen. Die Beispiele für Auslöser (warmer oder voller
+  Raum, langes Stehen, Angst, Schmerz, starke Gefühle) und Prodromi (Übelkeit, Erbrechen) folgen der
+  üblichen Wiedergabe der Originalarbeit; im Volltext geprüft sind sie nicht. Kariman 2015 nennt für
+  seine Auswertung eine längere Liste.
+
 ## BMI (Body-Mass-Index)
 
 - **Quelle:** WHO. *Obesity: preventing and managing the global epidemic.* WHO
@@ -101,6 +224,9 @@
   25,0-29,9 · Adipositas Grad I 30,0-34,9 · Grad II 35,0-39,9 · Grad III ≥ 40,0.
   WHO TRS 894, *Classification of overweight in adults according to BMI*.
   Übersicht: <https://www.who.int/data/gho/data/themes/topics/topic-details/GHO/body-mass-index>
+- **In der App (Funktion „BMI", ab 1.12.0):** Gewicht in kg und Größe in cm, Ausgabe wie beim früheren
+  Rechner „BMI 24,7 (Normalgewicht; 80 kg, 180 cm)". Die Klassen gelten für Erwachsene; das Eingabeblatt
+  sagt das. Keine Farbe im Einsatz, die Klasse ist eine Einordnung, keine Warnstufe.
 
 ## Pack-Years
 
