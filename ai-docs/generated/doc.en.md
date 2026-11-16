@@ -29,6 +29,10 @@ Why: some functions only arrive with app updates. You may offer a **function** (
 | NEWS2 | `news2` | 1.1.0 |
 | LAMS | `lams` | 1.9.0 |
 | FAST4D | `fast4d` | 1.9.0 |
+| ZOPS | `zops` | 1.12.0 |
+| Sgarbossa (Smith-modified) | `sgarbossa` | 1.12.0 |
+| EGSYS | `egsys` | 1.12.0 |
+| BMI | `bmi` | 1.12.0 |
 
 Additionally, individual **properties** are only available from a minimum version:
 
@@ -156,7 +160,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - `dependsOn` (Dependency)
 - `defaultWhen` (list)
 
-#### FunctionNode — special function (functionKind: "medikamentenplan", "aerzte", "packYears", "news2", "lams", "fast4d")
+#### FunctionNode — special function (functionKind: "medikamentenplan", "aerzte", "packYears", "news2", "lams", "fast4d", "zops", "sgarbossa", "egsys", "bmi")
 - `type` (always "function") — required
 - `id` (string) — required
 - `title` (string)
@@ -166,7 +170,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - `inline` (boolean)
 - `noSeparatorBefore` (boolean)
 - `blankLineBefore` (boolean)
-- `functionKind` (one of "medikamentenplan", "aerzte", "packYears", "news2", "lams", "fast4d") — required
+- `functionKind` (one of "medikamentenplan", "aerzte", "packYears", "news2", "lams", "fast4d", "zops", "sgarbossa", "egsys", "bmi") — required
 - `config` (FunctionConfig)
 - `default` (string)
 - `required` (boolean)
@@ -185,6 +189,8 @@ Three node types: **Container** (section with children), **Field** (input field)
 - `rowSeparator` (string)
 - `rowPrefix` (string)
 - `rowSuffix` (string)
+- `thresholdText` (string)
+- `lineEnd` (string)
 
 **Not in the format:** Variables, text placeholders, conditions (e.g. `visibleIf`), repeatable groups of measurements and a dedicated vital signs function do not exist. Do not offer or imitate them; measurements are normal fields.
 
@@ -579,7 +585,11 @@ Three node types: **Container** (section with children), **Field** (input field)
         "packYears",
         "news2",
         "lams",
-        "fast4d"
+        "fast4d",
+        "zops",
+        "sgarbossa",
+        "egsys",
+        "bmi"
       ],
       "description": "Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan). functionKind = innerer Diskriminator (waechst), aufgeloest ueber die Funktions-Registry. Immer Block."
     },
@@ -605,6 +615,14 @@ Three node types: **Container** (section with children), **Field** (input field)
         "rowSuffix": {
           "type": "string",
           "description": "Suffix je Zeile bei rowLayout='block'."
+        },
+        "thresholdText": {
+          "type": "string",
+          "description": "Text, den ein Score ab seiner Schwelle anhaengt (z. B. EGSYS ab 3 Punkten). Nur fuer Funktionen, die in der Registry `thresholdText` anbieten. Fehlt oder leer -> Standardtext der Funktion."
+        },
+        "lineEnd": {
+          "type": "string",
+          "description": "Zeichen am Ende der Ergebniszeile (alle einzeiligen Funktionen, Registry `lineEnd`). Fehlt -> Standard der Funktion (je nach Funktion '.' oder nichts); leer ('') -> nichts am Ende."
         }
       },
       "additionalProperties": false,
@@ -643,7 +661,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - **Start without a selection?** (`defaultEmpty`, from app 1.6.0, only with `multiple`) — Nothing is preselected; without a selection the field outputs nothing. *Example: dispatch codes, where a preselection would document something wrong.*
 
 ### Functions only
-- **Which functions exist?** Medication list (`medikamentenplan`): list of medications, in the app also by scanning. Contacts/doctors (`aerzte`): list of doctors and relatives. Pack-years (`packYears`, from app 1.1.0): calculator from cigarettes per day and years. NEWS2 (`news2`, from app 1.1.0): score from the vital signs. LAMS (`lams`, from app 1.9.0): score 0–5 from face, arm drift and grip strength, output includes the findings. FAST4D (`fast4d`, from app 1.9.0): stroke screening from seven findings (normal / abnormal / not testable) plus a time, positive from one abnormal finding; not a points score.
+- **Which functions exist?** Medication list (`medikamentenplan`): list of medications, in the app also by scanning. Contacts/doctors (`aerzte`): list of doctors and relatives. Pack-years (`packYears`, from app 1.1.0): calculator from cigarettes per day and years. NEWS2 (`news2`, from app 1.1.0): score from the vital signs. LAMS (`lams`, from app 1.9.0): score 0–5 from face, arm drift and grip strength, output includes the findings. FAST4D (`fast4d`, from app 1.9.0): stroke screening from seven findings (normal / abnormal / not testable) plus a time, positive from one abnormal finding; not a points score. ZOPS (`zops`, from app 1.12.0): orientation to time, place, person and situation (oriented / not oriented / not testable); the output names only the deviation, no points. Sgarbossa (`sgarbossa`, from app 1.12.0): ECG criteria in left bundle branch block in the Smith-modified version, three criteria (met / not met / not assessable), positive from one met criterion; no points; line end via `config.lineEnd` (default "."). EGSYS (`egsys`, from app 1.12.0): points from six history items in syncope (yes/no), output includes the findings and appends a text from 3 points (default "- kardiale Synkope wahrscheinlich", own text via `config.thresholdText`); `config.lineEnd` sets the character at the end of the line (default ".", empty = nothing). BMI (`bmi`, from app 1.12.0): body mass index from weight (kg) and height (cm) with the WHO class for adults, e.g. "BMI 24,7 (Normalgewicht; 80 kg, 180 cm)".
 - **Text when nothing is recorded?** (`default`, from app 1.1.1) — Shown in the output when the function has no entries or no result. *Example: "keine Dauermedikation bekannt".*
 - **Must not be skipped silently?** (`required`, from app 1.2.0) — Same as a required field.
 - **Switch on only when needed?** (`defaultExcluded`, from app 1.9.0) — The function starts as "not collected" and only enters the output when the user switches it on or enters data. Not together with `required`. For older app versions: put the function into its own section with `excludable` and `defaultExcluded`.
@@ -663,7 +681,7 @@ The app renders the template to plain text. Rules:
 - **Not assessed (`excludable`):** a container marked "−" disappears entirely (including children) from the output.
 - **`emptyText`:** substitute text when the container is shown but its children output nothing.
 - **Field value:** by default the `default` (or `options[0]`, with `defaultEmpty` nothing); `options` turns the field into a select; `allowCustom` additionally allows free text; `multiline` is multi-line free text.
-- **FunctionNode:** medication list / doctors render their rows; `config.rowLayout` = `block` (stacked, optional `rowPrefix`/`rowSuffix` per row) or `inline` (one line, joined with `rowSeparator`). Pack-years, NEWS2, LAMS and FAST4D output their result; without entries or a result the `default` appears. LAMS and FAST4D read best as one line ("LAMS 4/5 (…)", "FAST4D positiv (…)"): `titleInline: true` and a `heading` with `"prefix": ""`, `"suffix": " "`.
+- **FunctionNode:** medication list / doctors render their rows; `config.rowLayout` = `block` (stacked, optional `rowPrefix`/`rowSuffix` per row) or `inline` (one line, joined with `rowSeparator`). Pack-years, NEWS2, LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS and BMI output their result; `config.lineEnd` sets the character at the end of their line (missing = as before, empty = nothing); without entries or a result the `default` appears. LAMS, FAST4D, ZOPS, Sgarbossa and EGSYS read best as one line ("LAMS 4/5 (…)", "FAST4D positiv (…)", "ZOPS orientiert.", "Sgarbossa (mod. nach Smith) negativ."): `titleInline: true` and a `heading` with `"prefix": ""`, `"suffix": " "`.
 
 ### Worked example (JSON → exact output)
 

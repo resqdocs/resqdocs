@@ -53,7 +53,9 @@ export function bmi({ weightKg, heightCm }) {
     value < 30 ? 'Präadipositas' :
     value < 35 ? 'Adipositas Grad I' :
     value < 40 ? 'Adipositas Grad II' : 'Adipositas Grad III';
-  return { value, klass, text: `BMI ${fmt(value)} (${klass}; ${fmt(w, 0)} kg, ${Math.round(h * 100)} cm)` };
+  // body (Funktion): ohne „BMI"-Praefix - das Label liefert der Titel des Funktions-Knotens.
+  const body = `${fmt(value)} (${klass}; ${fmt(w, 0)} kg, ${Math.round(h * 100)} cm)`;
+  return { value, klass, text: `BMI ${body}`, body };
 }
 
 // --- LAMS (Los Angeles Motor Scale) ----------------------------------------------
@@ -130,6 +132,140 @@ export function fast4d(v) {
 
   // body (Funktion): ohne „FAST4D"-Praefix - das Label liefert der Titel des Funktions-Knotens.
   return { positive, count, untestable, findings, notTestable, timeText, text: `FAST4D ${body}`, body };
+}
+
+// --- ZOPS -------------------------------------------------------------------------
+// Merkhilfe fuer die Orientierung: Zeit, Ort, Person, Situation. KEIN Score, keine Schwelle, keine
+// Bewertung: jeder Punkt ist orientiert, nicht orientiert oder nicht pruefbar. Die Ausgabe nennt nur
+// die Abweichung, damit der Normalfall ein Wort bleibt (docs/medical-sources.md).
+
+const ZOPS_ITEMS = [
+  ['time', 'Zeit'],
+  ['place', 'Ort'],
+  ['person', 'Person'],
+  ['situation', 'Situation'],
+];
+
+/**
+ * ZOPS-Ergebnis.
+ * @param {object} v - time, place, person, situation: 'ok' | 'no' | 'na'
+ *                     (orientiert | nicht orientiert | nicht pruefbar)
+ */
+export function zops(v) {
+  for (const [key] of ZOPS_ITEMS) {
+    if (!['ok', 'no', 'na'].includes(v[key])) throw new Error(`ZOPS: ${key} muss ok|no|na sein`);
+  }
+  const names = (state) => ZOPS_ITEMS.filter(([key]) => v[key] === state).map(([, out]) => out);
+  const orientedTo = names('ok');
+  const notOriented = names('no');
+  const notTestable = names('na');
+  const oriented = orientedTo.length === ZOPS_ITEMS.length;
+  const untestable = notTestable.length === ZOPS_ITEMS.length;
+  const rest = notTestable.length ? `; nicht prüfbar: ${notTestable.join(', ')}` : '';
+
+  let body;
+  if (untestable) body = 'nicht prüfbar.';
+  else if (notOriented.length) body = `nicht orientiert zu: ${notOriented.join(', ')}${rest}.`;
+  else if (oriented) body = 'orientiert.';
+  // Nichts auffaellig, aber nicht alles pruefbar: genau sagen, wozu die Orientierung feststeht.
+  else body = `orientiert zu: ${orientedTo.join(', ')}${rest}.`;
+
+  // body (Funktion): ohne „ZOPS"-Praefix - das Label liefert der Titel des Funktions-Knotens.
+  return { oriented, untestable, orientedTo, notOriented, notTestable, text: `ZOPS ${body}`, body };
+}
+
+// --- Sgarbossa (modifiziert nach Smith) --------------------------------------------
+// Infarktzeichen im EKG bei Linksschenkelblock (Sgarbossa et al., N Engl J Med 1996;334:481-487) in
+// der Fassung von Smith et al., Ann Emerg Med 2012;60:766-776: das dritte Kriterium ist die diskordante
+// ST-Hebung im Verhaeltnis zur S-Zacke (ST/S, Grenzwert -0,25) statt fester 5 mm; die Regel ist
+// UNGEWICHTET, ein erfuelltes Kriterium genuegt. Kein Punktwert.
+// Wichtig: Ein negatives Ergebnis schliesst einen akuten Koronarverschluss NICHT aus (Sensitivitaet der
+// modifizierten Kriterien 80 % bei Meyers et al., Am Heart J 2015;170:1255-1264). Der Hinweis dazu
+// steht in der App (SGARBOSSA_NEGATIVE_HINT), nie im Protokolltext (docs/medical-sources.md).
+
+const SGARBOSSA_ITEMS = [
+  ['concordantElevation', 'konkordante ST-Hebung'],
+  ['concordantDepression', 'konkordante ST-Senkung in V1-V3'],
+  ['discordantElevation', 'diskordante ST-Hebung (ST/S ab 0,25)'],
+];
+
+/** Pflicht-Hinweis der App bei negativem Ergebnis (Wortlaut vom Maintainer). */
+export const SGARBOSSA_NEGATIVE_HINT = 'Negative Sgarbossa-Kriterien schließen einen akuten Koronarverschluss nicht aus.';
+
+/**
+ * Ergebnis der modifizierten Sgarbossa-Kriterien.
+ * @param {object} v - concordantElevation, concordantDepression, discordantElevation: 'pos' | 'neg' | 'na'
+ *                     (erfuellt | nicht erfuellt | nicht beurteilbar)
+ * @param {string} [lineEnd] - Zeichen am Ende der Zeile; fehlt -> '.', leer -> nichts
+ */
+export function sgarbossa(v, lineEnd) {
+  for (const [key] of SGARBOSSA_ITEMS) {
+    if (!['pos', 'neg', 'na'].includes(v[key])) throw new Error(`Sgarbossa: ${key} muss pos|neg|na sein`);
+  }
+  const findings = SGARBOSSA_ITEMS.filter(([key]) => v[key] === 'pos').map(([, out]) => out);
+  const notAssessable = SGARBOSSA_ITEMS.filter(([key]) => v[key] === 'na').map(([, out]) => out);
+  const count = findings.length;
+  const positive = count > 0;
+  const untestable = notAssessable.length === SGARBOSSA_ITEMS.length;
+
+  // Zeilenende frei waehlbar (Maintainer): genau das, was die Vorlage vorgibt.
+  const end = typeof lineEnd === 'string' ? lineEnd : '.';
+  let body;
+  if (untestable) body = 'nicht beurteilbar';
+  else if (positive) body = `positiv: ${findings.join(', ')}${notAssessable.length ? `; nicht beurteilbar: ${notAssessable.join(', ')}` : ''}`;
+  else body = `negativ${notAssessable.length ? ` (nicht beurteilbar: ${notAssessable.join(', ')})` : ''}`;
+  body += end;
+
+  // body (Funktion): ohne Praefix - das Label liefert der Titel des Funktions-Knotens.
+  return { positive, negative: !positive && !untestable, count, untestable, findings, notAssessable, text: `Sgarbossa (mod. nach Smith) ${body}`, body };
+}
+
+// --- EGSYS -------------------------------------------------------------------------
+// Del Rosso et al., Heart 2008;94:1620-1626 (Evaluation of Guidelines in Syncope Study): Punktwert aus
+// der Anamnese fuer die Frage, ob eine Synkope kardial bedingt ist. Sechs Punkte mit Werten von +4 bis
+// -1; „A score >=3 identified cardiac syncope" (Sensitivitaet 95 %/92 %, Spezifitaet 61 %/69 %).
+// Punktwerte je Punkt nach Kariman et al., Emerg Med Int 2015;2015:515370, Tabelle 2 (EGSYS-M).
+// Wichtig: Unter 3 Punkten ist eine kardiale Synkope NICHT ausgeschlossen - der Hinweis dazu steht in
+// der App (EGSYS_LOW_HINT), nie im Protokolltext (docs/medical-sources.md).
+
+const EGSYS_ITEMS = [
+  ['palpitations', 4, 'Palpitationen vor Synkope'],
+  ['heartDisease', 3, 'Herzerkrankung/EKG auffällig'],
+  ['effort', 3, 'Synkope bei Belastung'],
+  ['supine', 2, 'Synkope im Liegen'],
+  ['triggers', -1, 'Auslöser vorhanden'],
+  ['prodromes', -1, 'vegetative Prodromi'],
+];
+/** Ab diesem Wert nennt die Studie eine kardiale Synkope wahrscheinlich. */
+export const EGSYS_THRESHOLD = 3;
+/** Hinweis der App bei einem Ergebnis unter der Schwelle. */
+export const EGSYS_LOW_HINT = 'Ein EGSYS unter 3 Punkten schließt eine kardiale Synkope nicht aus.';
+/** Standardtext ab der Schwelle; in der Vorlage frei aenderbar (config.thresholdText, Maintainer). */
+export const EGSYS_DEFAULT_TEXT = '- kardiale Synkope wahrscheinlich';
+
+/**
+ * EGSYS-Ergebnis.
+ * @param {object} v - palpitations, heartDisease, effort, supine, triggers, prodromes: 'yes' | 'no'
+ * @param {string} [thresholdText] - Text ab 3 Punkten; fehlt oder leer -> EGSYS_DEFAULT_TEXT
+ * @param {string} [lineEnd] - Zeichen am Ende der Zeile; fehlt -> '.', leer -> nichts
+ */
+export function egsys(v, thresholdText, lineEnd) {
+  for (const [key] of EGSYS_ITEMS) {
+    if (v[key] !== 'yes' && v[key] !== 'no') throw new Error(`EGSYS: ${key} muss yes|no sein`);
+  }
+  const hits = EGSYS_ITEMS.filter(([key]) => v[key] === 'yes');
+  const score = hits.reduce((sum, [, points]) => sum + points, 0);
+  const findings = hits.map(([, , out]) => out);
+  const cardiacSuspected = score >= EGSYS_THRESHOLD;
+  const unit = Math.abs(score) === 1 ? 'Punkt' : 'Punkte';
+
+  const own = typeof thresholdText === 'string' ? thresholdText.trim() : '';
+  const extra = cardiacSuspected ? own || EGSYS_DEFAULT_TEXT : '';
+  // Zeilenende frei waehlbar (Maintainer): genau das, was die Vorlage vorgibt - keine Automatik.
+  const end = typeof lineEnd === 'string' ? lineEnd : '.';
+  const body = `${score} ${unit}${findings.length ? ` (${findings.join(', ')})` : ''}${extra ? ` ${extra}` : ''}${end}`;
+  // body (Funktion): ohne „EGSYS"-Praefix - das Label liefert der Titel des Funktions-Knotens.
+  return { score, cardiacSuspected, findings, text: `EGSYS ${body}`, body };
 }
 
 // --- NEWS2 ----------------------------------------------------------------------

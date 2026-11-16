@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.12.0] - 2026-11-16
+
+### Added
+
+- ZOPS function: orientation to time, place, person and situation, each oriented, not oriented or not testable; the protocol line names only the deviation
+- Sgarbossa criteria (Smith-modified) function: three ECG criteria for left bundle branch block or paced rhythm, positive from one met criterion; on a negative result the input sheet notes that an acute coronary occlusion is not ruled out
+- EGSYS score function for syncope: six history items with points and findings in the protocol line; from 3 points a text that each template can choose
+- BMI function: weight and height, BMI with the WHO class for adults
+- Function configuration: a section in the element properties for settings that only a function has, including the character at the end of the line for every single-line function
+
+### Changed
+
+- The row format of the medication plan and contacts/doctors moved from the advanced section to the function configuration
+- daisyUI 5.8.1
+
+### Fixed
+
+- With large text, the button rows under contacts/doctors and the medication plan wrap instead of widening the page
+- Long function names in the add menu are left-aligned
+
 ## [1.11.0] - 2026-11-15
 
 ### Added

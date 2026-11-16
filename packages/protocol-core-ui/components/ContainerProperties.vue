@@ -30,7 +30,8 @@ const isRoot = computed(() => !!node.value && node.value.id === props.root.id)
 // Ueberschrift zu gestalten -> die Optionen werden AUSGEBLENDET (v-if), NICHT geleert. Die gesetzten Werte
 // bleiben im Modell und sind wieder editierbar, sobald ein Titel da ist. Nur-Whitespace zaehlt als leer.
 const hasTitle = computed(() => !!node.value?.title?.trim())
-// Listen-Funktion (Medikamentenplan/Aerzte) = mehrzeilige Zeilen-Liste -> bekommt das Zeilen-Format.
+// Listen-Funktion (Medikamentenplan/Aerzte) = mehrzeilige Zeilen-Liste -> bekommt das Zeilen-Format
+// (im Bereich „Funktionskonfiguration").
 // Quelle: Registry-Marker singleLine (Score wie Pack-Years/NEWS2 = einzeilig -> keine Liste; unbekannt ->
 // keine Liste). Titel/inline/Banner sind bei ALLEN Knoten identisch (bewusst, fuer die Wiedererkennung):
 // inline verhaelt sich wie beim Feld - Default Block, explizit waehlbar (auch fuer Listen, 2026-07-03).
@@ -39,6 +40,25 @@ const isListFunction = computed(() => {
   const def = n?.type === 'function' ? FUNCTION_REGISTRY[n.functionKind] : undefined
   return !!def && !def.singleLine
 })
+// Score mit eigenem Text ab der Schwelle (z. B. EGSYS): Beschriftung und Standardtext aus der Registry.
+const thresholdTextDef = computed(() => {
+  const n = node.value
+  return n?.type === 'function' ? FUNCTION_REGISTRY[n.functionKind]?.thresholdText : undefined
+})
+// Bereich „Funktionskonfiguration": da, sobald die Funktion mindestens eine eigene Option anbietet.
+// Neue Optionen weiterer Funktionen hier ergaenzen. Im Kopf steht bewusst keine Vorschau, sondern ein ⓘ,
+// das den Bereich allgemein erklaert (Maintainer-Wunsch).
+// Funktion mit frei waehlbarem Zeilenende (z. B. EGSYS): Standard und Beschriftung aus der Registry.
+const lineEndDef = computed(() => {
+  const n = node.value
+  return n?.type === 'function' ? FUNCTION_REGISTRY[n.functionKind]?.lineEnd : undefined
+})
+const hasFunctionConfig = computed(() => !!thresholdTextDef.value || !!lineEndDef.value || isListFunction.value)
+// Zeilenende: das Feld zeigt den geltenden Wert (WYSIWYG). Leeren heisst „nichts am Ende" und wird als ''
+// gespeichert; der Standard selbst wird nicht ins Modell geschrieben.
+function setLineEnd(v: string): void {
+  setConfig({ lineEnd: v === lineEndDef.value?.standard ? undefined : v })
+}
 
 // Feld-Trenner ist VERERBBAR: ein Container ohne eigenen separator erbt vom naechsten Vorfahren
 // (sonst DEFAULT_SEPARATOR). Pro Container aktiv ueberschreiben = Wert eintragen; leer = erben.
@@ -560,6 +580,60 @@ async function saveAsBaustein(): Promise<void> {
         </div>
       </details>
 
+      <!-- FUNKTIONSKONFIGURATION (eigener aufklappbarer Bereich zwischen „Allgemein" und „Abhängigkeit",
+           Maintainer-Wunsch): Einstellungen, die eine Funktion selbst anbietet. Allgemein gedacht - neue
+           Optionen weiterer Funktionen kommen hierher. Erscheint nur, wenn die Funktion etwas anbietet
+           (hasFunctionConfig). Kopf mit ⓘ statt Vorschau. Heute: Text ab der Schwelle und Zeilenende (EGSYS) sowie
+           das Zeilen-Format der Listen-Funktionen (Medikationsplan, Kontakte/Ärzte). -->
+      <details v-if="node.type === 'function' && hasFunctionConfig" class="group rounded-lg bg-base-200/50">
+        <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          <span class="shrink-0">Funktionskonfiguration</span>
+          <InfoTip :info="INFO.functionConfig" />
+          <span class="flex-1" aria-hidden="true"></span>
+          <span class="shrink-0 text-base-content/50 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+        </summary>
+        <div class="space-y-2 px-4 pb-4">
+          <fieldset v-if="thresholdTextDef" class="fieldset">
+            <legend class="fieldset-legend">{{ thresholdTextDef.label }} <InfoTip :info="INFO.thresholdText" /></legend>
+            <input class="input w-full" :value="node.config?.thresholdText ?? ''" :placeholder="thresholdTextDef.standard" @input="setConfig({ thresholdText: ($event.target as HTMLInputElement).value.trim() ? ($event.target as HTMLInputElement).value : undefined })" />
+            <p class="text-xs text-base-content/50">leer = Standard „{{ thresholdTextDef.standard }}“</p>
+          </fieldset>
+          <fieldset v-if="lineEndDef" class="fieldset">
+            <legend class="fieldset-legend">{{ lineEndDef.label }} <InfoTip :info="INFO.lineEnd" /></legend>
+            <input class="input w-24 font-mono" :value="node.config?.lineEnd ?? lineEndDef.standard" @input="setLineEnd(($event.target as HTMLInputElement).value)" />
+            <p class="text-xs text-base-content/50">{{ lineEndDef.standard ? `Standard „${lineEndDef.standard}“ · leer = nichts am Ende` : 'Standard: nichts am Ende' }}</p>
+          </fieldset>
+          <!-- Listen-Funktion (Medikamentenplan/Kontakte/Ärzte): Zeilen-Format. Score-Funktionen haben keine
+               Zeilen-Liste -> kein Zeilen-Format. -->
+          <template v-if="isListFunction">
+            <span class="text-xs font-semibold text-base-content/60">Zeilen-Format</span>
+            <label class="flex w-full cursor-pointer items-center gap-2 py-0">
+              <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.config?.rowLayout === 'inline'" @change="setConfig(($event.target as HTMLInputElement).checked ? { rowLayout: 'inline', rowPrefix: undefined, rowSuffix: undefined } : { rowLayout: 'block', rowSeparator: undefined })" />
+              <span class="text-sm">Hintereinander (eine Zeile, mit Trenner) statt untereinander</span>
+              <InfoTip :info="INFO.rowLayout" class="ml-auto" />
+            </label>
+            <!-- hintereinander -> freier Trenner -->
+            <fieldset v-if="node.config?.rowLayout === 'inline'" class="fieldset">
+              <legend class="fieldset-legend">Trenner zwischen Einträgen <InfoTip :info="INFO.rowSeparator" /></legend>
+              <input class="input w-full font-mono" :value="node.config?.rowSeparator ?? ''" placeholder="z. B.  ·  oder ;" @input="setConfig({ rowSeparator: ($event.target as HTMLInputElement).value || undefined })" />
+              <!-- Wert aus der Konstante, die der Renderer nutzt - sonst laufen Text und Ausgabe wieder auseinander. -->
+              <p class="text-xs text-base-content/50">leer = Standard-Trenner „{{ FUNCTION_ROW_INLINE_SEPARATOR }}“ (Mittelpunkt)</p>
+            </fieldset>
+            <!-- untereinander -> Praefix/Suffix je Zeile -->
+            <template v-else>
+              <fieldset class="fieldset">
+                <legend class="fieldset-legend">Präfix je Zeile <InfoTip :info="INFO.rowPrefix" /></legend>
+                <input class="input w-full font-mono" :value="node.config?.rowPrefix ?? ''" placeholder="z. B. - " @input="setConfig({ rowPrefix: ($event.target as HTMLInputElement).value || undefined })" />
+              </fieldset>
+              <fieldset class="fieldset">
+                <legend class="fieldset-legend">Suffix je Zeile <InfoTip :info="INFO.rowSuffix" /></legend>
+                <input class="input w-full font-mono" :value="node.config?.rowSuffix ?? ''" placeholder="z. B. ;" @input="setConfig({ rowSuffix: ($event.target as HTMLInputElement).value || undefined })" />
+              </fieldset>
+            </template>
+          </template>
+        </div>
+      </details>
+
       <!-- ABHAENGIGKEIT: eigener aufklappbarer Bereich ueber „Erweitert" (gleiches <details>-Muster, siehe dort).
            Der Kopf zeigt die Regeln als Vorschau. Nicht an der Wurzel - die ist im Einsatz kein eigenes Element. -->
       <details v-if="!isRoot" class="group rounded-lg bg-base-200/50">
@@ -743,34 +817,6 @@ async function saveAsBaustein(): Promise<void> {
             </fieldset>
           </template>
 
-          <!-- FUNKTION mit Zeilen-Liste (Medikamentenplan/Ärzte): Zeilen-Format. Score-Funktionen
-               (Pack-Years) haben keine Zeilen-Liste -> kein Zeilen-Format, nur die Titel-Optionen oben. -->
-          <template v-if="node.type === 'function' && isListFunction">
-            <span class="text-xs font-semibold text-base-content/60">Zeilen-Format</span>
-            <label class="flex w-full cursor-pointer items-center gap-2 py-0">
-              <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.config?.rowLayout === 'inline'" @change="setConfig(($event.target as HTMLInputElement).checked ? { rowLayout: 'inline', rowPrefix: undefined, rowSuffix: undefined } : { rowLayout: 'block', rowSeparator: undefined })" />
-              <span class="text-sm">Hintereinander (eine Zeile, mit Trenner) statt untereinander</span>
-              <InfoTip :info="INFO.rowLayout" class="ml-auto" />
-            </label>
-            <!-- hintereinander -> freier Trenner -->
-            <fieldset v-if="node.config?.rowLayout === 'inline'" class="fieldset">
-              <legend class="fieldset-legend">Trenner zwischen Einträgen <InfoTip :info="INFO.rowSeparator" /></legend>
-              <input class="input w-full font-mono" :value="node.config?.rowSeparator ?? ''" placeholder="z. B.  ·  oder ;" @input="setConfig({ rowSeparator: ($event.target as HTMLInputElement).value || undefined })" />
-              <!-- Wert aus der Konstante, die der Renderer nutzt - sonst laufen Text und Ausgabe wieder auseinander. -->
-              <p class="text-xs text-base-content/50">leer = Standard-Trenner „{{ FUNCTION_ROW_INLINE_SEPARATOR }}“ (Mittelpunkt)</p>
-            </fieldset>
-            <!-- untereinander -> Praefix/Suffix je Zeile -->
-            <template v-else>
-              <fieldset class="fieldset">
-                <legend class="fieldset-legend">Präfix je Zeile <InfoTip :info="INFO.rowPrefix" /></legend>
-                <input class="input w-full font-mono" :value="node.config?.rowPrefix ?? ''" placeholder="z. B. - " @input="setConfig({ rowPrefix: ($event.target as HTMLInputElement).value || undefined })" />
-              </fieldset>
-              <fieldset class="fieldset">
-                <legend class="fieldset-legend">Suffix je Zeile <InfoTip :info="INFO.rowSuffix" /></legend>
-                <input class="input w-full font-mono" :value="node.config?.rowSuffix ?? ''" placeholder="z. B. ;" @input="setConfig({ rowSuffix: ($event.target as HTMLInputElement).value || undefined })" />
-              </fieldset>
-            </template>
-          </template>
         </div>
       </details>
     </div>

@@ -386,7 +386,11 @@
         "packYears",
         "news2",
         "lams",
-        "fast4d"
+        "fast4d",
+        "zops",
+        "sgarbossa",
+        "egsys",
+        "bmi"
       ],
       "description": "Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan). functionKind = innerer Diskriminator (waechst), aufgeloest ueber die Funktions-Registry. Immer Block."
     },
@@ -412,6 +416,14 @@
         "rowSuffix": {
           "type": "string",
           "description": "Suffix je Zeile bei rowLayout='block'."
+        },
+        "thresholdText": {
+          "type": "string",
+          "description": "Text, den ein Score ab seiner Schwelle anhaengt (z. B. EGSYS ab 3 Punkten). Nur fuer Funktionen, die in der Registry `thresholdText` anbieten. Fehlt oder leer -> Standardtext der Funktion."
+        },
+        "lineEnd": {
+          "type": "string",
+          "description": "Zeichen am Ende der Ergebniszeile (alle einzeiligen Funktionen, Registry `lineEnd`). Fehlt -> Standard der Funktion (je nach Funktion '.' oder nichts); leer ('') -> nichts am Ende."
         }
       },
       "additionalProperties": false,

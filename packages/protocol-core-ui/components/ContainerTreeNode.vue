@@ -20,7 +20,7 @@ const SnippetPicker = inject(snippetPickerKey, null)
 // Versions-Gating der Funktionen: der Online-Editor stellt die für die gewählte App-Version anbietbaren
 // functionKinds bereit; fehlt der Provider (Mobile-App = eigene Version), sind ALLE erlaubt.
 const allowedKinds = inject(allowedFunctionKindsKey, null)
-const ALL_FUNCTION_KINDS: FunctionKind[] = ['medikamentenplan', 'aerzte', 'packYears', 'news2', 'lams', 'fast4d']
+const ALL_FUNCTION_KINDS: FunctionKind[] = ['medikamentenplan', 'aerzte', 'packYears', 'news2', 'lams', 'fast4d', 'zops', 'sgarbossa', 'egsys', 'bmi']
 function kindAllowed(k: FunctionKind): boolean {
   return !allowedKinds || allowedKinds.value.includes(k)
 }
@@ -179,7 +179,9 @@ function confirmDelete(): void {
               <!-- Beschriftung aus der Registry: derselbe Name, den die neue Funktion als Titel bekommt
                    (createFunction). Vorher stand hier „Ärzte", eingefuegt wurde „Ärzte & Kontaktpersonen". -->
               <template v-for="k in ALL_FUNCTION_KINDS" :key="k">
-                <button v-if="kindAllowed(k)" type="button" class="btn btn-ghost btn-xs justify-start" @click="add('function', k)">{{ FUNCTION_REGISTRY[k].label }}</button>
+                <!-- Lange Namen („Sgarbossa (mod. nach Smith)") brechen um: Knöpfe zentrieren Text sonst,
+                     darum links ausrichten und die Höhe mitwachsen lassen. -->
+                <button v-if="kindAllowed(k)" type="button" class="btn btn-ghost btn-xs h-auto min-h-6 justify-start py-1 text-left leading-tight" @click="add('function', k)">{{ FUNCTION_REGISTRY[k].label }}</button>
               </template>
             </template>
           </div>

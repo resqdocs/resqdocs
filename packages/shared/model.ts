@@ -146,7 +146,7 @@ export interface Field {
 
 /** Funktions-Knoten: ein BLATT mit eigener Einsatz-UI + eigenem Wert (erste Funktion: Medikamentenplan).
  *  functionKind = innerer Diskriminator (waechst), aufgeloest ueber die Funktions-Registry. Immer Block. */
-export type FunctionKind = 'medikamentenplan' | 'aerzte' | 'packYears' | 'news2' | 'lams' | 'fast4d'
+export type FunctionKind = 'medikamentenplan' | 'aerzte' | 'packYears' | 'news2' | 'lams' | 'fast4d' | 'zops' | 'sgarbossa' | 'egsys' | 'bmi'
 
 /** Zeilen-Layout-Konfiguration einer Funktion (pro functionKind in der Registry interpretiert). Alle
  *  Felder optional + primitiv -> JSON-Roundtrip trivial; fehlt -> heutiges Verhalten (block, ohne pre/suf). */
@@ -160,6 +160,12 @@ export interface FunctionConfig {
   rowPrefix?: string
   /** Suffix je Zeile bei rowLayout='block'. */
   rowSuffix?: string
+  /** Text, den ein Score ab seiner Schwelle anhaengt (z. B. EGSYS ab 3 Punkten). Nur fuer Funktionen,
+   *  die in der Registry `thresholdText` anbieten. Fehlt oder leer -> Standardtext der Funktion. */
+  thresholdText?: string
+  /** Zeichen am Ende der Ergebniszeile (alle einzeiligen Funktionen, Registry `lineEnd`).
+   *  Fehlt -> Standard der Funktion (je nach Funktion '.' oder nichts); leer ('') -> nichts am Ende. */
+  lineEnd?: string
 }
 
 export interface FunctionNode {
@@ -290,10 +296,60 @@ export interface FAST4DRow {
   fastTime?: string
 }
 
+/** Befund eines ZOPS-Punkts: orientiert / nicht orientiert / nicht pruefbar. */
+export type ZopsBefund = 'ok' | 'no' | 'na'
+
+/** Eingabe der Funktion „ZOPS" (Orientierung zu Zeit, Ort, Person, Situation): genau EINE Zeile pro
+ *  Knoten, vier Befunde. KEIN Punktwert und keine Schwelle: die Ausgabe nennt nur, wozu der Patient
+ *  nicht orientiert ist oder was sich nicht pruefen liess (Registry ruft scores.zops). Feldnamen mit
+ *  Praefix wie LAMSRow/FAST4DRow, damit sie im Entwurf nicht mit anderen Funktionen kollidieren. */
+export interface ZOPSRow {
+  zopsTime?: ZopsBefund
+  zopsPlace?: ZopsBefund
+  zopsPerson?: ZopsBefund
+  zopsSituation?: ZopsBefund
+}
+
+/** Befund eines Sgarbossa-Kriteriums: erfuellt / nicht erfuellt / nicht beurteilbar. */
+export type SgarbossaBefund = 'pos' | 'neg' | 'na'
+
+/** Eingabe der Funktion „Sgarbossa (mod. nach Smith)": genau EINE Zeile pro Knoten, drei gleichwertige
+ *  EKG-Kriterien (konkordante ST-Hebung, konkordante ST-Senkung in V1-V3, diskordante ST-Hebung ab
+ *  25 % der S-Zacke). Positiv ab EINEM erfuellten Kriterium, kein Punktwert (Registry ruft
+ *  scores.sgarbossa). Feldnamen mit Praefix wie bei den anderen Befund-Funktionen. */
+export interface SgarbossaRow {
+  sgbConcordantElevation?: SgarbossaBefund
+  sgbConcordantDepression?: SgarbossaBefund
+  sgbDiscordantElevation?: SgarbossaBefund
+}
+
+/** Antwort auf einen EGSYS-Punkt. Als Text statt Boolean, weil der Entwurf Zeilen nur aus Booleans
+ *  als leer verwirft (caseDraft.sanitizeRows). */
+export type EgsysAntwort = 'yes' | 'no'
+
+/** Eingabe der Funktion „EGSYS" (Synkope: Hinweise auf kardiale Ursache): genau EINE Zeile pro Knoten,
+ *  sechs Anamnese-Punkte mit Ja/Nein. Die Summe (-2 bis +12) wird abgeleitet (Registry ruft
+ *  scores.egsys), nie gespeichert. Feldnamen mit Praefix wie bei den anderen Befund-Funktionen. */
+export interface EGSYSRow {
+  egsysPalpitations?: EgsysAntwort
+  egsysHeartDisease?: EgsysAntwort
+  egsysEffort?: EgsysAntwort
+  egsysSupine?: EgsysAntwort
+  egsysTriggers?: EgsysAntwort
+  egsysProdromes?: EgsysAntwort
+}
+
+/** Eingabe der Funktion „BMI": genau EINE Zeile pro Knoten, Gewicht in kg und Groesse in cm. Wert und
+ *  WHO-Klasse werden abgeleitet (Registry ruft scores.bmi), nie gespeichert. Feldnamen mit Praefix. */
+export interface BMIRow {
+  bmiWeight?: number
+  bmiHeight?: number
+}
+
 /** Zeilen-Typ einer Funktion - je functionKind verschieden, als Union (rueckwaerts-kompatibel:
  *  MedikamenteRow bleibt der erste Fall). Registry/Komponente kastellieren je Kind zur Laufzeit.
  *  Score-Funktionen (packYears) halten genau EINE Zeile mit ihren Eingaben (kein Namen-Feld). */
-export type FunctionRow = MedikamenteRow | ArztRow | PackYearsRow | NEWS2Row | LAMSRow | FAST4DRow
+export type FunctionRow = MedikamenteRow | ArztRow | PackYearsRow | NEWS2Row | LAMSRow | FAST4DRow | ZOPSRow | SgarbossaRow | EGSYSRow | BMIRow
 
 /** Ausfuell-Zustand eines BLATTS im Einsatz. Feld = Tri-State; Funktion = eigene Daten (rows).
  *  Fehlt -> 'confirmed' (Standardwert). */

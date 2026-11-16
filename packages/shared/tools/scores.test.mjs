@@ -3,7 +3,7 @@
 // Llanes 2004; BMI WHO). Fachlich gegenzuprüfen.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { packYears, bmi, lams, fast4d, news2, ekgAxisTable, signatureBlock } from './scores.mjs'
+import { packYears, bmi, lams, fast4d, news2, ekgAxisTable, signatureBlock, zops, sgarbossa, SGARBOSSA_NEGATIVE_HINT, egsys, EGSYS_LOW_HINT, EGSYS_THRESHOLD, EGSYS_DEFAULT_TEXT } from './scores.mjs'
 
 test('packYears: Definition (Zig./Tag ÷ 20) × Jahre, Rundung auf 1 Nachkommastelle', () => {
   assert.equal(packYears({ cigarettesPerDay: 20, years: 10 }).value, 10)
@@ -21,6 +21,9 @@ test('bmi: kg/m² + WHO-Klassen inkl. Grenzwerte', () => {
   assert.equal(bmi({ weightKg: 95, heightCm: 175 }).klass, 'Adipositas Grad I') // 31.0
   assert.equal(bmi({ weightKg: 125, heightCm: 175 }).klass, 'Adipositas Grad III') // 40.8
   assert.throws(() => bmi({ weightKg: 80, heightCm: 0 }))
+  // Funktion: Zeile ohne „BMI"-Präfix (der Titel kommt vom Knoten), Text wie beim früheren Rechner.
+  assert.equal(bmi({ weightKg: 80, heightCm: 180 }).body, '24,7 (Normalgewicht; 80 kg, 180 cm)')
+  assert.equal(bmi({ weightKg: 80, heightCm: 180 }).text, 'BMI 24,7 (Normalgewicht; 80 kg, 180 cm)')
 })
 
 test('lams: Summe 0-5; >= 4 markiert LVO-Verdacht', () => {
@@ -89,11 +92,169 @@ test('fast4d: unvollständige/ungültige Eingabe wirft', () => {
   assert.throws(() => fast4d({ ...F4D_NEG, face: 'ja' }))
 })
 
+const ZOPS_OK = { time: 'ok', place: 'ok', person: 'ok', situation: 'ok' }
+
+test('zops: nennt nur die Abweichung, kein Punktwert', () => {
+  const ok = zops(ZOPS_OK)
+  assert.equal(ok.oriented, true)
+  assert.equal(ok.body, 'orientiert.')
+  assert.equal(ok.text, 'ZOPS orientiert.')
+  const zeit = zops({ ...ZOPS_OK, time: 'no' })
+  assert.equal(zeit.oriented, false)
+  assert.deepEqual(zeit.notOriented, ['Zeit'])
+  assert.equal(zeit.body, 'nicht orientiert zu: Zeit.')
+  assert.equal(zops({ ...ZOPS_OK, time: 'no', situation: 'no' }).body, 'nicht orientiert zu: Zeit, Situation.')
+  // Reihenfolge immer Zeit, Ort, Person, Situation - unabhängig von der Eingabereihenfolge.
+  assert.equal(zops({ situation: 'no', person: 'no', place: 'no', time: 'no' }).body, 'nicht orientiert zu: Zeit, Ort, Person, Situation.')
+  assert.ok(!/\d/.test(zeit.body), 'keine Zahl in der Ausgabe')
+})
+
+test('zops: nicht prüfbar wird genannt und nie als orientiert unterstellt', () => {
+  assert.equal(zops({ ...ZOPS_OK, time: 'no', situation: 'na' }).body, 'nicht orientiert zu: Zeit; nicht prüfbar: Situation.')
+  const teil = zops({ ...ZOPS_OK, situation: 'na' })
+  assert.equal(teil.oriented, false)
+  assert.equal(teil.body, 'orientiert zu: Zeit, Ort, Person; nicht prüfbar: Situation.')
+  const nichts = zops({ time: 'na', place: 'na', person: 'na', situation: 'na' })
+  assert.equal(nichts.untestable, true)
+  assert.equal(nichts.body, 'nicht prüfbar.')
+})
+
+test('zops: unvollständige/ungültige Eingabe wirft', () => {
+  assert.throws(() => zops({ ...ZOPS_OK, person: undefined }))
+  assert.throws(() => zops({ ...ZOPS_OK, time: 'neg' }))
+})
+
+const SGB_NEG = { concordantElevation: 'neg', concordantDepression: 'neg', discordantElevation: 'neg' }
+
+test('sgarbossa (mod. nach Smith): positiv ab EINEM Kriterium, ungewichtet, kein Punktwert', () => {
+  const neg = sgarbossa(SGB_NEG)
+  assert.equal(neg.positive, false)
+  assert.equal(neg.negative, true)
+  assert.equal(neg.body, 'negativ.')
+  assert.equal(neg.text, 'Sgarbossa (mod. nach Smith) negativ.')
+  // Jedes der drei Kriterien genügt allein - auch das dritte (im Original reichte es mit 2 Punkten nicht).
+  assert.equal(sgarbossa({ ...SGB_NEG, concordantElevation: 'pos' }).body, 'positiv: konkordante ST-Hebung.')
+  assert.equal(sgarbossa({ ...SGB_NEG, concordantDepression: 'pos' }).body, 'positiv: konkordante ST-Senkung in V1-V3.')
+  const drittes = sgarbossa({ ...SGB_NEG, discordantElevation: 'pos' })
+  assert.equal(drittes.positive, true)
+  assert.equal(drittes.body, 'positiv: diskordante ST-Hebung (ST/S ab 0,25).')
+  const alle = sgarbossa({ concordantElevation: 'pos', concordantDepression: 'pos', discordantElevation: 'pos' })
+  assert.equal(alle.count, 3)
+  assert.equal(alle.body, 'positiv: konkordante ST-Hebung, konkordante ST-Senkung in V1-V3, diskordante ST-Hebung (ST/S ab 0,25).')
+  assert.ok(!/Punkt/.test(alle.body), 'kein Punktwert')
+})
+
+test('sgarbossa: nicht beurteilbar wird genannt; der Hinweis steht nie im Text', () => {
+  assert.equal(sgarbossa({ ...SGB_NEG, discordantElevation: 'na' }).body, 'negativ (nicht beurteilbar: diskordante ST-Hebung (ST/S ab 0,25)).')
+  assert.equal(sgarbossa({ concordantElevation: 'pos', concordantDepression: 'na', discordantElevation: 'neg' }).body, 'positiv: konkordante ST-Hebung; nicht beurteilbar: konkordante ST-Senkung in V1-V3.')
+  const nichts = sgarbossa({ concordantElevation: 'na', concordantDepression: 'na', discordantElevation: 'na' })
+  assert.equal(nichts.untestable, true)
+  assert.equal(nichts.negative, false) // nichts beurteilbar ist kein „negativ"
+  assert.equal(nichts.body, 'nicht beurteilbar.')
+  // Wortlaut des Pflicht-Hinweises (Maintainer) - und er gelangt nicht in die Ausgabe.
+  assert.equal(SGARBOSSA_NEGATIVE_HINT, 'Negative Sgarbossa-Kriterien schließen einen akuten Koronarverschluss nicht aus.')
+  for (const r of [sgarbossa(SGB_NEG), nichts, sgarbossa({ ...SGB_NEG, discordantElevation: 'na' })]) {
+    assert.ok(!r.body.includes('Koronarverschluss') && !r.text.includes('Koronarverschluss'))
+  }
+})
+
+test('sgarbossa: Zeilenende frei wählbar, Standard Punkt, leer heißt nichts', () => {
+  assert.equal(sgarbossa(SGB_NEG).body, 'negativ.')
+  assert.equal(sgarbossa(SGB_NEG, ';').body, 'negativ;')
+  assert.equal(sgarbossa(SGB_NEG, '').text, 'Sgarbossa (mod. nach Smith) negativ')
+  assert.equal(sgarbossa({ ...SGB_NEG, discordantElevation: 'na' }, '').body, 'negativ (nicht beurteilbar: diskordante ST-Hebung (ST/S ab 0,25))')
+})
+
+test('sgarbossa: unvollständige/ungültige Eingabe wirft', () => {
+  assert.throws(() => sgarbossa({ ...SGB_NEG, discordantElevation: undefined }))
+  assert.throws(() => sgarbossa({ ...SGB_NEG, concordantElevation: 'ja' }))
+})
+
+const EGSYS_NO = { palpitations: 'no', heartDisease: 'no', effort: 'no', supine: 'no', triggers: 'no', prodromes: 'no' }
+
+test('egsys: Punktwerte je Punkt nach der Quelle (+4, +3, +3, +2, -1, -1)', () => {
+  assert.equal(egsys(EGSYS_NO).score, 0)
+  assert.equal(egsys({ ...EGSYS_NO, palpitations: 'yes' }).score, 4)
+  assert.equal(egsys({ ...EGSYS_NO, heartDisease: 'yes' }).score, 3)
+  assert.equal(egsys({ ...EGSYS_NO, effort: 'yes' }).score, 3)
+  assert.equal(egsys({ ...EGSYS_NO, supine: 'yes' }).score, 2)
+  assert.equal(egsys({ ...EGSYS_NO, triggers: 'yes' }).score, -1)
+  assert.equal(egsys({ ...EGSYS_NO, prodromes: 'yes' }).score, -1)
+  // Grenzen des Wertebereichs
+  assert.equal(egsys({ ...EGSYS_NO, triggers: 'yes', prodromes: 'yes' }).score, -2)
+  assert.equal(egsys({ palpitations: 'yes', heartDisease: 'yes', effort: 'yes', supine: 'yes', triggers: 'no', prodromes: 'no' }).score, 12)
+  assert.equal(egsys({ palpitations: 'yes', heartDisease: 'yes', effort: 'yes', supine: 'yes', triggers: 'yes', prodromes: 'yes' }).score, 10)
+})
+
+test('egsys: ab 3 Punkten „kardiale Synkope wahrscheinlich“, darunter nicht; Befunde stehen im Text', () => {
+  assert.equal(EGSYS_THRESHOLD, 3)
+  const hoch = egsys({ ...EGSYS_NO, palpitations: 'yes', heartDisease: 'yes' })
+  assert.equal(hoch.cardiacSuspected, true)
+  assert.equal(hoch.body, '7 Punkte (Palpitationen vor Synkope, Herzerkrankung/EKG auffällig) - kardiale Synkope wahrscheinlich.')
+  assert.equal(hoch.text, 'EGSYS 7 Punkte (Palpitationen vor Synkope, Herzerkrankung/EKG auffällig) - kardiale Synkope wahrscheinlich.')
+  // genau an der Schwelle
+  assert.equal(egsys({ ...EGSYS_NO, effort: 'yes' }).body, '3 Punkte (Synkope bei Belastung) - kardiale Synkope wahrscheinlich.')
+  // 4 - 1 = 3: die Abzüge zählen mit
+  assert.equal(egsys({ ...EGSYS_NO, palpitations: 'yes', triggers: 'yes' }).cardiacSuspected, true)
+  // 3 - 1 = 2: knapp darunter
+  const knapp = egsys({ ...EGSYS_NO, heartDisease: 'yes', prodromes: 'yes' })
+  assert.equal(knapp.cardiacSuspected, false)
+  assert.equal(knapp.body, '2 Punkte (Herzerkrankung/EKG auffällig, vegetative Prodromi).')
+  assert.equal(egsys({ ...EGSYS_NO, supine: 'yes', prodromes: 'yes' }).body, '1 Punkt (Synkope im Liegen, vegetative Prodromi).')
+  assert.equal(egsys(EGSYS_NO).body, '0 Punkte.')
+  assert.equal(egsys({ ...EGSYS_NO, triggers: 'yes' }).body, '-1 Punkt (Auslöser vorhanden).')
+  assert.equal(egsys({ ...EGSYS_NO, triggers: 'yes', prodromes: 'yes' }).body, '-2 Punkte (Auslöser vorhanden, vegetative Prodromi).')
+})
+
+test('egsys: eigener Text ab 3 Punkten, Standard wenn leer', () => {
+  const hoch = { ...EGSYS_NO, palpitations: 'yes' }
+  assert.equal(EGSYS_DEFAULT_TEXT, '- kardiale Synkope wahrscheinlich')
+  assert.equal(egsys(hoch, '- Kardiologie verständigen').body, '4 Punkte (Palpitationen vor Synkope) - Kardiologie verständigen.')
+  assert.equal(egsys(hoch, 'V. a. kardiale Synkope').body, '4 Punkte (Palpitationen vor Synkope) V. a. kardiale Synkope.')
+  for (const leer of [undefined, '', '   ']) assert.equal(egsys(hoch, leer).body, '4 Punkte (Palpitationen vor Synkope) - kardiale Synkope wahrscheinlich.')
+  // Unter der Schwelle steht der Text nie.
+  assert.equal(egsys({ ...EGSYS_NO, supine: 'yes' }, '- Kardiologie verständigen').body, '2 Punkte (Synkope im Liegen).')
+})
+
+test('egsys: Zeilenende frei wählbar, Standard Punkt, leer heißt nichts, keine Automatik', () => {
+  const hoch = { ...EGSYS_NO, palpitations: 'yes' }
+  const tief = { ...EGSYS_NO, supine: 'yes' }
+  assert.equal(egsys(hoch).body, '4 Punkte (Palpitationen vor Synkope) - kardiale Synkope wahrscheinlich.')
+  assert.equal(egsys(hoch, undefined, ';').body, '4 Punkte (Palpitationen vor Synkope) - kardiale Synkope wahrscheinlich;')
+  assert.equal(egsys(hoch, undefined, '').body, '4 Punkte (Palpitationen vor Synkope) - kardiale Synkope wahrscheinlich')
+  assert.equal(egsys(hoch, '- abklären!', '').body, '4 Punkte (Palpitationen vor Synkope) - abklären!')
+  // Genau das, was die Vorlage vorgibt: kein Weglassen bei eigenem Satzzeichen.
+  assert.equal(egsys(hoch, '- abklären!').body, '4 Punkte (Palpitationen vor Synkope) - abklären!.')
+  // Gilt für die ganze Zeile, auch unter 3 Punkten.
+  assert.equal(egsys(tief, undefined, ' -').body, '2 Punkte (Synkope im Liegen) -')
+  assert.equal(egsys(tief, undefined, '').body, '2 Punkte (Synkope im Liegen)')
+  assert.equal(egsys(EGSYS_NO, undefined, '').text, 'EGSYS 0 Punkte')
+})
+
+test('egsys: der Hinweis steht nie im Text; unvollständige Eingabe wirft', () => {
+  assert.equal(EGSYS_LOW_HINT, 'Ein EGSYS unter 3 Punkten schließt eine kardiale Synkope nicht aus.')
+  for (const r of [egsys(EGSYS_NO), egsys({ ...EGSYS_NO, supine: 'yes' })]) assert.ok(!r.body.includes('schließt') && !r.text.includes('schließt'))
+  assert.throws(() => egsys({ ...EGSYS_NO, supine: undefined }))
+  assert.throws(() => egsys({ ...EGSYS_NO, effort: true }))
+  assert.throws(() => egsys({ ...EGSYS_NO, effort: 'ja' }))
+})
+
 test('fast4d/lams: Ausgabe nur mit Zeichen, die die Brücke auf dem NIDA-Layout tippen kann', () => {
   const texte = [
     lams({ face: 1, arm: 2, grip: 2 }).body,
     fast4d({ face: 'pos', faceSide: 'li', arm: 'pos', armSide: 're', speech: 'pos', diplopia: 'pos', field: 'pos', vertigo: 'pos', ataxia: 'pos', timeMode: 'onset', time: '09:15' }).body,
     fast4d({ face: 'na', arm: 'na', speech: 'na', diplopia: 'na', field: 'na', vertigo: 'na', ataxia: 'na', timeMode: 'unknown' }).body,
+    sgarbossa(SGB_NEG).body,
+    sgarbossa({ concordantElevation: 'pos', concordantDepression: 'pos', discordantElevation: 'pos' }).body,
+    sgarbossa({ concordantElevation: 'neg', concordantDepression: 'na', discordantElevation: 'na' }).body,
+    sgarbossa({ concordantElevation: 'na', concordantDepression: 'na', discordantElevation: 'na' }).body,
+    egsys(EGSYS_NO).body,
+    egsys({ palpitations: 'yes', heartDisease: 'yes', effort: 'yes', supine: 'yes', triggers: 'yes', prodromes: 'yes' }).body,
+    egsys({ ...EGSYS_NO, triggers: 'yes', prodromes: 'yes' }).body,
+    zops(ZOPS_OK).body,
+    zops({ time: 'no', place: 'no', person: 'ok', situation: 'na' }).body,
+    zops({ time: 'ok', place: 'ok', person: 'na', situation: 'na' }).body,
+    zops({ time: 'na', place: 'na', person: 'na', situation: 'na' }).body,
   ]
   for (const t of texte) assert.match(t, /^[A-Za-z0-9ÄÖÜäöüß .,:;()\/-]+$/)
 })

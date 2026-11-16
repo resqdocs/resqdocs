@@ -58,6 +58,18 @@ const EXPECTED: Record<string, string[]> = {
   rowSeparator: [out(list({ rowLayout: 'inline', rowSeparator: '; ' }), rows)],
   rowPrefix: [out(list({ rowLayout: 'block', rowPrefix: '- ' }), rows)],
   rowSuffix: [out(list({ rowLayout: 'block', rowSuffix: ';' }), rows)],
+  lineEnd: [
+    out(
+      root({ type: 'function', id: 'e', functionKind: 'egsys', title: 'EGSYS', showTitle: true, titleInline: true, heading: H('', ' '), config: { lineEnd: ';' } }),
+      { e: { state: 'function', rows: [{ egsysPalpitations: 'yes', egsysHeartDisease: 'no', egsysEffort: 'no', egsysSupine: 'no', egsysTriggers: 'no', egsysProdromes: 'no' }] } },
+    ),
+  ],
+  thresholdText: [
+    out(
+      root({ type: 'function', id: 'e', functionKind: 'egsys', title: 'EGSYS', showTitle: true, titleInline: true, heading: H('', ' '), config: { thresholdText: '- kardiale Ursache abklären' } }),
+      { e: { state: 'function', rows: [{ egsysPalpitations: 'yes', egsysHeartDisease: 'no', egsysEffort: 'no', egsysSupine: 'no', egsysTriggers: 'no', egsysProdromes: 'no' }] } },
+    ),
+  ],
 }
 
 const infos = INFO as Record<string, InfoText>

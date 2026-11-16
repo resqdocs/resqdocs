@@ -127,6 +127,51 @@ test('createFunction: FAST4D startet mit Inline-Titel -> eine Zeile „FAST4D po
   assert.equal(render(r, { f: { state: 'function', rows: [row] } }), 'FAST4D positiv (1/7): Fazialisparese links. Symptombeginn unklar.')
 })
 
+test('createFunction: ZOPS startet mit Inline-Titel -> eine Zeile „ZOPS orientiert."', () => {
+  const fn = createFunction('z', 'zops')
+  assert.equal(fn.title, 'ZOPS')
+  assert.equal(fn.titleInline, true)
+  let r = createContainer('r')
+  r = addChild(r, 'r', fn)
+  const values = (row: object) => ({ z: { state: 'function', rows: [row] } }) as unknown as Parameters<typeof render>[1]
+  assert.equal(render(r, values({ zopsTime: 'ok', zopsPlace: 'ok', zopsPerson: 'ok', zopsSituation: 'ok' })), 'ZOPS orientiert.')
+  assert.equal(render(r, values({ zopsTime: 'no', zopsPlace: 'ok', zopsPerson: 'ok', zopsSituation: 'na' })), 'ZOPS nicht orientiert zu: Zeit; nicht prüfbar: Situation.')
+})
+
+test('createFunction: Sgarbossa startet mit Inline-Titel; der App-Hinweis steht nie im Protokolltext', () => {
+  const fn = createFunction('s', 'sgarbossa')
+  assert.equal(fn.title, 'Sgarbossa (mod. nach Smith)')
+  assert.equal(fn.titleInline, true)
+  let r = createContainer('r')
+  r = addChild(r, 'r', fn)
+  const values = (row: object) => ({ s: { state: 'function', rows: [row] } }) as unknown as Parameters<typeof render>[1]
+  const neg = render(r, values({ sgbConcordantElevation: 'neg', sgbConcordantDepression: 'neg', sgbDiscordantElevation: 'neg' }))
+  assert.equal(neg, 'Sgarbossa (mod. nach Smith) negativ.')
+  assert.equal(render(r, values({ sgbConcordantElevation: 'pos', sgbConcordantDepression: 'neg', sgbDiscordantElevation: 'neg' })), 'Sgarbossa (mod. nach Smith) positiv: konkordante ST-Hebung.')
+})
+
+test('createFunction: EGSYS startet mit Inline-Titel -> eine Zeile „EGSYS 7 Punkte (…)"', () => {
+  const fn = createFunction('e', 'egsys')
+  assert.equal(fn.title, 'EGSYS')
+  assert.equal(fn.titleInline, true)
+  let r = createContainer('r')
+  r = addChild(r, 'r', fn)
+  const values = (row: object) => ({ e: { state: 'function', rows: [row] } }) as unknown as Parameters<typeof render>[1]
+  const no = { egsysPalpitations: 'no', egsysHeartDisease: 'no', egsysEffort: 'no', egsysSupine: 'no', egsysTriggers: 'no', egsysProdromes: 'no' }
+  assert.equal(render(r, values({ ...no, egsysPalpitations: 'yes', egsysHeartDisease: 'yes' })), 'EGSYS 7 Punkte (Palpitationen vor Synkope, Herzerkrankung/EKG auffällig) - kardiale Synkope wahrscheinlich.')
+  assert.equal(render(r, values({ ...no, egsysSupine: 'yes', egsysProdromes: 'yes' })), 'EGSYS 1 Punkt (Synkope im Liegen, vegetative Prodromi).')
+})
+
+test('createFunction: BMI startet mit Inline-Titel -> eine Zeile „BMI 24,7 (…)" wie der frühere Rechner', () => {
+  const fn = createFunction('b', 'bmi')
+  assert.equal(fn.title, 'BMI')
+  assert.equal(fn.titleInline, true)
+  let r = createContainer('r')
+  r = addChild(r, 'r', fn)
+  const values = { b: { state: 'function', rows: [{ bmiWeight: 80, bmiHeight: 180 }] } } as unknown as Parameters<typeof render>[1]
+  assert.equal(render(r, values), 'BMI 24,7 (Normalgewicht; 80 kg, 180 cm)')
+})
+
 test('parentOf / isDescendant', () => {
   let r = createContainer('r')
   r = addChild(r, 'r', createContainer('a'))

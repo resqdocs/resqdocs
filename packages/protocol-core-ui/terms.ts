@@ -30,7 +30,7 @@ export interface InfoText {
 
 const SECTION = 'Fasst zusammengehörige Felder unter einer Überschrift zusammen, z. B. „Anamnese“. Abschnitte lassen sich ineinander verschachteln.'
 const FIELD = 'Eine einzelne Angabe in der Vorlage, z. B. „Atmung“: frei eingeben oder aus einer Liste wählen.'
-const FUNCTION = 'Fertige Eingabehilfe für Aufwendigeres: Medikationsplan, Kontakte/Ärzte, Pack-Years, NEWS2, LAMS und FAST4D.'
+const FUNCTION = 'Fertige Eingabehilfe für Aufwendigeres: Medikationsplan, Kontakte/Ärzte, Pack-Years, NEWS2, LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS und BMI.'
 const SNIPPET = 'Fertiger Text, den du einmal anlegst und immer wieder nutzt. In der Vorlage wird daraus ein Feld mit diesem Text, im {einsatz} landet er direkt im Feld.'
 const SAVED_SECTION = 'Ein Abschnitt samt Inhalt, den du für andere Vorlagen gespeichert hast. Eingefügt wird immer eine Kopie: Spätere Änderungen wirken nicht auf bereits eingefügte Kopien.'
 
@@ -130,6 +130,31 @@ export const INFO = {
       { term: 'Grün', text: 'Alle sieben Zeichen sind unauffällig.' },
       { term: 'Gelb', text: 'Mindestens ein Zeichen ist auffällig.' },
       { term: 'Ohne Farbe', text: 'Nichts ist auffällig, aber nicht alles war prüfbar.' },
+    ],
+  },
+  zopsColors: {
+    title: 'Farben bei ZOPS',
+    text: 'Die Farbe siehst nur du in der App. Im Protokolltext steht sie nicht.',
+    items: [
+      { term: 'Grün', text: 'Zu allen vier Punkten orientiert.' },
+      { term: 'Gelb', text: 'Zu mindestens einem Punkt nicht orientiert.' },
+      { term: 'Ohne Farbe', text: 'Nichts ist auffällig, aber nicht alles war prüfbar.' },
+    ],
+  },
+  sgarbossaColors: {
+    title: 'Farben bei Sgarbossa',
+    text: 'Die Farbe siehst nur du in der App. Im Protokolltext steht sie nicht.',
+    items: [
+      { term: 'Rot', text: 'Mindestens ein Kriterium ist erfüllt.' },
+      { term: 'Ohne Farbe', text: 'Kein Kriterium ist erfüllt. Grün gibt es hier nicht: Negative Sgarbossa-Kriterien schließen einen akuten Koronarverschluss nicht aus.' },
+    ],
+  },
+  egsysColors: {
+    title: 'Farben bei EGSYS',
+    text: 'Die Farbe siehst nur du in der App. Im Protokolltext steht sie nicht.',
+    items: [
+      { term: 'Rot', text: '3 Punkte oder mehr.' },
+      { term: 'Ohne Farbe', text: 'Unter 3 Punkten. Grün gibt es hier nicht: Ein EGSYS unter 3 Punkten schließt eine kardiale Synkope nicht aus.' },
     ],
   },
   lamsColors: {
@@ -241,6 +266,20 @@ export const INFO = {
     title: 'Trenner zwischen Einträgen',
     text: 'Steht zwischen den Einträgen, wenn sie in einer Zeile stehen. Standard ist der Mittelpunkt, weil innerhalb eines Eintrags schon Kommas vorkommen können.',
     examples: [{ label: 'Trenner „; “', output: 'Medikament A; Medikament B' }],
+  },
+  functionConfig: {
+    title: 'Funktionskonfiguration',
+    text: 'Einstellungen, die nur diese Funktion kennt, etwa wie ihr Ergebnis im Protokolltext steht. Sie gelten für die Vorlage, also für jeden Einsatz damit. Hat eine Funktion nichts einzustellen, gibt es den Bereich nicht.',
+  },
+  lineEnd: {
+    title: 'Zeilenende',
+    text: 'Steht ganz am Ende der Ergebniszeile, z. B. ein Punkt oder ein Semikolon. Leer lassen, wenn nichts dahinter stehen soll.',
+    examples: [{ label: 'Zeilenende „;“', output: 'EGSYS 4 Punkte (Palpitationen vor Synkope) - kardiale Synkope wahrscheinlich;' }],
+  },
+  thresholdText: {
+    title: 'Text ab der Schwelle',
+    text: 'Steht im Protokolltext hinter dem Ergebnis, sobald der Score seine Schwelle erreicht, bei EGSYS ab 3 Punkten. Darunter steht nichts dahinter.',
+    examples: [{ label: 'Eigener Text „- kardiale Ursache abklären“', output: 'EGSYS 4 Punkte (Palpitationen vor Synkope) - kardiale Ursache abklären.' }],
   },
   rowPrefix: {
     title: 'Präfix je Zeile',
