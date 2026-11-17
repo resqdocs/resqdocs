@@ -17,7 +17,7 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 - Editing a function result with the pencil starts from the generated text instead of an empty field; restoring the typed text is offered below the input
 - Element properties: the title format and the inline setting sit under "General" next to the switch they depend on; "Advanced" keeps only rarely used settings
-- The issuer choice when scanning a medication plan is more compact
+- The choice whether the doctor on a scanned medication plan is added as GP or specialist is more compact
 
 ### Fixed
 
