@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [1.13.0] - 2026-11-17
+
+### Added
+
+- Share several templates at once as a file, a link or a QR code
+- Import with a choice: pick which templates to take over, rename each one and, for an existing name, choose between adding it as a new template and overwriting; a collection starts with nothing selected
+- Undo, redo and duplicate while editing a template
+- After every update the introduction shows a "New" page with the changes of the last three versions as an expandable timeline
+
+### Changed
+
+- Editing a function result with the pencil starts from the generated text instead of an empty field; restoring the typed text is offered below the input
+- Element properties: the title format and the inline setting sit under "General" next to the switch they depend on; "Advanced" keeps only rarely used settings
+- The issuer choice when scanning a medication plan is more compact
+
+### Fixed
+
+- Contact persons keep their role and the advance directive and power of attorney checkmarks after a restart or update
+- Scanning no longer opens a second camera layer below the native scanner
+- A field that is multiline and has options can be edited again
+- Stable spacing under "General" in the properties on iPhone
+- The medication library shows a read error instead of an empty list, and taking over the old library resumes after an interruption
+- "Export all" can be imported again
+
 ## [1.12.0] - 2026-11-16
 
 ### Added

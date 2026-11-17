@@ -334,3 +334,9 @@ export function moveDown(root: Container, id: string): Container {
   if (p.id !== root.id) return outdentChild(root, id)
   return root
 }
+
+/** Feld aus einem Textbaustein: der Text als Standardwert, ohne Titelzeile; mehrzeilig, wenn der Text Umbrüche
+ *  hat. Eine Quelle für App und Online-Editor, damit ein eingefügter Textbaustein überall gleich aussieht. */
+export function createSnippetField(id: string, text: string): Field {
+  return { ...createField(id), default: text, showTitle: false, ...(text.includes('\n') ? { multiline: true } : {}) }
+}

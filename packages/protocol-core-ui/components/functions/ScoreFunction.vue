@@ -21,7 +21,7 @@ import SgarbossaSheet from './SgarbossaSheet.vue'
 import EgsysSheet from './EgsysSheet.vue'
 import BmiSheet from './BmiSheet.vue'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
-import RequiredMark from '@/components/RequiredMark.vue'
+import RequiredMark from '../RequiredMark.vue'
 import FunctionFillToggle from './FunctionFillToggle.vue'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
 
@@ -103,11 +103,6 @@ function doReset(): void {
 
     <p v-if="node.required && isOpen" class="pl-9 text-sm text-warning">Pflichtfeld – noch offen</p>
 
-    <!-- BEWAHREN: getippter Freitext ruht (Status ✓/−) -> antippbar zum verlustfreien Zurueckholen. -->
-    <button v-if="supported && preservedText" type="button" class="flex min-h-11 items-center gap-1.5 pl-9 text-left text-sm text-info hover:underline" :title="preservedText" @click="restorePreserved">
-      <span aria-hidden="true">✎</span>
-      <span>Getippter Text gemerkt — zurückholen</span>
-    </button>
 
     <!-- − nicht erhoben: Rechner entfaellt in der Ausgabe. -->
     <p v-if="supported && excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
@@ -132,6 +127,7 @@ function doReset(): void {
         type="button"
         class="flex min-h-11 w-full items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-left shadow-sm active:bg-base-200"
         :aria-label="`${label}: ${hasData ? ergebnis : 'noch nicht erhoben'} — eingeben`"
+        data-score-open
         @click="sheetOpen = true"
       >
         <!-- Kein truncate: Befund-Scores (LAMS/FAST4D) nennen die Befunde - die Zeile darf umbrechen,
@@ -145,6 +141,12 @@ function doReset(): void {
         Diese Funktion wird von deiner App-Version nicht unterstützt.
       </p>
     </template>
+
+    <!-- BEWAHREN: getippter Freitext ruht (Status ✓/−) -> antippbar zum verlustfreien Zurueckholen. UNTER der Eingabe (Maintainer), wie beim Feld. -->
+    <button v-if="supported && preservedText" type="button" class="flex min-h-11 items-center gap-1.5 pl-9 text-left text-sm text-info hover:underline" :title="preservedText" @click="restorePreserved">
+      <span aria-hidden="true">✎</span>
+      <span>Getippter Text gemerkt — zurückholen</span>
+    </button>
 
     <!-- Eingabe-Sheet je Score-Typ (teleportet sich selbst) -->
     <PackYearsSheet v-if="sheetOpen && node.functionKind === 'packYears'" :initial="packYearsRow" @apply="apply" @close="sheetOpen = false" />

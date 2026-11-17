@@ -12,6 +12,24 @@
       "minVersion": "1.1.1"
     },
     {
+      "prop": "inline",
+      "on": "function",
+      "de": "Funktion in der Zeile",
+      "en": "Inline function",
+      "note_de": "einzeilige Funktion hängt an die laufende Zeile an statt einer eigenen Zeile",
+      "note_en": "single-line function continues the current line instead of starting its own",
+      "minVersion": "1.1.0"
+    },
+    {
+      "prop": "noSeparatorBefore",
+      "on": "function",
+      "de": "Kein Trenner davor (Funktion)",
+      "en": "No separator before (function)",
+      "note_de": "kein Feld-Trenner vor der Funktion, sie klebt am vorherigen Element",
+      "note_en": "no field separator before the function; it sticks to the previous element",
+      "minVersion": "1.1.0"
+    },
+    {
       "prop": "required",
       "on": "field",
       "de": "Pflichtfeld",
@@ -109,6 +127,15 @@
       "note_de": "Solange eine Bedingung zutrifft, gilt ein anderer Standardwert als default. Form: [ { \"fieldId\": \"<id eines Feldes mit options>\", \"options\": [\"<exakter Options-Text>\"], \"value\": \"<Standardwert in diesem Fall>\" } ]. Die erste zutreffende Regel gilt (höchstens fünf). Hat das Feld selbst options, muss value eine davon sein. Eigene Eingaben des Anwenders gehen vor. Ältere App-Versionen ignorieren die Angabe und nehmen default.",
       "note_en": "While a condition is met, a different default applies instead of default. Shape: [ { \"fieldId\": \"<id of a field with options>\", \"options\": [\"<exact option text>\"], \"value\": \"<default in this case>\" } ]. The first matching rule applies (at most five). If the field itself has options, value must be one of them. The user's own input takes precedence. Older app versions ignore it and use default.",
       "minVersion": "1.11.0"
+    },
+    {
+      "prop": "config.lineEnd",
+      "on": "function",
+      "de": "Zeilenende",
+      "en": "Line end",
+      "note_de": "Zeichen am Ende der Ergebniszeile einzeiliger Funktionen (Funktionskonfiguration); leer = nichts. Ältere Apps setzen ihren festen Standard",
+      "note_en": "character at the end of the result line of single-line functions (function configuration); empty = nothing. Older apps use their fixed default",
+      "minVersion": "1.12.0"
     }
   ],
   "functions": [

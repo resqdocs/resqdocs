@@ -9,7 +9,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { useTreeEditor } from '@resqdocs/protocol-core-ui/treeEditor'
-import { exportTemplate } from '@resqdocs/protocol-core/templateIO'
+import { exportTemplates } from '@resqdocs/protocol-core/templateIO'
 import { detectAndParse, kindNoun } from '@resqdocs/protocol-core/importRouter'
 import { shareTransfer, receiveTransfer, TransferError, type TransferTtl } from '@resqdocs/protocol-core/transferClient'
 import QrCode from '@/components/QrCode.vue'
@@ -19,6 +19,7 @@ import { routeDetected } from '@/composables/useImportRouting'
 import { useTemplateExport } from '@/composables/useTemplateExport'
 import { useAppVersion } from '@/composables/useAppVersion'
 import { incomingOpen, takeIncomingOpen } from '@/composables/useIncomingOpen'
+import { offerImport } from '@/composables/useImportChoice'
 import { readIncomingFile, discardIncomingFile } from '@/utils/fileTransfer'
 
 // Optionaler Dev-Override der Transfer-Dienst-URL (sonst Default aus dem Client).
@@ -38,13 +39,24 @@ const mode = ref<'closed' | 'export' | 'import'>('closed')
 const importText = ref('')
 const msg = ref<{ kind: 'ok' | 'err'; text: string } | null>(null)
 const copied = ref(false)
-const { sharing, shareTemplate } = useTemplateExport()
+const { sharing, shareTemplates } = useTemplateExport()
 
-// Export-Auswahl (B): welche Vorlage? Default = die aktive und folgt ihr, bis manuell umgestellt.
-const selectedId = ref(root.value.id)
-watch(() => root.value.id, (id) => { selectedId.value = id })
-const selectedTemplate = computed<Container>(() => protocols.value.find((p) => p.id === selectedId.value) ?? root.value)
-const exportJson = computed(() => exportTemplate(selectedTemplate.value))
+// Export-Auswahl: eine oder mehrere Vorlagen. Default = die aktive und folgt ihr, solange nur eine
+// gewählt ist. Mehrere = Sammlung (Datei, Link und QR); eine = Einzelformat, das auch ältere Apps lesen.
+const selectedIds = ref<string[]>([root.value.id])
+watch(() => root.value.id, (id) => { if (selectedIds.value.length <= 1) selectedIds.value = [id] })
+// In der Reihenfolge der Bibliothek, nicht der Klick-Reihenfolge; gelöschte Vorlagen fallen heraus.
+const selectedTemplates = computed<Container[]>(() => protocols.value.filter((p) => selectedIds.value.includes(p.id)))
+const allSelected = computed(() => selectedTemplates.value.length === protocols.value.length)
+function toggleSelected(id: string, on: boolean): void {
+  selectedIds.value = on ? [...new Set([...selectedIds.value, id])] : selectedIds.value.filter((x) => x !== id)
+  shareLink.value = null // ein alter Link passt nicht mehr zur Auswahl
+}
+function toggleAllSelected(): void {
+  selectedIds.value = allSelected.value ? [root.value.id] : protocols.value.map((p) => p.id)
+  shareLink.value = null
+}
+const exportJson = computed(() => (selectedTemplates.value.length ? exportTemplates(selectedTemplates.value) : ''))
 
 function toggle(m: 'export' | 'import'): void {
   mode.value = mode.value === m ? 'closed' : m
@@ -89,7 +101,7 @@ async function copyExport(): Promise<void> {
 }
 
 async function downloadExport(): Promise<void> {
-  const res = await shareTemplate(selectedTemplate.value)
+  const res = await shareTemplates(selectedTemplates.value)
   if (!res.ok && res.error) msg.value = { kind: 'err', text: 'Export fehlgeschlagen: ' + res.error }
 }
 
@@ -186,11 +198,10 @@ function cancelIncoming(): void {
   if (item?.kind === 'file') void discardIncomingFile(item.url)
 }
 
-const pendingImport = ref<{ tree: Container; existingId: string; name: string } | null>(null)
-
-function finishImport(added: Container): void {
-  editor.selectProtocol(added.id)
-  msg.value = { kind: 'ok', text: 'Vorlage importiert.' }
+/** Nach dem Übernehmen im ImportChoiceDialog: erste Vorlage öffnen, Import-Feld leeren. Bis dahin bleibt der
+ *  empfangene Text im Feld stehen - bricht der Nutzer ab, geht ein schon verbrauchter „1× lesen“-Link nicht verloren. */
+function afterImport(added: Container[]): void {
+  if (added[0]) editor.selectProtocol(added[0].id)
   importText.value = ''
   mode.value = 'closed'
 }
@@ -211,17 +222,11 @@ async function runLoad(text: string): Promise<void> {
     msg.value = { kind: 'err', text: (r.kind ? `${kindNoun(r.kind)} erkannt, aber ` : '') + r.error }
     return
   }
-  if (r.kind === 'protocol') {
-    // Vorlage: Ueberschreiben NUR bei Namensgleichheit (das, was der Nutzer sieht). Die interne id
-    // kollidiert geraeteuebergreifend zufaellig (Default-Vorlage = id 'protokoll') und darf NIE
-    // Ueberschreiben ausloesen — sonst wuerde eine anders benannte Vorlage still zerstoert. Kein
-    // Namens-Treffer -> als NEUE Vorlage (kollisionssicher) -> nie Datenverlust, hoechstens eine Dublette.
-    const target = tree.resolveImportTarget(r.tree)
-    if (target.mode === 'overwrite') {
-      pendingImport.value = { tree: r.tree, existingId: target.existingId, name: target.name }
-      return
-    }
-    finishImport(tree.importProtocol(r.tree))
+  if (r.kind === 'protocol' || r.kind === 'bundle') {
+    // Vorlage(n): Name wählen, bei Namensgleichheit überschreiben oder als neue Vorlage - im ImportChoiceDialog
+    // Überschrieben wird nur auf ausdrückliche Wahl; Standard ist „als neue Vorlage“.
+    msg.value = null
+    offerImport(r.kind === 'bundle' ? r.trees : [r.tree], afterImport)
     return
   }
   // Baustein/Snippet: zentral ans richtige Ziel (landet in der Bausteine-Bibliothek).
@@ -231,18 +236,6 @@ async function runLoad(text: string): Promise<void> {
     importText.value = ''
     mode.value = 'closed'
   }
-}
-function doOverwrite(): void {
-  const p = pendingImport.value
-  if (p) finishImport(tree.overwriteProtocolById(p.existingId, p.tree))
-  pendingImport.value = null
-}
-function doRename(): void {
-  if (pendingImport.value) finishImport(tree.importProtocol(pendingImport.value.tree, true))
-  pendingImport.value = null
-}
-function cancelImport(): void {
-  pendingImport.value = null
 }
 
 function onFile(e: Event): void {
@@ -262,18 +255,37 @@ function onFile(e: Event): void {
     </div>
 
     <div v-if="mode === 'export'" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
-      <label class="flex flex-col gap-1">
-        <span class="text-xs font-semibold text-base-content/60">Welche Vorlage?</span>
-        <select v-model="selectedId" class="select select-sm w-full" aria-label="Vorlage wählen">
-          <option v-for="p in protocols" :key="p.id" :value="p.id">{{ (p.title && p.title.trim()) || p.id }}</option>
-        </select>
-      </label>
+      <!-- Auswahl: eine oder mehrere Vorlagen. Mehrere gehen als Sammlung über Datei, Link und QR. -->
+      <fieldset class="flex flex-col gap-1" data-export-selection>
+        <div class="flex items-center justify-between gap-2">
+          <legend class="text-xs font-semibold text-base-content/60">Welche Vorlagen?</legend>
+          <button v-if="protocols.length > 1" class="btn btn-ghost btn-xs" type="button" @click="toggleAllSelected">
+            {{ allSelected ? 'Nur aktive' : 'Alle' }}
+          </button>
+        </div>
+        <div class="flex max-h-48 flex-col overflow-y-auto rounded border border-base-300">
+          <label v-for="p in protocols" :key="p.id" class="flex min-h-11 cursor-pointer items-center gap-3 border-b border-base-200 px-3 last:border-b-0">
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm"
+              :checked="selectedIds.includes(p.id)"
+              :data-export-pick="p.id"
+              @change="toggleSelected(p.id, ($event.target as HTMLInputElement).checked)"
+            />
+            <span class="min-w-0 flex-1 truncate text-sm">{{ (p.title && p.title.trim()) || p.id }}</span>
+          </label>
+        </div>
+        <p v-if="!selectedTemplates.length" class="text-xs text-warning">Mindestens eine Vorlage wählen.</p>
+        <p v-else-if="selectedTemplates.length > 1" class="text-xs text-base-content/60">
+          {{ selectedTemplates.length }} Vorlagen gehen zusammen raus. Ältere ResQDocs-Versionen können nur einzelne Vorlagen empfangen.
+        </p>
+      </fieldset>
       <div v-if="focus !== 'link'" class="flex flex-col gap-2">
         <div class="flex items-center justify-between gap-2">
           <span class="text-xs font-semibold text-base-content/60">Exportieren — als Datei/JSON</span>
           <div class="flex gap-1">
-            <button class="btn btn-ghost btn-xs" type="button" @click="copyExport">{{ copied ? 'Kopiert' : 'JSON kopieren' }}</button>
-            <button class="btn btn-ghost btn-xs" type="button" :disabled="sharing" @click="downloadExport">Als Datei</button>
+            <button class="btn btn-ghost btn-xs" type="button" :disabled="!selectedTemplates.length" @click="copyExport">{{ copied ? 'Kopiert' : 'JSON kopieren' }}</button>
+            <button class="btn btn-ghost btn-xs" type="button" :disabled="sharing || !selectedTemplates.length" @click="downloadExport">Als Datei</button>
           </div>
         </div>
         <pre class="max-h-60 overflow-auto rounded bg-base-200 p-2 text-xs"><code>{{ exportJson }}</code></pre>
@@ -290,7 +302,7 @@ function onFile(e: Event): void {
               <option v-for="o in TTL_LABELS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </label>
-          <button class="btn btn-primary btn-xs" type="button" :disabled="shareBusy" @click="shareViaLink">
+          <button class="btn btn-primary btn-xs" type="button" :disabled="shareBusy || !selectedTemplates.length" @click="shareViaLink">
             {{ shareBusy ? 'Erstelle …' : 'Link erstellen' }}
           </button>
         </div>
@@ -386,19 +398,6 @@ function onFile(e: Event): void {
       <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="cancelIncoming"></button>
     </div>
 
-    <!-- Kollision: Vorlage mit gleicher Kennung existiert -> ueberschreiben oder als neue importieren -->
-    <div class="modal" :class="{ 'modal-open': pendingImport !== null }" role="dialog" aria-modal="true">
-      <div class="modal-box">
-        <h3 class="text-base font-semibold">Vorlage existiert bereits</h3>
-        <p class="py-3 text-sm">Es gibt schon eine Vorlage mit dem Namen <strong>{{ pendingImport?.name }}</strong>. Überschreiben oder als neue Vorlage importieren?</p>
-        <div class="modal-action flex-wrap">
-          <button type="button" class="btn btn-ghost btn-sm" @click="cancelImport">Abbrechen</button>
-          <button type="button" class="btn btn-sm" @click="doRename">Als neue importieren</button>
-          <button type="button" class="btn btn-error btn-sm" @click="doOverwrite">Überschreiben</button>
-        </div>
-      </div>
-      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="cancelImport"></button>
-    </div>
     </Teleport>
   </div>
 </template>

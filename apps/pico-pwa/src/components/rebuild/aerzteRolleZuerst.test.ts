@@ -25,7 +25,7 @@ const DIRECTIVE = 7
 type Node = any
 
 function templateAst(): Node {
-  const path = fileURLToPath(new URL('AerzteFunction.vue', import.meta.url))
+  const path = fileURLToPath(new URL('../../../../../packages/protocol-core-ui/components/functions/AerzteFunction.vue', import.meta.url))
   const { descriptor } = sfc.parse(readFileSync(path, 'utf8'))
   assert.ok(descriptor.template?.ast, 'AerzteFunction.vue: kein <template>')
   return descriptor.template.ast

@@ -11,3 +11,50 @@ export const snippetPickerKey: InjectionKey<Component | null> = Symbol('rd-snipp
 /** Optional: die aktuell anbietbaren functionKinds. Der Online-Editor gated sie nach der vom Nutzer
  *  gewählten App-Version; fehlt der Provider (Mobile-App = immer die eigene Version), sind ALLE erlaubt. */
 export const allowedFunctionKindsKey: InjectionKey<Ref<readonly FunctionKind[]> | null> = Symbol('rd-allowed-function-kinds')
+
+// --- Listen-Funktionen (Medikationsplan, Kontakte/Ärzte): was nur die App kann --------------------------------
+// Kamera-Scan, die eigene PZN-Bibliothek und die Medikamenten-Suche gibt es nur in der App. Sie steckt sie hier
+// ein; ohne Provider (Online-Editor im Browser) entfallen Scan-Knöpfe und Vorschläge, die Erfassung von Hand
+// bleibt vollständig.
+
+/** Ein Vorschlag aus der eigenen Medikamenten-Bibliothek (strukturell wie der PZN-Eintrag der App). */
+export interface MedicationSuggestion {
+  pzn: string
+  wirkstoff: string
+  label: string
+  staerke: string
+}
+
+/** Scan im Medikationsplan. */
+export interface MedplanScan {
+  /** Kamera für eine Packung. Events: `decoded(result)`, `cancel`. */
+  packageScanner: Component
+  /** PZN aus dem gelesenen Packungscode, sonst null (synchron: die Meldung erscheint sofort). */
+  pznFromPackage(result: unknown): string | null
+  /** Zeile zur PZN: aus der eigenen Bibliothek, sonst ein Platzhalter. */
+  rowForPzn(pzn: string): Promise<import('@resqdocs/protocol-core/model').MedikamenteRow>
+  /** Medikationsplan (BMP) scannen und prüfen. Prop `mode: 'camera' | 'scanner'`; Events `apply(rows, doctor?)`, `close`. */
+  planSheet: Component
+}
+
+export interface ListCapture {
+  /** Vorschläge ab 3 Zeichen im Namensfeld des Medikationsplans. */
+  suggestMedication?(query: string, limit: number): Promise<MedicationSuggestion[]>
+  medplanScan?: MedplanScan
+  /** Arzt (und optional Medikamente) aus dem Medikationsplan scannen. Events `apply(doctor, meds?)`, `close`. */
+  aerzteScanSheet?: Component
+}
+
+export const listCaptureKey: InjectionKey<ListCapture | null> = Symbol('rd-list-capture')
+
+// --- Textbausteine: Quelle für die gemeinsame Auswahl (SnippetPicker) ------------------------------------------
+// App: ihre SQLite-Bibliothek (useBausteine). Online-Editor: useSnippetLibrary (IndexedDB). Ohne Quelle zeigt die
+// Auswahl eine leere Liste.
+export interface SnippetSource {
+  snippets: Ref<readonly { id: string; title: string; text: string }[]>
+  loaded: Ref<boolean>
+  reload(): Promise<void>
+  /** Hinweis, wo man Textbausteine anlegt (Standard: der Bausteine-Tab der App). */
+  emptyHint?: string
+}
+export const snippetSourceKey: InjectionKey<SnippetSource | null> = Symbol('rd-snippet-source')

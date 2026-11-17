@@ -451,3 +451,13 @@ test('Funktionsname „Kontakte/Ärzte": der Kontakt steht vorn (bewusste Entsch
   // und als Titel jeder neu eingefügten Funktion (createFunction) - beides liest diese eine Stelle.
   assert.equal(FUNCTION_REGISTRY.aerzte.label, 'Kontakte/Ärzte')
 })
+
+// EINE Liste der Funktionsarten für App (＋-Menü) und Online-Editor (Katalog). Jede Art braucht zudem
+// einen Eintrag in ai-docs/feature-versions.json, sonst filtert der Online-Editor sie still weg.
+test('FUNCTION_KINDS = Registry = feature-versions.json (Gleichstand App/Online-Editor)', async () => {
+  const { FUNCTION_KINDS, FUNCTION_REGISTRY: REG } = await import('./registry.ts')
+  const { readFileSync } = await import('node:fs')
+  const fv = JSON.parse(readFileSync(new URL('../../../ai-docs/feature-versions.json', import.meta.url), 'utf8')) as { functions: { kind: string }[] }
+  assert.deepEqual(FUNCTION_KINDS, Object.keys(REG))
+  assert.deepEqual([...fv.functions.map((f) => f.kind)].sort(), [...FUNCTION_KINDS].sort())
+})

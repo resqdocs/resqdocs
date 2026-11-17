@@ -42,3 +42,16 @@ test('Datensparsamkeit/Quelltext: kein Logging, kein Browser-Storage, kein Netz'
   const src = readFileSync(new URL('./packageScan.ts', import.meta.url), 'utf8')
   assert.ok(!/console\.|localStorage\.|sessionStorage\.|indexedDB\.|fetch\(|XMLHttpRequest/.test(src))
 })
+
+// Abbildung PZN -> Zeile beim Packungs-Scan (vorher inline im Medikationsplan, jetzt reine Funktion, die die App
+// über listCaptureKey einsteckt) - Verhalten muss exakt gleich bleiben.
+test('packageScanRow: Wirkstoff vor Bezeichnung, Stärke als eigenes Feld, Platzhalter ohne Bibliothek', async () => {
+  const { packageScanRow } = await import('./packageScan.ts')
+  let fragen = 0
+  const resolve = (): string | null => { fragen++; return 'Ibuprofen' }
+  assert.deepEqual(packageScanRow('01234567', { wirkstoff: 'Ibuprofen', label: 'Ibuflam', staerke: '400 mg' }, resolve), { name: 'Ibuprofen', staerke: '400 mg', pzn: '01234567' })
+  assert.deepEqual(packageScanRow('01234567', { wirkstoff: '', label: 'Ibuflam 400 mg', staerke: '400 mg' }, resolve), { name: 'Ibuflam 400 mg', staerke: undefined, pzn: '01234567' }, 'Stärke steht schon im Namen')
+  assert.equal(fragen, 0, 'mit Bibliotheks-Namen wird nicht nachgeschlagen')
+  assert.deepEqual(packageScanRow('01234567', null, () => null), { name: 'PZN 01234567', staerke: undefined, pzn: '01234567' })
+  assert.equal(packageScanRow('01234567', { wirkstoff: '', label: '', staerke: '' }, resolve).name, 'Ibuprofen (PZN 01234567, community/ungeprüft)')
+})

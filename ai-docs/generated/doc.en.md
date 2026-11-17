@@ -39,6 +39,8 @@ Additionally, individual **properties** are only available from a minimum versio
 | Property | in JSON | applies to | since app version |
 |---|---|---|---|
 | Default text | `default` | functions (fallback when there is no output: lists without entries, calculators without a result) | 1.1.1 |
+| Inline function | `inline` | functions (single-line function continues the current line instead of starting its own) | 1.1.0 |
+| No separator before (function) | `noSeparatorBefore` | functions (no field separator before the function; it sticks to the previous element) | 1.1.0 |
 | Required | `required` | field (field cannot be silently skipped during a case (no "not collected"); empty = "still open") | 1.2.0 |
 | Required | `required` | functions (function cannot be silently skipped during a case; empty = "still open") | 1.2.0 |
 | Contact persons with legal flags | `vollmacht` | functions (recorded during a case, do not write it into the JSON. Doctors function: contact persons (relatives/carers) with role + advance directive / power of attorney) | 1.3.0 |
@@ -50,6 +52,7 @@ Additionally, individual **properties** are only available from a minimum versio
 | "Custom" as a large text field | `customMultiline` | field (On a select with allowCustom: the custom input is a large text field instead of a single line, for longer texts. Older app versions show the single-line input; the output is the same.) | 1.10.0 |
 | Dependency | `dependsOn` | field, container, function (The element only appears during a case once the conditions are met; until then it is hidden and not in the output. Shape: { "conditions": [ { "fieldId": "<id of a field with options>", "options": ["<exact option text>"] } ] }. A condition is met when one of the options is chosen in that field. Several conditions (at most three) must all be met; with "match": "any" one is enough. Always set together with defaultExcluded: true (on a container also excludable: true), not together with required. Older app versions ignore it: there the element starts as "not assessed" and is switched on by hand.) | 1.11.0 |
 | Conditional default | `defaultWhen` | field (While a condition is met, a different default applies instead of default. Shape: [ { "fieldId": "<id of a field with options>", "options": ["<exact option text>"], "value": "<default in this case>" } ]. The first matching rule applies (at most five). If the field itself has options, value must be one of them. The user's own input takes precedence. Older app versions ignore it and use default.) | 1.11.0 |
+| Line end | `config.lineEnd` | functions (character at the end of the result line of single-line functions (function configuration); empty = nothing. Older apps use their fixed default) | 1.12.0 |
 
 **Gate rule:** a `functionKind` is available **only if its minimum version ≤ the user's version**. Otherwise do not offer it; if the user asks, say "that needs at least version X". **Never write** a `functionKind` into the JSON that the stated version does not know. Containers and fields work from version 1.0.0 onward. If the user states a version **before 1.0.0** (or none), assume the base — only `container` + `field`, no functions — and point out that functions and the template import itself need at least 1.0.0.
 

@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "protocolId": "beispiel-vorlage",
+  "createdAt": 1763300000000,
+  "lastTouchedAt": 1763300600000,
+  "expiresAt": 1763311400000,
+  "ttlHours": 3,
+  "values": {
+    "feld-bestaetigt": { "state": "confirmed" },
+    "feld-bestaetigt-gemerkt": { "state": "confirmed", "prevValue": "zuletzt getippt" },
+    "feld-freitext": { "state": "custom", "value": "Beispieltext" },
+    "feld-mehrfach": { "state": "custom", "value": "A, B und C", "values": ["A", "B", "C"] },
+    "feld-ausgeschlossen": { "state": "excluded" },
+    "feld-ausgeschlossen-gemerkt": { "state": "excluded", "prevValue": "gemerkt" },
+    "feld-ausgeschlossen-mehrfach": { "state": "excluded", "prevValue": "A und B", "prevValues": ["A", "B"] },
+    "fn-medikamente": {
+      "state": "function",
+      "rows": [
+        { "name": "Beispielwirkstoff", "staerke": "100 mg", "dosierung": "1-0-1", "kommentar": "Beispiel", "pzn": "00000000" }
+      ]
+    },
+    "fn-kontakte": {
+      "state": "function",
+      "rows": [
+        { "name": "Dr. Beispiel", "rolle": "Hausarzt", "ort": "Beispielstadt", "telefon": "0000 000000", "arztnummer": "000000000" },
+        { "name": "Dr. Muster", "rolle": "Facharzt" },
+        { "name": "Erika Beispiel", "rolle": "Angehöriger", "telefon": "0000 111111", "patientenverfuegung": true, "vollmacht": false },
+        { "name": "Max Muster", "rolle": "Betreuer", "vollmacht": true }
+      ]
+    },
+    "fn-ausgeschlossen": { "state": "function", "rows": [], "status": "excluded", "prevText": "gemerkt" },
+    "fn-freitext": { "state": "function", "rows": [], "status": "custom", "text": "eigener Text" },
+    "fn-bestaetigt-gemerkt": { "state": "function", "rows": [{ "cigarettesPerDay": 20, "years": 10 }], "prevText": "gemerkt" },
+    "fn-news2": {
+      "state": "function",
+      "rows": [{ "rr": 16, "spo2": 96, "systolic": 130, "pulse": 80, "temp": 37.2, "consciousness": "A", "onOxygen": false, "scale2": false }]
+    },
+    "fn-lams": { "state": "function", "rows": [{ "lamsFace": 1, "lamsArm": 2, "lamsGrip": 0 }] },
+    "fn-fast4d": {
+      "state": "function",
+      "rows": [{
+        "fastFace": "pos", "fastArm": "pos", "fastSpeech": "neg", "fastDiplopia": "na", "fastField": "neg",
+        "fastVertigo": "neg", "fastAtaxia": "na", "fastFaceSide": "li", "fastArmSide": "re",
+        "fastTimeMode": "onset", "fastTime": "08:15"
+      }]
+    },
+    "fn-zops": { "state": "function", "rows": [{ "zopsTime": "no", "zopsPlace": "ok", "zopsPerson": "ok", "zopsSituation": "na" }] },
+    "fn-sgarbossa": { "state": "function", "rows": [{ "sgbConcordantElevation": "neg", "sgbConcordantDepression": "pos", "sgbDiscordantElevation": "na" }] },
+    "fn-egsys": {
+      "state": "function",
+      "rows": [{ "egsysPalpitations": "yes", "egsysHeartDisease": "no", "egsysEffort": "no", "egsysSupine": "yes", "egsysTriggers": "no", "egsysProdromes": "no" }]
+    },
+    "fn-bmi": { "state": "function", "rows": [{ "bmiWeight": 80, "bmiHeight": 180 }] }
+  }
+}

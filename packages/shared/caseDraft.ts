@@ -107,7 +107,7 @@ function sanitizeValues(v: unknown): Record<string, FieldFill> {
 
 /** Funktions-Zeilen strikt auf bekannte Felder reduzieren (leere raus). Deckt ALLE Zeilen-Typen ab:
  *  Medikament {name, staerke?, dosierung?, kommentar?, pzn?}, Arzt {name, rolle?, ort?, telefon?,
- *  arztnummer?} UND Score-Zeilen (z. B. Pack-Years {cigarettesPerDay?, years?} - reine Zahlen, KEIN
+ *  arztnummer?, patientenverfuegung?, vollmacht?} UND Score-Zeilen (z. B. Pack-Years {cigarettesPerDay?, years?} - reine Zahlen, KEIN
  *  Namen-Feld; LAMS {lamsFace?, lamsArm?, lamsGrip?} - Punktwerte im festen Bereich; FAST4D {fast…} - Befunde
  *  neg|pos|na, Seite, Zeitart und Uhrzeit HH:MM; ZOPS {zops…} - Befunde ok|no|na; Sgarbossa {sgb…} - Kriterien pos|neg|na; EGSYS {egsys…} - Antworten yes|no). DSGVO: striktes Allowlisting - NUR diese Felder gelangen in den Entwurf, keine
  *  Scan-Rohdaten. Da der Entwurf den functionKind je Zeile nicht kennt, behalten wir die Union aller
@@ -116,7 +116,9 @@ function sanitizeValues(v: unknown): Record<string, FieldFill> {
  *  nur komplett leere Zeilen entfallen. */
 const STRING_FIELDS = ['name', 'staerke', 'dosierung', 'kommentar', 'pzn', 'ort', 'telefon', 'arztnummer'] as const
 const NUMBER_FIELDS = ['cigarettesPerDay', 'years', 'rr', 'spo2', 'systolic', 'pulse', 'temp', 'bmiWeight', 'bmiHeight'] as const
-const BOOL_FIELDS = ['onOxygen', 'scale2'] as const
+const BOOL_FIELDS = ['onOxygen', 'scale2', 'patientenverfuegung', 'vollmacht'] as const
+/** Rollen der Funktion „Kontakte/Ärzte" (ArztRow.rolle). */
+const ARZT_ROLLEN = ['Hausarzt', 'Facharzt', 'Angehöriger', 'Betreuer'] as const
 /** Befund-Felder mit festem Wertebereich (LAMS-Punkte, FAST4D-Befunde/-Seite/-Zeitart, ZOPS-Befunde, Sgarbossa-Kriterien, EGSYS-Antworten): nur exakt
  *  diese Werte gelangen in den Entwurf. */
 const FAST4D_BEFUND = ['neg', 'pos', 'na'] as const
@@ -161,12 +163,15 @@ function sanitizeRows(v: unknown): FunctionRow[] {
     const row: Record<string, unknown> = {}
     // String-Felder (Medikament + Arzt)
     for (const k of STRING_FIELDS) if (typeof r[k] === 'string') row[k] = r[k]
-    if (r.rolle === 'Hausarzt' || r.rolle === 'Facharzt') row.rolle = r.rolle
+    // Alle Rollen aus ArztRow - auch die Kontakt-Rollen. Bis 1.12.0 fielen Angehöriger/Betreuer hier weg und mit
+    // ihnen die Häkchen Patientenverfügung/Vollmacht: nach jedem Neustart (auch nach einem Update) stand der
+    // Kontakt ohne Rolle und ohne diese Angaben im Einsatz.
+    if (typeof r.rolle === 'string' && (ARZT_ROLLEN as readonly string[]).includes(r.rolle)) row.rolle = r.rolle
     // ACVPU-Enum (NEWS2-Bewusstsein)
     if (typeof r.consciousness === 'string' && ['A', 'C', 'V', 'P', 'U'].includes(r.consciousness)) row.consciousness = r.consciousness
     // Numerische Score-Felder (Pack-Years, NEWS2-Vitalwerte, BMI; endliche Zahlen)
     for (const k of NUMBER_FIELDS) if (typeof r[k] === 'number' && Number.isFinite(r[k])) row[k] = r[k]
-    // Boolean-Score-Felder (NEWS2: O2-Gabe, SpO2-Skala 2)
+    // Boolean-Felder (NEWS2: O2-Gabe, SpO2-Skala 2; Kontaktperson: Patientenverfügung, Vollmacht)
     for (const k of BOOL_FIELDS) if (typeof r[k] === 'boolean') row[k] = r[k]
     // Befund-Felder mit festem Wertebereich (LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS)
     for (const [k, erlaubt] of Object.entries(ENUM_FIELDS)) if (erlaubt.includes(r[k] as string | number)) row[k] = r[k]

@@ -69,6 +69,9 @@ async function fetchWindow(offset: number): Promise<PznEntry[]> {
     : lib.page({ offset, limit: PAGE, dir: sortDir.value, missingStaerke: missingOnly.value })
 }
 
+// Lesefehler des Backends: ohne Fehlerzustand wirkte die Bibliothek LEER („Noch keine Einträge.“),
+// obwohl die Daten unversehrt auf dem Gerät liegen - wer dann neu importiert oder aufgibt, verliert Arbeit.
+const loadError = ref(false)
 async function reload(): Promise<void> {
   loading.value = true
   try {
@@ -77,6 +80,9 @@ async function reload(): Promise<void> {
     total.value = n
     missingCount.value = missing
     hasMore.value = first.length === PAGE
+    loadError.value = false
+  } catch {
+    loadError.value = true
   } finally {
     loading.value = false
   }
@@ -88,7 +94,13 @@ async function loadMore(): Promise<void> {
   const offset = missingOnly.value
     ? entries.value.filter((x) => x.staerke.trim() === '').length
     : entries.value.length
-  const next = await fetchWindow(offset)
+  let next: PznEntry[]
+  try {
+    next = await fetchWindow(offset)
+  } catch {
+    loadError.value = true
+    return
+  }
   const known = new Set(entries.value.map((x) => x.pzn))
   entries.value = [...entries.value, ...next.filter((x) => !known.has(x.pzn))]
   hasMore.value = next.length === PAGE
@@ -562,6 +574,10 @@ async function deleteAll(): Promise<void> {
           </button>
         </div>
 
+        <div v-if="loadError" class="alert alert-warning flex flex-wrap items-center gap-2 text-sm" role="alert" data-pzn-load-error>
+          <span class="min-w-0 flex-1">Die Bibliothek ist gerade nicht lesbar. Deine Einträge sind nicht gelöscht.</span>
+          <button class="btn btn-sm min-h-11" type="button" :disabled="loading" @click="reload">Erneut versuchen</button>
+        </div>
         <ul v-if="entries.length" class="flex flex-col gap-1.5">
           <li v-for="e in entries" :key="e.pzn">
             <!-- READ: zweizeilige Summary (M3 Two-line-Item) - Antippen oeffnet die Edit-Karte -->
@@ -628,7 +644,7 @@ async function deleteAll(): Promise<void> {
         </ul>
         <p v-else-if="loading" class="text-xs text-base-content/50">Lädt…</p>
         <p v-else-if="query.trim()" class="text-xs text-base-content/50">Kein Treffer für „{{ query.trim() }}".</p>
-        <p v-else class="text-xs text-base-content/50">Noch keine Einträge.</p>
+        <p v-else-if="!loadError" class="text-xs text-base-content/50">Noch keine Einträge.</p>
 
         <div v-if="hasMore" class="flex flex-wrap items-center gap-2">
           <span class="text-xs text-base-content/60">{{ entries.length }} geladen.</span>
