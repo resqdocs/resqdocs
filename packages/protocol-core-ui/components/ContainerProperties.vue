@@ -366,8 +366,9 @@ async function saveAsBaustein(): Promise<void> {
         <InfoTip :info="node.type === 'function' ? INFO.function : node.type === 'field' ? INFO.field : INFO.section" />
       </div>
 
-      <!-- ALLGEMEIN (eigener aufklappbarer Bereich, offen): das, was man fast immer einstellt - Titel,
-           Standardwert, Pflichtfeld, „nicht erhoben". Gleiches <details>-Muster wie „Erweitert" (siehe dort). -->
+      <!-- ALLGEMEIN (eigener aufklappbarer Bereich, offen): das, was man fast immer einstellt - Titel und wie er im
+           Protokolltext steht, Standardwert, Pflichtfeld, „nicht erhoben", gleiche Zeile. Abhaengige Einstellungen
+           stehen eingerueckt direkt unter ihrem Schalter. Gleiches <details>-Muster wie „Erweitert" (siehe dort). -->
       <details open class="group rounded-lg bg-base-200/50">
         <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <span class="shrink-0">Allgemein</span>
@@ -375,7 +376,9 @@ async function saveAsBaustein(): Promise<void> {
           <span class="min-w-0 flex-1 truncate text-xs text-base-content/50">{{ node.title?.trim() || 'ohne Titel' }}</span>
           <span class="shrink-0 text-base-content/50 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
         </summary>
-        <div class="flex flex-col gap-3 px-4 pb-4">
+        <!-- space-y statt flex-col+gap: WebKit/WKWebView rechnet vertikale gap-Abstaende beim ersten Layout
+             doppelt (kam mit a2350bf zurueck). Waechter: webkitGap.test.ts. -->
+        <div class="space-y-3 px-4 pb-4">
       <!-- BASIS: Titel - der Name, den man pflegt. Die interne id liegt unter „Erweitert". -->
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Titel</legend>
@@ -405,6 +408,54 @@ async function saveAsBaustein(): Promise<void> {
         <span class="text-sm">Titel im Protokolltext zeigen</span>
         <InfoTip :info="INFO.showTitle" class="ml-auto" />
       </label>
+
+      <!-- Titel-Format: steht direkt unter dem Schalter, von dem es abhaengt (nur wenn der Titel im Protokolltext
+           steht): prefix/suffix, Titel als eigene Zeile samt Fuellzeichen und Absatz davor. Eingerueckt = gehoert zum Schalter. -->
+      <!-- Block+Margin statt Flex-gap: WKWebView/WebKit rendert Flex-/Grid-gap-Abstaende beim Erst-Layout
+           zu gross und korrigiert erst nach einem Reflow (Tap) — margin-basierter Abstand umgeht den Bug.
+           Quellen: Apple DevForums 737214, daisyUI #2410, Tailwind #3394, philipwalton/flexbugs. -->
+      <div v-if="node.showTitle && hasTitle" class="space-y-3 border-l-2 border-base-300 pl-3" data-title-format>
+        <span class="text-xs font-semibold text-base-content/60">Titel-Format <InfoTip :info="INFO.titleFormat" /></span>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Präfix <InfoTip :info="INFO.prefix" /></legend>
+          <input class="input w-full font-mono" :value="heading.prefix" placeholder="## " @input="setHeading({ prefix: ($event.target as HTMLInputElement).value })" />
+        </fieldset>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Suffix <InfoTip :info="INFO.suffix" /></legend>
+          <input class="input w-full font-mono" :value="heading.suffix" placeholder=": " @input="setHeading({ suffix: ($event.target as HTMLInputElement).value })" />
+        </fieldset>
+        <!-- Titel als eigene Zeile (Banner/Trenner) - Container, Feld UND Funktion; Inhalt rutscht darunter. -->
+        <label class="flex w-full cursor-pointer items-center gap-2 py-0">
+          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="titleOwnLine" @change="setTitleOwnLine(($event.target as HTMLInputElement).checked)" />
+          <span class="text-sm">Titel als eigene Zeile (Trenner/Banner — Inhalt darunter)</span>
+          <InfoTip :info="INFO.titleOwnLine" class="ml-auto" />
+        </label>
+        <!-- Füllzeichen/Breite/Bezug nur wenn Titel auf eigener Zeile (inline ignoriert sie). -->
+        <template v-if="titleOwnLine">
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Füllzeichen (leer = keins) <InfoTip :info="INFO.fill" /></legend>
+            <input class="input w-full font-mono" maxlength="1" :value="heading.fill" placeholder="=" @input="setHeading({ fill: ($event.target as HTMLInputElement).value })" />
+          </fieldset>
+          <fieldset v-if="!!heading.fill" class="fieldset">
+            <legend class="fieldset-legend">Breite <InfoTip :info="INFO.width" /></legend>
+            <input type="number" class="input w-full" min="0" max="200" :value="heading.width" @input="setHeading({ width: Number(($event.target as HTMLInputElement).value) })" />
+          </fieldset>
+          <fieldset v-if="!!heading.fill && heading.width > 0" class="fieldset">
+            <legend class="fieldset-legend">Füllzeichen-Bezug <InfoTip :info="INFO.fillMode" /></legend>
+            <select class="select w-full" :value="heading.fillMode" @change="setHeading({ fillMode: (($event.target as HTMLSelectElement).value as 'inclusive' | 'exclusive') })">
+              <option value="inclusive">inklusive (konstante Gesamtbreite)</option>
+              <option value="exclusive">exklusive (feste Füllzeichen-Zahl)</option>
+            </select>
+          </fieldset>
+          <!-- Absatz davor: optische Leerzeile vor dem Banner, wirkt nur wenn etwas darueber steht.
+               NICHT am Wurzel-Container: dort steht nie etwas darueber -> Grundvoraussetzung unerfuellbar. -->
+          <label v-if="!isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
+            <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.blankLineBefore === true" @change="set({ blankLineBefore: ($event.target as HTMLInputElement).checked })" />
+            <span class="text-sm">Absatz davor (Leerzeile, wenn etwas darüber steht)</span>
+            <InfoTip :info="INFO.blankLineBefore" class="ml-auto" />
+          </label>
+        </template>
+      </div>
 
       <!-- FELD/FUNKTION: Pflichtfeld. Im Einsatz entfaellt der −-Zustand (nicht erhoben); ✓/✎ bleiben.
            Ein leeres Pflichtfeld wird nur visuell als „noch offen" markiert (kein Zwang, keine Sperre). -->
@@ -448,6 +499,22 @@ async function saveAsBaustein(): Promise<void> {
         <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/50">(nur bei Bedarf einschalten)</span></span>
         <InfoTip :info="node.type === 'function' ? INFO.functionStartsExcluded : INFO.fieldStartsExcluded" class="ml-auto" />
       </label>
+
+      <!-- FELD oder FUNKTION: in derselben Zeile wie das vorherige Element (inline) + Trenner-Opt-out darunter.
+           Haeufig gebraucht, deshalb hier und nicht unter „Erweitert". Standard ist eine eigene Zeile; entfaellt,
+           solange der Titel auf eigener Zeile steht (Banner = immer eigener Block). -->
+      <template v-if="(node.type === 'field' || node.type === 'function') && !titleOwnLine">
+        <label class="flex w-full cursor-pointer items-center gap-2 py-0">
+          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.inline === true" @change="set(($event.target as HTMLInputElement).checked ? { inline: true } : { inline: false, noSeparatorBefore: false })" />
+          <span class="text-sm">Inline (an vorheriges Element anhängen statt neue Zeile)</span>
+          <InfoTip :info="INFO.inline" class="ml-auto" />
+        </label>
+        <label v-if="node.inline" class="flex w-full cursor-pointer items-center gap-2 border-l-2 border-base-300 py-0 pl-3">
+          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.noSeparatorBefore === true" @change="set({ noSeparatorBefore: ($event.target as HTMLInputElement).checked })" />
+          <span class="text-sm">Kein Trenner davor (direkt ans vorherige kleben)</span>
+          <InfoTip :info="INFO.noSeparatorBefore" class="ml-auto" />
+        </label>
+      </template>
 
       <!-- CONTAINER: einklappbar + als „nicht erhoben" markierbar (Basis).
            NICHT am Wurzel-Container: die Wurzel wird im Einsatz nie als Sektion gerendert (EinsatzView zeigt nur
@@ -503,8 +570,13 @@ async function saveAsBaustein(): Promise<void> {
 
       <!-- LISTENOPTIONEN (eigener aufklappbarer Bereich): alles rund um die Auswahlliste eines Feldes.
            FELD: Auswahl-Optionen (Select). Gesetzt -> das Feld ist ein Select. „als Standard" = Radio.
-           Bei „mehrzeilig" ausgeblendet: Select (Optionen) und Textarea schliessen sich aus. -->
-      <details v-if="node.type === 'field' && !node.multiline" class="group rounded-lg bg-base-200/50">
+           Bei „mehrzeilig" ausgeblendet: Select (Optionen) und Textarea schliessen sich aus. AUSNAHME: hat
+           ein importiertes Feld trotzdem Optionen UND mehrzeilig, bleibt der Bereich sichtbar - sonst waeren die
+           Optionen weder zu sehen noch zu aendern (Mehrzeilig-Schalter und Standardwert sind bei Optionen
+           ohnehin ausgeblendet). Im Einsatz ist das Feld eine Auswahl; nach dem Loeschen der letzten Option
+           erscheinen Mehrzeilig und Standardwert wieder. Ueber die Oberflaeche entsteht der Zustand nicht neu:
+           addOption/Einfuegen setzen multiline zurueck. -->
+      <details v-if="node.type === 'field' && (!node.multiline || !!node.options?.length)" class="group rounded-lg bg-base-200/50">
         <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <span class="shrink-0">Listenoptionen</span>
           <InfoTip :info="INFO.listOptions" />
@@ -530,7 +602,7 @@ async function saveAsBaustein(): Promise<void> {
           <button type="button" class="btn btn-ghost btn-xs" :aria-expanded="pasteOpen" @click="pasteOpen = !pasteOpen; pasteInfo = ''">Liste einfügen</button>
         </div>
         <!-- „Liste einfuegen": z. B. mehrere hundert Codes „Zahl: Einsatzmeldung" auf einmal -->
-        <div v-if="pasteOpen" class="flex flex-col gap-1">
+        <div v-if="pasteOpen" class="space-y-1">
           <textarea
             v-model="pasteText"
             rows="6"
@@ -712,8 +784,9 @@ async function saveAsBaustein(): Promise<void> {
         </div>
       </details>
 
-      <!-- ERWEITERT (Progressive Disclosure): selten Gebrauchtes eingeklappt - interne id, Titel-Format,
-           Layout/Trenner, Ausgabe-Optionen. Default zu; Kopf zeigt die id als Vorschau. -->
+      <!-- ERWEITERT (Progressive Disclosure): nur noch selten Gebrauchtes - interne id, bei Abschnitten Feld-Trenner
+           und Text wenn leer. Titel-Format und Inline stehen unter „Allgemein" bei ihren Schaltern. Default zu;
+           Kopf zeigt die id als Vorschau. -->
       <!-- BEWUSST kein daisyUI-.collapse: dessen animiertes Auf-/Zuklappen nutzt content-visibility:hidden->visible
            (+ interpolate-size min-height/height 0->auto). Der Inhalt ist geschlossen NICHT gelayoutet und wird beim
            Oeffnen erstmalig vermessen; auf iOS/Android-WebView sitzt der Erst-Layout erst nach einem Reflow (Tap)
@@ -736,68 +809,6 @@ async function saveAsBaustein(): Promise<void> {
             <p v-else class="text-xs text-base-content/50">Interne Kennung · wird automatisch vergeben · normalerweise nicht ändern</p>
           </fieldset>
           <p v-else class="text-xs text-base-content/50">Oberste Ebene der Vorlage · die Kennung „{{ node.id }}" wird über die Bibliothek verwaltet (Titel umbenennen).</p>
-
-          <!-- Titel-Format (nur wenn Ueberschrift/Titel in der Ausgabe): prefix/suffix; Container zusaetzlich inline-Titel + Banner -->
-          <!-- Block+Margin statt Flex-gap: WKWebView/WebKit rendert Flex-/Grid-gap-Abstaende beim Erst-Layout
-               zu gross und korrigiert erst nach einem Reflow (Tap) — margin-basierter Abstand umgeht den Bug.
-               Quellen: Apple DevForums 737214, daisyUI #2410, Tailwind #3394, philipwalton/flexbugs. -->
-          <div v-if="node.showTitle && hasTitle" class="space-y-3">
-            <span class="text-xs font-semibold text-base-content/60">Titel-Format <InfoTip :info="INFO.titleFormat" /></span>
-            <fieldset class="fieldset">
-              <legend class="fieldset-legend">Präfix <InfoTip :info="INFO.prefix" /></legend>
-              <input class="input w-full font-mono" :value="heading.prefix" placeholder="## " @input="setHeading({ prefix: ($event.target as HTMLInputElement).value })" />
-            </fieldset>
-            <fieldset class="fieldset">
-              <legend class="fieldset-legend">Suffix <InfoTip :info="INFO.suffix" /></legend>
-              <input class="input w-full font-mono" :value="heading.suffix" placeholder=": " @input="setHeading({ suffix: ($event.target as HTMLInputElement).value })" />
-            </fieldset>
-            <!-- Titel als eigene Zeile (Banner/Trenner) - Container, Feld UND Funktion; Inhalt rutscht darunter. -->
-            <label class="flex w-full cursor-pointer items-center gap-2 py-0">
-              <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="titleOwnLine" @change="setTitleOwnLine(($event.target as HTMLInputElement).checked)" />
-              <span class="text-sm">Titel als eigene Zeile (Trenner/Banner — Inhalt darunter)</span>
-              <InfoTip :info="INFO.titleOwnLine" class="ml-auto" />
-            </label>
-            <!-- Füllzeichen/Breite/Bezug nur wenn Titel auf eigener Zeile (inline ignoriert sie). -->
-            <template v-if="titleOwnLine">
-              <fieldset class="fieldset">
-                <legend class="fieldset-legend">Füllzeichen (leer = keins) <InfoTip :info="INFO.fill" /></legend>
-                <input class="input w-full font-mono" maxlength="1" :value="heading.fill" placeholder="=" @input="setHeading({ fill: ($event.target as HTMLInputElement).value })" />
-              </fieldset>
-              <fieldset v-if="!!heading.fill" class="fieldset">
-                <legend class="fieldset-legend">Breite <InfoTip :info="INFO.width" /></legend>
-                <input type="number" class="input w-full" min="0" max="200" :value="heading.width" @input="setHeading({ width: Number(($event.target as HTMLInputElement).value) })" />
-              </fieldset>
-              <fieldset v-if="!!heading.fill && heading.width > 0" class="fieldset">
-                <legend class="fieldset-legend">Füllzeichen-Bezug <InfoTip :info="INFO.fillMode" /></legend>
-                <select class="select w-full" :value="heading.fillMode" @change="setHeading({ fillMode: (($event.target as HTMLSelectElement).value as 'inclusive' | 'exclusive') })">
-                  <option value="inclusive">inklusive (konstante Gesamtbreite)</option>
-                  <option value="exclusive">exklusive (feste Füllzeichen-Zahl)</option>
-                </select>
-              </fieldset>
-              <!-- Absatz davor: optische Leerzeile vor dem Banner, wirkt nur wenn etwas darueber steht.
-                   NICHT am Wurzel-Container: dort steht nie etwas darueber -> Grundvoraussetzung unerfuellbar. -->
-              <label v-if="!isRoot" class="flex w-full cursor-pointer items-center gap-2 py-0">
-                <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.blankLineBefore === true" @change="set({ blankLineBefore: ($event.target as HTMLInputElement).checked })" />
-                <span class="text-sm">Absatz davor (Leerzeile, wenn etwas darüber steht)</span>
-                <InfoTip :info="INFO.blankLineBefore" class="ml-auto" />
-              </label>
-            </template>
-          </div>
-
-          <!-- FELD oder FUNKTION (Score ODER Liste): block/inline + Trenner-Opt-out. Wie beim Feld: Default
-               Block, inline explizit waehlbar. Entfaellt bei aktivem Banner (Titel auf eigener Zeile = Block). -->
-          <template v-if="(node.type === 'field' || node.type === 'function') && !titleOwnLine">
-            <label class="flex w-full cursor-pointer items-center gap-2 py-0">
-              <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.inline === true" @change="set(($event.target as HTMLInputElement).checked ? { inline: true } : { inline: false, noSeparatorBefore: false })" />
-              <span class="text-sm">Inline (an vorheriges Element anhängen statt neue Zeile)</span>
-              <InfoTip :info="INFO.inline" class="ml-auto" />
-            </label>
-            <label v-if="node.inline" class="flex w-full cursor-pointer items-center gap-2 py-0">
-              <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.noSeparatorBefore === true" @change="set({ noSeparatorBefore: ($event.target as HTMLInputElement).checked })" />
-              <span class="text-sm">Kein Trenner davor (direkt ans vorherige kleben)</span>
-              <InfoTip :info="INFO.noSeparatorBefore" class="ml-auto" />
-            </label>
-          </template>
 
           <!-- CONTAINER: Ausgabe-Optionen (Feld-Trenner + Text wenn leer) -->
           <template v-if="node.type === 'container'">

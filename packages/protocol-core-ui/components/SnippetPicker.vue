@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * Geteilte Snippet-Auswahl (Bausteine-Rework): EIN Bottom-Sheet/Modal für Editor UND Einsatz. Die Snippets
- * aus der Bibliothek (useBausteine, geteilter Singleton-Ref) stehen zur Auswahl; „Einfügen" emittiert den
+ * Geteilte Snippet-Auswahl (Bausteine-Rework): EIN Bottom-Sheet/Modal für Editor UND Einsatz, in App und
+ * Online-Editor. Die Snippets kommen vom Host über snippetSourceKey (App: SQLite-Bibliothek, Online-Editor:
+ * IndexedDB); ohne Quelle bleibt die Liste leer. „Einfügen" emittiert den
  * reinen Text des Gewählten; der Host mappt ihn auf seine v1-Primitive (Editor: Feld-Vorgabe via
  * tree.insertSnippet, Einsatz: useCaseValues.setCustom). Reine Auswahl — mutiert nichts, schließt NICHT
  * selbst (der Host schließt nach select). Lädt sich selbst (reload, wenn noch nicht geladen).
@@ -14,9 +15,9 @@
  * Teleport an body wie die Score-Sheets: im Einsatz-Shell sperrt ein backdrop-blur-Vorfahr ein fixed/Modal
  * sonst ein. Struktur nach Vorbild MoveToPicker.vue (daisyUI modal modal-bottom / ab sm modal-middle).
  */
-import { computed, onMounted, ref, watch } from 'vue'
-import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
-import { useBausteine } from '@/composables/useBausteine'
+import { computed, inject, onMounted, ref, watch } from 'vue'
+import TabRef from './TabRef.vue'
+import { snippetSourceKey } from '../injection.ts'
 
 const props = withDefaults(defineProps<{ title?: string; multiple?: boolean }>(), {
   title: 'Textbaustein einfügen',
@@ -24,9 +25,12 @@ const props = withDefaults(defineProps<{ title?: string; multiple?: boolean }>()
 })
 const emit = defineEmits<{ select: [text: string]; close: [] }>()
 
-const { snippets, loaded, reload } = useBausteine()
+const source = inject(snippetSourceKey, null)
+const snippets = computed(() => source?.snippets.value ?? [])
+// Ohne Quelle gilt die Liste als geladen (leer) - sonst stünde „Lädt …“ für immer da.
+const loaded = computed(() => source?.loaded.value ?? true)
 onMounted(() => {
-  if (!loaded.value) void reload()
+  if (source && !source.loaded.value) void source.reload()
 })
 
 // Nur Snippets MIT Text sind einfügbar — ein leeres Snippet würde ein Feld auf „abweichend, aber leer"
@@ -106,7 +110,9 @@ function confirm(): void {
         </template>
 
         <p v-else-if="loaded" class="px-2 py-6 text-center text-sm text-base-content/50">
-          Noch keine Textbausteine mit Text. Lege unter <TabRef tab="bausteine" /> welche an.
+          Noch keine Textbausteine mit Text.
+          <template v-if="source?.emptyHint">{{ source.emptyHint }}</template>
+          <template v-else>Lege unter <TabRef tab="bausteine" /> welche an.</template>
         </p>
         <p v-else class="px-2 py-6 text-center text-sm text-base-content/50">Lade …</p>
 

@@ -8,23 +8,17 @@
  * bleibt die Liste als Inhaltsverzeichnis lesbar. „fertig/raustippen": Fertig-Button ODER Fokus verlaesst
  * die Karte (focusout). v1 manuelle Erfassung; Packung-/BMP-Scan folgt.
  */
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, inject, nextTick, ref, watch } from 'vue'
 import type { FunctionNode, MedikamenteRow, ArztRow } from '@resqdocs/protocol-core/model'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
 import { formatMedikament, medikamentRowHasData, arztRowHasData, staerkeOhneDuplikat } from '@resqdocs/protocol-core/functions/registry'
-import { usePznLibrary } from '@/medications/usePznLibrary'
-import type { PznEntry } from '@/medications/pznLibrary'
-import { meaningfulLength } from '@/medications/pznSuggest'
-import { useMedicationLookup } from '@/medications/useMedicationLookup'
-import { extractPznFromPackageCode, packageScanName, type PackageBarcodeFormat } from '@/medications/packageScan'
-import CodeScanOverlay from '@/components/CodeScanOverlay.vue'
-import { PACKAGE_PROFILE } from '@/medplan/scanProfiles'
-import MedplanReviewSheet from './MedplanReviewSheet.vue'
+import { meaningfulLength } from '@resqdocs/protocol-core/textSearch'
+import { listCaptureKey, type MedicationSuggestion } from '@resqdocs/protocol-core-ui/injection'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
-import FunctionFillToggle from './FunctionFillToggle.vue'
-import RequiredMark from '@/components/RequiredMark.vue'
+import FunctionFillToggle from '@resqdocs/protocol-core-ui/components/functions/FunctionFillToggle.vue'
+import RequiredMark from '@resqdocs/protocol-core-ui/components/RequiredMark.vue'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
 import { shouldCloseCard, tapIsPending } from '@resqdocs/protocol-core-ui/cardFocusGuard'
 
@@ -35,8 +29,10 @@ const { einsatzRoot } = useProtocolTree()
 // dev-Scan-/Lookup-Logik 1:1 wiederverwendet (erprobt). PZN-Lookup: eigene Bibliothek zuerst
 // (entry(): Wirkstoff vor Bezeichnung + Wirkstärke), sonst Community-Woerterbuch (resolve, per
 // Default aus -> Platzhalter „PZN <nr>").
-const pznLibrary = usePznLibrary()
-const lookup = useMedicationLookup()
+// Scan, PZN-Vorschläge und Prüf-Sheet steckt die App ein (listCaptureKey); ohne Provider (Browser) entfallen
+// Scan-Knopf und Vorschläge, die Erfassung von Hand bleibt vollständig.
+const capture = inject(listCaptureKey, null)
+const medplanScan = capture?.medplanScan ?? null
 
 const rows = computed<MedikamenteRow[]>(() => caseValues.getRows(props.node.id) as MedikamenteRow[])
 const filledCount = computed(() => rows.value.filter((r) => r.name.trim()).length) // leere Zeile zaehlt nicht
@@ -191,21 +187,20 @@ function startPackageScan(): void {
   pkgScanMsg.value = null
   pkgScanOpen.value = true
 }
-async function onPackageDecoded(p: { text: string; format: PackageBarcodeFormat }): Promise<void> {
+async function onPackageDecoded(p: unknown): Promise<void> {
   pkgScanOpen.value = false // Overlay ist nach einem Decode „done" -> schliessen
-  const pzn = extractPznFromPackageCode(p.text, p.format)
+  if (!medplanScan) return
+  const pzn = medplanScan.pznFromPackage(p)
   if (!pzn) {
     pkgScanMsg.value = 'Keine PZN auf der Packung erkannt — näher heranführen oder manuell eintippen.'
     return
   }
   // Strukturiert aus der EIGENEN Bibliothek: Wirkstoff (wichtiger als Bezeichnung,
   // konsistent zu resolveFromLibrary der Review-Sheets) + Wirkstärke als eigenes Feld —
-  // ausser der Name (z. B. Label "Ibuflam 400 mg") trägt sie schon (keine Doppel-Doku).
-  const e = await pznLibrary.entry(pzn)
-  const name = (e && (e.wirkstoff || e.label)) || packageScanName(pzn, lookup.resolve(pzn))
-  const staerke = staerkeOhneDuplikat(name, e?.staerke)
+  // ausser der Name (z. B. Label "Ibuflam 400 mg") trägt sie schon (keine Doppel-Doku). Abbildung: packageScanRow.
+  const row = await medplanScan.rowForPzn(pzn)
   const cleaned = rows.value.filter(medikamentRowHasData)
-  caseValues.setRows(props.node.id, [...cleaned, { name, staerke, pzn }]) // anhaengen, kompakt (kein Edit-Open)
+  caseValues.setRows(props.node.id, [...cleaned, row]) // anhaengen, kompakt (kein Edit-Open)
 }
 
 // --- Typeahead: das manuelle Namensfeld sucht in der PZN-Bibliothek --------------------------------
@@ -213,7 +208,7 @@ async function onPackageDecoded(p: { text: string; format: PackageBarcodeFormat 
 // (Wirkstoff vor Bezeichnung, Staerke ohne Namens-Dublette). Leere oder nicht lesbare Bibliothek ->
 // keine Vorschlaege, das Feld bleibt schlichtes Freitext-Input. Nur EINE Karte
 // ist offen -> eine gemeinsame Vorschlagsliste, an editingIndex gebunden.
-const suggestions = ref<PznEntry[]>([])
+const suggestions = ref<MedicationSuggestion[]>([])
 const suggestForRow = ref<number | null>(null)
 let suggestTimer: ReturnType<typeof setTimeout> | null = null
 // Grosszuegig, damit das gesuchte Medikament nicht unter der Kappung verschwindet; die Liste ist
@@ -249,9 +244,10 @@ function onNameInput(i: number, value: string): void {
     suggestForRow.value = null
     return
   }
+  const suggest = capture?.suggestMedication
+  if (!suggest) return // ohne Bibliothek (Browser): schlichtes Freitext-Feld
   suggestTimer = setTimeout(() => {
-    void pznLibrary
-      .suggest(value, SUGGEST_LIMIT)
+    void suggest(value, SUGGEST_LIMIT)
       .then((hits) => {
         if (editingIndex.value !== i) return // Zeile gewechselt -> veraltetes Ergebnis verwerfen
         suggestions.value = hits
@@ -264,7 +260,7 @@ function onNameInput(i: number, value: string): void {
   }, 180)
 }
 
-function chooseSuggestion(i: number, e: PznEntry): void {
+function chooseSuggestion(i: number, e: MedicationSuggestion): void {
   const name = e.wirkstoff || e.label
   // Name + PZN sofort; die Staerke nur auf Rueckfrage (und nur, wenn sie nicht ohnehin im Namen steckt).
   setRow(i, { name, pzn: e.pzn })
@@ -330,11 +326,6 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
 
     <p v-if="node.required && isOpen" class="pl-9 text-sm text-warning">Pflichtfeld – noch offen</p>
 
-    <!-- BEWAHREN: getippter Funktions-Freitext ruht (Status ✓/−) -> antippbar zum verlustfreien Zurueckholen. -->
-    <button v-if="preservedText" type="button" class="flex min-h-11 items-center gap-1.5 pl-9 text-left text-sm text-info hover:underline" :title="preservedText" @click="restorePreserved">
-      <span aria-hidden="true">✎</span>
-      <span>Getippter Text gemerkt — zurückholen</span>
-    </button>
 
     <!-- nicht erhoben: Zeilen-Verwaltung aus, nur Hinweis. Daten bleiben erhalten und kommen beim Zurueckschalten wieder. -->
     <p v-if="excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokolltext</p>
@@ -382,9 +373,9 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
             class="input input-sm flex-1 font-medium"
             :value="r.name"
             placeholder="Medikament"
-            role="combobox"
-            :aria-expanded="suggestForRow === i && suggestions.length > 0"
-            aria-autocomplete="list"
+            :role="capture?.suggestMedication ? 'combobox' : undefined"
+            :aria-expanded="capture?.suggestMedication ? suggestForRow === i && suggestions.length > 0 : undefined"
+            :aria-autocomplete="capture?.suggestMedication ? 'list' : undefined"
             :aria-label="`Medikament ${i + 1}`"
             @input="onNameInput(i, ($event.target as HTMLInputElement).value)"
             @keydown.esc.stop="closeSuggest"
@@ -428,13 +419,19 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
          Umbrechen statt ueberlaufen (wie bei Kontakte/Aerzte), sonst wird die Seite bei grosser Schrift zu breit. -->
     <div class="flex flex-wrap gap-2" data-aktionsleiste>
       <button type="button" class="btn btn-primary btn-sm h-auto min-h-11 min-w-0 shrink grow gap-1 whitespace-normal py-2 leading-tight" @click="addRow"><span aria-hidden="true">＋</span> Medikament</button>
-      <button type="button" class="btn btn-outline btn-sm h-auto min-h-11 min-w-0 shrink grow gap-2 whitespace-normal py-2 leading-tight" aria-haspopup="dialog" :aria-expanded="scanPickerOpen" @click="scanPickerOpen = true">
+      <button v-if="medplanScan" type="button" class="btn btn-outline btn-sm h-auto min-h-11 min-w-0 shrink grow gap-2 whitespace-normal py-2 leading-tight" aria-haspopup="dialog" :aria-expanded="scanPickerOpen" @click="scanPickerOpen = true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5 shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.822 1.316Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" /></svg>
         Scannen
       </button>
     </div>
     <p v-if="pkgScanMsg" class="text-xs text-warning" role="status">{{ pkgScanMsg }}</p>
     </template>
+
+    <!-- BEWAHREN: getippter Freitext ruht (Status ✓/−) -> antippbar zum verlustfreien Zurueckholen. UNTER der Eingabe (Maintainer), wie beim Feld. -->
+    <button v-if="preservedText" type="button" class="flex min-h-11 items-center gap-1.5 pl-9 text-left text-sm text-info hover:underline" :title="preservedText" @click="restorePreserved">
+      <span aria-hidden="true">✎</span>
+      <span>Getippter Text gemerkt — zurückholen</span>
+    </button>
 
     <!-- Scan-Art waehlen: komfortable Tiles (bewusste Wahl, sourced scan-sheet-beauty). daisyUI .modal
          modal-bottom wie MoveToPicker; 56px-Zeilen mit gefasstem Icon-Chip (Theme-Akzent). Teleport, weil ein
@@ -481,11 +478,11 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
     <!-- Teleport an body: das Vollbild-Overlay (fixed inset-0) wuerde sonst von einem transformierten/
          backdrop-blur-Vorfahren des Einsatz-Shells auf den Inhaltsbereich eingesperrt. -->
     <Teleport to="body">
-      <CodeScanOverlay v-if="pkgScanOpen" :profile="PACKAGE_PROFILE" @decoded="onPackageDecoded" @cancel="pkgScanOpen = false" />
+      <component :is="medplanScan.packageScanner" v-if="pkgScanOpen && medplanScan" @decoded="onPackageDecoded" @cancel="pkgScanOpen = false" />
     </Teleport>
 
     <!-- BMP-Plan-Scan + Review (teleportet sich selbst) -->
-    <MedplanReviewSheet v-if="bmpOpen" :mode="bmpMode" @apply="onBmpApply" @close="bmpOpen = false" />
+    <component :is="medplanScan.planSheet" v-if="bmpOpen && medplanScan" :mode="bmpMode" @apply="onBmpApply" @close="bmpOpen = false" />
 
     <!-- Lösch-Rückfrage: Einzelzeile mit Daten oder „alle zurücksetzen" (teleportet sich selbst) -->
     <ConfirmDialog

@@ -216,3 +216,34 @@ test('resolveImportTarget: DATENSICHER — id-Kollision loest NIE Ueberschreiben
   // Titellose Vorlage -> kein Namens-Treffer -> NEU (sichere Dublette statt falschem Ueberschreiben)
   assert.deepEqual(resolveImportTarget([createContainer('protokoll')], createContainer('protokoll')), { mode: 'new' })
 })
+
+test('Import mit Auswahl: umbenennen, gezielt überschreiben, sonst neu mit „(Import)“', async () => {
+  const { importWithChoices } = await import('./library.ts')
+  const std = createContainer('protokoll'); std.title = 'Standard'
+  const kurz = createContainer('k'); kurz.title = 'Kurz'
+  const a = createContainer('protokoll'); a.title = 'Standard'
+  const b = createContainer('n1'); b.title = 'Kurz'
+  const c = createContainer('n2'); c.title = 'Alt'
+  let n = 100
+  const r = importWithChoices([std, kurz], [
+    { tree: a, name: 'Standard', overwrite: true }, // ersetzt die vorhandene „Standard“
+    { tree: b, name: 'Kurz', overwrite: false }, // bleibt daneben: „Kurz (Import)“
+    { tree: c, name: 'Neuer Name', overwrite: false }, // umbenannt
+  ], () => `x${++n}`)
+  assert.deepEqual(r.protocols.map((p) => p.title), ['Standard', 'Kurz', 'Kurz (Import)', 'Neuer Name'])
+  assert.equal(r.protocols[0].id, 'protokoll', 'überschriebene Vorlage behält ihren Platz und ihre Kennung')
+  assert.notEqual(r.protocols[0], std)
+  assert.equal(r.protocols[1], kurz, 'nicht gewählte Vorlage bleibt unangetastet')
+  assert.equal(r.overwritten, 1)
+  assert.equal(r.renamed, 1)
+})
+
+test('Import mit Auswahl: eine gerade übernommene Vorlage wird nie überschrieben', async () => {
+  const { importWithChoices } = await import('./library.ts')
+  const a = createContainer('a'); a.title = 'Gleich'
+  const b = createContainer('b'); b.title = 'Gleich'
+  let n = 0
+  const r = importWithChoices([], [{ tree: a, name: 'Gleich', overwrite: true }, { tree: b, name: 'Gleich', overwrite: true }], () => `x${++n}`)
+  assert.deepEqual(r.protocols.map((p) => p.title), ['Gleich', 'Gleich (Import)'])
+  assert.equal(r.overwritten, 0)
+})

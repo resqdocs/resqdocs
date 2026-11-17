@@ -27,8 +27,8 @@ const sfc = require_('@vue/compiler-sfc/dist/compiler-sfc.cjs.js') as any
 const DATEIEN = [
   'SnippetLibrarySection.vue',
   'BlockLibrarySection.vue',
-  '../rebuild/AerzteFunction.vue',
-  '../rebuild/MedplanFunction.vue',
+  '../../../../../packages/protocol-core-ui/components/functions/AerzteFunction.vue',
+  '../../../../../packages/protocol-core-ui/components/functions/MedplanFunction.vue',
 ]
 
 function compiled(name: string): string {

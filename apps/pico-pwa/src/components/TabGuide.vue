@@ -1,11 +1,7 @@
 <script lang="ts">
-/** Hint-ID der Tour. Eine neue ID zeigt die Tour nach dem Update allen einmal erneut:
- *  'v3' stellte mit 1.8.0 die neuen Begriffe und die ⓘ-Erklaerungen vor, 'v4' zeigte mit 1.9.0,
- *  was neu war, 'v5' mit 1.10.0. 'v6' zeigt mit 1.11.0 die Neuerungen aus 1.9.0, 1.10.0 und 1.11.0
- *  gemeinsam: die drei Versionen kamen so kurz hintereinander, dass viele sie nicht einzeln gesehen haben. */
-export const TAB_GUIDE_HINT_ID = 'tab-guide-v6'
-/** Wer eine dieser IDs schon hat, kannte die App vorher und bekommt zuerst die Seite „Neu“. */
-const PREVIOUS_HINT_IDS = ['tab-guide-v2', 'tab-guide-v3', 'tab-guide-v4', 'tab-guide-v5']
+// Kennung + Inhalt der Seite „Neu“ kommen automatisch aus den Release-Notes (tabGuideHints.ts):
+// nach JEDEM Update erscheint die Tour wieder, bisherige Nutzer zuerst mit „Neu“ (Grundregel Maintainer).
+export { TAB_GUIDE_HINT_ID } from './tabGuideHints'
 </script>
 
 <script setup lang="ts">
@@ -16,6 +12,9 @@ import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
 import { useStorage } from '@/storage/useStorage'
 import { useDisclaimer } from '@/composables/useDisclaimer'
 import { useAppVersion } from '@/composables/useAppVersion'
+import { isReturningUser } from '@/releaseNotes/whatsNew'
+import { TAB_GUIDE_HINT_ID, WHATS_NEW } from './tabGuideHints'
+import ReleaseTimeline from './ReleaseTimeline.vue'
 
 /**
  * Mehrseitige Onboarding-Tour (Mechanik der Erklaer-Hinweise): erscheint NACH dem
@@ -50,7 +49,7 @@ const step = ref(0)
 // Bisherige Nutzer sehen zuerst, was neu ist; danach dieselbe Tour wie bei einer Neuinstallation
 // („So ist eine Vorlage aufgebaut“ nach den Vorlagen).
 const pages = computed(() =>
-  PREVIOUS_HINT_IDS.some((id) => storage.settings.dismissedHints.includes(id))
+  isReturningUser(storage.settings.dismissedHints, HINT_ID) && NEWS.length > 0
     ? ['neu', 'willkommen', 'bridge', 'einsatz', 'vorlagen', 'begriffe', 'privat']
     : ['willkommen', 'bridge', 'einsatz', 'vorlagen', 'begriffe', 'privat'],
 )
@@ -68,37 +67,10 @@ function dismiss(): void {
 const scroller = ref<HTMLElement | null>(null)
 watch(step, () => void nextTick(() => scroller.value?.scrollTo({ top: 0 })))
 
-/** Seite „Neu“: die letzten drei Versionen, neueste zuerst. Kurz gehalten; alles Weitere steht im Versionsverlauf. */
-const NEWS: ReadonlyArray<{ version: string; items: ReadonlyArray<{ lead: string; text: string }> }> = [
-  {
-    version: '1.12.0',
-    items: [
-      { lead: 'Neue Funktionen:', text: 'ZOPS für die Orientierung, Sgarbossa-Kriterien (mod. nach Smith) und EGSYS-Score bei Synkope. Befunde antippen, das Ergebnis steht als eine Zeile im Protokolltext.' },
-      { lead: 'BMI-Rechner:', text: 'als Funktion: Gewicht und Größe eingeben, BMI und WHO-Klasse stehen im Protokolltext.' },
-      { lead: 'Funktionskonfiguration:', text: 'Einstellungen, die nur eine Funktion kennt, stehen in einem eigenen Bereich, zum Beispiel das Zeichen am Zeilenende oder bei EGSYS der Text ab 3 Punkten.' },
-      { lead: 'Große Schrift:', text: 'Die Knöpfe unter Kontakte/Ärzte und Medikationsplan brechen um, die Seite bleibt in der Bildschirmbreite.' },
-    ],
-  },
-  {
-    version: '1.11.0',
-    items: [
-      { lead: 'Die Bridge tippt auch ohne Handy:', text: 'Sie speichert einen festen Text und tippt ihn, wenn du ihren Knopf drückst. Einrichten über das Stick-Symbol oben rechts oder im Einsatz mit „Auf Knopf speichern“.' },
-      { lead: 'Neue Bridge-Firmware 0.5.1:', text: 'Das Update kommt per WLAN über die App. Sobald du mit der Bridge verbunden bist, erscheint oben ein Hinweis.' },
-      { lead: 'Abhängigkeiten in Vorlagen:', text: 'Felder und Abschnitte erscheinen erst, wenn in einem anderen Feld eine bestimmte Option gewählt ist. Ein Feld kann je nach Auswahl auch einen anderen Standardwert bekommen.' },
-      { lead: 'Aufgeräumte Eigenschaften:', text: 'Die Einstellungen eines Feldes sind in aufklappbare Bereiche sortiert.' },
-      { lead: 'Versionsverlauf:', text: 'Unter Einstellungen steht, was mit welcher Version dazugekommen ist.' },
-    ],
-  },
-  {
-    version: '1.10.0',
-    items: [
-      { lead: 'Fortschritt beim Tippen:', text: 'Nach dem Senden siehst du, wie weit die Bridge ist. Mit „Stoppen“, „Weitertippen“ und „Abbrechen“ steuerst du das Tippen.' },
-      { lead: 'Tippgeschwindigkeit:', text: 'feinere Stufen und schneller als bisher.' },
-      { lead: 'Scanner:', text: 'Beim Medikationsplan startet die Kamera ohne Zoom, der ganze Code passt ins Bild.' },
-      { lead: 'Auswahllisten:', text: 'Der Standardwert kann weichen, sobald du etwas anderes wählst. „individuell“ gibt es auf Wunsch mit großem Textfeld.' },
-    ],
-  },
-]
+/** Seite „Neu“: die letzten drei Versionen aus den Release-Notes als Zeitleiste wie im Versionsverlauf.
+ *  Aufgeklappt ist nur das aktuelle Update; die älteren lassen sich bei Bedarf aufklappen. */
+const NEWS = WHATS_NEW
+const newsOpen = ref<Set<string>>(new Set(NEWS[0] ? [NEWS[0].version] : []))
 
 function next(): void {
   if (step.value < LAST.value) step.value++
@@ -149,19 +121,9 @@ function onTouchEnd(e: TouchEvent): void {
         <div v-if="page === 'neu'" class="flex flex-1 flex-col gap-4 pb-2">
           <div class="flex flex-col gap-1 text-center">
             <h1 class="text-xl font-bold">Neu in den letzten Versionen</h1>
-            <p class="text-sm text-base-content/70">Drei Updates kurz hintereinander. Das ist dazugekommen:</p>
+            <p class="text-sm text-base-content/70">Das ist mit den letzten Updates dazugekommen. Alles Weitere steht unter Einstellungen → Versionsverlauf.</p>
           </div>
-          <section v-for="n in NEWS" :key="n.version" class="flex flex-col gap-2">
-            <h2 class="flex items-center gap-2 text-sm font-semibold">
-              <span class="badge badge-primary badge-sm tabular-nums">{{ n.version }}</span>
-            </h2>
-            <ul class="card flex flex-col gap-3 bg-base-100 p-4 shadow-sm">
-              <li v-for="item in n.items" :key="item.lead" class="flex items-start gap-3 text-sm">
-                <span class="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true"></span>
-                <span><strong>{{ item.lead }}</strong> {{ item.text }}</span>
-              </li>
-            </ul>
-          </section>
+          <ReleaseTimeline v-model:open="newsOpen" :notes="NEWS" :app-version="version" />
         </div>
 
         <!-- Seite „Begriffe“: die Teile einer Vorlage, mit denselben Zeichen wie im Aufbau und im Bausteine-Tab -->

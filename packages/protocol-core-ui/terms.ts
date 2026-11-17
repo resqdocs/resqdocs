@@ -93,7 +93,7 @@ export const INFO = {
   },
   general: {
     title: 'Allgemein',
-    text: 'Das, was du fast immer einstellst: Titel, Standardwert, ob das Element Pflicht ist und ob es im {einsatz} von Anfang an erhoben wird.',
+    text: 'Das, was du fast immer einstellst: Titel und wie er im Protokolltext steht, Standardwert, ob das Element Pflicht ist, ob es im {einsatz} von Anfang an erhoben wird und ob es in derselben Zeile wie das vorherige Element steht.',
   },
   listOptions: {
     title: 'Listenoptionen',
@@ -190,7 +190,7 @@ export const INFO = {
   },
   advanced: {
     title: 'Erweitert',
-    text: 'Hier legst du fest, wie der Protokolltext aussieht: Überschriften, Trennzeichen und was in einer Zeile steht. Die Vorlage funktioniert auch, wenn du hier nichts änderst. Unter Vorschau siehst du jede Änderung sofort.',
+    text: 'Selten Gebrauchtes: die interne Kennung des Elements, bei Abschnitten außerdem das Trennzeichen zwischen Elementen in derselben Zeile und der Text für einen leeren Abschnitt. Die Vorlage funktioniert auch, wenn du hier nichts änderst.',
   },
   id: {
     title: 'Kennung (id)',

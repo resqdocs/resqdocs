@@ -104,6 +104,51 @@ export function importProtocol(
   return { protocols: [...protocols, added], added }
 }
 
+/** Entscheidung je Vorlage beim Import: übernehmen?, unter welchem Namen, bei Namensgleichheit überschreiben? */
+export interface ImportChoice {
+  tree: Container
+  /** Name, unter dem die Vorlage ankommt; leer = ihr eigener Titel. */
+  name: string
+  /** Nur wirksam, wenn es den Namen in der Bibliothek schon gibt: true = diese Vorlage ersetzen, false = als neue
+   *  Vorlage mit „ (Import)“ dazulegen. */
+  overwrite: boolean
+}
+
+/**
+ * Gewählte Vorlagen übernehmen - DATENSICHER: Überschrieben wird nur, was der Nutzer ausdrücklich gewählt hat,
+ * und nur eine Vorlage, die es VOR diesem Import schon gab (nie eine gerade erst übernommene). Ohne Überschreiben
+ * kommt bei Namensgleichheit „ (Import)“ dazu.
+ */
+export function importWithChoices(
+  protocols: Container[],
+  choices: readonly ImportChoice[],
+  nextId: () => string,
+): { protocols: Container[]; added: Container[]; overwritten: number; renamed: number } {
+  const before = new Set(protocols.map((p) => p.id))
+  let list = protocols
+  const added: Container[] = []
+  let overwritten = 0
+  let renamed = 0
+  for (const c of choices) {
+    const title = c.name.trim() || c.tree.title
+    const tree: Container = { ...c.tree, title }
+    const existing = findProtocolByName(list, title)
+    if (existing && c.overwrite && before.has(existing.id)) {
+      const r = overwriteProtocolById(list, existing.id, tree, nextId)
+      before.delete(existing.id) // jede vorhandene Vorlage höchstens einmal ersetzen
+      list = r.protocols
+      added.push(r.added)
+      overwritten++
+      continue
+    }
+    if (existing) renamed++
+    const r = importProtocol(list, tree, nextId, !!existing)
+    list = r.protocols
+    added.push(r.added)
+  }
+  return { protocols: list, added, overwritten, renamed }
+}
+
 /** Ziel eines Vorlagen-Imports/-Empfangs bestimmen — DATENSICHER (bindend: nie fremde Protokolle zerstoeren).
  *  Identitaet ist der NAME (das, was der Nutzer sieht). Die interne id kollidiert geraeteuebergreifend
  *  ZUFAELLIG — die Default-Vorlage hat ueberall id 'protokoll', Zusatz-Vorlagen 'n1','n2',… — und darf

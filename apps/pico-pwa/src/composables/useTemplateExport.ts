@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
-import { exportTemplate } from '@resqdocs/protocol-core/templateIO'
+import { exportTemplate, exportTemplates } from '@resqdocs/protocol-core/templateIO'
 import { shareJson } from '@/utils/fileTransfer'
 
 /**
@@ -26,5 +26,20 @@ export function useTemplateExport() {
       sharing.value = false
     }
   }
-  return { sharing, shareTemplate }
+  /** Eine oder mehrere Vorlagen als Datei teilen (mehrere = Sammlung). */
+  async function shareTemplates(templates: readonly Container[]): Promise<{ ok: boolean; error?: string }> {
+    if (templates.length === 1) return shareTemplate(templates[0])
+    if (sharing.value || !templates.length) return { ok: false }
+    sharing.value = true
+    try {
+      await shareJson('resqdocs-vorlagen.json', exportTemplates(templates), 'Vorlagen exportieren')
+      return { ok: true }
+    } catch (err) {
+      const m = err instanceof Error ? err.message : String(err)
+      return { ok: false, error: /cancel|abbruch/i.test(m) ? undefined : m }
+    } finally {
+      sharing.value = false
+    }
+  }
+  return { sharing, shareTemplate, shareTemplates }
 }

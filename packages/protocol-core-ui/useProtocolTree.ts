@@ -10,7 +10,7 @@
 
 import { ref, computed } from 'vue'
 import type { Container, Node } from '@resqdocs/protocol-core/model'
-import { createContainer, createField, createFunction, addChild as addChildOp, updateNode, removeNode, moveChild, moveUp as moveUpOp, moveDown as moveDownOp, reparent as reparentOp, indentChild, outdentChild } from '@resqdocs/protocol-core/creator'
+import { createContainer, createField, createFunction, createSnippetField, addChild as addChildOp, updateNode, removeNode, moveChild, moveUp as moveUpOp, moveDown as moveDownOp, reparent as reparentOp, indentChild, outdentChild } from '@resqdocs/protocol-core/creator'
 import type { FunctionKind } from '@resqdocs/protocol-core/model'
 import {
   collidesId,
@@ -20,6 +20,8 @@ import {
   removeProtocol as removeOp,
   moveProtocol as moveProtocolOp,
   importProtocol as importProtocolOp,
+  importWithChoices as importWithChoicesOp,
+  type ImportChoice,
   overwriteProtocolById as overwriteProtocolByIdOp,
   protocolExists as protocolExistsOp,
   findProtocolByName as findProtocolByNameOp,
@@ -73,7 +75,7 @@ export function useProtocolTree() {
      *  ohne Titel (showTitle:false), mehrzeiliger Text -> multiline (grosses Textfeld). Bewusst KEIN
      *  eingefrorener Text: das Feld bleibt im Einsatz editier-/ausschliessbar (Tri-State) wie jedes andere. */
     insertSnippet(parentId: string, text: string): Node {
-      const field: Node = { ...createField(nextId()), default: text, showTitle: false, ...(text.includes('\n') ? { multiline: true } : {}) }
+      const field: Node = createSnippetField(nextId(), text)
       mutateEditor((t) => addChildOp(t, parentId, field))
       return field
     },
@@ -144,6 +146,13 @@ export function useProtocolTree() {
       protocols.value = next
       editorActiveId.value = added.id
       return added
+    },
+    /** Import mit Auswahl: je Vorlage Name und - bei Namensgleichheit - Ueberschreiben oder neu. */
+    importWithChoices(choices: ImportChoice[]): { added: Container[]; overwritten: number; renamed: number } {
+      const { protocols: next, added, overwritten, renamed } = importWithChoicesOp(protocols.value, choices, nextId)
+      protocols.value = next
+      if (added[0]) editorActiveId.value = added[0].id
+      return { added, overwritten, renamed }
     },
     /** Vorhandene Vorlage mit gleichem NAMEN suchen (fuer die Ueberschreiben-oder-neu-Abfrage). */
     findProtocolByName(title: string | undefined): Container | undefined {

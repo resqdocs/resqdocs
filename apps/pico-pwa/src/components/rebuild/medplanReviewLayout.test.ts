@@ -88,3 +88,18 @@ test('der gemeinsame Scrollbereich darf schrumpfen (min-h-0 + flex-1)', () => {
   assert.match(cls, /\bmin-h-0\b/, 'Scrollbereich braucht min-h-0, sonst schrumpft er nicht.')
   assert.match(cls, /\bflex-1\b/, 'Scrollbereich braucht flex-1, sonst bekommt er die Resthoehe nicht.')
 })
+
+
+
+// Auswahl der ausstellenden Praxis (Gerät 2026-11-17): Radios bleiben (Maintainer), aber ohne die großen
+// Lücken, die min-h-11 je Option und ein großer Zeilenabstand beim Umbrechen erzeugten.
+test('Praxis-Auswahl: Radios kompakt, ohne min-h-11 je Option', () => {
+  for (const name of ['MedplanReviewSheet.vue', 'AerzteReviewSheet.vue']) {
+    const src = readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8')
+    const a = src.indexOf('role="radiogroup"')
+    const gruppe = src.slice(src.lastIndexOf('<div', a), src.indexOf('</div>', a))
+    assert.equal((gruppe.match(/type="radio"/g) ?? []).length, 3, `${name}: drei Radios`)
+    assert.doesNotMatch(gruppe, /min-h-11/, `${name}: keine 44px-Mindesthöhe je Option`)
+    assert.match(gruppe, /gap-y-0/, `${name}: kein Zeilenabstand beim Umbrechen`)
+  }
+})

@@ -252,8 +252,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- Root in Theme-Farbe (matcht hell/dunkel/resqdocs); nur der Kamera-Bereich bleibt dunkel. -->
-  <div class="fixed inset-0 z-50 flex flex-col bg-base-100">
+  <!-- Root in Theme-Farbe (matcht hell/dunkel/resqdocs); nur der Kamera-Bereich bleibt dunkel.
+       In der App (nativer Scanner) NICHTS zeichnen: sonst stand erst diese Web-Kameraansicht da und die native
+       Kamera fuhr darueber (zwei Kameras uebereinander). Sichtbar nur im Browser oder bei einem Fehler
+       (z. B. Kamerazugriff verweigert), damit Meldung und Schliessen erreichbar sind. -->
+  <div v-if="!nativeAvailable || error" class="fixed inset-0 z-50 flex flex-col bg-base-100" data-scan-overlay>
     <!-- Kamerabild + Orientierungsrahmen (rein dekorativ, dekodiert wird das ganze Bild).
          Tap auf den Kamera-Bereich = Refokus (nur wo unterstuetzt; passiv, ohne preventDefault). -->
     <div

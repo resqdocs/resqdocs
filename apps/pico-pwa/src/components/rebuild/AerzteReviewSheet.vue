@@ -119,10 +119,12 @@ onMounted(() => {
         <div v-if="aussteller" class="flex flex-col gap-1 rounded-lg bg-base-200 p-2">
           <span class="text-xs text-base-content/60">Ausstellende Praxis aus dem Plan:</span>
           <span class="text-sm font-medium">{{ aussteller.name }}<template v-if="aussteller.ort">, {{ aussteller.ort }}</template><template v-if="aussteller.nummer">, {{ aussteller.nummer.typ }} {{ aussteller.nummer.wert }}</template><template v-if="aussteller.telefon">, Tel. {{ aussteller.telefon }}</template></span>
-          <div class="flex flex-wrap items-center gap-3 text-sm" role="radiogroup" aria-label="Rolle des Arztes">
-            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="" class="radio radio-sm" /> Arzt</label>
-            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Hausarzt" class="radio radio-sm" /> Hausarzt</label>
-            <label class="flex min-h-11 items-center gap-1 py-2"><input v-model="ausstellerRolle" type="radio" value="Facharzt" class="radio radio-sm" /> Facharzt</label>
+          <!-- Radios wie gehabt, aber kompakt: ohne min-h-11 je Option und mit kleinem Zeilenabstand - vorher entstanden
+               beim Umbrechen große Lücken zwischen den Optionen. -->
+          <div class="flex flex-wrap items-center gap-x-5 gap-y-0 text-sm" role="radiogroup" aria-label="Rolle des Arztes">
+            <label class="flex cursor-pointer items-center gap-2 py-1.5"><input v-model="ausstellerRolle" type="radio" value="" class="radio radio-sm" /> Arzt</label>
+            <label class="flex cursor-pointer items-center gap-2 py-1.5"><input v-model="ausstellerRolle" type="radio" value="Hausarzt" class="radio radio-sm" /> Hausarzt</label>
+            <label class="flex cursor-pointer items-center gap-2 py-1.5"><input v-model="ausstellerRolle" type="radio" value="Facharzt" class="radio radio-sm" /> Facharzt</label>
           </div>
 
           <!-- Cross-Uebernahme: Medikamente auch anlegen? Nur wenn ein Medikamentenplan existiert. -->

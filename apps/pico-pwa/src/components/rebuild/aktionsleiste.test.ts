@@ -8,7 +8,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-const read = (name: string): string => readFileSync(fileURLToPath(new URL(`./${name}`, import.meta.url)), 'utf8')
+// Die Listen-Funktionen liegen im gemeinsamen Paket (App und Online-Editor nutzen sie).
+const read = (name: string): string => readFileSync(fileURLToPath(new URL(`../../../../../packages/protocol-core-ui/components/functions/${name}`, import.meta.url)), 'utf8')
 
 for (const file of ['AerzteFunction.vue', 'MedplanFunction.vue']) {
   test(`${file}: Aktionsleiste bricht um statt die Seite zu verbreitern`, () => {

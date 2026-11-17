@@ -16,9 +16,9 @@ import { useDependencyHidden } from '@resqdocs/protocol-core-ui/useDependencies'
 import { countDeviations } from '@resqdocs/protocol-core/deviations'
 import { countOpenRequired } from '@resqdocs/protocol-core/required'
 import EinsatzField from './EinsatzField.vue'
-import MedplanFunction from './MedplanFunction.vue'
-import AerzteFunction from './AerzteFunction.vue'
-import ScoreFunction from './ScoreFunction.vue'
+import MedplanFunction from '@resqdocs/protocol-core-ui/components/functions/MedplanFunction.vue'
+import AerzteFunction from '@resqdocs/protocol-core-ui/components/functions/AerzteFunction.vue'
+import ScoreFunction from '@resqdocs/protocol-core-ui/components/functions/ScoreFunction.vue'
 import ContainerFillToggle from './ContainerFillToggle.vue'
 
 const props = defineProps<{ node: Container; depth: number; insideCollapse: boolean }>()

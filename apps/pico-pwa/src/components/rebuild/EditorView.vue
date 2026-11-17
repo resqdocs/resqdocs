@@ -7,6 +7,8 @@
  * ab lg drei Spalten. Zentrale Tree-API per provide/inject an die rekursiven Knoten.
  */
 import { ref, provide, toRaw, onMounted, onUnmounted } from 'vue'
+import { useTreeHistory } from '@resqdocs/protocol-core-ui/useTreeHistory'
+import { duplicateNode } from '@resqdocs/protocol-core/treeOps'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { findNode, collectIds, canMoveUp as canMoveUpOp, canMoveDown as canMoveDownOp, canIndent as canIndentOp, canOutdent as canOutdentOp, moveTargets as moveTargetsOp } from '@resqdocs/protocol-core/creator'
@@ -18,7 +20,7 @@ import ContainerProperties from '@resqdocs/protocol-core-ui/components/Container
 import ContainerPreview from '@resqdocs/protocol-core-ui/components/ContainerPreview.vue'
 import LibraryBar from './LibraryBar.vue'
 import AiToolNotice from './AiToolNotice.vue'
-import SnippetPicker from './SnippetPicker.vue'
+import SnippetPicker from '@resqdocs/protocol-core-ui/components/SnippetPicker.vue'
 import { snippetPickerKey } from '@resqdocs/protocol-core-ui/injection'
 
 const tree = useProtocolTree()
@@ -27,6 +29,10 @@ const blocks = useBlockLibrary()
 const root = tree.root
 const selectedId = ref<string | null>(root.value.id)
 const view = ref<'aufbau' | 'eigenschaften' | 'vorschau'>('aufbau')
+// Rückgängig/Wiederholen wie im Online-Editor (gemeinsamer Verlauf). Jede Änderung am Baum läuft über change();
+// Tipp-Folgen an derselben Eigenschaft zählen als ein Schritt.
+const hist = useTreeHistory(tree, selectedId)
+const change = hist.change
 
 // Ab lg alle drei Segmente gleichzeitig; darunter nur das aktive. Reaktiv per matchMedia (lg=1024px),
 // damit die teuren Ganzbaum-Segmente (Aufbau/Vorschau) mobil per v-if GAR NICHT gemountet sind, wenn man
@@ -56,7 +62,7 @@ const api: TreeEditorApi = {
   },
   update(id, patch) {
     const newId = patch.id
-    tree.update(id, patch)
+    change(`u:${id}:${Object.keys(patch).sort().join(',')}`, () => tree.update(id, patch))
     // id ist der Key im Einsatz-Werte-Store -> beim Umbenennen den Wert mit-migrieren.
     if (typeof newId === 'string' && newId.length > 0 && newId !== id) {
       caseValues.rename(id, newId)
@@ -64,18 +70,21 @@ const api: TreeEditorApi = {
     }
   },
   addChild(parentId, kind, functionKind) {
-    const child = tree.addChild(parentId, kind, functionKind)
-    selectedId.value = child.id
+    let childId = ''
+    change(null, () => (childId = tree.addChild(parentId, kind, functionKind).id))
+    selectedId.value = childId
     view.value = 'eigenschaften'
   },
   insertSnippet(parentId, text) {
-    const child = tree.insertSnippet(parentId, text)
-    selectedId.value = child.id
+    let childId = ''
+    change(null, () => (childId = tree.insertSnippet(parentId, text).id))
+    selectedId.value = childId
     view.value = 'eigenschaften'
   },
   insertBlock(parentId, block) {
-    const child = tree.insertBlock(parentId, block)
-    selectedId.value = child.id
+    let childId = ''
+    change(null, () => (childId = tree.insertBlock(parentId, block).id))
+    selectedId.value = childId
     view.value = 'eigenschaften'
   },
   async saveContainerAsBaustein(id) {
@@ -91,27 +100,34 @@ const api: TreeEditorApi = {
   remove(id) {
     if (id === root.value.id) return
     const node = findNode(root.value, id)
-    tree.remove(id)
+    change(null, () => tree.remove(id))
     caseValues.drop(node ? collectIds(node) : [id]) // verwaiste Einsatz-Werte (inkl. Gesundheitsdaten) mit raus
     if (selectedId.value === id) selectedId.value = root.value.id
   },
   move(childId, delta) {
-    tree.move(childId, delta)
+    change(null, () => tree.move(childId, delta))
   },
   moveUp(id) {
-    tree.moveUp(id)
+    change(null, () => tree.moveUp(id))
   },
   moveDown(id) {
-    tree.moveDown(id)
+    change(null, () => tree.moveDown(id))
   },
   indent(id) {
-    tree.indent(id)
+    change(null, () => tree.indent(id))
   },
   outdent(id) {
-    tree.outdent(id)
+    change(null, () => tree.outdent(id))
   },
   reparent(id, targetParentId, index) {
-    tree.reparent(id, targetParentId, index)
+    change(null, () => tree.reparent(id, targetParentId, index))
+  },
+  duplicate(id) {
+    if (id === root.value.id) return
+    const result = duplicateNode(root.value, id, tree.nextId)
+    if (!result) return
+    change(null, () => tree.replace(result.root))
+    selectedId.value = result.copyId
   },
   canMoveUp(id) {
     return canMoveUpOp(root.value, id)
@@ -150,12 +166,14 @@ provide(snippetPickerKey, SnippetPicker)
     <!-- small-screen-first: ein Bereich nach dem anderen; ab lg alle drei nebeneinander -->
     <!-- Umschalter: oben zentriert + sticky (unter dem App-Header, Safe-Area beachtet).
          Nur < lg (ab lg drei Spalten nebeneinander). -->
-    <div class="sticky top-[calc(env(safe-area-inset-top,0px)+4rem)] z-[5] flex justify-center bg-base-200/95 py-2 backdrop-blur-sm lg:hidden">
+    <div class="sticky top-[calc(env(safe-area-inset-top,0px)+4rem)] z-[5] flex items-center justify-center gap-1 bg-base-200/95 py-2 backdrop-blur-sm lg:hidden">
+      <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canUndo.value" aria-label="Rückgängig" title="Rückgängig" data-undo @click="hist.undo()">↶</button>
       <div class="join">
         <button class="btn btn-sm join-item" :class="view === 'aufbau' ? 'btn-primary' : ''" @click="view = 'aufbau'">Aufbau</button>
         <button class="btn btn-sm join-item" :class="view === 'eigenschaften' ? 'btn-primary' : ''" @click="view = 'eigenschaften'">Eigenschaften</button>
         <button class="btn btn-sm join-item" :class="view === 'vorschau' ? 'btn-primary' : ''" @click="view = 'vorschau'">Vorschau</button>
       </div>
+      <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canRedo.value" aria-label="Wiederholen" title="Wiederholen" data-redo @click="hist.redo()">↷</button>
     </div>
 
     <div class="lg:grid lg:grid-cols-3 lg:items-start lg:gap-4">
@@ -164,7 +182,14 @@ provide(snippetPickerKey, SnippetPicker)
         <!-- overflow-visible: das absolute ⋮-Aktionsmenue darf ueber den Kartenrand hinausragen -->
         <div class="card overflow-visible bg-base-100 shadow">
           <div class="card-body gap-2 p-3">
-            <h3 class="text-sm font-semibold text-base-content/70">Aufbau</h3>
+            <div class="flex items-center gap-1">
+              <h3 class="text-sm font-semibold text-base-content/70">Aufbau</h3>
+              <!-- ab lg (drei Spalten, kein Umschalter) sitzen Rückgängig/Wiederholen hier -->
+              <span class="ml-auto hidden gap-1 lg:flex">
+                <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canUndo.value" aria-label="Rückgängig" title="Rückgängig" @click="hist.undo()">↶</button>
+                <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canRedo.value" aria-label="Wiederholen" title="Wiederholen" @click="hist.redo()">↷</button>
+              </span>
+            </div>
             <ContainerTreeNode :node="root" :depth="0" />
           </div>
         </div>
