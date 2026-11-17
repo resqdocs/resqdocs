@@ -10,19 +10,21 @@ import { parseTemplate, PROTOCOL_SCHEMA } from './templateIO.ts'
 import { parseBlock, BLOCK_SCHEMA } from './blockIO.ts'
 import { parseSnippet, SNIPPET_SCHEMA, type SnippetPayload } from './snippetIO.ts'
 
-export type DetectedKind = 'protocol' | 'block' | 'snippet'
+export type DetectedKind = 'protocol' | 'block' | 'snippet' | 'bundle'
 
 export type DetectResult =
   | { ok: true; kind: 'protocol'; tree: Container }
   | { ok: true; kind: 'block'; tree: Container }
   | { ok: true; kind: 'snippet'; snippet: SnippetPayload }
+  // Sammlung mehrerer Vorlagen: JSON-Liste von Vorlagen-Dateien (so exportiert „Alle“ im Online-Editor)
+  | { ok: true; kind: 'bundle'; trees: Container[] }
   // Fehler: kind gesetzt, wenn das Schema ERKANNT wurde, der Parser aber ablehnt (z. B. Version zu neu)
   // -> die UI kann "Vorlage erkannt, aber ..." statt eines nackten Schema-Fehlers zeigen.
   | { ok: false; kind?: DetectedKind; error: string }
 
 /** Nutzer-sichtbares Substantiv fuer den erkannten Typ (Meldung „Als <…> importiert"). */
 export function kindNoun(k: DetectedKind): string {
-  return k === 'protocol' ? 'Vorlage' : k === 'block' ? 'Gespeicherter Abschnitt' : 'Textbaustein'
+  return k === 'protocol' ? 'Vorlage' : k === 'block' ? 'Gespeicherter Abschnitt' : k === 'bundle' ? 'Vorlagen-Sammlung' : 'Textbaustein'
 }
 
 /** JSON am schema-Feld erkennen und mit dem passenden Parser parsen. Reicht tree/snippet 1:1 durch. */
@@ -33,6 +35,7 @@ export function detectAndParse(json: string): DetectResult {
   } catch {
     return { ok: false, error: 'Kein gueltiges JSON.' }
   }
+  if (Array.isArray(parsed)) return parseBundle(parsed)
   const schema = (parsed as { schema?: unknown } | null)?.schema
   if (typeof schema !== 'string') {
     return { ok: false, error: 'Keine ResQDocs-Datei erkannt (schema fehlt).' }
@@ -50,4 +53,23 @@ export function detectAndParse(json: string): DetectResult {
     return r.ok ? { ok: true, kind: 'snippet', snippet: r.snippet } : { ok: false, kind: 'snippet', error: r.error }
   }
   return { ok: false, error: `Unbekanntes Schema „${schema}“. Diese Datei kann hier nicht importiert werden.` }
+}
+
+/**
+ * Sammlung: jede Vorlage einzeln mit dem bestehenden Parser prüfen. Alles oder nichts - eine fehlerhafte
+ * Vorlage wird mit ihrer Position gemeldet, statt still nur einen Teil zu übernehmen.
+ */
+function parseBundle(items: unknown[]): DetectResult {
+  if (!items.length) return { ok: false, kind: 'bundle', error: 'Die Sammlung enthält keine Vorlage.' }
+  const trees: Container[] = []
+  for (const [i, item] of items.entries()) {
+    const pos = `Vorlage ${i + 1} von ${items.length}`
+    if ((item as { schema?: unknown } | null)?.schema !== PROTOCOL_SCHEMA) {
+      return { ok: false, kind: 'bundle', error: `${pos} ist keine ResQDocs-Vorlage.` }
+    }
+    const r = parseTemplate(JSON.stringify(item))
+    if (!r.ok) return { ok: false, kind: 'bundle', error: `${pos}: ${r.error}` }
+    trees.push(r.tree)
+  }
+  return { ok: true, kind: 'bundle', trees }
 }

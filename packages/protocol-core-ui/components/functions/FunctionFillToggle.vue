@@ -3,11 +3,14 @@
  *  Feld-Tri-State (TriStateToggle), damit im Einsatz EINE Tri-State-Sprache gilt. Der Status lebt IN der
  *  'function'-Fill-Variante NEBEN den Zeilen (getFunctionStatus/setFunctionStatus/setFunctionText,
  *  rows-erhaltend) - deshalb NICHT toggleExcluded (das wuerde die Zeilen verwerfen).
- *  ✎ startet mit vorhandenem Freitext oder dem Standardtext (node.default) vorbelegt.
+ *  ✎ startet vorbelegt: vorhandener Freitext, sonst der ruhend gemerkte (prevText), sonst der Text, den die
+ *  Funktion gerade erzeugt (z. B. die FAST4D- oder NEWS2-Zeile - man bearbeitet ihn, statt neu zu tippen),
+ *  sonst der Standardtext (node.default).
  *  @click.stop.prevent, damit ein Tipp keine umgebende Interaktion (focusout/Karte) ausloest. */
 import { computed, onMounted } from 'vue'
 import type { FunctionNode } from '@resqdocs/protocol-core/model'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
+import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
@@ -29,13 +32,26 @@ const TITLE = {
   excluded: 'nicht erhoben - erscheint nicht im Protokolltext',
 } as const
 
+/** Text, den die Funktion mit den erfassten Werten gerade erzeugt (wie im Protokolltext), sonst ''. */
+function generated(): string {
+  const def = FUNCTION_REGISTRY[props.node.functionKind]
+  const fill = caseValues.get(props.node.id)
+  if (!def || !def.hasData(fill)) return ''
+  return def.renderBody(fill, props.node.config).trim()
+}
 function toggle(): void {
   let next = NEXT[status.value]
   // Pflicht-Funktion: der −-Zustand (nicht erhoben) entfaellt -> von ✎ direkt auf ✓ (NEXT[excluded]).
   if (next === 'excluded' && props.node.required) next = NEXT[next]
   // ✎: Freitext-Modus, vorbelegt mit vorhandenem Freitext, sonst dem RUHEND gemerkten (prevText,
-  // Wiederherstellung nach versehentlichem Verlassen), sonst dem Standardtext (node.default).
-  if (next === 'custom') caseValues.setFunctionText(props.node.id, caseValues.getFunctionText(props.node.id) || caseValues.getFunctionPrevText(props.node.id) || (props.node.default ?? ''))
+  // Wiederherstellung nach versehentlichem Verlassen), sonst dem gerade erzeugten Text der Funktion (zum
+  // Bearbeiten statt Neu-Tippen, Maintainer-Wunsch), sonst dem Standardtext (node.default).
+  if (next === 'custom') {
+    caseValues.setFunctionText(
+      props.node.id,
+      caseValues.getFunctionText(props.node.id) || caseValues.getFunctionPrevText(props.node.id) || generated() || (props.node.default ?? ''),
+    )
+  }
   else caseValues.setFunctionStatus(props.node.id, next)
 }
 </script>
@@ -50,6 +66,7 @@ function toggle(): void {
       'border-base-300 bg-base-200 text-base-content/50': status === 'excluded',
     }"
     :title="TITLE[status]"
+    :data-fill-toggle="status"
     :aria-label="`${label}: ${TITLE[status]} - tippen wechselt`"
     @click.stop.prevent="toggle"
   >

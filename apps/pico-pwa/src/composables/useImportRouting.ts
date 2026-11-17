@@ -1,14 +1,14 @@
 // Zentrales Import-Routing (pico-pwa): erkennt eine Datei am Schema (detectAndParse) und leitet sie ans
 // richtige Ziel — egal, an welcher Import-Stelle sie eingeworfen wurde. So ist es „nicht so schlimm, an der
 // falschen Stelle zu importieren, solange es richtig gespeichert wird". Block/Snippet/Vorlage sind in der App
-// globale Singletons und damit von jeder Stelle erreichbar. Vorlagen werden per Default „als neu" (retitle,
-// kollisionsfrei) übernommen; eine Stelle mit eigener Kollisions-UX (Vorlagen-„Daten"-Sheet) reicht stattdessen
-// onProtocol durch. PZN bleibt außen vor (eigene Domäne, kein schema-Envelope).
+// globale Singletons und damit von jeder Stelle erreichbar. Vorlagen (einzeln oder als Sammlung) gehen IMMER in den
+// ImportChoiceDialog: Name wählen, bei Namensgleichheit überschreiben oder als neue Vorlage. PZN bleibt
+// außen vor (eigene Domäne, kein schema-Envelope).
 import type { Container } from '@resqdocs/protocol-core/model'
 import { detectAndParse, kindNoun, type DetectResult } from '@resqdocs/protocol-core/importRouter'
 import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
-import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { useBausteine } from './useBausteine'
+import { offerImport } from './useImportChoice'
 
 export type ImportOutcome = { ok: boolean; message: string }
 
@@ -21,13 +21,12 @@ async function routeSnippet(title: string, text: string): Promise<ImportOutcome>
   await useBausteine().addSnippetFrom(title, text)
   return { ok: true, message: `Als Textbaustein „${saved}“ importiert.` }
 }
-function routeProtocolAsNew(tree: Container): ImportOutcome {
-  // kollisionsfrei als neue Vorlage; Kollisions-Modal bleibt dem Vorlagen-Sheet vorbehalten. importProtocol
-  // hängt bei retitle ein „ (Import)"-Suffix an -> den TATSÄCHLICH gespeicherten Titel (added.title) melden.
-  const added = useProtocolTree().importProtocol(tree, true)
-  return { ok: true, message: `Als Vorlage „${(added.title ?? '').trim() || 'ohne Titel'}“ übernommen — im Vorlagen-Tab sichtbar.` }
+/** Vorlage(n) zur Entscheidung anbieten (ImportChoiceDialog): Name, Überschreiben oder neu - nichts wird
+ *  ungefragt übernommen. */
+function offerProtocols(trees: Container[]): ImportOutcome {
+  offerImport(trees)
+  return { ok: true, message: trees.length === 1 ? 'Vorlage erkannt: bitte Namen prüfen und übernehmen.' : `${trees.length} Vorlagen erkannt: bitte auswählen und übernehmen.` }
 }
-
 type OkResult = Extract<DetectResult, { ok: true }>
 
 /** Ein bereits erkanntes Objekt ans Ziel routen (Block/Snippet zentral, Vorlage „als neu"). Für Aufrufer,
@@ -35,7 +34,8 @@ type OkResult = Extract<DetectResult, { ok: true }>
 export function routeDetected(r: OkResult): Promise<ImportOutcome> {
   if (r.kind === 'block') return routeBlock(r.tree)
   if (r.kind === 'snippet') return routeSnippet(r.snippet.title, r.snippet.text)
-  return Promise.resolve(routeProtocolAsNew(r.tree))
+  if (r.kind === 'bundle') return Promise.resolve(offerProtocols(r.trees))
+  return Promise.resolve(offerProtocols([r.tree]))
 }
 
 /**

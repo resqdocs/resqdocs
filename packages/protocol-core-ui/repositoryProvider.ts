@@ -7,11 +7,13 @@
 // Capacitor-Import) und wandern unveraendert ins geteilte UI-Paket @resqdocs/protocol-core-ui.
 import { createMemoryProtocolRepository, type ProtocolRepository } from '@resqdocs/protocol-core/protocolRepository'
 import { createMemoryBlockRepository, type BlockRepository } from '@resqdocs/protocol-core/blockRepository'
+import { createMemorySnippetRepository, type SnippetRepository } from '@resqdocs/protocol-core/snippetRepository'
 
 export type LibraryMode = 'memory' | 'sqlite' | 'indexeddb'
 
 let protocolFactory: (() => Promise<ProtocolRepository>) | null = null
 let blockFactory: (() => Promise<BlockRepository>) | null = null
+let snippetFactory: (() => Promise<SnippetRepository>) | null = null
 let mode: LibraryMode = 'memory'
 let degradedReason: string | null = null
 
@@ -19,10 +21,13 @@ let degradedReason: string | null = null
 export function configureRepositories(opts: {
   protocol?: () => Promise<ProtocolRepository>
   block?: () => Promise<BlockRepository>
+  /** Textbausteine (Online-Editor: IndexedDB). Die App führt ihre Textbausteine in der SQLite-Bibliothek. */
+  snippet?: () => Promise<SnippetRepository>
   mode?: LibraryMode
 }): void {
   if (opts.protocol) protocolFactory = opts.protocol
   if (opts.block) blockFactory = opts.block
+  if (opts.snippet) snippetFactory = opts.snippet
   if (opts.mode) mode = opts.mode
 }
 
@@ -53,4 +58,9 @@ export function resolveProtocolRepository(): Promise<ProtocolRepository> {
 /** Baustein-Repository aufloesen; ohne Host-Verdrahtung: Memory-Variante. */
 export function resolveBlockRepository(): Promise<BlockRepository> {
   return (blockFactory ?? (async () => createMemoryBlockRepository()))()
+}
+
+/** Textbaustein-Repository aufloesen; ohne Host-Verdrahtung: Memory-Variante. */
+export function resolveSnippetRepository(): Promise<SnippetRepository> {
+  return (snippetFactory ?? (async () => createMemorySnippetRepository()))()
 }

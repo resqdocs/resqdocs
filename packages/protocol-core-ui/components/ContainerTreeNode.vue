@@ -4,7 +4,7 @@
  *  rekursive Kinder. Feld: Blatt (kein ＋, keine Kinder). :key="child.id" = stabile Wiederverwendung. */
 import { ref, computed, inject, nextTick } from 'vue'
 import type { Node, FunctionKind } from '@resqdocs/protocol-core/model'
-import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
+import { FUNCTION_KINDS, FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 import { useTreeEditor } from '../treeEditor.ts'
 import { snippetPickerKey, allowedFunctionKindsKey } from '../injection.ts'
 import MoveToPicker from './MoveToPicker.vue'
@@ -20,7 +20,7 @@ const SnippetPicker = inject(snippetPickerKey, null)
 // Versions-Gating der Funktionen: der Online-Editor stellt die für die gewählte App-Version anbietbaren
 // functionKinds bereit; fehlt der Provider (Mobile-App = eigene Version), sind ALLE erlaubt.
 const allowedKinds = inject(allowedFunctionKindsKey, null)
-const ALL_FUNCTION_KINDS: FunctionKind[] = ['medikamentenplan', 'aerzte', 'packYears', 'news2', 'lams', 'fast4d', 'zops', 'sgarbossa', 'egsys', 'bmi']
+const ALL_FUNCTION_KINDS: FunctionKind[] = FUNCTION_KINDS // eine Quelle mit dem Online-Editor
 function kindAllowed(k: FunctionKind): boolean {
   return !allowedKinds || allowedKinds.value.includes(k)
 }
@@ -189,10 +189,13 @@ function confirmDelete(): void {
       </div>
 
       <!-- Direkte Aktionen (Maintainer-Wahl): Verschieben-Icon oeffnet die Sitemap (positionsgenau, ersetzt
-           Hoch/Runter), ✕ entfernt. Kein ⋮-Menue mehr. 44px-Ziele. -->
+           Hoch/Runter), Duplizieren (wenn der Host es anbietet), ✕ entfernt. Kein ⋮-Menue mehr. 44px-Ziele. -->
       <template v-if="depth > 0">
         <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="`Verschieben: ${label(node)}`" title="Verschieben" @click="pickerOpen = true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" /></svg>
+        </button>
+        <button v-if="tree.duplicate" type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="`Duplizieren: ${label(node)}`" title="Duplizieren" @click="tree.duplicate(node.id)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" /><path stroke-linecap="round" stroke-linejoin="round" d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></svg>
         </button>
         <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5 text-error" :aria-label="`Löschen: ${label(node)}`" title="Löschen" @click="confirmOpen = true">✕</button>
       </template>

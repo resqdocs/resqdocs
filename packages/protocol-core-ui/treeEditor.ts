@@ -36,6 +36,9 @@ export interface TreeEditorApi {
    *  (tiefe Kopie; spaetere Editor-Aenderungen wirken nicht zurueck). */
   saveContainerAsBaustein(id: string): Promise<SaveBausteinOutcome>
   remove(id: string): void
+  /** Optional: Element samt Inhalt kopieren und direkt dahinter einfügen (frische Kennungen). Ohne Host-Umsetzung
+   *  zeigt der Baum keinen Duplizieren-Knopf. */
+  duplicate?(id: string): void
   move(childId: string, delta: number): void
   /** Fliessendes „Hoch": Swap mit Vorgaenger, am oberen Container-Rand automatisch davor ausruecken. */
   moveUp(id: string): void

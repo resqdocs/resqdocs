@@ -63,3 +63,38 @@ test('kindNoun: nutzerlesbare Substantive', () => {
   assert.equal(kindNoun('block'), 'Gespeicherter Abschnitt')
   assert.equal(kindNoun('snippet'), 'Textbaustein')
 })
+
+// „Alle exportieren“ im Online-Editor schreibt eine JSON-LISTE von Vorlagen. Die war bisher nirgends
+// importierbar („Keine ResQDocs-Datei erkannt“).
+test('Sammlung (Liste von Vorlagen) wird erkannt und vollständig geparst', async () => {
+  const { exportTemplate } = await import('./templateIO.ts')
+  const { createContainer } = await import('./creator.ts')
+  const a = createContainer('a'); a.title = 'Erste'
+  const b = createContainer('b'); b.title = 'Zweite'
+  const json = JSON.stringify([JSON.parse(exportTemplate(a)), JSON.parse(exportTemplate(b))])
+  const r = detectAndParse(json)
+  assert.ok(r.ok && r.kind === 'bundle')
+  assert.deepEqual(r.trees.map((t) => t.title), ['Erste', 'Zweite'])
+})
+
+test('Sammlung: leere Liste und fremde Einträge werden mit Position abgelehnt', async () => {
+  const { exportTemplate } = await import('./templateIO.ts')
+  const { createContainer } = await import('./creator.ts')
+  const leer = detectAndParse('[]')
+  assert.ok(!leer.ok && leer.kind === 'bundle')
+  const ok = JSON.parse(exportTemplate(createContainer('a')))
+  const r = detectAndParse(JSON.stringify([ok, { schema: 'resqdocs-snippet', title: 'x', text: 'y' }]))
+  assert.ok(!r.ok && r.kind === 'bundle')
+  assert.match(r.error, /Vorlage 2 von 2/)
+})
+
+test('exportTemplates: eine Vorlage im Einzelformat, mehrere als Sammlung - beides wieder importierbar', async () => {
+  const { exportTemplates } = await import('./templateIO.ts')
+  const a = createContainer('a'); a.title = 'Erste'
+  const b = createContainer('b'); b.title = 'Zweite'
+  const eins = detectAndParse(exportTemplates([a]))
+  assert.ok(eins.ok && eins.kind === 'protocol', 'eine Vorlage bleibt im Format, das auch ältere Apps lesen')
+  const zwei = detectAndParse(exportTemplates([a, b]))
+  assert.ok(zwei.ok && zwei.kind === 'bundle')
+  assert.deepEqual(zwei.trees.map((t) => t.title), ['Erste', 'Zweite'])
+})

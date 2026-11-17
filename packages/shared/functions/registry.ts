@@ -530,3 +530,7 @@ export const FUNCTION_REGISTRY: Record<FunctionKind, FunctionDef> = {
   egsys: egsysFn,
   bmi: bmiFn,
 }
+
+/** Alle Funktionsarten in Anzeige-Reihenfolge - EINE Quelle für das ＋-Menü der App und den Katalog des
+ *  Online-Editors (vorher drei getrennt gepflegte Listen). Reihenfolge = Reihenfolge in FUNCTION_REGISTRY. */
+export const FUNCTION_KINDS = Object.keys(FUNCTION_REGISTRY) as FunctionKind[]

@@ -9,6 +9,7 @@
 // PPN-Datenelement (IFA-Agentur '11'). KEIN GTIN/EAN-Mapping (separates Follow-up).
 
 import type { ScanResultFormat } from '../medplan/scanProfiles.ts'
+import { staerkeOhneDuplikat } from '@resqdocs/protocol-core/functions/registry'
 
 /** Format aus dem Scanner (CodeScanOverlay); 'qrcode' kommt im Packungs-Profil nicht vor. */
 export type PackageBarcodeFormat = ScanResultFormat
@@ -44,4 +45,19 @@ export function extractPznFromPackageCode(raw: string, format: PackageBarcodeFor
  */
 export function packageScanName(pzn: string, resolved: string | null): string {
   return resolved ? `${resolved} (PZN ${pzn}, community/ungeprüft)` : `PZN ${pzn}`
+}
+
+/**
+ * Zeile für eine gescannte Packung - dieselbe Abbildung wie die Review-Sheets: Wirkstoff vor Bezeichnung aus der
+ * EIGENEN Bibliothek, Wirkstärke als eigenes Feld, außer der Name trägt sie schon. Ohne Bibliotheks-Namen der
+ * Platzhalter „PZN …“ (ggf. mit Community-Name). `resolve` wird nur dann gefragt.
+ */
+export function packageScanRow(
+  pzn: string,
+  entry: { wirkstoff?: string; label?: string; staerke?: string } | null | undefined,
+  resolve: () => string | null,
+): { name: string; staerke?: string; pzn: string } {
+  const name = (entry && (entry.wirkstoff || entry.label)) || packageScanName(pzn, resolve())
+  const staerke = staerkeOhneDuplikat(name, entry?.staerke)
+  return { name, staerke, pzn }
 }

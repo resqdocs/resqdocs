@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, watchEffect, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, watchEffect, nextTick, provide } from 'vue'
 import BausteineTab from '@/components/library/BausteineTab.vue'
 import TabIcon from '@resqdocs/protocol-core-ui/components/TabIcon.vue'
 import SettingsTab from '@/components/settings/SettingsTab.vue'
@@ -10,6 +10,7 @@ import FirmwareNoticeBanner from '@/components/FirmwareNoticeBanner.vue'
 import TypingProgressBar from '@/components/TypingProgressBar.vue'
 import PznNoticeBanner from '@/components/PznNoticeBanner.vue'
 import AppUpdateDialog from '@/components/AppUpdateDialog.vue'
+import ImportChoiceDialog from '@/components/ImportChoiceDialog.vue'
 import TabGuide, { TAB_GUIDE_HINT_ID } from '@/components/TabGuide.vue'
 import EinsatzView from '@/components/rebuild/EinsatzView.vue'
 import EditorView from '@/components/rebuild/EditorView.vue'
@@ -27,6 +28,9 @@ import { useReworkCaseDraft } from '@/rebuild/useReworkCaseDraft'
 import { useUsageNotice } from '@/composables/useUsageNotice'
 import { useDisclaimer } from '@/composables/useDisclaimer'
 import { startIncomingOpen, setIncomingHold, incomingOpen } from '@/composables/useIncomingOpen'
+import { listCaptureKey, snippetSourceKey } from '@resqdocs/protocol-core-ui/injection'
+import { useBausteine } from '@/composables/useBausteine'
+import { appListCapture } from '@/components/rebuild/listCapture'
 
 // Rework-Repositories auf die native Capacitor/SQLite-Schicht verdrahten (Web bleibt Memory). MUSS vor
 // dem ersten Aufloesen (protocolPersistence.init / useBlockLibrary) laufen -> synchron im Setup.
@@ -34,6 +38,14 @@ configureNativeRepositories()
 
 // App-Einstellungen laden + Storage-Backend wählen (nativ → SQLite, Web → Memory). Einmalig, idempotent.
 const storage = useStorage()
+// Medikationsplan/Kontakte im gemeinsamen Paket: Kamera-Scan, PZN-Vorschläge und Prüf-Sheets steckt NUR die App
+// ein (listCaptureKey) - an der Wurzel, damit jede Einsatz-Stelle sie bekommt.
+provide(listCaptureKey, appListCapture)
+// Textbausteine für die gemeinsame Auswahl (Editor und Einsatz): die SQLite-Bibliothek der App.
+{
+  const bausteine = useBausteine()
+  provide(snippetSourceKey, { snippets: bausteine.snippets, loaded: bausteine.loaded, reload: bausteine.reload })
+}
 const protocolPersistence = useProtocolPersistence()
 const pznLookup = useMedicationLookup()
 const pznNotice = usePznNotice()
@@ -166,6 +178,8 @@ onBeforeUnmount(() => {
   <UsageNoticeModal />
   <!-- Hinweis auf eine neue App-Version im Store (resqdocs.app/app-version.json), unter den beiden Gates. -->
   <AppUpdateDialog />
+  <!-- Vorlagen-Import: Auswahl, Name, Überschreiben oder neu, über allen Tabs. -->
+  <ImportChoiceDialog />
 
   <!-- Welcome-Seite: vollflaechig, erscheint nach dem Disclaimer
        (liegt unter dessen z-50); ueber das ?-Symbol im Header wieder abrufbar. -->

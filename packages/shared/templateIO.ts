@@ -10,6 +10,15 @@ export function exportTemplate(root: Container): string {
   return JSON.stringify({ schema: PROTOCOL_SCHEMA, version: PROTOCOL_VERSION, tree: root }, null, 2)
 }
 
+/**
+ * Eine oder mehrere Vorlagen exportieren (Datei, Link, QR). Eine Vorlage = das bekannte Einzelformat (auch ältere
+ * Apps lesen es); mehrere = Sammlung als JSON-Liste von Einzelvorlagen (importRouter erkennt sie als 'bundle').
+ */
+export function exportTemplates(roots: readonly Container[]): string {
+  if (roots.length === 1) return exportTemplate(roots[0])
+  return JSON.stringify(roots.map((r) => JSON.parse(exportTemplate(r))), null, 2)
+}
+
 export type ParseResult = { ok: true; tree: Container } | { ok: false; error: string }
 
 function isContainerLike(x: unknown): x is Container {

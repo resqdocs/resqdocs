@@ -10,21 +10,23 @@
  * AUSSTELLENDE ARZT primaer; existiert auch ein Medikamentenplan im Protokoll, koennen die Medikamente
  * optional mit angelegt werden (Cross-Uebernahme, AerzteReviewSheet).
  */
-import { computed, ref } from 'vue'
+import { computed, inject, ref } from 'vue'
 import type { FunctionNode, ArztRow, MedikamenteRow } from '@resqdocs/protocol-core/model'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
 import { formatArzt, arztRowHasData, medikamentRowHasData } from '@resqdocs/protocol-core/functions/registry'
-import AerzteReviewSheet from './AerzteReviewSheet.vue'
+import { listCaptureKey } from '@resqdocs/protocol-core-ui/injection'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
-import FunctionFillToggle from './FunctionFillToggle.vue'
-import RequiredMark from '@/components/RequiredMark.vue'
+import FunctionFillToggle from '@resqdocs/protocol-core-ui/components/functions/FunctionFillToggle.vue'
+import RequiredMark from '@resqdocs/protocol-core-ui/components/RequiredMark.vue'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
 import { shouldCloseCard, tapIsPending } from '@resqdocs/protocol-core-ui/cardFocusGuard'
 
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
+// „Arzt aus Medikationsplan scannen“ steckt die App ein (listCaptureKey); ohne Provider (Browser) kein Scan-Knopf.
+const scanSheet = inject(listCaptureKey, null)?.aerzteScanSheet ?? null
 // Wurzel der aktiven Einsatz-Vorlage (Singleton) -> Cross-Funktion-Suche, ohne root durchzureichen.
 const { einsatzRoot } = useProtocolTree()
 
@@ -198,11 +200,6 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
 
     <p v-if="node.required && isOpen" class="pl-9 text-sm text-warning">Pflichtfeld – noch offen</p>
 
-    <!-- BEWAHREN: getippter Funktions-Freitext ruht (Status ✓/−) -> antippbar zum verlustfreien Zurueckholen. -->
-    <button v-if="preservedText" type="button" class="flex min-h-11 items-center gap-1.5 pl-9 text-left text-sm text-info hover:underline" :title="preservedText" @click="restorePreserved">
-      <span aria-hidden="true">✎</span>
-      <span>Getippter Text gemerkt — zurückholen</span>
-    </button>
 
     <!-- nicht erhoben: Zeilen-Verwaltung aus, nur Hinweis. Daten bleiben erhalten und kommen beim Zurueckschalten wieder. -->
     <p v-if="excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
@@ -304,7 +301,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
          der allein breiter als die Zeile ist, trotzdem zu breit. -->
     <div class="flex flex-wrap gap-2" data-aktionsleiste>
       <button type="button" class="btn btn-primary btn-sm h-auto min-h-11 min-w-0 shrink grow gap-1 whitespace-normal py-2 leading-tight" @click="addRow"><span aria-hidden="true">＋</span> Eintrag</button>
-      <button type="button" class="btn btn-outline btn-sm h-auto min-h-11 min-w-0 shrink grow gap-2 whitespace-normal py-2 leading-tight" @click="bmpOpen = true">
+      <button v-if="scanSheet" type="button" class="btn btn-outline btn-sm h-auto min-h-11 min-w-0 shrink grow gap-2 whitespace-normal py-2 leading-tight" @click="bmpOpen = true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5 shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
         Arzt aus Medikationsplan scannen
       </button>
@@ -312,8 +309,14 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
 
     </template>
 
+    <!-- BEWAHREN: getippter Freitext ruht (Status ✓/−) -> antippbar zum verlustfreien Zurueckholen. UNTER der Eingabe (Maintainer), wie beim Feld. -->
+    <button v-if="preservedText" type="button" class="flex min-h-11 items-center gap-1.5 pl-9 text-left text-sm text-info hover:underline" :title="preservedText" @click="restorePreserved">
+      <span aria-hidden="true">✎</span>
+      <span>Getippter Text gemerkt — zurückholen</span>
+    </button>
+
     <!-- BMP-Scan + Review (teleportet sich selbst) -->
-    <AerzteReviewSheet v-if="bmpOpen" @apply="onScanApply" @close="bmpOpen = false" />
+    <component :is="scanSheet" v-if="bmpOpen && scanSheet" @apply="onScanApply" @close="bmpOpen = false" />
 
     <!-- Lösch-Rückfrage: Einzelzeile mit Daten oder „alle zurücksetzen" (teleportet sich selbst) -->
     <ConfirmDialog

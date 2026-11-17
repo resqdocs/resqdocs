@@ -121,3 +121,111 @@
   <https://www.nngroup.com/articles/onboarding-tutorials/>
 - Apple Human Interface Guidelines - Onboarding ("fast, fun, and optional"):
   <https://developer.apple.com/design/human-interface-guidelines/onboarding>
+
+## Online-Editor: Gliederung der Arbeitsfläche
+
+> Recherche-Stand 2026-11-17. Angewandt in `apps/protocol-editor` (`style.css`, Block „Gliederung sichtbar
+> machen“, und `components/CanvasNode.vue`): Abschnitt, Unterabschnitt und Element sollen auf einen Blick
+> unterscheidbar sein, ohne den Aufbau zu ändern.
+
+- Gemeinsame Region: Rahmen oder Hintergrund fassen Zusammengehöriges, Regionen lassen sich schachteln;
+  Weißraum hat Vorrang, zu viele Rahmen machen unruhig — Nielsen Norman Group, A. Harley (2020):
+  <https://www.nngroup.com/articles/common-region/>
+  → Abschnitt = Karte mit Kopfband, Unterabschnitt = eingelassene Region darin, die Fläche wechselt je Ebene.
+- Nähe: Weißraum vereint oder trennt und kann andere Signale überstimmen — Nielsen Norman Group,
+  A. Harley (2020): <https://www.nngroup.com/articles/gestalt-proximity/>
+  → mehr Abstand zwischen Abschnitten als zwischen den Elementen darin; die Schaltfläche „Element in …
+  hinzufügen“ steht in der Region, zu der sie gehört, und nennt sie.
+- Trenner sparsam einsetzen; eingerückte Trenner für Zusammengehöriges, verankert an Symbolen vor der
+  Titel-Linie — Material Design, Dividers: <https://m1.material.io/components/dividers.html>
+  → Haarlinie zwischen zwei Elementen beginnt an der Titel-Linie, die Typ-Kacheln bilden die Spalte davor.
+- Stehender Kopf beim Scrollen: klein halten, deckende Fläche, keine Animation — Nielsen Norman Group,
+  P. Laubheimer (2021): <https://www.nngroup.com/articles/sticky-headers/>. Vorbild „Sticky Scroll“: zeigt
+  oben, in welchem Bereich man gerade ist — Visual Studio Code:
+  <https://code.visualstudio.com/docs/getstarted/userinterface>
+  → der Kopf des Abschnitts der obersten Ebene bleibt beim Scrollen stehen.
+
+## Online-Editor: Auswahl schließen
+
+> Recherche-Stand 2026-11-17. Angewandt in `apps/protocol-editor` (`src/editor/outsideClick.ts`, eingehängt in
+> `src/App.vue`): ein Klick auf freie Fläche außerhalb der aufgeklappten Karte schließt das Bearbeiten.
+
+- Ein vorübergehendes Bedienfeld schließt beim Klick daneben („a popover generally closes when people click
+  or tap outside its bounds“); dabei geht nichts verloren („Always save work when automatically closing a
+  nonmodal popover“), verworfen wird nur über ein ausdrückliches Abbrechen — Apple, Human Interface
+  Guidelines, Popovers: <https://developer.apple.com/design/human-interface-guidelines/popovers>
+  → Klick daneben schließt die Karte; jede Änderung ist schon übernommen, Rückgängig bleibt möglich.
+- „Light dismiss“ als Web-Standard: „if you click outside of the popover, it closes automatically“, ebenso
+  per Esc — web.dev, Learn CSS, Popover and dialog: <https://web.dev/learn/css/popover-and-dialog>;
+  MDN, Using the Popover API: <https://developer.mozilla.org/en-US/docs/Web/API/Popover_API/Using>
+  → Esc und Klick daneben tun dasselbe; liegt etwas darüber (Dialog, Einfüge-Menü, Erklärung), schließt
+  zuerst nur das.
+- Geschlossen wird nur, wenn Drücken und Loslassen dasselbe Ziel außerhalb treffen („If sameTarget is false,
+  then return“) — WHATWG, HTML Living Standard, Popover light dismiss:
+  <https://html.spec.whatwg.org/multipage/popover.html#popover-light-dismiss>
+  → Text in der Karte markieren und außerhalb loslassen schließt nicht.
+
+Bewusst anders als ein Popover: Ein Klick auf ein anderes Element wählt dieses direkt, und Bedienelemente
+außerhalb (Leiste „Hinzufügen“, Rückgängig, Ein-/Ausklappen) lassen die Auswahl stehen, weil sie sich auf das
+gewählte Element beziehen.
+
+## Online-Editor: Gewähltes Element verschieben
+
+> Recherche-Stand 2026-11-17. Angewandt in `apps/protocol-editor` (`src/components/CanvasNode.vue`, `src/style.css`):
+> das gewählte, rot gerahmte Element lässt sich an seinem roten Kopf greifen und verschieben.
+
+- Greifbarkeit zeigen: Griff-Symbol und Zeiger-Wechsel; ein Griff ist ein sicheres Ziel, das keine benachbarten
+  Bedienelemente auslöst. Ziehen mit einer genaueren Alternative koppeln („an accompanying more-precise
+  interaction“) — Nielsen Norman Group, P. Laubheimer (2020): <https://www.nngroup.com/articles/drag-drop/>
+  → Griff-Punkte und Greif-Zeiger im roten Kopf; die Knöpfe ↑/↓ (Alt+↑/↓) bleiben die genaue Alternative.
+- Ist Ziehen eine Hauptaktion, bleibt der Griff dauerhaft sichtbar („use an always visible drag handle icon“);
+  hat ein Element eigene Bedienelemente, ist nur der Griff greifbar, nicht das ganze Element — Atlassian
+  Design System, Pragmatic drag and drop, Design guidelines:
+  <https://atlassian.design/components/pragmatic-drag-and-drop/design-guidelines>
+  → greifbar ist der Kopf ohne seine Knöpfe; Titel- und Einstellungsfelder der Karte bleiben normal bedienbar.
+- Beim Start des Ziehens Aufgeklapptes schließen („collapse the tree item when the drag starts“) und nach dem
+  Ablegen wieder öffnen, wenn es vorher offen war; das Ziehbild klein halten (höchstens 280 × 280 px, wenige
+  Angaben), das Original bleibt abgeschwächt an seinem Platz — ebd.
+  → die offene Karte klappt beim Ziehen auf Kopf und Titelzeile zusammen und steht nach dem Ablegen am neuen
+  Platz wieder offen; am Zeiger hängt nur die kleine Marke mit Griff und Typ.
+- Ein Ziehbild muss im Fenster liegen: „If the element is _completely_ offscreen, Safari@17.1 will cancel the
+  drag“ — Atlassian, Quelltext-Kommentar in `@atlaskit/pragmatic-drag-and-drop` (1.4.0),
+  `set-custom-native-drag-preview.js`:
+  <https://unpkg.com/@atlaskit/pragmatic-drag-and-drop@1.4.0/dist/esm/public-utils/element/custom-native-drag-preview/set-custom-native-drag-preview.js>
+  → als Ziehbild dient die Marke, die ohnehin sichtbar im Kopf steht; es wird kein Bild außerhalb erzeugt.
+
+## Online-Editor: Einfügestelle neben Abschnitten
+
+> Recherche-Stand 2026-11-17. Angewandt in `apps/protocol-editor` (`src/components/InsertGap.vue`, `src/style.css`):
+> neben Abschnitten zeigt ein kleines Plus dauerhaft, dass dort eingefügt werden kann.
+
+- Bedienbares muss ohne Suchen als bedienbar erkennbar sein: „Users need to know which areas of the page are
+  plain static content, and which areas are clickable (or tappable)“ und „Never make users rely on scrubbing
+  the screen with the mouse to determine if a text is clickable“ — Nielsen Norman Group, H. Loranger (2015):
+  <https://www.nngroup.com/articles/clickable-elements/>
+  → zwischen zwei Elementen verrät die Haarlinie die Einfügestelle; neben Abschnitten, wo keine Linie steht,
+  übernimmt das ein ruhiges Plus mit etwas Abstand zu den Rahmen. Beim Überfahren wird es wie überall zur
+  Einfügelinie.
+
+## Einstellungen eines Elements: Reihenfolge und Gruppen
+
+> Recherche-Stand 2026-11-17. Angewandt in `packages/protocol-core-ui` (`components/ContainerProperties.vue`,
+> `terms.ts`), gilt für App und Online-Editor: Titel-Format und „Inline“ stehen unter „Allgemein“ direkt bei
+> ihrem Schalter, „Erweitert“ enthält nur noch Seltenes. Keine Funktion und keine Beschriftung geändert.
+
+- Häufig Gebrauchtes gehört nach vorn: „You have to disclose everything that users frequently need up front,
+  so that they have to progress to the secondary display only on rare occasions“ — Nielsen Norman Group,
+  J. Nielsen (2006): <https://www.nngroup.com/articles/progressive-disclosure/>
+  → gezählt an den Vorlagen im Repo: jedes Element mit sichtbarem Titel hat ein eigenes Präfix/Suffix, gut die
+  Hälfte der Felder nutzt „Inline“. Beides lag hinter „Erweitert“.
+- Abhängige Einstellungen stehen bei der Einstellung, von der sie abhängen: „Don't make the settings on a page
+  dependent upon settings on other pages. Put the dependent settings on a single page instead“ — Microsoft,
+  Windows UX Guide, Property Windows: <https://learn.microsoft.com/en-us/windows/win32/uxguide/win-property-win>;
+  „Place a dependent setting below the setting on which it depends“ — Android Developers, Settings:
+  <https://developer.android.com/design/ui/mobile/guides/patterns/settings>
+  → das Titel-Format erscheint nur bei „Titel im Protokolltext zeigen“ und steht jetzt eingerückt direkt
+  darunter; „Kein Trenner davor“ steht unter „Inline“.
+- So wenig ändern wie nötig: „Never make radical changes when minimal adjustments will suffice“ — Nielsen Norman
+  Group, H. Loranger (2015): <https://www.nngroup.com/articles/radical-incremental-redesign/>
+  → Gruppen, Namen, Reihenfolge und Beschriftungen bleiben; es ziehen nur zwei Blöcke um.
+

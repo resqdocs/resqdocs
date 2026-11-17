@@ -11,8 +11,7 @@ import {
   createPznLibrarySqliteRepository,
   type PznSqliteRepository,
 } from './pznLibrarySqliteRepository.ts'
-import { PZN_LIBRARY_KEY } from './pznLibraryRepository.ts'
-import { listSorted, parseImport } from './pznLibrary.ts'
+import { runLegacyBackfill } from './pznLegacyBackfill.ts'
 import type { PznLibraryBackend } from './pznLibraryBackend.ts'
 
 export function createNativePznBackend(adapter: KeyValueAdapter): PznLibraryBackend {
@@ -22,24 +21,13 @@ export function createNativePznBackend(adapter: KeyValueAdapter): PznLibraryBack
     // Migrationen liefen bereits in getSharedCapacitorSqlClient (genau einmal).
     const client = await getSharedCapacitorSqlClient()
     const repo = createPznLibrarySqliteRepository(client)
-    // Einmal-Backfill aus dem alten Preferences-Blob, NUR wenn die Tabelle leer ist
-    // (idempotent). BEST-EFFORT: ein Fehler hier darf das Backend NIE lahmlegen — die
-    // Tabelle bleibt nutzbar, der Nutzer kann neu erfassen/importieren.
+    // Einmal-Backfill aus dem alten Preferences-Blob, mit Status statt „Tabelle leer“ (pznLegacyBackfill.ts):
+    // ein Abbruch mittendrin wird beim nächsten Start fortgesetzt. BEST-EFFORT: ein Fehler hier darf das Backend
+    // NIE lahmlegen - die Tabelle bleibt nutzbar, der Nutzer kann neu erfassen/importieren.
     try {
-      if ((await repo.count()) === 0) {
-        const raw = await adapter.get(PZN_LIBRARY_KEY)
-        if (raw) {
-          let incoming = null
-          try {
-            incoming = parseImport(JSON.parse(raw))
-          } catch {
-            incoming = null
-          }
-          if (incoming) await repo.bulkPut(listSorted(incoming), 'overwrite')
-        }
-      }
+      await runLegacyBackfill(repo, adapter)
     } catch {
-      // Backfill best-effort; Tabelle bleibt nutzbar.
+      // Backfill best-effort; Status bleibt 'running' -> nächster Start setzt fort.
     }
     return repo
   }
