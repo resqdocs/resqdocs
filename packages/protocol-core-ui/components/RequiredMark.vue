@@ -9,6 +9,6 @@ defineProps<{ open: boolean }>()
 </script>
 
 <template>
-  <span class="font-bold leading-none" :class="open ? 'text-warning' : 'text-base-content/40'" title="Pflichtfeld" aria-hidden="true">*</span>
+  <span class="font-bold leading-none" :class="open ? 'text-warning' : 'text-base-content/75'" title="Pflichtfeld" aria-hidden="true">*</span>
   <span class="sr-only">Pflichtfeld{{ open ? ' – noch offen' : '' }}</span>
 </template>

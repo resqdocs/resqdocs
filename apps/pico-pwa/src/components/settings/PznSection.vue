@@ -23,14 +23,14 @@ async function onSync(): Promise<void> {
 <template>
   <div class="flex flex-col gap-3">
       <h3 class="font-medium">PZN-Wörterbuch (Medikamentennamen)</h3>
-      <p class="text-sm text-base-content/70">{{ lookup.status.value }}</p>
+      <p class="text-sm text-base-content/75">{{ lookup.status.value }}</p>
       <div class="flex items-center gap-2">
         <button class="btn btn-sm min-h-11" type="button" :disabled="lookup.state.busy" @click="onSync">
           Jetzt aktualisieren
         </button>
         <span v-if="lookup.state.busy" class="loading loading-spinner loading-sm" aria-label="lädt" />
       </div>
-      <p v-if="msg" class="text-sm text-base-content/70">{{ msg }}</p>
+      <p v-if="msg" class="text-sm text-base-content/75">{{ msg }}</p>
 
       <label class="flex cursor-pointer items-start gap-2 text-sm">
         <input
@@ -41,14 +41,14 @@ async function onSync(): Promise<void> {
         />
         <span>
           Im Hintergrund auf neue Versionen prüfen
-          <span class="block text-xs text-base-content/60">
+          <span class="block text-xs text-base-content/75">
             Lädt gelegentlich nur die kleine Versionsangabe von resqdocs.app, um auf eine neue Datenbank
             hinzuweisen. Ohne diese Option erscheint der Hinweis rein lokal, wenn die Daten älter als 7 Tage sind.
           </span>
         </span>
       </label>
 
-      <p class="text-xs text-base-content/60">
+      <p class="text-xs text-base-content/75">
         Community-Wörterbuch (CC0) zum Auflösen gescannter PZNs in Medikamentennamen - offline nutzbar,
         Aktualisierung nur auf Knopfdruck. Namen sind <strong>ungeprüfte Community-Angaben</strong> und
         werden im Scan entsprechend markiert. Es werden nie Patientendaten übertragen.

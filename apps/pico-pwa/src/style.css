@@ -1,5 +1,7 @@
 /* Tailwind CSS v4 + daisyUI 5 — CSS-first config (no tailwind.config.js). */
 @import "tailwindcss";
+/* Fenster und Knopfzeilen über der Bildschirmtastatur (gemeinsam für App und Online-Editor). */
+@import "../../../packages/protocol-core-ui/keyboard.css";
 /* Die geteilten Editor-Komponenten liegen im Paket @resqdocs/protocol-core-ui (ausserhalb dieses
    Projektordners). Tailwind scannt Projekt-eigene Dateien automatisch, aber NICHT das Paket -> ohne
    diese Quelle fehlen dessen Utility-Klassen (z. B. das absolute ＋-Menue w-44/right-0) im CSS. */
@@ -201,3 +203,53 @@ textarea,
   :root:not([data-theme]) .brand-logo-light { display: none; }
   :root:not([data-theme]) .brand-logo-dark { display: inline; }
 }
+
+/* Kontrast: Bedienelemente und Nebentext sind auch in der Sonne lesbar.
+   - Rahmen von Eingabefeldern, Auswahllisten, Kaestchen, Radios und Schaltern mindestens 3:1 (WCAG 1.4.11).
+     daisyUI mischt sie standardmaessig aus 20 % Textfarbe (1,2:1); die vorgesehene Stellschraube ist --input-color.
+     Fokus- und Ausgewaehlt-Zustaende behalten ihre daisyUI-Farben.
+   - Nebentext in zwei Stufen: Haupttext 100 %, Nebentext 75 % (hell 6,0:1, dunkel 7,9:1), Platzhalter 70 %.
+     In den Komponenten steht deshalb nur text-base-content/75 (Waechter: contrast.test.ts).
+   Unlayered: gewinnt gegen die daisyUI-Regeln. */
+:root { --rd-control-border: #7d88a6; }
+[data-theme="dark"],
+[data-theme="resqdocs-dark"] { --rd-control-border: #6b7ba6; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) { --rd-control-border: #6b7ba6; }
+}
+.input:not(:focus):not(:focus-within),
+.select:not(:focus):not(:focus-within),
+.textarea:not(:focus),
+.checkbox:not(:checked):not(:indeterminate),
+.radio:not(:checked),
+.toggle:not(:checked) {
+  --input-color: var(--rd-control-border);
+}
+.label,
+.fieldset .label { color: color-mix(in oklab, var(--color-base-content) 75%, transparent); }
+.input::placeholder,
+.textarea::placeholder,
+.select::placeholder,
+input::placeholder,
+textarea::placeholder { color: color-mix(in oklab, var(--color-base-content) 70%, transparent); }
+
+/* Rückmeldung beim Antippen: Die graue Tipp-Hervorhebung des Handys ist app-weit aus. daisyUI-Knöpfe
+   (.btn) reagieren selbst; eigene Bedienelemente (Zustandsschalter ✓/✎/−, Antwortzeilen, Zeilen im Aufbau,
+   Lücken im Lückentext, Tab-Leiste) bekommen hier eine kurze, sichtbare Reaktion, solange der Finger
+   draufliegt. Die Tönung kommt aus der Textfarbe und wirkt deshalb hell wie dunkel. */
+@media (pointer: coarse) {
+  button:not(.btn):not(:disabled):active,
+  [role="button"]:active,
+  summary:active,
+  label:has(> input[type="checkbox"], > input[type="radio"]):active {
+    box-shadow: inset 0 0 0 100vmax color-mix(in oklab, var(--color-base-content) 12%, transparent);
+    transform: scale(0.98);
+  }
+}
+@media (pointer: coarse) and (prefers-reduced-motion: reduce) {
+  button:not(.btn):not(:disabled):active,
+  [role="button"]:active,
+  summary:active,
+  label:has(> input[type="checkbox"], > input[type="radio"]):active { transform: none; }
+}
+

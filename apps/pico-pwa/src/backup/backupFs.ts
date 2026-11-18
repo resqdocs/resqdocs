@@ -29,6 +29,9 @@ export interface BackupFileStore extends BackupStore {
   readSnapshot(name: string): Promise<string | null>
   /** Alle Snapshots + Index löschen. */
   clearAll(): Promise<void>
+  /** Die gespeicherte (schon gepackte) Sicherungsdatei unverändert in den Cache kopieren und ihre Adresse
+   *  liefern - zum Teilen ohne Lesen, Entpacken und neu Packen. null, wenn es nicht klappt. */
+  copySnapshotToCache?(name: string, filename: string): Promise<string | null>
 }
 
 export function createCapacitorBackupStore(): BackupFileStore {
@@ -61,6 +64,15 @@ export function createCapacitorBackupStore(): BackupFileStore {
     },
     async deleteSnapshot(name) {
       await Filesystem.deleteFile({ path: path(name), directory: dir() }).catch(() => {})
+    },
+    async copySnapshotToCache(name, filename) {
+      try {
+        await Filesystem.deleteFile({ path: filename, directory: Directory.Cache }).catch(() => {})
+        await Filesystem.copy({ from: path(name), directory: dir(), to: filename, toDirectory: Directory.Cache })
+        return (await Filesystem.getUri({ path: filename, directory: Directory.Cache })).uri
+      } catch {
+        return null
+      }
     },
     async readSnapshot(name) {
       try {

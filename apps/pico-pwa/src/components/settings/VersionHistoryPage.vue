@@ -32,7 +32,7 @@ function toggleAll(): void {
     <div class="flex items-end justify-between gap-3">
       <div class="flex flex-col">
         <h2 class="text-base font-semibold">Versionsverlauf</h2>
-        <p class="text-sm text-base-content/60">Was mit welcher Version dazugekommen ist.</p>
+        <p class="text-sm text-base-content/75">Was mit welcher Version dazugekommen ist.</p>
       </div>
       <button type="button" class="btn btn-ghost btn-sm min-h-11 shrink-0 px-2 font-normal text-primary" @click="toggleAll">
         {{ allOpen ? 'Alle zuklappen' : 'Alle aufklappen' }}

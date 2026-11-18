@@ -8,6 +8,7 @@ import { routeImport } from '@/composables/useImportRouting'
 import { shareJson, copyToClipboard } from '@/utils/fileTransfer'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 import InfoTip from '@resqdocs/protocol-core-ui/components/InfoTip.vue'
+import LongTextDialog from '@resqdocs/protocol-core-ui/components/LongTextDialog.vue'
 import { INFO } from '@resqdocs/protocol-core-ui/terms'
 import { useTransferShare } from '@resqdocs/protocol-core-ui/useTransferShare'
 import { shouldCloseCard, tapIsPending } from '@resqdocs/protocol-core-ui/cardFocusGuard'
@@ -28,15 +29,18 @@ const editingId = ref<string | null>(null)
 const draftTitle = ref('')
 const draftText = ref('')
 
-// Grosses Textfeld: der Snippet-Text in einem Vollbild-Sheet (Snippets koennen lange Texte sein). expandOpen
-// haelt onFocusOut ab, die Karte zu schliessen, solange das Modal offen ist (wie der pendingDelete-Guard).
+// Grosses Textfeld: der Snippet-Text im Schreib-Fenster (Snippets koennen lange Texte sein). expandOpen
+// haelt onFocusOut ab, die Karte zu schliessen, solange das Fenster offen ist (wie der pendingDelete-Guard).
 const expandOpen = ref(false)
-const bigTextDialog = ref<HTMLDialogElement | null>(null)
-const bigTextArea = ref<HTMLTextAreaElement | null>(null)
+const bigText = ref<InstanceType<typeof LongTextDialog> | null>(null)
 function openBigText(): void {
   expandOpen.value = true
-  bigTextDialog.value?.showModal()
-  requestAnimationFrame(() => bigTextArea.value?.focus()) // Autofokus wie LongTextField
+  bigText.value?.open()
+}
+// Schließen des Schreib-Fensters speichert gleich (wie das große Textfeld im Einsatz), nicht erst beim Schließen der Karte.
+function onBigTextClosed(): void {
+  expandOpen.value = false
+  commitEdit()
 }
 
 // Autofokus auf das Titel-Input der frisch gemounteten Karte (nextTick-Race vermeiden, wie MedplanFunction).
@@ -331,13 +335,13 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
 
       <!-- Import: Snippet-JSON einfügen oder Datei wählen (eigenes resqdocs-snippet-Schema, getrennt von Blöcken/Vorlagen) -->
       <div v-if="importOpen" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
-        <span class="text-xs font-semibold text-base-content/60">JSON einfügen oder Datei wählen</span>
+        <span class="text-xs font-semibold text-base-content/75">JSON einfügen oder Datei wählen</span>
         <textarea v-model="importText" rows="4" class="textarea textarea-bordered w-full text-xs" placeholder='{"schema":"resqdocs-snippet","version":1,"snippet":{ … }}' aria-label="JSON"></textarea>
         <div class="flex flex-wrap items-center gap-2">
           <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="!importText.trim()" @click="doImport(importText)">Laden</button>
           <input type="file" accept="application/json,.json" class="file-input file-input-sm min-h-11" aria-label="Datei wählen" @change="onImportFile" />
         </div>
-        <p class="text-xs text-base-content/50">Wird als neuer Textbaustein importiert.</p>
+        <p class="text-xs text-base-content/75">Wird als neuer Textbaustein importiert.</p>
       </div>
       <p v-if="ioMsg" class="text-xs" :class="ioMsg.kind === 'ok' ? 'text-success' : 'text-error'">{{ ioMsg.text }}</p>
 
@@ -356,15 +360,15 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
         >
           <span class="min-w-0 flex-1 truncate text-sm">
             <span class="font-medium">{{ summaryTitle(s) }}</span>
-            <span v-if="s.text.trim()" class="text-base-content/50"> — {{ preview(s.text) }}</span>
+            <span v-if="s.text.trim()" class="text-base-content/75"> — {{ preview(s.text) }}</span>
           </span>
-          <span class="shrink-0 text-base-content/40" aria-hidden="true">✎</span>
+          <span class="shrink-0 text-base-content/75" aria-hidden="true">✎</span>
         </button>
 
         <!-- EDIT: Karte (Ring + Titel + Text + Fertig) -->
         <div
           v-else
-          class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20 [scroll-margin-block-end:calc(6rem+env(safe-area-inset-bottom))] [scroll-margin-block-start:4.5rem]"
+          class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20 [scroll-margin-block-end:max(calc(6rem+env(safe-area-inset-bottom)),calc(var(--kb-inset,0px)+1rem))] [scroll-margin-block-start:4.5rem]"
           :ref="setEditCard"
           @focusout="onFocusOut" @pointerdown="onCardTap" @mousedown="onCardTap"
           @keydown.esc="closeEdit"
@@ -373,23 +377,28 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
             <input
               :ref="setEditTitle"
               v-model="draftTitle"
+              @focus="scrollIntoViewSoon(editCardEl)"
               class="input input-sm flex-1 font-medium"
               placeholder="Titel"
               aria-label="Titel des Textbausteins"
             />
             <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`Textbaustein ${draftTitle || 'ohne Titel'} löschen`" @click="pendingDelete = s.id">✕</button>
           </div>
-          <textarea
-            v-model="draftText"
-            class="textarea textarea-bordered textarea-sm w-full"
-            rows="3"
-            placeholder="Neutraler Text …"
-            aria-label="Text des Textbausteins"
-          />
+          <!-- Text wie das große Textfeld im Einsatz (LongTextField): Vorschau im Aussehen eines Textfelds, ein Tipp
+               öffnet das Schreib-Fenster. Kein kleines Textfeld in der Karte, das mit offener Tastatur schrumpft. -->
+          <button
+            type="button"
+            class="textarea textarea-bordered textarea-sm min-h-[4.5rem] w-full whitespace-pre-wrap text-left"
+            aria-label="Text des Textbausteins bearbeiten"
+            data-snippet-text
+            @click="openBigText"
+          >
+            <span v-if="draftText.trim()" class="line-clamp-3 text-base-content/80">{{ draftText }}</span>
+            <span v-else class="text-base-content/75">Text eingeben …</span>
+          </button>
+          <!-- Knopfzeile bewusst NICHT an die Tastatur gebunden (kein kb-sticky): sie schob sich beim Tippen des
+               Titels über Titel und Text (iPhone-Video). Stattdessen rückt die ganze Karte über die Tastatur. -->
           <div class="flex flex-wrap justify-end gap-2">
-            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" aria-label="Text groß bearbeiten" title="Großes Textfeld" @click="openBigText">
-              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></svg>
-            </button>
             <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="copiedId === s.id ? 'JSON kopiert' : 'JSON kopieren'" title="Kopieren" @click="exportCopy(s)">
               <svg v-if="copiedId === s.id" class="size-5 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
               <svg v-else class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
@@ -405,7 +414,7 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
           <!-- Als-Link-teilen-Panel (verschlüsselter Kurzzeit-Transfer wie bei Vorlagen/Blöcken) -->
           <div v-if="shareOpenId === s.id" :ref="setSharePanel" class="flex flex-col gap-2 rounded-lg border border-base-300 bg-base-100 p-2 [scroll-margin-block-end:calc(6rem+env(safe-area-inset-bottom))] [scroll-margin-block-start:4.5rem]">
             <div class="flex flex-wrap items-center gap-2">
-              <label class="text-xs font-semibold text-base-content/60">Gültigkeit</label>
+              <label class="text-xs font-semibold text-base-content/75">Gültigkeit</label>
               <select v-model="shareTtl" class="select select-xs" aria-label="Gültigkeit des Transfer-Links">
                 <option v-for="t in TTL_LABELS" :key="t.value" :value="t.value">{{ t.label }}</option>
               </select>
@@ -418,35 +427,27 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
                 <button class="btn btn-ghost btn-xs" type="button" @click="copySnippetLink">{{ linkCopied ? 'Kopiert' : 'Kopieren' }}</button>
               </div>
               <QrCode :value="shareLink.link" :size="180" />
-              <p class="text-xs text-base-content/50">Der Link ist das Geheimnis — nur mit vertrauten Personen teilen. Läuft ab bzw. wird nach dem Lesen gelöscht.</p>
+              <p class="text-xs text-base-content/75">Der Link ist das Geheimnis — nur mit vertrauten Personen teilen. Läuft ab bzw. wird nach dem Lesen gelöscht.</p>
             </div>
           </div>
         </div>
       </template>
       </div>
-      <p v-if="!snippets.length" class="px-1 py-1 text-sm text-base-content/60">Noch keine Textbausteine.</p>
+      <p v-if="!snippets.length" class="px-1 py-1 text-sm text-base-content/75">Noch keine Textbausteine.</p>
     </div>
 
-    <!-- Grosses Textfeld: der Text der OFFENEN Karte (draftText, live) in einem Vollbild-Sheet — Muster wie
-         LongTextField (natives <dialog>, top-layer). BEWUSST auf Section-Ebene (EINMAL, ausserhalb des v-for):
-         ein Template-Ref im v-for wuerde zum Array (ref_for) und showModal() wuerde werfen (Verify). Speichert
-         NICHT selbst; Persistenz laeuft beim Karten-Schliessen (commitEdit); expandOpen haelt onFocusOut ab. -->
-    <dialog ref="bigTextDialog" class="modal modal-bottom sm:modal-middle" @close="expandOpen = false">
-      <div class="modal-box flex h-[85vh] max-h-none flex-col gap-3 pb-[env(safe-area-inset-bottom)]">
-        <h3 class="text-base font-semibold">{{ draftTitle.trim() || 'Textbaustein' }} — Text</h3>
-        <textarea
-          ref="bigTextArea"
-          v-model="draftText"
-          class="textarea textarea-bordered min-h-0 w-full flex-1 text-base leading-relaxed"
-          placeholder="Neutraler Text …"
-          aria-label="Text des Textbausteins"
-        />
-        <div class="flex justify-end">
-          <button type="button" class="btn btn-primary btn-sm" @click="bigTextDialog?.close()">Fertig</button>
-        </div>
-      </div>
-      <form method="dialog" class="modal-backdrop"><button aria-label="Schließen">close</button></form>
-    </dialog>
+    <!-- Grosses Textfeld: der Text der OFFENEN Karte (draftText, live) im Schreib-Fenster (dasselbe wie im
+         Einsatz). BEWUSST auf Section-Ebene (EINMAL, ausserhalb des v-for): ein Template-Ref im v-for wuerde
+         zum Array (ref_for) und das Oeffnen wuerde werfen (Verify). Speichert NICHT selbst; Persistenz laeuft
+         beim Schliessen des Fensters und der Karte (commitEdit); expandOpen haelt onFocusOut ab. -->
+    <LongTextDialog
+      ref="bigText"
+      v-model="draftText"
+      :title="`${draftTitle.trim() || 'Textbaustein'} — Text`"
+      placeholder="Neutraler Text …"
+      hint="Wird beim Schließen gespeichert"
+      @close="onBigTextClosed"
+    />
 
     <ConfirmDialog
       v-if="pendingDelete"

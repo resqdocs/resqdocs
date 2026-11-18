@@ -142,7 +142,7 @@ function pickCustom(): void {
             <span>{{ opt }}</span>
           </button>
         </li>
-        <li v-if="!visible.length" class="px-2 py-1 text-sm italic text-base-content/50">Keine Treffer</li>
+        <li v-if="!visible.length" class="px-2 py-1 text-sm italic text-base-content/75">Keine Treffer</li>
       </ul>
       <button v-if="customLabel" type="button" class="flex min-h-11 w-full items-center gap-2 border-t border-base-300 px-3 text-left text-sm" @click="pickCustom">
         <span class="w-4 shrink-0" aria-hidden="true">✎</span>

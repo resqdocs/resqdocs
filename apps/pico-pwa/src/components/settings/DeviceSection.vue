@@ -111,11 +111,11 @@ async function onSetSsid(): Promise<void> {
       <div class="rounded-lg bg-base-200 p-3 text-sm">
         <p class="mb-1 font-medium">Handy mit dem Bridge-WLAN verbinden</p>
         <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-          <dt class="text-base-content/60">WLAN</dt>
+          <dt class="text-base-content/75">WLAN</dt>
           <dd><code class="select-text font-mono">ResQDocs-&lt;ID&gt;</code></dd>
-          <dt class="text-base-content/60">Passwort</dt>
+          <dt class="text-base-content/75">Passwort</dt>
           <dd><code class="select-text font-mono">resqdocs2026</code></dd>
-          <dt class="text-base-content/60">Adresse</dt>
+          <dt class="text-base-content/75">Adresse</dt>
           <dd><code class="select-text font-mono">http://10.10.10.1</code></dd>
         </dl>
         <button
@@ -124,7 +124,7 @@ async function onSetSsid(): Promise<void> {
           type="button"
           @click="openWifiSettings"
         >WLAN-Einstellungen öffnen</button>
-        <p class="mt-1 text-xs text-base-content/60">
+        <p class="mt-1 text-xs text-base-content/75">
           Das Passwort ist für alle Bridges gleich und bewusst öffentlich — die Bridge tippt nur
           Text und speichert nichts.
         </p>
@@ -150,11 +150,11 @@ async function onSetSsid(): Promise<void> {
       </div>
 
       <div v-if="status" class="rounded bg-base-200 p-2 text-sm">
-        <div><span class="text-base-content/60">Name:</span> {{ status.name }}</div>
-        <div><span class="text-base-content/60">Firmware:</span> {{ status.fwVersion }}</div>
-        <div><span class="text-base-content/60">API:</span> {{ status.apiVersion }}</div>
-        <div><span class="text-base-content/60">Bereit:</span> {{ status.ready ? 'ja' : 'nein' }}</div>
-        <div><span class="text-base-content/60">Standard-Zielgerät:</span> {{ status.defaultOs }}</div>
+        <div><span class="text-base-content/75">Name:</span> {{ status.name }}</div>
+        <div><span class="text-base-content/75">Firmware:</span> {{ status.fwVersion }}</div>
+        <div><span class="text-base-content/75">API:</span> {{ status.apiVersion }}</div>
+        <div><span class="text-base-content/75">Bereit:</span> {{ status.ready ? 'ja' : 'nein' }}</div>
+        <div><span class="text-base-content/75">Standard-Zielgerät:</span> {{ status.defaultOs }}</div>
       </div>
       <p v-if="error" class="text-sm text-error">{{ error }}</p>
 
@@ -164,13 +164,13 @@ async function onSetSsid(): Promise<void> {
       <div>
         <div class="mb-1 flex items-center justify-between">
           <span class="label-text">Firmware aktualisieren</span>
-          <span v-if="fw.manifest" class="text-xs text-base-content/60">mitgeliefert: {{ fw.manifest.version }}</span>
+          <span v-if="fw.manifest" class="text-xs text-base-content/75">mitgeliefert: {{ fw.manifest.version }}</span>
         </div>
 
-        <p v-if="fwState === 'no-bundle'" class="text-sm text-base-content/60">
+        <p v-if="fwState === 'no-bundle'" class="text-sm text-base-content/75">
           Diese App-Version enthält keine Bridge-Firmware.
         </p>
-        <p v-else-if="fwState === 'no-status'" class="text-sm text-base-content/60">
+        <p v-else-if="fwState === 'no-status'" class="text-sm text-base-content/75">
           Erst "Status abrufen", um die Firmware-Version der Bridge zu prüfen.
         </p>
         <p v-else-if="fwState === 'unsupported'" class="text-sm text-warning">
@@ -201,9 +201,9 @@ async function onSetSsid(): Promise<void> {
 
         <template v-if="fw.running.value">
           <progress class="progress progress-primary mt-2 w-full" :value="fw.progress.value" max="1" />
-          <p class="text-sm text-base-content/70">{{ fwPhaseText }}</p>
+          <p class="text-sm text-base-content/75">{{ fwPhaseText }}</p>
         </template>
-        <p v-if="fwMsg" class="text-sm" :class="fw.phase.value === 'error' ? 'text-error' : 'text-base-content/70'">
+        <p v-if="fwMsg" class="text-sm" :class="fw.phase.value === 'error' ? 'text-error' : 'text-base-content/75'">
           {{ fwMsg }}
         </p>
       </div>
@@ -231,7 +231,7 @@ async function onSetSsid(): Promise<void> {
           Testtext senden
         </button>
       </div>
-      <p v-if="sendMsg" class="text-sm text-base-content/70">{{ sendMsg }}</p>
+      <p v-if="sendMsg" class="text-sm text-base-content/75">{{ sendMsg }}</p>
 
       <div class="divider my-0" />
 
@@ -259,9 +259,9 @@ async function onSetSsid(): Promise<void> {
           Erlaubt: A-Z a-z 0-9 _ - (max. 23 Zeichen)
         </span>
       </div>
-      <p v-if="ssidMsg" class="text-sm text-base-content/70">{{ ssidMsg }}</p>
+      <p v-if="ssidMsg" class="text-sm text-base-content/75">{{ ssidMsg }}</p>
 
-      <p class="text-xs text-base-content/60">
+      <p class="text-xs text-base-content/75">
         Lokale HTTP-Verbindung zur Bridge. <strong>Keine Patientendaten</strong> im Testtext verwenden —
         <code>POST /type</code> überträgt den Text nur <strong>transient</strong> (Body, kein Logging/Cache).
         Im Web-Browser kann es CORS-/Mixed-Content-Probleme geben; die native App nutzt CapacitorHttp.

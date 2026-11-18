@@ -10,6 +10,6 @@
         <li>Verwendete externe Pakete unterliegen <strong>ihren eigenen Lizenzen</strong>.</li>
         <li>Quellcode und Mitwirken: über das Projekt-Repository (Issues/Beiträge).</li>
       </ul>
-      <p class="text-xs text-base-content/60">Dies ist ein Hinweis, keine Rechtsberatung.</p>
+      <p class="text-xs text-base-content/75">Dies ist ein Hinweis, keine Rechtsberatung.</p>
   </div>
 </template>

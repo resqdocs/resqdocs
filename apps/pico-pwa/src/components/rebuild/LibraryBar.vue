@@ -157,7 +157,7 @@ const collapsed = ref(false)
   <div class="flex flex-col gap-2 rounded-lg border border-base-300 bg-base-100 p-2">
     <!-- Kopf: Collapse-Toggle (zugeklappt = aktive Vorlage) + Mehr-Menue (⋮) + Save-Status -->
     <div class="flex items-center justify-between gap-2">
-      <button type="button" class="flex min-h-9 items-center gap-1 truncate text-left text-sm font-semibold text-base-content/70" :aria-expanded="!collapsed" @click="collapsed = !collapsed">
+      <button type="button" class="flex min-h-9 items-center gap-1 truncate text-left text-sm font-semibold text-base-content/75" :aria-expanded="!collapsed" @click="collapsed = !collapsed">
         <span aria-hidden="true">{{ collapsed ? '▸' : '▾' }}</span>
         <span v-if="collapsed" class="truncate">{{ activeTitle }}</span>
         <span v-else>Vorlagen</span>
@@ -193,10 +193,10 @@ const collapsed = ref(false)
                mit Hintergrund in jeder Zeile draengten sie sich vor den Namen. Das Menue bleibt bei den drei
                Punkten (ein Zahnrad wurde probiert und verworfen), aber als Icon in derselben Groesse wie Teilen
                statt als kleines Textzeichen. -->
-          <button type="button" class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0 text-base-content/60" :aria-label="`${(p.title && p.title.trim()) || p.id} teilen (Link und QR)`" title="Teilen (Link & QR)" @click="rowShare(p.id)">
+          <button type="button" class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0 text-base-content/75" :aria-label="`${(p.title && p.title.trim()) || p.id} teilen (Link und QR)`" title="Teilen (Link & QR)" @click="rowShare(p.id)">
             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
           </button>
-          <button type="button" class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0 text-base-content/60" :aria-label="`Aktionen für ${(p.title && p.title.trim()) || p.id}`" title="Aktionen" @click="openSheet(p.id)">
+          <button type="button" class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0 text-base-content/75" :aria-label="`Aktionen für ${(p.title && p.title.trim()) || p.id}`" title="Aktionen" @click="openSheet(p.id)">
             <svg class="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <circle cx="12" cy="5" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="12" cy="19" r="1.9" />
             </svg>
@@ -242,9 +242,9 @@ const collapsed = ref(false)
     <div class="modal modal-bottom" :class="{ 'modal-open': dataOpen }" role="dialog" aria-modal="true">
       <div class="modal-box">
         <h3 class="text-sm font-semibold">Daten</h3>
-        <p class="pb-2 text-xs text-base-content/60"><b>Teilen/Empfangen</b> = verschlüsselter Link/QR. <b>Export/Import</b> = Datei/JSON.</p>
+        <p class="pb-2 text-xs text-base-content/75"><b>Teilen/Empfangen</b> = verschlüsselter Link/QR. <b>Export/Import</b> = Datei/JSON.</p>
         <TemplateIO ref="dataIo" />
-        <button type="button" class="btn btn-ghost btn-block mt-2" @click="dataOpen = false">Schließen</button>
+        <button type="button" class="kb-actions btn btn-ghost btn-block mt-2" @click="dataOpen = false">Schließen</button>
       </div>
       <button type="button" class="modal-backdrop" aria-label="Schließen" @click="dataOpen = false"></button>
     </div>

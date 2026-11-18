@@ -229,3 +229,86 @@ gewählte Element beziehen.
   Group, H. Loranger (2015): <https://www.nngroup.com/articles/radical-incremental-redesign/>
   → Gruppen, Namen, Reihenfolge und Beschriftungen bleiben; es ziehen nur zwei Blöcke um.
 
+
+## Großes Textfeld: Fenster, Tastatur und Schriftgröße
+
+> Recherche-Stand 2026-11-17. Angewandt in `packages/protocol-core-ui` (`components/LongTextDialog.vue`,
+> `components/LongTextField.vue`, `longTextSize.ts`, `visibleViewport.ts`) und in der App
+> (`composables/useLongTextSize.ts`, Textbausteine). Anlass war ein Video vom iPhone: „Fertig“ lag hinter der
+> Tastatur, das Fenster nutzte 85 % der Höhe, der Titel stand noch einmal als Platzhalter im Feld.
+
+- Lange Texte bekommen am Handy den ganzen Bildschirm: „Consider using a full-screen modal style for in-depth
+  content or a complex task“ — Apple, Human Interface Guidelines, Modality:
+  <https://developer.apple.com/design/human-interface-guidelines/modality>; ein Fenster von unten „should not be
+  used for displaying complex content“ — Nielsen Norman Group, P. Laubheimer (2023):
+  <https://www.nngroup.com/articles/bottom-sheet/>
+  → am Handy volle Höhe ohne abgedunkelten Rand, auf breiten Bildschirmen bleibt es ein mittiger Dialog.
+- Schließen steht oben: „Always give people an obvious way to dismiss a modal view“, in iOS „people typically
+  expect to find a button in the top toolbar“ — Apple, Human Interface Guidelines, Modality (wie oben)
+  → „Fertig“ im Kopf; unten verdeckte ihn die Tastatur.
+- Der Text endet über der Tastatur: „User-interface features like the on-screen keyboard (OSK) can shrink the
+  visual viewport without affecting the layout viewport“ — MDN, Visual Viewport API:
+  <https://developer.mozilla.org/en-US/docs/Web/API/Visual_Viewport_API>
+  → die Höhe des Fensters folgt dem sichtbaren Bereich; die Schreibmarke verschwindet nicht hinter der Tastatur.
+- Der Platzhalter ersetzt keine Beschriftung: „the best solution is to have clear, visible labels that are placed
+  outside empty form fields“ — Nielsen Norman Group, K. Sherwin (2014):
+  <https://www.nngroup.com/articles/form-design-placeholders/>
+  → der Titel steht im Kopf, der Platzhalter sagt nur „Tippen oder diktieren …“.
+- Sichtbar machen, dass nichts verloren geht: „Whenever users interact with a system, they need to know whether the
+  interaction was successful“ — Nielsen Norman Group, A. Harley (2018):
+  <https://www.nngroup.com/articles/visibility-system-status/>
+  → Hinweis „Wird automatisch gespeichert“ im Fuß; „Fertig“ schließt nur.
+- Schriftgröße bleibt im Standard bei 16 px: Apple nennt für iOS 17 pt als Standard und 11 pt als Minimum — Apple,
+  Human Interface Guidelines, Typography: <https://developer.apple.com/design/human-interface-guidelines/typography>;
+  Material 3 setzt Fließtext auf 16/24 (bodyLarge), die kleinere Stufe auf 14/20 (bodyMedium) — Android Developers:
+  <https://developer.android.com/develop/ui/compose/designsystems/material3>; größere Schrift wird unter Ablenkung
+  schneller erfasst: „Larger sizes outperformed smaller sizes“ — Nielsen Norman Group, P. Laubheimer (2017):
+  <https://www.nngroup.com/articles/glanceable-fonts/>
+  → nicht verkleinert; mehr Text kommt über die volle Höhe und den Zeilenabstand.
+- Die Größe wählt der Nutzer: Text soll sich „without assistive technology up to 200 percent“ vergrößern lassen —
+  W3C, WCAG 2.2, 1.4.4 Resize Text: <https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html>
+  → drei Stufen im Fenster (14, 16, 19 px), je Gerät gemerkt. Der Zoom der App ist abgeschaltet, das ist hier der
+  erste Weg, Text größer zu stellen.
+- Zeilenabstand 1,5: „Line spacing (leading) is at least space-and-a-half within paragraphs“ — W3C, WCAG 2.2,
+  1.4.8 Visual Presentation: <https://www.w3.org/WAI/WCAG22/Understanding/visual-presentation.html>
+  → von 1,625 auf 1,5: etwa 8 % mehr Zeilen, ohne die Schrift zu verkleinern.
+- Kein erzwungenes Querformat für mehr Platz: Inhalte sollen ihre Ansicht nicht auf eine Ausrichtung beschränken,
+  „unless a specific display orientation is essential“ — W3C, WCAG 2.2, 1.3.4 Orientation:
+  <https://www.w3.org/WAI/WCAG22/Understanding/orientation.html>; Android 16 ignoriert erzwungene Ausrichtungen
+  auf Displays ab 600 dp — Android Developers:
+  <https://developer.android.com/develop/ui/compose/layouts/adaptive/app-orientation-aspect-ratio-resizability>;
+  nur 0,63 % der Tastenanschläge fielen in einer Feldstudie im Querformat (Buschek et al., zitiert in Palin et al.,
+  MobileHCI 2019): <https://www.pokristensson.com/pubs/PalinEtAlMobileHCI2019.pdf>
+  → das Hochformat bleibt der Standard, die App dreht weiter frei mit.
+
+## Lückentext: Ausfüllen und Einrichten am Handy
+
+> Recherche-Stand 2026-11-17/18. Angewandt in `packages/shared` (`cloze.ts`, `clozeFill.ts`, `clozeEdit.ts`) und
+> `packages/protocol-core-ui/components/cloze/`. Fenster, Tastatur und Schriftgröße folgen dem Abschnitt
+> „Großes Textfeld“ oben.
+
+- Ein Satz mit Eingaben mitten im Text ist für Screenreader und kleine Bildschirme heikel; jede Eingabe braucht
+  einen eigenen Namen und darf nicht nur aus dem Satz heraus verständlich sein — A. Roselli, „Sentence Forms (not
+  Mad Libs)“ (2021): <https://adrianroselli.com/2021/08/sentence-forms-not-mad-libs.html>; zum Muster selbst
+  L. Wroblewski (2010): <https://www.lukew.com/ff/entry.asp?1007>
+  → jede Lücke hat einen Namen, wird unter dem Text einzeln und groß abgefragt und nennt im Text Name und Zustand.
+- Tippflächen: rund 1 cm × 1 cm — Nielsen Norman Group, A. Harley (2019):
+  <https://www.nngroup.com/articles/touch-target-size/>; mindestens 24 px, mit Ausnahme für Ziele im Fließtext —
+  WCAG 2.2, 2.5.8: <https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html>
+  → Antworten mindestens 44 px hoch; die Lücken im Satz sind klein, deshalb die große Abfrage darunter.
+- Bedienung mit dem Daumen im unteren Bereich — S. Hoober (2013):
+  <https://www.uxmatters.com/mt/archives/2013/02/how-do-users-really-hold-mobile-devices.php>
+  → Abfrage und „Weiter“ stehen unten, der Text oben.
+- Vorbelegen und Auswählen statt Tippen — Nielsen Norman Group, R. Budiu (2015):
+  <https://www.nngroup.com/articles/mobile-input-checklist/>
+  → Lücken mit Standardwert werden beim Durchtippen übersprungen (je Lückentext umstellbar).
+- Rückweg und Kontrolle — Nielsen Norman Group, M. Rosala (2020):
+  <https://www.nngroup.com/articles/user-control-and-freedom/>
+  → jede Lücke bleibt antippbar, „Zurück in Text“ macht eine Lücke rückgängig, jede Antwort gilt sofort.
+- Seltenes eine Ebene tiefer — J. Nielsen (2006): <https://www.nngroup.com/articles/progressive-disclosure/>
+  → im Einrichten-Fenster nur Art, Name, Antworten und Pflicht; alles Weitere in den normalen Einstellungen.
+- Lücken als abgesetzte Einheiten im Text — Apple, Human Interface Guidelines, Token fields:
+  <https://developer.apple.com/design/human-interface-guidelines/token-fields>; Platzhalter mit Namen im Text
+  als verbreitetes Muster — TextExpander, Fill-ins:
+  <https://textexpander.com/learn/using/snippets/snippet-fill-ins>
+  → Lücken stehen als Marken im Text, beim Schreiben als `{Name}`.

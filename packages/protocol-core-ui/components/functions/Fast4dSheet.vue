@@ -13,13 +13,16 @@
 import { computed, reactive, ref } from 'vue'
 import type { FAST4DRow, Fast4dBefund } from '@resqdocs/protocol-core/model'
 import { fast4d } from '@resqdocs/protocol-core/tools/scores.mjs'
+import { FAST4D_UHRZEIT, FAST4D_ZEICHEN, fast4dInput, type Fast4dId } from '@resqdocs/protocol-core/tools/fast4dDefs.mjs'
 import InfoTip from '@resqdocs/protocol-core-ui/components/InfoTip.vue'
 import { INFO } from '@resqdocs/protocol-core-ui/terms'
 
 const props = defineProps<{ initial?: FAST4DRow }>()
 const emit = defineEmits<{ apply: [row: FAST4DRow]; close: [] }>()
 
-type ItemId = 'face' | 'arm' | 'speech' | 'diplopia' | 'field' | 'vertigo' | 'ataxia'
+// Zeichen, Schlüssel, Uhrzeit-Prüfung und Zuordnung zum Rechenkern: eine Quelle (tools/fast4dDefs.mjs).
+// Hier steht nur, was das Blatt zusätzlich braucht: Buchstabe, Name und Hilfetext je Zeichen.
+type ItemId = Fast4dId
 type Seite = 're' | 'li'
 type ZeitArt = 'onset' | 'lsw' | 'unknown'
 interface Item { id: ItemId; letter: string; name: string; help: string; side?: true }
@@ -39,7 +42,8 @@ const GROUPS: { label: string; items: Item[] }[] = [
   { label: 'FAST', items: FAST_ITEMS },
   { label: '4D', items: D_ITEMS },
 ]
-const ALL_IDS: ItemId[] = [...FAST_ITEMS, ...D_ITEMS].map((i) => i.id)
+// Vollständigkeit zählt gegen die eine Quelle: fehlte hier ein Zeichen, bliebe das Blatt unvollständig statt still zu kürzen.
+const ALL_IDS: ItemId[] = FAST4D_ZEICHEN.map((z) => z.id)
 const BEFUNDE: { v: Fast4dBefund; glyph: string; label: string }[] = [
   { v: 'neg', glyph: '✓', label: 'unauffällig' },
   { v: 'pos', glyph: '!', label: 'auffällig' },
@@ -54,17 +58,10 @@ const ZEITEN: { v: ZeitArt; label: string }[] = [
   { v: 'lsw', label: 'Zuletzt gesund gesehen' },
   { v: 'unknown', label: 'unklar' },
 ]
-const UHRZEIT = /^([01]\d|2[0-3]):[0-5]\d$/
 
-const picked = reactive<Record<ItemId, Fast4dBefund | null>>({
-  face: props.initial?.fastFace ?? null,
-  arm: props.initial?.fastArm ?? null,
-  speech: props.initial?.fastSpeech ?? null,
-  diplopia: props.initial?.fastDiplopia ?? null,
-  field: props.initial?.fastField ?? null,
-  vertigo: props.initial?.fastVertigo ?? null,
-  ataxia: props.initial?.fastAtaxia ?? null,
-})
+const picked = reactive(
+  Object.fromEntries(FAST4D_ZEICHEN.map((z) => [z.id, props.initial?.[z.rowKey] ?? null])) as Record<ItemId, Fast4dBefund | null>,
+)
 const side = reactive<Record<'face' | 'arm', Seite | null>>({
   face: props.initial?.fastFaceSide ?? null,
   arm: props.initial?.fastArmSide ?? null,
@@ -95,23 +92,19 @@ function allNeg(): void {
 }
 
 const needsTime = computed(() => timeMode.value === 'onset' || timeMode.value === 'lsw')
-const timeValid = computed(() => UHRZEIT.test(time.value))
+const timeValid = computed(() => FAST4D_UHRZEIT.test(time.value))
 const openCount = computed(() => ALL_IDS.filter((id) => picked[id] == null).length)
 
 // Vollständig = alle sieben Befunde gewählt. VOR dem fast4d-Aufruf prüfen (scores.fast4d wirft sonst).
 const row = computed<FAST4DRow | null>(() => {
   if (openCount.value > 0) return null
-  const r: FAST4DRow = {
-    fastFace: picked.face!,
-    fastArm: picked.arm!,
-    fastSpeech: picked.speech!,
-    fastDiplopia: picked.diplopia!,
-    fastField: picked.field!,
-    fastVertigo: picked.vertigo!,
-    fastAtaxia: picked.ataxia!,
+  const r: FAST4DRow = {}
+  for (const z of FAST4D_ZEICHEN) {
+    r[z.rowKey] = picked[z.id]!
+    // Seite gehört nur zu einem auffälligen Befund (Face, Arm).
+    const s = z.id === 'face' || z.id === 'arm' ? side[z.id] : null
+    if (z.sideKey && picked[z.id] === 'pos' && s) r[z.sideKey] = s
   }
-  if (picked.face === 'pos' && side.face) r.fastFaceSide = side.face
-  if (picked.arm === 'pos' && side.arm) r.fastArmSide = side.arm
   if (timeMode.value) r.fastTimeMode = timeMode.value
   if (needsTime.value && timeValid.value) r.fastTime = time.value
   return r
@@ -119,10 +112,7 @@ const row = computed<FAST4DRow | null>(() => {
 const result = computed(() => {
   const r = row.value
   if (!r) return null
-  return fast4d({
-    face: r.fastFace!, arm: r.fastArm!, speech: r.fastSpeech!, diplopia: r.fastDiplopia!, field: r.fastField!, vertigo: r.fastVertigo!, ataxia: r.fastAtaxia!,
-    faceSide: r.fastFaceSide, armSide: r.fastArmSide, timeMode: r.fastTimeMode, time: r.fastTime,
-  })
+  return fast4d(fast4dInput(r as Parameters<typeof fast4dInput>[0]))
 })
 
 // Farbe der GEWÄHLTEN Option (volle Klassen-Literale -> Tailwind purged sie nicht). Die Bedeutung
@@ -159,22 +149,22 @@ function apply(): void {
 <template>
   <Teleport to="body">
     <div class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true" aria-label="FAST4D erheben">
-      <div class="modal-box flex max-h-[90vh] flex-col gap-3 overflow-hidden pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div class="modal-box flex max-h-[90vh] flex-col space-y-3 overflow-hidden pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div class="flex shrink-0 items-center gap-2">
           <h3 class="text-base font-semibold">FAST4D erheben</h3>
           <button type="button" class="btn btn-ghost btn-sm ml-auto min-h-11" @click="allNeg">Alle unauffällig</button>
         </div>
 
-        <div class="-mx-1 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-1">
+        <div class="-mx-1 flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto overscroll-contain px-1">
           <section v-for="g in GROUPS" :key="g.label" class="flex flex-col">
-            <p class="pb-1 text-xs font-semibold uppercase tracking-wide text-base-content/50">{{ g.label }}</p>
+            <p class="pb-1 text-xs font-semibold uppercase tracking-wide text-base-content/75">{{ g.label }}</p>
 
-            <div v-for="it in g.items" :key="it.id" class="flex flex-col gap-2 border-t border-base-300 py-3">
+            <div v-for="it in g.items" :key="it.id" class="flex flex-col space-y-2 border-t border-base-300 py-3">
               <div class="flex items-start gap-2">
                 <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-base-200 text-xs font-bold" aria-hidden="true">{{ it.letter }}</span>
                 <div class="min-w-0">
                   <p class="text-sm font-semibold">{{ it.name }}</p>
-                  <p class="text-xs text-base-content/60">{{ it.help }}</p>
+                  <p class="text-xs text-base-content/75">{{ it.help }}</p>
                 </div>
               </div>
               <div class="join w-full" role="group" :aria-label="it.name">
@@ -193,7 +183,7 @@ function apply(): void {
                 </button>
               </div>
               <div v-if="it.side && picked[it.id] === 'pos'" class="flex items-center gap-2" role="group" :aria-label="`${it.name}: Seite`">
-                <span class="text-xs text-base-content/60">Seite</span>
+                <span class="text-xs text-base-content/75">Seite</span>
                 <button
                   v-for="s in SEITEN"
                   :key="s.v"
@@ -209,12 +199,12 @@ function apply(): void {
             </div>
 
             <!-- T: Zeit gehört zur FAST-Gruppe, wird erfasst, zählt aber nicht zum Ergebnis. -->
-            <div v-if="g.label === 'FAST'" class="flex flex-col gap-2 border-t border-base-300 py-3">
+            <div v-if="g.label === 'FAST'" class="flex flex-col space-y-2 border-t border-base-300 py-3">
               <div class="flex items-start gap-2">
                 <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-base-200 text-xs font-bold" aria-hidden="true">T</span>
                 <div class="min-w-0">
                   <p class="text-sm font-semibold">Time – Zeit</p>
-                  <p class="text-xs text-base-content/60">Wird erfasst, zählt nicht zum Ergebnis.</p>
+                  <p class="text-xs text-base-content/75">Wird erfasst, zählt nicht zum Ergebnis.</p>
                 </div>
               </div>
               <div class="join w-full" role="group" aria-label="Zeitangabe">
@@ -231,9 +221,9 @@ function apply(): void {
                 </button>
               </div>
               <label v-if="needsTime" class="flex items-center gap-2">
-                <span class="text-xs text-base-content/60">Uhrzeit</span>
+                <span class="text-xs text-base-content/75">Uhrzeit</span>
                 <input v-model="time" type="time" class="input input-sm min-h-11 w-32" aria-label="Uhrzeit" />
-                <span v-if="!timeValid" class="text-xs text-base-content/60">Ohne Uhrzeit erscheint die Zeit nicht im Text.</span>
+                <span v-if="!timeValid" class="text-xs text-base-content/75">Ohne Uhrzeit erscheint die Zeit nicht im Text.</span>
               </label>
             </div>
           </section>
@@ -243,9 +233,9 @@ function apply(): void {
           <p class="min-w-0 flex-1" role="status">
             <template v-if="result">
               <span class="badge badge-sm align-middle" :class="resultClass">{{ resultLabel }}</span>
-              <span class="ml-2 text-base-content/70">{{ resultDetail }}</span>
+              <span class="ml-2 text-base-content/75">{{ resultDetail }}</span>
             </template>
-            <span v-else class="italic text-base-content/50">Noch {{ openCount }} von 7 Befunden offen.</span>
+            <span v-else class="italic text-base-content/75">Noch {{ openCount }} von 7 Befunden offen.</span>
           </p>
           <InfoTip :info="INFO.fast4dColors" />
         </div>

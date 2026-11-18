@@ -18,11 +18,11 @@ const { saveStatus, libraryMode, libraryError, retrySave } = useProtocolPersiste
     </template>
     <template v-else-if="saveStatus === 'saving'">
       <span class="loading loading-spinner loading-xs"></span>
-      <span class="text-base-content/60">Speichert …</span>
+      <span class="text-base-content/75">Speichert …</span>
     </template>
     <template v-else-if="saveStatus === 'saved'">
       <span class="text-success" aria-hidden="true">✓</span>
-      <span class="text-base-content/60">Gespeichert</span>
+      <span class="text-base-content/75">Gespeichert</span>
     </template>
     <template v-else-if="saveStatus === 'error'">
       <span class="text-error" aria-hidden="true">!</span>

@@ -63,7 +63,7 @@ const typingSpeed = computed({
       <fieldset class="fieldset">
         <div class="flex items-center justify-between">
           <legend class="fieldset-legend">Tippgeschwindigkeit</legend>
-          <span class="text-xs text-base-content/60">{{ typingSpeedLabel(settings.typingDelayMs) }}</span>
+          <span class="text-xs text-base-content/75">{{ typingSpeedLabel(settings.typingDelayMs) }}</span>
         </div>
         <input
           v-model.number="typingSpeed"
@@ -76,7 +76,7 @@ const typingSpeed = computed({
           :aria-valuetext="typingSpeedLabel(settings.typingDelayMs)"
           @change="saveSettings()"
         />
-        <div class="mt-1 flex justify-between text-xs text-base-content/60">
+        <div class="mt-1 flex justify-between text-xs text-base-content/75">
           <span>Langsam</span>
           <span>Schnell</span>
         </div>
@@ -91,14 +91,14 @@ const typingSpeed = computed({
         />
         <span>
           Auf neue App-Versionen hinweisen
-          <span class="block text-xs text-base-content/60">
+          <span class="block text-xs text-base-content/75">
             Fragt bei jedem Öffnen der App die kleine Versionsangabe von resqdocs.app ab. Dabei werden
             keine Einsatz- oder Gerätedaten übertragen.
           </span>
         </span>
       </label>
 
-      <p class="text-xs text-base-content/60">Einstellungen werden lokal gespeichert (keine Cloud).</p>
+      <p class="text-xs text-base-content/75">Einstellungen werden lokal gespeichert (keine Cloud).</p>
     </div>
   </section>
 </template>

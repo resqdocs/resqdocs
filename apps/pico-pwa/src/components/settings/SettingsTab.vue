@@ -74,7 +74,7 @@ watch(page, (p) => {
 
   <div v-else class="flex flex-col gap-4">
     <h2 class="text-base font-semibold">Einstellungen</h2>
-    <p class="text-sm text-base-content/60">
+    <p class="text-sm text-base-content/75">
       App-Einstellungen, Bridge, Daten und Rechtliches.
     </p>
 
@@ -92,7 +92,7 @@ watch(page, (p) => {
       <div class="card-body flex-row items-center justify-between gap-3 p-4">
         <div class="flex flex-col">
           <span class="font-medium">Bridge</span>
-          <span class="text-xs text-base-content/60">Verbindung · Firmware · Testtext · Bridge-ID</span>
+          <span class="text-xs text-base-content/75">Verbindung · Firmware · Testtext · Bridge-ID</span>
         </div>
         <div class="flex items-center gap-2">
           <span
@@ -101,7 +101,7 @@ watch(page, (p) => {
           >
             {{ reachable === true ? 'verbunden' : reachable === false ? 'getrennt' : 'unbekannt' }}
           </span>
-          <span class="text-base-content/40" aria-hidden="true">›</span>
+          <span class="text-base-content/75" aria-hidden="true">›</span>
         </div>
       </div>
     </button>
@@ -116,11 +116,11 @@ watch(page, (p) => {
       <div class="card-body flex-row items-center justify-between gap-3 p-4">
         <div class="flex flex-col">
           <span class="font-medium">PZN-Bibliothek (persönlich)</span>
-          <span class="text-xs text-base-content/60">
+          <span class="text-xs text-base-content/75">
             {{ pznCount }} {{ pznCount === 1 ? 'Eintrag' : 'Einträge' }} · lokal, eigene Bezeichnungen
           </span>
         </div>
-        <span class="text-base-content/40" aria-hidden="true">›</span>
+        <span class="text-base-content/75" aria-hidden="true">›</span>
       </div>
     </button>
 
@@ -153,11 +153,11 @@ watch(page, (p) => {
       <div class="card-body flex-row items-center justify-between gap-3 p-4">
         <div class="flex flex-col">
           <span class="font-medium">Versionsverlauf</span>
-          <span class="text-xs text-base-content/60">Was mit welcher Version dazugekommen ist</span>
+          <span class="text-xs text-base-content/75">Was mit welcher Version dazugekommen ist</span>
         </div>
         <div class="flex items-center gap-2">
           <span class="badge badge-ghost badge-sm">{{ appVersion }}</span>
-          <span class="text-base-content/40" aria-hidden="true">›</span>
+          <span class="text-base-content/75" aria-hidden="true">›</span>
         </div>
       </div>
     </button>
@@ -173,7 +173,7 @@ watch(page, (p) => {
     </div>
 
     <!-- Dezente Fusszeile: Version/Build (nativ „X.Y.Z (Build)", Web nur „X.Y.Z") + Herausgeber + Entwickler. -->
-    <p class="mt-1 text-center text-xs leading-relaxed text-base-content/40">
+    <p class="mt-1 text-center text-xs leading-relaxed text-base-content/75">
       ResQDocs {{ appVersion }}<br />
       Herausgeber: [Anbieter] · Entwicklung: [Name]
     </p>

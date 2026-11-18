@@ -9,6 +9,7 @@
 // Spiegelt das bewaehrte dev-Muster (composables/temporaryCaseDraft.ts), aber mit dem Rework-Wertformat
 // (Record<id, FieldFill>) und EIGENEM Key - getrennt vom dev-Draft (anderes caseState-Format).
 import type { FieldFill, FunctionRow } from './model.ts'
+import { FAST4D_UHRZEIT, fast4dEnumFields } from './tools/fast4dDefs.mjs'
 
 /** TTL-Grenzen (Stunden). Default 3 h, einstellbar 1-5 h (Settings: caseDraftTtlHours). */
 export const CASE_DRAFT_TTL_MIN_HOURS = 1
@@ -121,30 +122,23 @@ const BOOL_FIELDS = ['onOxygen', 'scale2', 'patientenverfuegung', 'vollmacht'] a
 const ARZT_ROLLEN = ['Hausarzt', 'Facharzt', 'Angehöriger', 'Betreuer'] as const
 /** Befund-Felder mit festem Wertebereich (LAMS-Punkte, FAST4D-Befunde/-Seite/-Zeitart, ZOPS-Befunde, Sgarbossa-Kriterien, EGSYS-Antworten): nur exakt
  *  diese Werte gelangen in den Entwurf. */
-const FAST4D_BEFUND = ['neg', 'pos', 'na'] as const
+/** Sgarbossa-Kriterium: erfuellt / nicht erfuellt / nicht pruefbar (eigene Liste, nicht an FAST4D gekoppelt). */
+const SGB_KRITERIUM = ['neg', 'pos', 'na'] as const
 const ZOPS_BEFUND = ['ok', 'no', 'na'] as const
 const JA_NEIN = ['yes', 'no'] as const
 const ENUM_FIELDS: Record<string, readonly (string | number)[]> = {
   lamsFace: [0, 1],
   lamsArm: [0, 1, 2],
   lamsGrip: [0, 1, 2],
-  fastFace: FAST4D_BEFUND,
-  fastArm: FAST4D_BEFUND,
-  fastSpeech: FAST4D_BEFUND,
-  fastDiplopia: FAST4D_BEFUND,
-  fastField: FAST4D_BEFUND,
-  fastVertigo: FAST4D_BEFUND,
-  fastAtaxia: FAST4D_BEFUND,
-  fastFaceSide: ['re', 'li'],
-  fastArmSide: ['re', 'li'],
-  fastTimeMode: ['onset', 'lsw', 'unknown'],
+  // FAST4D: Befunde, Seiten und Zeitart aus der einen Quelle (tools/fast4dDefs.mjs)
+  ...fast4dEnumFields(),
   zopsTime: ZOPS_BEFUND,
   zopsPlace: ZOPS_BEFUND,
   zopsPerson: ZOPS_BEFUND,
   zopsSituation: ZOPS_BEFUND,
-  sgbConcordantElevation: FAST4D_BEFUND,
-  sgbConcordantDepression: FAST4D_BEFUND,
-  sgbDiscordantElevation: FAST4D_BEFUND,
+  sgbConcordantElevation: SGB_KRITERIUM,
+  sgbConcordantDepression: SGB_KRITERIUM,
+  sgbDiscordantElevation: SGB_KRITERIUM,
   egsysPalpitations: JA_NEIN,
   egsysHeartDisease: JA_NEIN,
   egsysEffort: JA_NEIN,
@@ -152,8 +146,6 @@ const ENUM_FIELDS: Record<string, readonly (string | number)[]> = {
   egsysTriggers: JA_NEIN,
   egsysProdromes: JA_NEIN,
 }
-/** FAST4D-Uhrzeit: ausschliesslich HH:MM (kein Freitext im Entwurf). */
-const UHRZEIT = /^([01]\d|2[0-3]):[0-5]\d$/
 function sanitizeRows(v: unknown): FunctionRow[] {
   if (!Array.isArray(v)) return []
   const out: FunctionRow[] = []
@@ -175,7 +167,8 @@ function sanitizeRows(v: unknown): FunctionRow[] {
     for (const k of BOOL_FIELDS) if (typeof r[k] === 'boolean') row[k] = r[k]
     // Befund-Felder mit festem Wertebereich (LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS)
     for (const [k, erlaubt] of Object.entries(ENUM_FIELDS)) if (erlaubt.includes(r[k] as string | number)) row[k] = r[k]
-    if (typeof r.fastTime === 'string' && UHRZEIT.test(r.fastTime)) row.fastTime = r.fastTime
+    // FAST4D-Uhrzeit: ausschliesslich HH:MM (kein Freitext im Entwurf)
+    if (typeof r.fastTime === 'string' && FAST4D_UHRZEIT.test(r.fastTime)) row.fastTime = r.fastTime
     // Leer? (keine nicht-leeren Strings UND keine Zahlen) -> keine Nutzerarbeit, raus. Ein alleiniger
     // Boolean (Toggle ohne Vitalwerte) zaehlt bewusst NICHT als Erfassung.
     const hatWert = Object.values(row).some((x) => (typeof x === 'string' ? x.trim() !== '' : typeof x === 'number'))

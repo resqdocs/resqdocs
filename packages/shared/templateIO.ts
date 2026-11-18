@@ -2,6 +2,7 @@
 // Versioniertes JSON, damit ein anderes Geraet pruefen kann, ob es die Vorlage unterstuetzt.
 
 import type { Container } from './model.ts'
+import { pruneCloze } from './cloze.ts'
 
 export const PROTOCOL_SCHEMA = 'resqdocs-protocol'
 export const PROTOCOL_VERSION = 1
@@ -44,5 +45,5 @@ export function parseTemplate(json: string): ParseResult {
     return { ok: false, error: `Version ${String(o.version)} wird von dieser App-Version nicht unterstuetzt.` }
   }
   if (!isContainerLike(o.tree)) return { ok: false, error: 'Die Vorlage hat keinen gültigen Aufbau.' }
-  return { ok: true, tree: o.tree }
+  return { ok: true, tree: pruneCloze(o.tree) } // Lücken ohne Ziel (fremde/gekürzte Vorlage) entfernen
 }

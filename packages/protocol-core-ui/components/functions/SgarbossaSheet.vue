@@ -93,23 +93,23 @@ function apply(): void {
 <template>
   <Teleport to="body">
     <div class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true" aria-label="Sgarbossa erheben">
-      <div class="modal-box flex max-h-[90vh] flex-col gap-3 overflow-hidden pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div class="modal-box flex max-h-[90vh] flex-col space-y-3 overflow-hidden pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div class="flex shrink-0 items-center gap-2">
           <h3 class="text-base font-semibold">Sgarbossa erheben</h3>
           <button type="button" class="btn btn-ghost btn-sm ml-auto min-h-11" @click="allNeg">Keins erfüllt</button>
         </div>
 
         <div class="-mx-1 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-1">
-          <p class="pb-2 text-xs text-base-content/60">
+          <p class="pb-2 text-xs text-base-content/75">
             Modifiziert nach Smith. Für EKGs mit Linksschenkelblock oder Schrittmacher-Rhythmus. Ein erfülltes Kriterium genügt.
           </p>
 
-          <div v-for="it in ITEMS" :key="it.id" class="flex flex-col gap-2 border-t border-base-300 py-3">
+          <div v-for="it in ITEMS" :key="it.id" class="flex flex-col space-y-2 border-t border-base-300 py-3">
             <div class="flex items-start gap-2">
               <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-base-200 text-xs font-bold" aria-hidden="true">{{ it.nr }}</span>
               <div class="min-w-0">
                 <p class="text-sm font-semibold">{{ it.name }}</p>
-                <p class="text-xs text-base-content/60">{{ it.help }}</p>
+                <p class="text-xs text-base-content/75">{{ it.help }}</p>
               </div>
             </div>
             <div class="join w-full" role="group" :aria-label="it.name">
@@ -138,9 +138,9 @@ function apply(): void {
           <p class="min-w-0 flex-1" role="status">
             <template v-if="result">
               <span class="badge badge-sm align-middle" :class="resultClass">{{ resultLabel }}</span>
-              <span class="ml-2 text-base-content/70">{{ resultDetail }}</span>
+              <span class="ml-2 text-base-content/75">{{ resultDetail }}</span>
             </template>
-            <span v-else class="italic text-base-content/50">Noch {{ openCount }} von 3 Kriterien offen.</span>
+            <span v-else class="italic text-base-content/75">Noch {{ openCount }} von 3 Kriterien offen.</span>
           </p>
           <InfoTip :info="INFO.sgarbossaColors" />
         </div>

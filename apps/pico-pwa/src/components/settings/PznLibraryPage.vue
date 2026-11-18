@@ -489,7 +489,7 @@ async function deleteAll(): Promise<void> {
 
     <div class="flex flex-wrap items-baseline justify-between gap-2">
       <h2 class="text-base font-semibold">PZN-Bibliothek (persönlich)</h2>
-      <span class="text-sm text-base-content/60">{{ total }} {{ total === 1 ? 'Eintrag' : 'Einträge' }}</span>
+      <span class="text-sm text-base-content/75">{{ total }} {{ total === 1 ? 'Eintrag' : 'Einträge' }}</span>
     </div>
 
     <section class="card bg-base-100 shadow">
@@ -499,47 +499,47 @@ async function deleteAll(): Promise<void> {
              daisyUI-5-Falle: form-control stapelt schmale Inputs nicht mehr. -->
         <div class="flex flex-col gap-2">
           <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">PZN</span>
+            <span class="text-xs text-base-content/75">PZN</span>
             <input v-model="pznInput" inputmode="numeric" placeholder="z. B. 12345678"
                    class="input input-sm w-full" @keyup.enter="addEntry" />
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">Wirkstoff</span>
+            <span class="text-xs text-base-content/75">Wirkstoff</span>
             <input v-model="wirkstoffInput" placeholder="z. B. Ibuprofen"
                    class="input input-sm w-full" @keyup.enter="addEntry" />
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">Wirkstärke</span>
+            <span class="text-xs text-base-content/75">Wirkstärke</span>
             <input v-model="staerkeInput" placeholder="z. B. 400 mg"
                    class="input input-sm w-full" @keyup.enter="addEntry" />
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">Bezeichnung (Handelsname)</span>
+            <span class="text-xs text-base-content/75">Bezeichnung (Handelsname)</span>
             <input v-model="labelInput" placeholder="z. B. Ibu 600"
                    class="input input-sm w-full" @keyup.enter="addEntry" />
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">Kategorie</span>
+            <span class="text-xs text-base-content/75">Kategorie</span>
             <select v-model="categoryInput" class="select select-sm w-full">
               <option value="">— keine —</option>
               <option v-for="c in PZN_CATEGORIES" :key="c" :value="c">{{ c }}</option>
             </select>
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">Bemerkung (Funktion/Hinweis)</span>
+            <span class="text-xs text-base-content/75">Bemerkung (Funktion/Hinweis)</span>
             <input v-model="noteInput" placeholder="z. B. Reanimation"
                    class="input input-sm w-full" @keyup.enter="addEntry" />
           </label>
-          <div class="flex flex-wrap gap-2 pt-1">
+          <div class="kb-sticky flex flex-wrap gap-2 pt-1">
             <button class="btn btn-primary btn-sm min-h-11 grow" type="button" @click="addEntry">Speichern</button>
             <button class="btn btn-outline btn-sm min-h-11 grow" type="button" @click="scanning = true">Packung scannen</button>
           </div>
         </div>
-        <p v-if="staerkeVorschlag" class="text-xs text-base-content/70">
+        <p v-if="staerkeVorschlag" class="text-xs text-base-content/75">
           Wirkstärke-Vorschlag aus der Bezeichnung:
           <button type="button" class="btn btn-ghost btn-sm min-h-11 align-baseline" @click="staerkeInput = staerkeVorschlag">{{ staerkeVorschlag }} übernehmen</button>
         </p>
-        <p class="text-xs text-base-content/60">Nur PZN, Wirkstoff, Wirkstärke, Bezeichnung, Kategorie und Bemerkung — keine Patientendaten.</p>
+        <p class="text-xs text-base-content/75">Nur PZN, Wirkstoff, Wirkstärke, Bezeichnung, Kategorie und Bemerkung — keine Patientendaten.</p>
 
         <!-- Identify-Panel: was beim Scan in der Bibliothek gefunden wurde (Wirkstoff prominent) -->
         <div v-if="identified" class="rounded-lg bg-base-200/60 p-2 text-sm">
@@ -548,8 +548,8 @@ async function deleteAll(): Promise<void> {
             <span v-if="identified.staerke" class="badge badge-sm badge-ghost">{{ identified.staerke }}</span>
             <span v-if="identified.category" class="badge badge-sm badge-ghost">{{ identified.category }}</span>
           </div>
-          <p v-if="identified.label && identified.wirkstoff" class="text-xs text-base-content/60">{{ identified.label }}</p>
-          <p v-if="identified.note" class="text-xs text-base-content/70">{{ identified.note }}</p>
+          <p v-if="identified.label && identified.wirkstoff" class="text-xs text-base-content/75">{{ identified.label }}</p>
+          <p v-if="identified.note" class="text-xs text-base-content/75">{{ identified.note }}</p>
         </div>
 
         <p v-if="error" class="text-sm text-error">{{ error }}</p>
@@ -586,25 +586,25 @@ async function deleteAll(): Promise<void> {
                     :aria-label="`${e.label || e.wirkstoff || 'PZN ' + e.pzn} bearbeiten`" @click="openEntry(e.pzn)">
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm font-medium">{{ e.label || e.wirkstoff || `PZN ${e.pzn}` }}</span>
-                <span class="block truncate text-xs text-base-content/60">{{ [e.wirkstoff, e.staerke, e.pzn].filter(Boolean).join(' · ') }}</span>
+                <span class="block truncate text-xs text-base-content/75">{{ [e.wirkstoff, e.staerke, e.pzn].filter(Boolean).join(' · ') }}</span>
               </span>
               <span v-if="e.category" class="badge badge-ghost badge-sm shrink-0">{{ e.category }}</span>
-              <span class="shrink-0 text-base-content/40" aria-hidden="true">✎</span>
+              <span class="shrink-0 text-base-content/75" aria-hidden="true">✎</span>
             </button>
 
             <!-- EDIT: Karte in place, alle Felder vollbreit; @change-Autosave + ✓-Feedback am Feld -->
             <div v-else class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20">
               <div class="flex items-center justify-between gap-2">
-                <span class="font-mono text-sm text-base-content/70">PZN {{ e.pzn }}</span>
+                <span class="font-mono text-sm text-base-content/75">PZN {{ e.pzn }}</span>
                 <span v-if="savedField && savedField.startsWith(e.pzn + ':')" class="text-xs text-success" role="status">✓ gespeichert</span>
               </div>
               <label class="flex flex-col gap-1">
-                <span class="text-xs text-base-content/60">Wirkstoff</span>
+                <span class="text-xs text-base-content/75">Wirkstoff</span>
                 <input :value="e.wirkstoff" placeholder="z. B. Ibuprofen" class="input input-sm w-full"
                        :aria-label="`Wirkstoff für PZN ${e.pzn}`" @change="onWirkstoffEdit(e.pzn, $event)" />
               </label>
               <label class="flex flex-col gap-1">
-                <span class="text-xs text-base-content/60">Wirkstärke</span>
+                <span class="text-xs text-base-content/75">Wirkstärke</span>
                 <input :ref="setStaerkeEl" v-model="staerkeDraft" placeholder="z. B. 400 mg" class="input input-sm w-full"
                        :enterkeyhint="missingOnly ? 'next' : 'done'"
                        :aria-label="`Wirkstärke für PZN ${e.pzn}`"
@@ -617,23 +617,23 @@ async function deleteAll(): Promise<void> {
                 „{{ offenerVorschlag }}" aus der Bezeichnung übernehmen
               </button>
               <label class="flex flex-col gap-1">
-                <span class="text-xs text-base-content/60">Bezeichnung (Handelsname)</span>
+                <span class="text-xs text-base-content/75">Bezeichnung (Handelsname)</span>
                 <input :value="e.label" placeholder="z. B. Ibuflam 400 mg" class="input input-sm w-full"
                        :aria-label="`Bezeichnung für PZN ${e.pzn}`" @change="onLabelEdit(e.pzn, $event)" />
               </label>
               <label class="flex flex-col gap-1">
-                <span class="text-xs text-base-content/60">Kategorie</span>
+                <span class="text-xs text-base-content/75">Kategorie</span>
                 <select :value="e.category" class="select select-sm w-full" :aria-label="`Kategorie für PZN ${e.pzn}`" @change="onCategoryEdit(e.pzn, $event)">
                   <option value="">— keine —</option>
                   <option v-for="c in PZN_CATEGORIES" :key="c" :value="c">{{ c }}</option>
                 </select>
               </label>
               <label class="flex flex-col gap-1">
-                <span class="text-xs text-base-content/60">Bemerkung (Funktion/Hinweis)</span>
+                <span class="text-xs text-base-content/75">Bemerkung (Funktion/Hinweis)</span>
                 <input :value="e.note" placeholder="z. B. Reanimation" class="input input-sm w-full"
                        :aria-label="`Bemerkung für PZN ${e.pzn}`" @change="onNoteEdit(e.pzn, $event)" />
               </label>
-              <div class="flex flex-wrap items-center gap-2 pt-1">
+              <div class="kb-sticky flex flex-wrap items-center gap-2 pt-1">
                 <button type="button" class="btn btn-ghost btn-sm min-h-11 text-error" @click="pendingDelete = e">Löschen</button>
                 <div class="grow"></div>
                 <button type="button" class="btn btn-sm min-h-11" @click="closeEntry">Fertig</button>
@@ -642,12 +642,12 @@ async function deleteAll(): Promise<void> {
             </div>
           </li>
         </ul>
-        <p v-else-if="loading" class="text-xs text-base-content/50">Lädt…</p>
-        <p v-else-if="query.trim()" class="text-xs text-base-content/50">Kein Treffer für „{{ query.trim() }}".</p>
-        <p v-else-if="!loadError" class="text-xs text-base-content/50">Noch keine Einträge.</p>
+        <p v-else-if="loading" class="text-xs text-base-content/75">Lädt…</p>
+        <p v-else-if="query.trim()" class="text-xs text-base-content/75">Kein Treffer für „{{ query.trim() }}".</p>
+        <p v-else-if="!loadError" class="text-xs text-base-content/75">Noch keine Einträge.</p>
 
         <div v-if="hasMore" class="flex flex-wrap items-center gap-2">
-          <span class="text-xs text-base-content/60">{{ entries.length }} geladen.</span>
+          <span class="text-xs text-base-content/75">{{ entries.length }} geladen.</span>
           <button class="btn btn-outline btn-xs" type="button" @click="loadMore">Weitere {{ PAGE }} laden</button>
         </div>
 
@@ -656,7 +656,7 @@ async function deleteAll(): Promise<void> {
         <section class="flex flex-col gap-2 border-t border-base-200 pt-3" aria-labelledby="pzn-transfer-title">
           <div>
             <h3 id="pzn-transfer-title" class="text-sm font-semibold">Exportieren und importieren</h3>
-            <p class="text-xs text-base-content/60">Export und Import als Datei bleiben auf dem Gerät.</p>
+            <p class="text-xs text-base-content/75">Export und Import als Datei bleiben auf dem Gerät.</p>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <button class="btn btn-outline btn-xs w-full" type="button" :disabled="!total || exporting" @click="onExport">
@@ -676,19 +676,19 @@ async function deleteAll(): Promise<void> {
             <div class="h-2 w-full overflow-hidden rounded-full bg-base-300" role="progressbar" :aria-valuenow="exportPercent" aria-valuemin="0" aria-valuemax="100">
               <div class="h-full rounded-full bg-primary transition-[width] duration-200 ease-linear" :style="{ width: exportPercent + '%' }" />
             </div>
-            <span class="text-xs text-base-content/70">
+            <span class="text-xs text-base-content/75">
               {{ exportProgress ? `${exportProgress.done} von ${exportProgress.total} exportiert…` : 'Export wird vorbereitet…' }}
             </span>
           </div>
           <!-- Nutzerwahl VOR der Dateiauswahl: wie sollen Duplikate behandelt werden? -->
           <div v-if="importChoosing" role="group" aria-label="Import-Modus" class="flex flex-col gap-2 rounded-lg bg-base-200/60 p-2">
-            <span class="text-xs text-base-content/70">Wie sollen <strong>bereits vorhandene</strong> Einträge behandelt werden?</span>
+            <span class="text-xs text-base-content/75">Wie sollen <strong>bereits vorhandene</strong> Einträge behandelt werden?</span>
             <div class="grid gap-2">
               <button class="btn btn-xs btn-primary w-full" type="button" :disabled="importing" @click="chooseImport('overwrite')">Duplikate überschreiben</button>
               <button class="btn btn-xs btn-outline w-full" type="button" :disabled="importing" @click="chooseImport('skip')">Nur fehlende ergänzen</button>
               <button class="btn btn-xs btn-ghost w-full" type="button" :disabled="importing" @click="importChoosing = false">Abbrechen</button>
             </div>
-            <span class="text-xs text-base-content/50">Vorhandene Einträge, die nicht in der Datei sind, bleiben in beiden Fällen erhalten. „Überschreiben" ersetzt alle Felder eines Eintrags durch die Werte aus der Datei — auch die Wirkstärke, die in älteren Backups noch fehlt.</span>
+            <span class="text-xs text-base-content/75">Vorhandene Einträge, die nicht in der Datei sind, bleiben in beiden Fällen erhalten. „Überschreiben" ersetzt alle Felder eines Eintrags durch die Werte aus der Datei — auch die Wirkstärke, die in älteren Backups noch fehlt.</span>
           </div>
           <!-- Eigene Bibliothek von einer Adresse laden: nur https, nur auf Tipp, Adresse wird nicht gespeichert -->
           <div v-if="urlOpen" role="group" aria-labelledby="pzn-url-title" class="flex flex-col gap-2 rounded-lg bg-base-200/60 p-2">
@@ -701,18 +701,18 @@ async function deleteAll(): Promise<void> {
                    class="input input-bordered input-sm w-full" placeholder="https://…/meine-pzn.json.gz"
                    aria-label="Adresse der eigenen PZN-Bibliothek" :disabled="importing" />
             <span v-if="urlError" class="text-xs text-error" role="alert">{{ urlError }}</span>
-            <span class="text-xs text-base-content/50">
+            <span class="text-xs text-base-content/75">
               Erlaubt sind .json und .json.gz über https. Die App lädt die Datei erst auf deinen Tipp direkt von dieser
               Adresse; der Betreiber des Servers sieht dabei wie bei jedem Abruf deine IP-Adresse. Die Adresse wird nicht
               gespeichert.
             </span>
-            <span class="text-xs text-base-content/70">Wie sollen <strong>bereits vorhandene</strong> Einträge behandelt werden?</span>
+            <span class="text-xs text-base-content/75">Wie sollen <strong>bereits vorhandene</strong> Einträge behandelt werden?</span>
             <div class="grid gap-2">
               <button class="btn btn-xs btn-primary w-full" type="button" :disabled="importing" @click="importFromUrl('overwrite')">Laden, Duplikate überschreiben</button>
               <button class="btn btn-xs btn-outline w-full" type="button" :disabled="importing" @click="importFromUrl('skip')">Laden, nur fehlende ergänzen</button>
               <button class="btn btn-xs btn-ghost w-full" type="button" :disabled="importing" @click="urlOpen = false; urlError = null">Abbrechen</button>
             </div>
-            <span class="text-xs text-base-content/50">
+            <span class="text-xs text-base-content/75">
               Vorhandene Einträge, die nicht in der Datei sind, bleiben in beiden Fällen erhalten. „Duplikate überschreiben"
               ersetzt alle Felder eines vorhandenen Eintrags durch die Werte aus der Datei, auch eine Wirkstärke, die dort fehlt.
             </span>
@@ -725,7 +725,7 @@ async function deleteAll(): Promise<void> {
               <div class="h-full rounded-full bg-primary transition-[width] duration-200 ease-linear" :style="{ width: importPercent + '%' }" />
             </div>
             <progress v-else class="progress progress-primary w-full" />
-            <span class="text-xs text-base-content/70">
+            <span class="text-xs text-base-content/75">
               {{ importProgress ? `${importProgress.done} von ${importProgress.total} importiert…` : 'Datei wird geladen…' }}
             </span>
           </div>

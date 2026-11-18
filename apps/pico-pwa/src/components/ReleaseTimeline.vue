@@ -51,8 +51,8 @@ function toggle(version: string): void {
               <span class="text-base font-semibold tabular-nums">{{ note.version }}</span>
               <span v-if="note.version === installed" class="badge badge-primary badge-sm">installiert</span>
             </span>
-            <span v-if="note.summary" class="text-sm text-base-content/70" :class="open.has(note.version) ? '' : 'line-clamp-2'">{{ note.summary }}</span>
-            <span class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-base-content/60">
+            <span v-if="note.summary" class="text-sm text-base-content/75" :class="open.has(note.version) ? '' : 'line-clamp-2'">{{ note.summary }}</span>
+            <span class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-base-content/75">
               <span v-for="s in note.sections" :key="s.kind" class="flex items-center gap-1.5">
                 <span class="h-2 w-2 rounded-full" :class="DOT[s.kind]" aria-hidden="true"></span>
                 {{ s.items.length }} {{ s.label }}
@@ -60,7 +60,7 @@ function toggle(version: string): void {
             </span>
           </span>
           <svg
-            class="mt-1 h-4 w-4 shrink-0 text-base-content/50 transition-transform duration-200 motion-reduce:transition-none"
+            class="mt-1 h-4 w-4 shrink-0 text-base-content/75 transition-transform duration-200 motion-reduce:transition-none"
             :class="open.has(note.version) ? 'rotate-90' : ''"
             viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
           ><path d="M6 3l5 5-5 5" /></svg>
@@ -76,7 +76,7 @@ function toggle(version: string): void {
           <div class="overflow-hidden">
             <div class="flex flex-col gap-3 border-t border-base-200 px-4 pb-4 pt-3">
               <div v-for="s in note.sections" :key="s.kind" class="flex flex-col gap-1.5">
-                <h4 class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-base-content/60">
+                <h4 class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-base-content/75">
                   <span class="h-2 w-2 rounded-full" :class="DOT[s.kind]" aria-hidden="true"></span>
                   {{ s.label }}
                 </h4>

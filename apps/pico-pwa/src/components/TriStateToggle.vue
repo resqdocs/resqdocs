@@ -43,7 +43,7 @@ function cycle(): void {
     :class="{
       'border-success bg-success text-success-content': modelValue === 'confirmed',
       'border-primary bg-primary text-primary-content': modelValue === 'custom',
-      'border-base-300 bg-base-200 text-base-content/50': modelValue === 'excluded',
+      'border-base-300 bg-base-200 text-base-content/75': modelValue === 'excluded',
     }"
     :title="TITLE[modelValue]"
     :aria-label="`${label}: ${TITLE[modelValue]} - tippen wechselt`"

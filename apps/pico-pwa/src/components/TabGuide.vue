@@ -15,6 +15,7 @@ import { useAppVersion } from '@/composables/useAppVersion'
 import { isReturningUser } from '@/releaseNotes/whatsNew'
 import { TAB_GUIDE_HINT_ID, WHATS_NEW } from './tabGuideHints'
 import ReleaseTimeline from './ReleaseTimeline.vue'
+import { TEST_PHASE } from '@/testPhase'
 
 /**
  * Mehrseitige Onboarding-Tour (Mechanik der Erklaer-Hinweise): erscheint NACH dem
@@ -37,8 +38,10 @@ const aiUrl = computed(() => `https://ai.resqdocs.app?v=${encodeURIComponent(ver
 // Erst zeigen, wenn (a) die persistierten Einstellungen geladen sind (sonst
 // rendert die Tour kurz auf Defaults und verschwindet) und (b) der
 // Haftungsausschluss bestaetigt ist (kein Durchschimmern hinter dem Gate).
+// In einer Testversion ersetzt der Testhinweis (TestPhaseScreen) die Einführung.
 const visible = computed(
   () =>
+    !TEST_PHASE &&
     storage.settingsLoaded.value &&
     disclaimer.ready.value &&
     !disclaimer.needsAck.value &&
@@ -121,7 +124,7 @@ function onTouchEnd(e: TouchEvent): void {
         <div v-if="page === 'neu'" class="flex flex-1 flex-col gap-4 pb-2">
           <div class="flex flex-col gap-1 text-center">
             <h1 class="text-xl font-bold">Neu in den letzten Versionen</h1>
-            <p class="text-sm text-base-content/70">Das ist mit den letzten Updates dazugekommen. Alles Weitere steht unter Einstellungen → Versionsverlauf.</p>
+            <p class="text-sm text-base-content/75">Das ist mit den letzten Updates dazugekommen. Alles Weitere steht unter Einstellungen → Versionsverlauf.</p>
           </div>
           <ReleaseTimeline v-model:open="newsOpen" :notes="NEWS" :app-version="version" />
         </div>
@@ -130,14 +133,14 @@ function onTouchEnd(e: TouchEvent): void {
         <div v-else-if="page === 'begriffe'" class="flex flex-1 flex-col justify-center gap-4">
           <h1 class="text-center text-xl font-bold">So ist eine Vorlage aufgebaut</h1>
           <ul class="card flex flex-col gap-3 bg-base-100 p-4 shadow-sm">
-            <li class="flex items-start gap-3 text-sm"><span class="w-6 shrink-0 text-center text-base text-base-content/40" aria-hidden="true">▸</span><span><strong>Abschnitt:</strong> fasst Felder unter einer Überschrift zusammen.</span></li>
+            <li class="flex items-start gap-3 text-sm"><span class="w-6 shrink-0 text-center text-base text-base-content/75" aria-hidden="true">▸</span><span><strong>Abschnitt:</strong> fasst Felder unter einer Überschrift zusammen.</span></li>
             <li class="flex items-start gap-3 text-sm"><span class="w-6 shrink-0 text-center text-base text-secondary" aria-hidden="true">◆</span><span><strong>Feld:</strong> eine einzelne Angabe, frei oder aus einer Liste.</span></li>
             <li class="flex items-start gap-3 text-sm"><span class="w-6 shrink-0 text-center text-base text-accent" aria-hidden="true">⊕</span><span><strong>Funktion:</strong> fertige Eingabehilfe, z. B. Medikationsplan oder NEWS2.</span></li>
             <li class="flex items-start gap-3 text-sm"><TabIcon tab="bausteine" class="size-6 shrink-0 text-primary" /><span><strong>Textbaustein:</strong> fertiger Text, den du immer wieder nutzt.</span></li>
             <li class="flex items-start gap-3 text-sm"><TabIcon tab="bausteine" class="size-6 shrink-0 text-primary" /><span><strong>Gespeicherter Abschnitt:</strong> ein Abschnitt, den du in andere Vorlagen einfügst.</span></li>
           </ul>
-          <p class="text-center text-sm text-base-content/70">Die letzten beiden findest du unter <TabRef tab="bausteine" />.</p>
-          <p class="text-center text-sm text-base-content/70">Mehr dazu erfährst du in der App: Tippe auf das <InfoIcon class="inline-block size-[1.15em] align-[-0.2em] text-primary" /> neben einem Begriff.</p>
+          <p class="text-center text-sm text-base-content/75">Die letzten beiden findest du unter <TabRef tab="bausteine" />.</p>
+          <p class="text-center text-sm text-base-content/75">Mehr dazu erfährst du in der App: Tippe auf das <InfoIcon class="inline-block size-[1.15em] align-[-0.2em] text-primary" /> neben einem Begriff.</p>
         </div>
 
         <!-- Seite 1: Willkommen / Wertversprechen -->
@@ -179,7 +182,7 @@ function onTouchEnd(e: TouchEvent): void {
         <!-- Seite 3: Dokumentieren mit Tri-State -->
         <div v-else-if="page === 'einsatz'" class="flex flex-1 flex-col justify-center gap-5">
           <h1 class="text-center text-xl font-bold">Dokumentieren im <TabRef tab="einsatz" /></h1>
-          <p class="text-center text-sm text-base-content/70">Jedes Feld hat drei Zustände:</p>
+          <p class="text-center text-sm text-base-content/75">Jedes Feld hat drei Zustände:</p>
           <div class="flex flex-col gap-3">
             <div class="card bg-base-100 shadow-sm">
               <div class="card-body flex-row items-center gap-3 p-4">
@@ -195,7 +198,7 @@ function onTouchEnd(e: TouchEvent): void {
             </div>
             <div class="card bg-base-100 shadow-sm">
               <div class="card-body flex-row items-center gap-3 p-4">
-                <span class="text-xl text-base-content/50">−</span>
+                <span class="text-xl text-base-content/75">−</span>
                 <p class="text-sm"><strong>Nicht erhoben</strong> - taucht im Protokolltext gar nicht auf. <em>Nicht erhoben = weglassen.</em></p>
               </div>
             </div>
@@ -266,13 +269,13 @@ function onTouchEnd(e: TouchEvent): void {
             Patientendaten existieren nur vorübergehend, während du dokumentierst - getippt, an dein
             Zielgerät übertragen, automatisch gelöscht. <strong>Nichts davon geht an uns.</strong>
           </p>
-          <p class="text-xs text-base-content/60">
+          <p class="text-xs text-base-content/75">
             Ausführliche Anleitung: <span class="font-medium">resqdocs.app/anleitung</span>
             (auch unter <TabRef tab="einstellungen" /> → Info &amp; Hilfe).
           </p>
         </div>
 
-        <p class="pt-4 text-center text-xs text-base-content/50">
+        <p class="pt-4 text-center text-xs text-base-content/75">
           Diese Einführung findest du jederzeit über das ?-Symbol oben rechts.
         </p>
 

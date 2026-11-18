@@ -27,6 +27,16 @@ export const RECEIVER_CORE = `(function () {
     for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
   }
+  // Editor je Kanal aus dem Link (?e=...). Feste Liste: ein Link kann nie auf eine fremde Adresse lenken.
+  var EDITORS = {
+    '': { url: 'https://editor.resqdocs.app', label: 'Im Online-Editor öffnen' },
+    dev: { url: 'https://editor.dev.resqdocs.app', label: 'Im Test-Editor öffnen' }
+  };
+  function editorFor(search) {
+    var m = /[?&]e=([a-z0-9-]{1,16})(?:&|$)/.exec(search || '');
+    var key = m ? m[1] : '';
+    return Object.prototype.hasOwnProperty.call(EDITORS, key) ? EDITORS[key] : EDITORS[''];
+  }
   function parseFragment(h) {
     if (h.charAt(0) === '#') h = h.slice(1);
     var dot = h.indexOf('.');
@@ -45,7 +55,7 @@ export const RECEIVER_CORE = `(function () {
     var pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ct);
     return new TextDecoder().decode(pt);
   }
-  return { fromB64url: fromB64url, parseFragment: parseFragment, decrypt: decrypt };
+  return { fromB64url: fromB64url, parseFragment: parseFragment, decrypt: decrypt, editorFor: editorFor };
 })`
 
 // Die vollstaendige Seite. Theme-bewusst (hell/dunkel), mobil-first, keine externen Requests
@@ -130,8 +140,10 @@ export const RECEIVER_HTML = `<!doctype html>
 
 <script>
 var RQD = ${RECEIVER_CORE}();
-var EDITOR_URL = 'https://editor.resqdocs.app';
 function $(id){ return document.getElementById(id); }
+var EDITOR = RQD.editorFor(location.search);
+var EDITOR_URL = EDITOR.url;
+$('editorBtn').textContent = EDITOR.label;
 function show(id){ ['nolink','ready','loading','error','result'].forEach(function(s){ $(s).className = (s===id)?'':'hide'; }); }
 function fail(msg){ $('errMsg').textContent = msg; show('error'); }
 
