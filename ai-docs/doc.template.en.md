@@ -116,6 +116,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - **Side by side instead of stacked?** (`inline`) — Appends this node to the previous one on the same line. *Example: "Pulse: 80, BP: 120/80" on one line.*
 - **No separator before?** (`noSeparatorBefore`) — Omits the comma/space so something attaches directly. *Example: value + unit "80/min" without a comma.*
 - **Text when nothing is output?** (`emptyText`) — Replacement text when the section is shown but its fields output nothing. *Example: "unauffällig".*
+- **Output as cloze text?** (`cloze`, from app 2.0.0, sections only) — Instead of listing its fields one below the other, the section outputs free-form text in which the fields appear as gaps. A whole protocol can be a single cloze text. *Example: "Patient ist [wach], [zeitlich und örtlich] orientiert."*
 
 ### Fields only
 - **Prefill with a default?** (`default`) — Stays in the field until the user changes it. *Example: "Consciousness" starts as "alert, oriented".*
@@ -149,6 +150,7 @@ The app renders the template to plain text. Rules:
 - **Inline layout:** `inline: true` appends the node to the previous sibling, joined with the `separator` (inherited from the root, overridable per container; default `", "`). `noSeparatorBefore: true` omits the separator (e.g. value + unit).
 - **Not assessed (`excludable`):** a container marked "−" disappears entirely (including children) from the output.
 - **`emptyText`:** substitute text when the container is shown but its children output nothing.
+- **Cloze text (`cloze`, from app 2.0.0):** `cloze.parts` is a list of fixed text (strings, line breaks allowed) and gaps `{ "gap": "<id>" }`. The id points to a field or function: a child of this container (the gap asks for the value itself) or an element elsewhere in the template (the gap shows that element's value). A gap contains only the value, without the title. If a gap stays empty, the doubled space and a dangling comma are removed. Children that are not used in a gap follow below the text. `askDefaults: true` also asks for gaps that already have a default when filling in. Older app versions show the children as a regular field list.
 - **Field value:** by default the `default` (or `options[0]`, with `defaultEmpty` nothing); `options` turns the field into a select; `allowCustom` additionally allows free text; `multiline` is multi-line free text.
 - **FunctionNode:** medication list / doctors render their rows; `config.rowLayout` = `block` (stacked, optional `rowPrefix`/`rowSuffix` per row) or `inline` (one line, joined with `rowSeparator`). Pack-years, NEWS2, LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS and BMI output their result; `config.lineEnd` sets the character at the end of their line (missing = as before, empty = nothing); without entries or a result the `default` appears. LAMS, FAST4D, ZOPS, Sgarbossa and EGSYS read best as one line ("LAMS 4/5 (…)", "FAST4D positiv (…)", "ZOPS orientiert.", "Sgarbossa (mod. nach Smith) negativ."): `titleInline: true` and a `heading` with `"prefix": ""`, `"suffix": " "`.
 

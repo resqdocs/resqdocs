@@ -1,0 +1,90 @@
+// Bildschirmtastatur: Rechenkern und Wächter für die gemeinsame Regel „Fenster und Knöpfe enden über der Tastatur".
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { keyboardVars, fitHeight, FIT_MIN_PX, layoutShrunk } from './keyboardInset.ts'
+
+const read = (f: string): string => readFileSync(new URL(f, import.meta.url), 'utf8')
+
+test('keyboardVars: ohne Tastatur volle Höhe, nichts verdeckt', () => {
+  assert.deepEqual(keyboardVars({ height: 852, offsetTop: 0 }, 852), { height: 852, top: 0, inset: 0, covered: false })
+  assert.deepEqual(keyboardVars(null, 852), { height: 852, top: 0, inset: 0, covered: false })
+  // kleine Abweichung (eingeblendete Leiste) ist keine Tastatur
+  assert.equal(keyboardVars({ height: 800, offsetTop: 0 }, 852).covered, false)
+})
+
+test('keyboardVars: Tastatur verdeckt den unteren Teil, auch wenn iOS die Seite hochschiebt', () => {
+  assert.deepEqual(keyboardVars({ height: 516, offsetTop: 0 }, 852), { height: 516, top: 0, inset: 336, covered: true })
+  // Seite um 140 px hochgeschoben: sichtbar ist 140…656, von unten ragt die Tastatur noch 196 px ins Layout
+  assert.deepEqual(keyboardVars({ height: 516, offsetTop: 140 }, 852), { height: 516, top: 140, inset: 196, covered: true })
+})
+
+test('fitHeight: eine Liste endet über der Tastatur, bleibt aber mindestens zwei Zeilen hoch', () => {
+  assert.equal(fitHeight({ height: 516, offsetTop: 0 }, 300), 208)
+  assert.equal(fitHeight({ height: 516, offsetTop: 140 }, 300), 348)
+  assert.equal(fitHeight({ height: 363, offsetTop: 0 }, 340), FIT_MIN_PX)
+})
+
+test('Regel: Fenster (daisyUI und eigene) enden über der Tastatur; die selbst ausgerichteten sind ausgenommen', () => {
+  const css = read('keyboard.css')
+  assert.match(css, /:root\[data-keyboard\] \.modal:is\(\.modal-open, \[open\]\):not\(\.modal-top\) > \.modal-box/)
+  assert.match(css, /:root\[data-keyboard\] \.overlay-backdrop > \.overlay-surface/)
+  // Der Rahmen bleibt bildschirmfüllend (wie beim großen Textfeld): keine Seite zwischen Fenster und Tastatur.
+  assert.doesNotMatch(css, /\.modal:is\(\.modal-open, \[open\]\):not\(\.modal-top\),?\s*(\n[^{]*)?\{[^}]*height: var\(--vv-h/)
+  // Fenster von unten reichen bis hinter die Tastatur, der Inhalt endet darüber.
+  assert.match(css, /padding-bottom: calc\(var\(--kb-inset, 0px\) \+ 1rem\)/)
+  assert.match(css, /env\(safe-area-inset-top, 0px\)/)
+  assert.match(css, /max-height: calc\(var\(--vv-h, 100dvh\) - env/)
+  assert.match(css, /margin-top: var\(--vv-top/)
+  assert.match(css, /margin-bottom: var\(--kb-inset/)
+  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /@layer/, 'ohne @layer, sonst gewinnen die Höhen-Klassen der Fenster')
+})
+
+test('Regel: Knopfzeilen bleiben stehen (Fenster) bzw. stehen über der Tastatur (Karten)', () => {
+  const css = read('keyboard.css')
+  assert.match(css, /\.modal-box \.modal-action,\s*\.kb-actions \{[^}]*position: sticky;[^}]*bottom: 0;/)
+  assert.match(css, /:root\[data-keyboard\] \.kb-sticky \{[^}]*bottom: var\(--kb-inset/)
+})
+
+test('App und Online-Editor binden Regel und Messung ein', () => {
+  for (const app of ['../../apps/pico-pwa', '../../apps/protocol-editor']) {
+    assert.match(read(`${app}/src/style.css`), /@import "\.\.\/\.\.\/\.\.\/packages\/protocol-core-ui\/keyboard\.css";/, app)
+    assert.match(read(`${app}/src/main.ts`), /installKeyboardInset\(\)/, app)
+  }
+})
+
+test('Betroffene Stellen tragen die Regel', () => {
+  assert.match(read('components/functions/MedplanFunction.vue'), /v-fit-keyboard/)
+  assert.match(read('components/functions/MedplanFunction.vue'), /class="kb-sticky btn/)
+  assert.match(read('components/functions/AerzteFunction.vue'), /class="kb-sticky btn/)
+  for (const f of ['rebuild/MedplanReviewSheet.vue', 'rebuild/AerzteReviewSheet.vue', 'rebuild/LibraryBar.vue']) {
+    assert.match(read(`../../apps/pico-pwa/src/components/${f}`), /kb-actions/, f)
+  }
+  assert.match(read('../../apps/pico-pwa/src/components/settings/PznLibraryPage.vue'), /class="kb-sticky /)
+  // Textbausteine: Knopfzeile NICHT an der Tastatur (lag sonst über dem Titel); die Karte rückt als Ganzes darüber.
+  const snip = read('../../apps/pico-pwa/src/components/library/SnippetLibrarySection.vue')
+  assert.doesNotMatch(snip, /class="kb-sticky/)
+  assert.match(snip, /scroll-margin-block-end:max\([^\]]*var\(--kb-inset/)
+  assert.match(snip, /@focus="scrollIntoViewSoon\(editCardEl\)"/)
+  // Rechner-Fenster: die Knopfzeile ist eine .modal-action und bleibt damit stehen.
+  for (const f of ['News2Sheet', 'BmiSheet', 'PackYearsSheet']) assert.match(read(`components/functions/${f}.vue`), /class="modal-action/, f)
+})
+
+test('layoutShrunk: Android-Tastatur erkannt, wenn ein Feld den Fokus hat und das Layout deutlich schrumpft', () => {
+  assert.equal(layoutShrunk(516, 852, true), true)
+  assert.equal(layoutShrunk(516, 852, false), false, 'ohne Eingabefeld (z. B. geteilter Bildschirm) keine Tastatur')
+  assert.equal(layoutShrunk(820, 852, true), false, 'eingeblendete Leiste ist keine Tastatur')
+})
+
+test('Regel: auf iOS und Android gleich - Linie über der Knopfzeile, kein Home-Balken-Abstand über der Tastatur', () => {
+  const css = read('keyboard.css')
+  assert.match(css, /:root\[data-keyboard-open\] \.modal-box \.modal-action,\s*:root\[data-keyboard-open\] \.kb-actions \{[^}]*box-shadow/)
+  assert.match(css, /:root\[data-keyboard-open\] \.modal\.modal-bottom > \.modal-box,\s*:root\[data-keyboard-open\] \.overlay-surface \{[^}]*max-height: calc\(100dvh[^}]*padding-bottom: 1rem;/)
+  const ts = read('keyboardInset.ts')
+  assert.match(ts, /toggleAttribute\('data-keyboard-open', v\.covered \|\| layoutShrunk/)
+})
+
+test('Regel: die untere Navigationsleiste ist bei offener Tastatur ausgeblendet (hing auf iOS mitten im Bild)', () => {
+  assert.match(read('keyboard.css'), /:root\[data-keyboard-open\] \.dock \{\s*display: none;/)
+  assert.match(read('../../apps/pico-pwa/src/App.vue'), /<nav class="dock /)
+})

@@ -53,6 +53,7 @@ Zusätzlich sind einzelne **Eigenschaften** erst ab einer Mindestversion verfüg
 | Abhängigkeit | `dependsOn` | field, container, function (Das Element erscheint im Einsatz erst, wenn die Bedingungen zutreffen; vorher ist es ausgeblendet und steht nicht in der Ausgabe. Form: { "conditions": [ { "fieldId": "<id eines Feldes mit options>", "options": ["<exakter Options-Text>"] } ] }. Eine Bedingung trifft zu, wenn im Feld eine der options gewählt ist. Mehrere Bedingungen (höchstens drei) müssen alle zutreffen; mit "match": "any" genügt eine. Immer zusammen mit defaultExcluded: true setzen (am Container zusätzlich excludable: true), nicht zusammen mit required. Ältere App-Versionen ignorieren die Angabe: dort startet das Element auf „nicht erhoben" und wird von Hand eingeschaltet.) | 1.11.0 |
 | Anderer Standardwert | `defaultWhen` | field (Solange eine Bedingung zutrifft, gilt ein anderer Standardwert als default. Form: [ { "fieldId": "<id eines Feldes mit options>", "options": ["<exakter Options-Text>"], "value": "<Standardwert in diesem Fall>" } ]. Die erste zutreffende Regel gilt (höchstens fünf). Hat das Feld selbst options, muss value eine davon sein. Eigene Eingaben des Anwenders gehen vor. Ältere App-Versionen ignorieren die Angabe und nehmen default.) | 1.11.0 |
 | Zeilenende | `config.lineEnd` | Funktionen (Zeichen am Ende der Ergebniszeile einzeiliger Funktionen (Funktionskonfiguration); leer = nichts. Ältere Apps setzen ihren festen Standard) | 1.12.0 |
+| Lückentext | `cloze` | container (Der Abschnitt gibt einen frei geschriebenen Text aus, in dem Felder und Funktionen als Lücken stehen. Form: { "parts": [ "Patient ist ", { "gap": "<id>" }, "." ] } – Strings sind fester Text, { "gap": "<id>" } ist eine Lücke. Die id gehört zu einem Feld oder einer Funktion: einem Kind des Abschnitts (die Lücke fragt den Wert ab) oder einem Element an anderer Stelle der Vorlage (die Lücke übernimmt dessen Wert). In der Lücke steht nur der Wert, ohne Titel. Optional "askDefaults": true fragt beim Ausfüllen auch Lücken mit Standardwert ab. Ältere App-Versionen ignorieren die Angabe und zeigen die Kinder als normale Feldliste.) | 2.0.0 |
 
 **Gate-Regel:** Ein `functionKind` ist verfügbar **nur, wenn seine Mindestversion ≤ der Nutzer-Version** ist. Sonst biete ihn nicht an; fragt der Nutzer danach, sag „das braucht mindestens Version X". **Schreibe niemals** einen `functionKind` ins JSON, den die genannte Version nicht kennt. Container und Felder gehen ab Version 1.0.0 immer. Nennt der Nutzer eine Version **vor 1.0.0** (oder keine), nimm die Basis an — nur `container` + `field`, keine Funktionen — und weise darauf hin, dass Funktionen und der Vorlagen-Import selbst mindestens 1.0.0 brauchen.
 
@@ -138,6 +139,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - `blankLineBefore` (boolean): Optische Leerzeile (Absatz) VOR diesem Element - nur wirksam, wenn darueber etwas ausgegeben wird UND das Element eine eigene Titel-/Banner-Zeile hat (Banner-Knoten; sonst still ohne Wirkung). Gedacht fuer Banner/Trenner, um Abschnitte sichtbar zu trennen.
 - `separator` (string): Feld-Trenner zwischen inline-Geschwistern: zentral an der Wurzel; vererbt sich nach unten, ein Container kann ihn fuer seinen Teilbaum ueberschreiben. Fehlt -> DEFAULT_SEPARATOR.
 - `emptyText` (string): Optionaler Ersatztext in der AUSGABE, wenn der Container ANGEZEIGT wird, seine Kinder aber nichts ausgeben (alle leer/nicht erhoben). Fehlt -> kein Ersatz (leer bleibt leer).
+- `cloze` (Cloze): Lueckentext: statt der Kinder untereinander gibt der Abschnitt einen frei geschriebenen Text aus, in dem die Luecken an ihrer Stelle im Satz stehen. In der Ausgabe erscheint je Luecke nur der Wert (ohne Titel). Kinder, die in keiner Luecke stehen, folgen wie gewohnt unter dem Text. ADDITIV: aeltere App-Versionen ignorieren die Eigenschaft und zeigen die Kinder als normale Feldliste.
 - `children` (Liste) — Pflicht
 
 #### Field — Eingabefeld
@@ -284,6 +286,10 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
           "type": "string",
           "description": "Optionaler Ersatztext in der AUSGABE, wenn der Container ANGEZEIGT wird, seine Kinder aber nichts ausgeben (alle leer/nicht erhoben). Fehlt -> kein Ersatz (leer bleibt leer)."
         },
+        "cloze": {
+          "$ref": "#/definitions/Cloze",
+          "description": "Lueckentext: statt der Kinder untereinander gibt der Abschnitt einen frei geschriebenen Text aus, in dem die Luecken an ihrer Stelle im Satz stehen. In der Ausgabe erscheint je Luecke nur der Wert (ohne Titel). Kinder, die in keiner Luecke stehen, folgen wie gewohnt unter dem Text. ADDITIV: aeltere App-Versionen ignorieren die Eigenschaft und zeigen die Kinder als normale Feldliste."
+        },
         "children": {
           "type": "array",
           "items": {
@@ -373,6 +379,47 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
       ],
       "additionalProperties": false,
       "description": "Eine Bedingung: im Auswahlfeld `fieldId` ist eine der `options` gewaehlt."
+    },
+    "Cloze": {
+      "type": "object",
+      "properties": {
+        "parts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ClozePart"
+          },
+          "description": "Der Text als Folge aus festen Stuecken und Luecken, in Lesereihenfolge."
+        },
+        "askDefaults": {
+          "type": "boolean",
+          "description": "Beim Ausfuellen auch Luecken abfragen, die schon einen Standardwert haben. Fehlt/false -> solche Luecken werden beim Durchtippen uebersprungen (man kann sie trotzdem antippen und aendern)."
+        }
+      },
+      "required": [
+        "parts"
+      ],
+      "additionalProperties": false,
+      "description": "Lueckentext: ein frei geschriebener Text mit Luecken. Er ist die AUSGABE-Form eines Abschnitts - die Luecken selbst sind normale Felder/Funktionen (Kinder des Abschnitts oder Elemente an anderer Stelle)."
+    },
+    "ClozePart": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "gap": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "gap"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Ein Stueck eines Lueckentexts: fester Text ODER eine Luecke. Die Luecke verweist per Kennung auf ein Feld oder eine Funktion der Vorlage. Liegt das Element direkt im Abschnitt des Lueckentexts, fragt die Luecke ihren Wert selbst ab; liegt es an anderer Stelle der Vorlage, uebernimmt sie dessen Wert."
     },
     "Node": {
       "anyOf": [
@@ -650,6 +697,7 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - **Nebeneinander statt untereinander?** (`inline`) — Hängt diesen Knoten an den vorigen in dieselbe Zeile an. *Beispiel: „Puls: 80, RR: 120/80" in einer Zeile statt zwei.*
 - **Ohne Trennzeichen an den Vorgänger?** (`noSeparatorBefore`) — Lässt das Komma/Leerzeichen davor weg, wenn etwas direkt anschließen soll. *Beispiel: Zahl + Einheit „80/min" ohne Komma dazwischen.*
 - **Text, wenn nichts ausgegeben wird?** (`emptyText`) — Ersatztext, wenn der Abschnitt angezeigt wird, seine Felder aber nichts ausgeben. *Beispiel: „unauffällig“.*
+- **Als Lückentext ausgeben?** (`cloze`, ab App 2.0.0, nur Abschnitte) — Statt der Felder untereinander gibt der Abschnitt einen frei geschriebenen Text aus, in dem die Felder als Lücken stehen. Auch ein ganzes Protokoll kann ein einziger Lückentext sein. *Beispiel: „Patient ist [wach], [zeitlich und örtlich] orientiert.“*
 
 ### Nur Felder
 - **Mit einem Standardwert vorbelegen?** (`default`) — Steht im Feld, bis der Nutzer etwas anderes einträgt. *Beispiel: „Bewusstsein" startet mit „wach, orientiert".*
@@ -683,6 +731,7 @@ Die App rendert die Vorlage zu Klartext. Regeln:
 - **Inline-Layout:** `inline: true` hängt den Knoten an das vorherige Geschwister an (statt neue Zeile), verbunden mit dem `separator` (von der Wurzel vererbt, pro Container via `separator` überschreibbar; Default `", "`). `noSeparatorBefore: true` lässt den Trenner davor weg (z. B. Wert + Einheit).
 - **Nicht erhoben (`excludable`):** ein als „−" markierter Container entfällt komplett (inkl. Kinder) in der Ausgabe.
 - **`emptyText`:** Ersatztext, wenn der Container angezeigt wird, seine Kinder aber nichts ausgeben.
+- **Lückentext (`cloze`, ab App 2.0.0):** `cloze.parts` ist eine Liste aus festem Text (Strings, auch mit Zeilenumbrüchen) und Lücken `{ "gap": "<id>" }`. Die id zeigt auf ein Feld oder eine Funktion: ein Kind dieses Containers (die Lücke fragt den Wert selbst ab) oder ein Element an anderer Stelle der Vorlage (die Lücke übernimmt dessen Wert). In der Lücke steht nur der Wert, ohne Titel. Bleibt eine Lücke leer, entfallen das doppelte Leerzeichen und ein verwaistes Komma. Kinder, die in keiner Lücke stehen, folgen unter dem Text. `askDefaults: true` fragt beim Ausfüllen auch Lücken mit Standardwert ab. Ältere App-Versionen zeigen die Kinder als normale Feldliste.
 - **Feld-Wert:** im Standard der `default` (bzw. `options[0]`, mit `defaultEmpty` nichts); `options` macht das Feld zu einem Select; `allowCustom` erlaubt zusätzlich Freitext; `multiline` ist mehrzeiliger Freitext.
 - **FunctionNode:** Medikationsplan/Ärzte rendern ihre Zeilen; `config.rowLayout` = `block` (untereinander, optional `rowPrefix`/`rowSuffix` je Zeile) oder `inline` (eine Zeile, getrennt mit `rowSeparator`). Pack-Years, NEWS2, LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS und BMI geben ihr Ergebnis aus; das Zeichen am Ende ihrer Zeile legt `config.lineEnd` fest (fehlt = wie bisher, leer = nichts); ohne Einträge oder Ergebnis erscheint der `default`. LAMS, FAST4D, ZOPS, Sgarbossa und EGSYS lesen sich am besten als eine Zeile („LAMS 4/5 (…)“, „FAST4D positiv (…)“, „ZOPS orientiert.“, „Sgarbossa (mod. nach Smith) negativ.“): `titleInline: true` und `heading` mit `"prefix": ""`, `"suffix": " "`.
 

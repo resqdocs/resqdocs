@@ -133,6 +133,9 @@ export async function readBinaryFile(file: File): Promise<Uint8Array> {
  * Fallback auf Blob-Download. Capacitor Filesystem schreibt Binärdaten base64 (ohne
  * `encoding`-Angabe).
  */
+/** Größe der Stücke beim Schreiben in die Cache-Datei (durch 3 teilbar: Base64 der Stücke ohne Füllzeichen). */
+export const SHARE_CHUNK_BYTES = 3 * 256 * 1024
+
 export async function shareBinary(
   filename: string,
   bytes: Uint8Array,
@@ -155,7 +158,13 @@ export async function shareBinary(
   }
   const { Filesystem, Directory } = await import('@capacitor/filesystem')
   const { Share } = await import('@capacitor/share')
-  await Filesystem.writeFile({ path: filename, data: bytesToBase64(bytes), directory: Directory.Cache })
+  // Stückweise schreiben wie streamGzipToCacheFileAndShare: ein einziger Riesen-Base64-Aufruf über die
+  // Bridge hing bei großen Bibliotheken (Sicherung mit über 200 000 PZN-Einträgen, Android 2026-11-18).
+  await Filesystem.writeFile({ path: filename, data: '', directory: Directory.Cache })
+  for (let at = 0; at < bytes.length; at += SHARE_CHUNK_BYTES) {
+    const part = bytes.subarray(at, Math.min(at + SHARE_CHUNK_BYTES, bytes.length))
+    await Filesystem.appendFile({ path: filename, data: bytesToBase64(part), directory: Directory.Cache })
+  }
   const { uri } = await Filesystem.getUri({ path: filename, directory: Directory.Cache })
   try {
     await Share.share({ title: filename, files: [uri], dialogTitle: 'Exportieren' })
@@ -171,6 +180,17 @@ const MAX_INCOMING_BYTES = 5 * 1024 * 1024
  * Liest eine vom System uebergebene Datei (file://-URL, iOS „In ResQDocs öffnen": Kopie in
  * Documents/Inbox) als Text und raeumt die Kopie danach weg. Nur nativ.
  */
+/** Eine schon im Cache liegende Datei teilen und danach aufräumen (z. B. eine kopierte Sicherung). */
+export async function shareCacheFile(filename: string, uri: string): Promise<void> {
+  const { Filesystem, Directory } = await import('@capacitor/filesystem')
+  const { Share } = await import('@capacitor/share')
+  try {
+    await Share.share({ title: filename, files: [uri], dialogTitle: 'Exportieren' })
+  } finally {
+    setTimeout(() => { void Filesystem.deleteFile({ path: filename, directory: Directory.Cache }).catch(() => {}) }, 10000)
+  }
+}
+
 export async function readIncomingFile(url: string): Promise<string> {
   const { Filesystem, Encoding } = await import('@capacitor/filesystem')
   try {

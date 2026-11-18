@@ -78,9 +78,9 @@ function confirm(): void {
 <template>
   <Teleport to="body">
     <div class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true" :aria-label="title">
-      <div class="modal-box flex max-h-[80vh] flex-col gap-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div class="modal-box flex max-h-[80vh] flex-col space-y-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <h3 class="text-base font-semibold">{{ title }}</h3>
-        <p class="text-xs text-base-content/60">
+        <p class="text-xs text-base-content/75">
           Eingefügt wird eine <strong>Kopie</strong> des Textes — keine Verknüpfung. Änderst du das Original später, füge es neu ein.
           <template v-if="multiple"> Mehrere ausgewählte werden mit Leerzeile verkettet und ans Feld angehängt.</template>
         </p>
@@ -94,11 +94,11 @@ function confirm(): void {
               <input type="checkbox" class="checkbox checkbox-sm mt-0.5 shrink-0" :checked="checked.includes(s.id)" @change="toggle(s.id)" />
               <span class="min-w-0 flex-1">
                 <span class="block text-sm font-medium">{{ s.title || '(ohne Titel)' }}</span>
-                <span class="block truncate text-xs text-base-content/50">{{ s.text }}</span>
+                <span class="block truncate text-xs text-base-content/75">{{ s.text }}</span>
               </span>
             </label>
           </div>
-          <p v-if="combinedText.trim()" class="max-h-32 shrink-0 overflow-y-auto whitespace-pre-wrap rounded-lg bg-base-200 p-2 text-xs text-base-content/70">{{ combinedText }}</p>
+          <p v-if="combinedText.trim()" class="max-h-32 shrink-0 overflow-y-auto whitespace-pre-wrap rounded-lg bg-base-200 p-2 text-xs text-base-content/75">{{ combinedText }}</p>
         </template>
 
         <!-- EINZEL: <select> (Editor-Pfad, unverändert) -->
@@ -106,15 +106,15 @@ function confirm(): void {
           <select v-model="sel" class="select select-bordered select-sm w-full" aria-label="Textbaustein auswählen">
             <option v-for="s in usable" :key="s.id" :value="s.id">{{ s.title || '(ohne Titel)' }}</option>
           </select>
-          <p v-if="selectedText.trim()" class="max-h-32 overflow-y-auto whitespace-pre-wrap rounded-lg bg-base-200 p-2 text-xs text-base-content/70">{{ selectedText }}</p>
+          <p v-if="selectedText.trim()" class="max-h-32 overflow-y-auto whitespace-pre-wrap rounded-lg bg-base-200 p-2 text-xs text-base-content/75">{{ selectedText }}</p>
         </template>
 
-        <p v-else-if="loaded" class="px-2 py-6 text-center text-sm text-base-content/50">
+        <p v-else-if="loaded" class="px-2 py-6 text-center text-sm text-base-content/75">
           Noch keine Textbausteine mit Text.
           <template v-if="source?.emptyHint">{{ source.emptyHint }}</template>
           <template v-else>Lege unter <TabRef tab="bausteine" /> welche an.</template>
         </p>
-        <p v-else class="px-2 py-6 text-center text-sm text-base-content/50">Lade …</p>
+        <p v-else class="px-2 py-6 text-center text-sm text-base-content/75">Lade …</p>
 
         <div class="modal-action">
           <button type="button" class="btn btn-ghost btn-sm min-h-11" @click="emit('close')">Abbrechen</button>

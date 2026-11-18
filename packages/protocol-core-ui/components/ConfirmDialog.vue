@@ -65,7 +65,7 @@ onBeforeUnmount(() => {
     <div class="modal modal-open" role="dialog" aria-modal="true" :aria-label="title">
       <div class="modal-box">
         <h3 class="text-base font-semibold">{{ title }}</h3>
-        <p v-if="message" class="pt-2 text-sm text-base-content/70">{{ message }}</p>
+        <p v-if="message" class="pt-2 text-sm text-base-content/75">{{ message }}</p>
         <div class="modal-action">
           <button ref="cancelBtn" type="button" class="btn btn-ghost min-h-12" @click="emit('cancel')">Abbrechen</button>
           <button ref="confirmBtn" type="button" class="btn btn-error min-h-12" :disabled="!armed" @click="emit('confirm')">{{ confirmLabel }}</button>

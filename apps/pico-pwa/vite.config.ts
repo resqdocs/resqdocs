@@ -47,6 +47,19 @@ export default defineConfig({
       '@protocols': fileURLToPath(new URL('../../protocols', import.meta.url)),
     },
   },
+  build: {
+    // Die App liegt vollständig auf dem Gerät, es wird nichts über das Netz nachgeladen. Ein großes Paket ist
+    // hier gewollt; die Grenze steht deutlich über dem heutigen Stand (rund 1,2 MB) und meldet erst echtes Wachstum.
+    chunkSizeWarningLimit: 1600,
+    rolldownOptions: {
+      // Einige Module werden an manchen Stellen bewusst erst bei Bedarf geladen (import()), damit die Logik
+      // ohne Capacitor testbar bleibt, an anderen direkt. Der Hinweis dazu ist bekannt und folgenlos.
+      onLog(level, log, handler) {
+        if (log.code === 'INEFFECTIVE_DYNAMIC_IMPORT') return
+        handler(level, log)
+      },
+    },
+  },
   server: {
     // allow the dev server to read the canonical seed outside the app root
     fs: { allow: [fileURLToPath(new URL('../../', import.meta.url))] },

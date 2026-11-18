@@ -26,14 +26,14 @@ onMounted(() => {
 <template>
   <div class="flex flex-col gap-4">
     <h2 class="text-base font-semibold">Bausteine</h2>
-    <p class="max-w-prose text-sm text-base-content/60">
+    <p class="max-w-prose text-sm text-base-content/75">
       Textbausteine und gespeicherte Abschnitte, die du in <TabRef tab="vorlagen" /> und im <TabRef tab="einsatz" /> wiederverwendest.
     </p>
 
     <div role="note" class="alert alert-info max-w-prose text-sm">
       Bausteine sind neutrale, wiederverwendbare Inhalte. Keine Patientendaten oder Einsatzdaten speichern.
     </div>
-    <p class="max-w-prose text-xs" :class="libraryMode === 'sqlite' ? 'text-base-content/60' : 'text-warning'">
+    <p class="max-w-prose text-xs" :class="libraryMode === 'sqlite' ? 'text-base-content/75' : 'text-warning'">
       <template v-if="libraryMode === 'sqlite'">Bausteine werden lokal auf diesem Gerät gespeichert.</template>
       <template v-else>Web-Entwicklung: Bausteine sind nur in-memory und nach App-Neustart weg.</template>
     </p>

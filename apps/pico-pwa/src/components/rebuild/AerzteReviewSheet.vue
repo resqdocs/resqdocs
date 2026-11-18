@@ -97,7 +97,7 @@ onMounted(() => {
   <!-- Review-Sheet (Bottom-Sheet, teleported; bewusst KEIN daisyUI .modal wegen z-999 ueber der Kamera) -->
   <Teleport to="body">
     <div class="overlay-backdrop fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center" role="dialog" aria-modal="true">
-      <div class="overlay-surface flex max-h-[85vh] w-full flex-col gap-3 rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:mx-auto sm:max-w-lg sm:rounded-2xl">
+      <div class="overlay-surface flex max-h-[85vh] w-full flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:mx-auto sm:max-w-lg sm:rounded-2xl">
         <div class="flex items-center justify-between gap-2">
           <span class="text-base font-semibold">Arzt aus Medikationsplan</span>
           <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11" aria-label="Schließen" @click="discardAndClose">✕</button>
@@ -117,7 +117,7 @@ onMounted(() => {
 
         <!-- Ausstellender Arzt (primaer) + optionale Rolle -->
         <div v-if="aussteller" class="flex flex-col gap-1 rounded-lg bg-base-200 p-2">
-          <span class="text-xs text-base-content/60">Ausstellende Praxis aus dem Plan:</span>
+          <span class="text-xs text-base-content/75">Ausstellende Praxis aus dem Plan:</span>
           <span class="text-sm font-medium">{{ aussteller.name }}<template v-if="aussteller.ort">, {{ aussteller.ort }}</template><template v-if="aussteller.nummer">, {{ aussteller.nummer.typ }} {{ aussteller.nummer.wert }}</template><template v-if="aussteller.telefon">, Tel. {{ aussteller.telefon }}</template></span>
           <!-- Radios wie gehabt, aber kompakt: ohne min-h-11 je Option und mit kleinem Zeilenabstand - vorher entstanden
                beim Umbrechen große Lücken zwischen den Optionen. -->
@@ -133,15 +133,15 @@ onMounted(() => {
             Auch {{ medCount }} Medikament{{ medCount === 1 ? '' : 'e' }} in den Medikationsplan übernehmen
           </label>
         </div>
-        <p v-else-if="!scanOpen" class="text-sm italic text-base-content/50">Noch nichts gescannt — „Code scannen" oder „Text einfügen".</p>
+        <p v-else-if="!scanOpen" class="text-sm italic text-base-content/75">Noch nichts gescannt — „Code scannen" oder „Text einfügen".</p>
 
         <!-- Aktionen -->
-        <div class="mt-auto flex justify-between gap-2 pt-2">
+        <div class="kb-actions mt-auto flex shrink-0 justify-between gap-2 pt-2">
           <button type="button" class="btn btn-ghost btn-sm min-h-11" @click="discardAndClose">Verwerfen</button>
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!aussteller" @click="applyAndClose">Arzt übernehmen</button>
         </div>
 
-        <p class="text-xs text-base-content/50">Nur auf dem Gerät, nichts wird gespeichert oder gesendet. Keine Patientendaten aus dem Code.</p>
+        <p class="text-xs text-base-content/75">Nur auf dem Gerät, nichts wird gespeichert oder gesendet. Keine Patientendaten aus dem Code.</p>
       </div>
     </div>
   </Teleport>

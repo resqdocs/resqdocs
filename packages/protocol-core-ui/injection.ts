@@ -1,5 +1,5 @@
 import type { Component, InjectionKey, Ref } from 'vue'
-import type { FunctionKind } from '@resqdocs/protocol-core/model'
+import type { Container, FunctionKind } from '@resqdocs/protocol-core/model'
 
 // Optionale Host-Bausteine für den geteilten Baum-Editor. Der Host (App / Online-Editor) kann sie
 // bereitstellen; fehlen sie, entfällt die jeweilige Aktion (kein harter Paket→App-Import).
@@ -58,3 +58,12 @@ export interface SnippetSource {
   emptyHint?: string
 }
 export const snippetSourceKey: InjectionKey<SnippetSource | null> = Symbol('rd-snippet-source')
+
+// --- Großes Textfeld: gewählte Schriftgröße -------------------------------------------------------------------
+// Die App merkt sich die Stufe je Gerät und steckt sie hier ein. Ohne Provider gilt die Wahl nur, solange das
+// Fenster lebt.
+export const longTextSizeKey: InjectionKey<Ref<import('./longTextSize.ts').LongTextSize> | null> = Symbol('rd-long-text-size')
+
+/** Die ganze Vorlage, die gerade ausgefüllt wird. Ein Lückentext braucht sie für Lücken, die ihren Wert
+ *  von anderer Stelle der Vorlage übernehmen; ohne Angabe finden solche Lücken ihr Ziel nicht. */
+export const templateRootKey: InjectionKey<Ref<Container> | null> = Symbol('rd-template-root')

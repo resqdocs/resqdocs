@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [2.0.0] - 2026-11-18
+
+### Added
+
+- Cloze text: a section can output its content as free text in which fields appear as gaps; during a case the gaps are filled one after another in a dedicated window or tapped directly
+- A gap can be free text, a choice, a multiple choice (with search for long lists), a function such as the medication plan or NEWS2, or the value of a field elsewhere in the template
+- Cloze texts can be set up in the app and in the online editor: tapping or selecting a word turns it into a gap; a whole protocol can be a single cloze text
+
+### Changed
+
+- The case preview wraps long lines so the text can be proofread on a phone without horizontal scrolling
+- Better readability, also in sunlight: secondary text and the borders of inputs, checkboxes and switches have more contrast
+- Switches, answer rows and the bottom bar show visible feedback while pressed
+- NEWS2 names an impossible SpO2 value directly in the status line
+- Text snippets are edited in the large writing window, like the large text field in a case
+
+### Fixed
+
+- Dialogs with the on-screen keyboard open: the title stays visible, the action buttons sit directly above the keyboard, and the bottom bar is hidden while typing
+- Exporting a single backup and the current state works reliably again, also with large medication libraries
+- No doubled spacing in calculator and picker dialogs on iPhone
+- The "Add" menu in the structure view stays on screen for indented rows
+
 ## [1.13.0] - 2026-11-17
 
 ### Added

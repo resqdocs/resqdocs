@@ -289,15 +289,15 @@ onBeforeUnmount(() => {
     <div class="flex flex-col items-stretch gap-1 bg-base-100 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
       <p v-if="error" class="text-center text-sm text-error">{{ error }}</p>
       <template v-else>
-        <p class="truncate text-center text-xs text-base-content/70">{{ profile.hint }}</p>
-        <p v-if="profile.note" class="text-center text-[11px] text-base-content/55">{{ profile.note }}</p>
+        <p class="truncate text-center text-xs text-base-content/75">{{ profile.hint }}</p>
+        <p v-if="profile.note" class="text-center text-[11px] text-base-content/75">{{ profile.note }}</p>
         <p v-if="keinFokus" class="truncate text-center text-[11px] text-warning">
           Diese Kamera kann nicht scharfstellen — Abstand ca. 20 cm halten.
         </p>
-        <p v-else-if="focusTapSupported" class="truncate text-center text-[11px] text-base-content/50">Zum Scharfstellen aufs Kamerabild tippen.</p>
+        <p v-else-if="focusTapSupported" class="truncate text-center text-[11px] text-base-content/75">Zum Scharfstellen aufs Kamerabild tippen.</p>
         <button
           v-if="diagnose"
-          class="mx-auto max-w-full px-2 py-1 text-center text-[11px] leading-snug text-base-content/50"
+          class="mx-auto max-w-full px-2 py-1 text-center text-[11px] leading-snug text-base-content/75"
           :class="umschaltbar ? 'underline decoration-dotted underline-offset-2' : 'cursor-default'"
           type="button"
           :disabled="!umschaltbar"
@@ -305,7 +305,7 @@ onBeforeUnmount(() => {
         >
           {{ diagnose }}<template v-if="umschaltbar"> — andere Kamera</template>
         </button>
-        <p v-if="slowHint" class="truncate text-center text-[11px] text-base-content/50">Abstand langsam verändern, Reflexionen vermeiden.</p>
+        <p v-if="slowHint" class="truncate text-center text-[11px] text-base-content/75">Abstand langsam verändern, Reflexionen vermeiden.</p>
       </template>
 
       <!-- Links: Schliessen (X) · Mitte: Scanner-Modus (nur Browser) · Rechts: Taschenlampe.
@@ -343,7 +343,7 @@ onBeforeUnmount(() => {
         <button
           class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full disabled:cursor-not-allowed"
           :class="!torchSupported
-            ? 'bg-base-200 text-base-content/40'
+            ? 'bg-base-200 text-base-content/75'
             : torchOn ? 'bg-warning text-warning-content' : 'bg-base-300 text-base-content'"
           type="button"
           :disabled="!torchSupported"

@@ -7,7 +7,29 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-const FILES = ['components/ContainerProperties.vue']
+const FILES = [
+  '../../apps/pico-pwa/src/components/ImportChoiceDialog.vue',
+  'components/ContainerProperties.vue',
+  'components/LongTextDialog.vue',
+  'components/cloze/ClozeEditorDialog.vue',
+  'components/cloze/ClozeFill.vue',
+  'components/cloze/ClozeFillDialog.vue',
+  'components/cloze/ClozeText.vue',
+  'components/cloze/ClozeSettings.vue',
+  'components/cloze/GapAnswer.vue',
+  'components/functions/News2Sheet.vue',
+  'components/BlockPicker.vue',
+  'components/MoveToPicker.vue',
+  'components/SnippetPicker.vue',
+  'components/functions/MedplanFunction.vue',
+  'components/functions/SgarbossaSheet.vue',
+  'components/functions/BmiSheet.vue',
+  'components/functions/Fast4dSheet.vue',
+  'components/functions/ZopsSheet.vue',
+  'components/functions/LamsSheet.vue',
+  'components/functions/EgsysSheet.vue',
+  'components/functions/PackYearsSheet.vue',
+]
 
 test('Eigenschaften-Panel: keine vertikalen flex-col+gap-Stapel (WebKit-Abstandsfehler)', () => {
   for (const f of FILES) {

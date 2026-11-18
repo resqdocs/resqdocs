@@ -313,6 +313,18 @@
       "term": "ip",
       "contains": "/dev/tcp/10.0.0.1",
       "reason": "fiktive Adresse in einem Testbeispiel fuer abgelehnte Befehle, keine reale Infrastruktur"
+    },
+    {
+      "file": "docs/sources.md",
+      "term": "token",
+      "contains": "Token fields",
+      "reason": "Quellenangabe: Apple Human Interface Guidelines, Bedienelement \"Token fields\" - kein Zugangs-Token"
+    },
+    {
+      "file": "docs/sources.md",
+      "term": "token",
+      "contains": "/token-fields",
+      "reason": "Quellenangabe: Apple Human Interface Guidelines, Bedienelement \"Token fields\" - kein Zugangs-Token"
     }
   ]
 }

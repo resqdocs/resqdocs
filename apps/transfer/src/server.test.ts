@@ -260,6 +260,19 @@ test('Empfänger-Seite: der AUSGELIEFERTE Entschlüssel-Kern (RECEIVER_CORE) ent
   assert.equal(core.parseFragment('#bad/id.KEY'), null)
 })
 
+test('Empfangsseite: der Editor-Kanal aus dem Link wählt nur aus der festen Liste', () => {
+  const core = (eval(RECEIVER_CORE) as () => { editorFor(search: string): { url: string; label: string } })()
+  const prod = 'https://editor.resqdocs.app'
+  assert.equal(core.editorFor('').url, prod)
+  assert.equal(core.editorFor('?e=dev').url, 'https://editor.dev.resqdocs.app')
+  assert.equal(core.editorFor('?x=1&e=dev&y=2').url, 'https://editor.dev.resqdocs.app')
+  assert.match(core.editorFor('?e=dev').label, /Test-Editor/)
+  // Unbekanntes, Adressen und Eigenschaften des Objekt-Prototyps fallen auf den normalen Editor zurück.
+  for (const bad of ['?e=', '?e=xyz', '?e=https://evil.example', '?e=constructor', '?e=__proto__', '?e=toString', '?e=DEV', '?other=dev']) {
+    assert.equal(core.editorFor(bad).url, prod, bad)
+  }
+})
+
 test('Smoke: der Dienst startet als eigener Prozess mit DEFAULT-Config und antwortet auf /healthz', async () => {
   // Faengt genau die Klasse Fehler, die die Unit-Tests NICHT sehen: der isMain-Startblock (Env-Verdrahtung,
   // fehlende Imports) laeuft nur beim direkten Ausfuehren. TRANSFER_MAX_TOTAL_BYTES bewusst NICHT gesetzt ->

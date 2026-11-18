@@ -105,7 +105,7 @@ function doReset(): void {
 
 
     <!-- − nicht erhoben: Rechner entfaellt in der Ausgabe. -->
-    <p v-if="supported && excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
+    <p v-if="supported && excluded" class="text-xs italic text-base-content/75">nicht erhoben — erscheint nicht im Protokoll</p>
 
     <!-- ✎ Freitext: ersetzt im Protokolltext das Ergebnis (vorbelegt mit Standardtext). -->
     <div v-else-if="supported && custom" class="flex flex-col gap-1">
@@ -117,7 +117,7 @@ function doReset(): void {
         :placeholder="node.default || 'z. B. nicht erhebbar'"
         @input="setCustomText(($event.target as HTMLTextAreaElement).value)"
       ></textarea>
-      <p class="text-xs italic text-base-content/50">Freitext — ersetzt im Protokolltext das Ergebnis. Erfasste Werte bleiben erhalten.</p>
+      <p class="text-xs italic text-base-content/75">Freitext — ersetzt im Protokolltext das Ergebnis. Erfasste Werte bleiben erhalten.</p>
     </div>
 
     <!-- ✓ berechnen: Ergebnis-Zeile; Antippen öffnet die Eingabe (nur bei unterstütztem Rechner). -->
@@ -133,11 +133,11 @@ function doReset(): void {
         <!-- Kein truncate: Befund-Scores (LAMS/FAST4D) nennen die Befunde - die Zeile darf umbrechen,
              sonst fehlt im Einsatz genau der Teil, den man gegenlesen will. -->
         <span v-if="hasData" class="min-w-0 flex-1 break-words text-sm"><span v-if="accentClass" :class="accentClass" aria-hidden="true">● </span>{{ ergebnis }}</span>
-        <span v-else class="min-w-0 flex-1 truncate text-sm italic text-base-content/50">Noch nicht erhoben — antippen zum Eingeben</span>
-        <span class="shrink-0 text-base-content/40" aria-hidden="true">✎</span>
+        <span v-else class="min-w-0 flex-1 truncate text-sm italic text-base-content/75">Noch nicht erhoben — antippen zum Eingeben</span>
+        <span class="shrink-0 text-base-content/75" aria-hidden="true">✎</span>
       </button>
       <!-- Unbekannter/nicht unterstützter Rechner (Fremd-Import o. neuere Vorlage): read-only, kein totes Tap-Ziel. -->
-      <p v-else class="rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm italic text-base-content/50">
+      <p v-else class="rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm italic text-base-content/75">
         Diese Funktion wird von deiner App-Version nicht unterstützt.
       </p>
     </template>

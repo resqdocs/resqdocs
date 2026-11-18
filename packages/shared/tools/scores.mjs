@@ -9,6 +9,8 @@
 // Vertrag: jede Funktion liefert { ...werte, text } - `text` ist die
 // NIDA-tippbare deutsche Kurzform fürs Protokollfeld.
 
+import { FAST4D_BEFUNDE, FAST4D_UHRZEIT, FAST4D_ZEICHEN } from './fast4dDefs.mjs';
+
 const fmt = (n, digits = 1) => Number(n).toFixed(digits).replace('.', ',');
 
 // --- Pack-Years -----------------------------------------------------------------
@@ -88,17 +90,9 @@ export function lams({ face, arm, grip }) {
 // ab EINEM auffaelligen Zeichen. Die Zeit (Symptombeginn) wird dokumentiert, aber nicht gewertet.
 // Bewusst OHNE Schwelle/Zuweisungshinweis: die Studie nennt keinen Cut-off (docs/medical-sources.md).
 
-const FAST4D_ITEMS = [
-  ['face', 'Fazialisparese'],
-  ['arm', 'Armabsinken'],
-  ['speech', 'Sprachstörung'],
-  ['diplopia', 'Doppelbilder'],
-  ['field', 'Gesichtsfelddefekt'],
-  ['vertigo', 'Dreh-/Schwankschwindel'],
-  ['ataxia', 'Dysmetrie/Ataxie'],
-];
+// Zeichen, Werte und Uhrzeit-Pruefung: eine Quelle fuer Rechenkern, Registry, Entwurf und Eingabeblatt.
+const FAST4D_ITEMS = FAST4D_ZEICHEN.map((z) => [z.id, z.text]);
 const FAST4D_SIDE = { re: ' rechts', li: ' links' };
-const FAST4D_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /**
  * FAST4D-Ergebnis.
@@ -109,7 +103,7 @@ const FAST4D_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
  */
 export function fast4d(v) {
   for (const [key] of FAST4D_ITEMS) {
-    if (!['neg', 'pos', 'na'].includes(v[key])) throw new Error(`FAST4D: ${key} muss neg|pos|na sein`);
+    if (!FAST4D_BEFUNDE.includes(v[key])) throw new Error(`FAST4D: ${key} muss neg|pos|na sein`);
   }
   const sideOf = (key) => (key === 'face' ? v.faceSide : key === 'arm' ? v.armSide : undefined);
   const findings = FAST4D_ITEMS.filter(([key]) => v[key] === 'pos').map(([key, out]) => out + (FAST4D_SIDE[sideOf(key)] ?? ''));
@@ -118,7 +112,7 @@ export function fast4d(v) {
   const positive = count > 0;
   const untestable = notTestable.length === FAST4D_ITEMS.length;
 
-  const time = typeof v.time === 'string' && FAST4D_TIME.test(v.time) ? v.time : '';
+  const time = typeof v.time === 'string' && FAST4D_UHRZEIT.test(v.time) ? v.time : '';
   const timeText =
     v.timeMode === 'unknown' ? 'Symptombeginn unklar.' :
     v.timeMode === 'onset' && time ? `Symptombeginn ${time}.` :

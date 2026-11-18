@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import ShareConfirmBox from './ShareConfirmBox.vue'
 import { useBackup } from '@/backup/useBackup'
 import { rotationFor, clampMaxAge, MAX_AGE_MIN, MAX_AGE_MAX } from '@/backup/backupSettings'
 import type { BackupRate, RetentionPreset } from '@/backup/backupSettings'
@@ -132,10 +133,16 @@ async function doDeleteAll(): Promise<void> {
   }
 }
 
+// Die Rückfrage steht direkt beim auslösenden Knopf (ShareConfirmBox) und rückt beim Öffnen ins Bild.
+// Vorher stand sie nur oben im Bereich; „Exportieren“ an einer Sicherung im Verlauf wirkte dadurch ohne
+// Funktion (Rückmeldung Android-Tester 2026-11-18).
+const shareError = ref('')
 function askShareCurrent(): void {
+  shareError.value = ''
   shareConfirm.value = { kind: 'current' }
 }
 function askShareSnapshot(name: string): void {
+  shareError.value = ''
   shareConfirm.value = { kind: 'snapshot', name }
 }
 async function doShare(): Promise<void> {
@@ -143,11 +150,18 @@ async function doShare(): Promise<void> {
   if (!req) return
   busy.value = true
   try {
-    if (req.kind === 'current') await backup.exportCurrent()
-    else await backup.exportSnapshot(req.name)
+    backup.lastMessage.value = ''
+    const ok = req.kind === 'current' ? await backup.exportCurrent() : await backup.exportSnapshot(req.name)
+    // Kein stilles Scheitern: liefert der Export nichts, bleibt der Kasten offen und nennt den Grund.
+    if (ok) shareConfirm.value = null
+    else shareError.value = backup.lastMessage.value || 'Exportieren ist nur in der App auf dem Handy möglich.'
+  } catch (e) {
+    // Abbrechen im Teilen-Fenster ist kein Fehler; alles andere im Kasten melden statt still zu verschlucken.
+    const msg = e instanceof Error ? e.message : String(e)
+    if (/cancel/i.test(msg)) shareConfirm.value = null
+    else shareError.value = `Teilen hat nicht geklappt: ${msg}`
   } finally {
     busy.value = false
-    shareConfirm.value = null
   }
 }
 function pickImport(): void {
@@ -257,7 +271,7 @@ async function cloudDelete(id: string): Promise<void> {
             {{ backup.history.value.length }}
             {{ backup.history.value.length === 1 ? 'Sicherung' : 'Sicherungen' }}
           </span>
-          <span class="text-xs text-base-content/60">
+          <span class="text-xs text-base-content/75">
             {{ lastAt ? `zuletzt ${relTime(lastAt)}` : 'noch keine Sicherung' }}
           </span>
         </div>
@@ -265,13 +279,13 @@ async function cloudDelete(id: string): Promise<void> {
           {{ busy ? 'Sichert …' : 'Jetzt sichern' }}
         </button>
       </div>
-      <p v-if="backup.lastMessage.value" role="status" aria-live="polite" class="mt-1 text-xs text-base-content/60">
+      <p v-if="backup.lastMessage.value" role="status" aria-live="polite" class="mt-1 text-xs text-base-content/75">
         {{ backup.lastMessage.value }}
       </p>
 
       <!-- Fortschritt bei langen Vorgängen (große PZN-Bibliothek): Packen/Schreiben. Nur bei großen Ops sichtbar. -->
       <div v-if="backup.progress.value" class="mt-2">
-        <p class="mb-1 text-xs text-base-content/70">
+        <p class="mb-1 text-xs text-base-content/75">
           {{ backup.progress.value.label }}
           <span v-if="backup.progress.value.total > 0" class="tabular-nums">
             · {{ Math.round((100 * backup.progress.value.done) / backup.progress.value.total) }} %
@@ -295,23 +309,13 @@ async function cloudDelete(id: string): Promise<void> {
       </div>
     </div>
 
-    <!-- Just-in-time-Bestätigung vor dem Teilen (das Share-Sheet kennt das Ziel vorher nicht). -->
-    <div v-if="shareConfirm" class="rounded-lg border border-info/40 bg-info/10 p-3 text-sm">
-      <p><strong>Sicherung teilen?</strong> Diese Datei enthält <strong>nur Vorlagen und Textbausteine — keine
-        Patientendaten.</strong> Legst du sie in iCloud, Drive, Mail o. Ä., verlässt sie dein Gerät und liegt
-        außerhalb der App. <strong>Das wählst und verantwortest du selbst</strong> (kein Zurückholen möglich).</p>
-      <div class="mt-2 flex flex-wrap gap-2">
-        <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="busy" @click="doShare">
-          {{ busy ? 'Teilt …' : 'Teilen' }}
-        </button>
-        <button class="btn btn-outline btn-sm min-h-11" type="button" :disabled="busy" @click="shareConfirm = null">Abbrechen</button>
-      </div>
-    </div>
+    <!-- Rückfrage vor dem Teilen des aktuellen Stands (das Share-Sheet kennt das Ziel vorher nicht). -->
+    <ShareConfirmBox v-if="shareConfirm?.kind === 'current'" :busy="busy" :error="shareError" @share="doShare" @cancel="shareConfirm = null" />
 
     <!-- Frequenz -->
     <div class="rounded-lg bg-base-200/60 p-3">
       <p class="text-sm font-medium">Automatisch sichern</p>
-      <p class="mt-1 text-xs text-base-content/60">Zusätzlich zum Speichern beim Verlassen der App.</p>
+      <p class="mt-1 text-xs text-base-content/75">Zusätzlich zum Speichern beim Verlassen der App.</p>
       <div class="join mt-2">
         <button
           v-for="opt in [
@@ -346,13 +350,13 @@ async function cloudDelete(id: string): Promise<void> {
           <option value="eigene">Eigene</option>
         </select>
       </label>
-      <p class="mt-1 text-xs text-base-content/60">
+      <p class="mt-1 text-xs text-base-content/75">
         Hebt bis zu <strong>{{ retention.cap }} Sicherungen</strong> auf und reicht rund
         <strong>{{ retention.months }} {{ retention.months === 1 ? 'Monat' : 'Monate' }}</strong> zurück.
         Ältere werden nach und nach ausgedünnt (nie alles auf einmal) — die neuesten bleiben dicht, dann je eine
         pro Tag bzw. Woche, damit du weit zurückspringen kannst, ohne den Speicher zu fluten.
         <br />
-        <span class="text-base-content/50">Sparsam = weniger Stände/kürzer · Ausführlich = mehr Stände/länger.</span>
+        <span class="text-base-content/75">Sparsam = weniger Stände/kürzer · Ausführlich = mehr Stände/länger.</span>
         Deine <strong>größte</strong> Sicherung (Etikett »bleibt erhalten«) wird <strong>nie</strong> automatisch
         gelöscht — als Schutz, falls versehentlich alles leer wird.
       </p>
@@ -396,9 +400,9 @@ async function cloudDelete(id: string): Promise<void> {
           @change="setMaxAgeDays($event.target as HTMLInputElement)"
         />
         <span>Tagen</span>
-        <span class="text-xs text-base-content/50">({{ MAX_AGE_MIN }} bis {{ MAX_AGE_MAX }} Tage)</span>
+        <span class="text-xs text-base-content/75">({{ MAX_AGE_MIN }} bis {{ MAX_AGE_MAX }} Tage)</span>
       </label>
-      <p class="mt-1 text-xs text-base-content/60">
+      <p class="mt-1 text-xs text-base-content/75">
         <template v-if="backup.settings.value.maxAgeEnabled">
           Sicherungen, die älter als <strong>{{ backup.settings.value.maxAgeDays }} Tage</strong> sind, werden beim
           nächsten Sichern <strong>endgültig gelöscht</strong>, lokal und die Cloud-Sicherungen dieses Geräts. Die
@@ -411,7 +415,7 @@ async function cloudDelete(id: string): Promise<void> {
     <!-- Verlauf -->
     <div class="rounded-lg bg-base-200/60 p-3">
       <p class="text-sm font-medium">Verlauf</p>
-      <p v-if="backup.history.value.length === 0" class="mt-1 text-xs text-base-content/60">Noch keine Sicherungen.</p>
+      <p v-if="backup.history.value.length === 0" class="mt-1 text-xs text-base-content/75">Noch keine Sicherungen.</p>
       <ul v-else class="mt-2 flex flex-col gap-2">
         <li v-for="s in localShown" :key="s.name" class="rounded-md bg-base-100 p-2">
           <button
@@ -420,7 +424,7 @@ async function cloudDelete(id: string): Promise<void> {
             @click="openSnapshot = openSnapshot === s.name ? null : s.name"
           >
             <span class="text-sm">{{ absTime(s.createdAt) }}</span>
-            <span class="text-xs text-base-content/60">
+            <span class="text-xs text-base-content/75">
               <template v-if="s.counts">{{ s.counts.protocols }} Vorlagen · {{ s.counts.blocks }} Abschnitte ·
                 {{ s.counts.snippets }} Textbausteine · {{ s.counts.pzn }} PZN</template>
               <template v-else>{{ s.total }} Einträge</template>
@@ -442,7 +446,7 @@ async function cloudDelete(id: string): Promise<void> {
           </button>
 
           <div v-if="openSnapshot === s.name" class="mt-2 flex flex-col gap-2 border-t border-base-300 pt-2">
-            <p class="text-xs text-base-content/70">
+            <p class="text-xs text-base-content/75">
               Wiederherstellen ändert nur deine aktuellen Daten. <strong>Neuere Sicherungen bleiben erhalten</strong> —
               vorher wird automatisch dein aktueller Stand gesichert, du kannst jederzeit zurückspringen.
             </p>
@@ -457,6 +461,13 @@ async function cloudDelete(id: string): Promise<void> {
                 Exportieren
               </button>
             </div>
+            <ShareConfirmBox
+              v-if="shareConfirm?.kind === 'snapshot' && shareConfirm.name === s.name"
+              :busy="busy"
+              :error="shareError"
+              @share="doShare"
+              @cancel="shareConfirm = null"
+            />
             <div v-else class="rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm">
               <p>„Exakt herstellen" <strong>ersetzt deine aktuellen Daten</strong> durch diesen Stand
                 (später Hinzugefügtes verschwindet). Dein jetziger Stand wurde gerade gesichert — du kannst
@@ -485,7 +496,7 @@ async function cloudDelete(id: string): Promise<void> {
     <!-- Cloud: eigenes Konto, eigene Geräte -->
     <div class="rounded-lg bg-base-200/60 p-3">
       <p class="text-sm font-medium">In deinem Konto sichern (Cloud)</p>
-      <p class="mt-1 text-xs text-base-content/60">
+      <p class="mt-1 text-xs text-base-content/75">
         Synchronisiert deine Sicherungen über deine <strong>eigenen Geräte</strong> — <strong>iPhone/iPad über
         iCloud</strong> (Ordner „ResQDocs“ in iCloud Drive), Android über dein Google-Konto (ausgeblendeter,
         app-eigener Ordner in Drive). Gesichert werden <strong>Vorlagen, gespeicherte Abschnitte, Textbausteine und deine
@@ -495,7 +506,7 @@ async function cloudDelete(id: string): Promise<void> {
 
       <template v-if="backup.cloudSupported">
       <!-- Status: lokal vs. Cloud (aus dem Content-Hash-Abgleich berechnet, kein gespeichertes „synced"-Flag). -->
-      <div class="mt-2 text-xs text-base-content/70">
+      <div class="mt-2 text-xs text-base-content/75">
         {{ backup.history.value.length }} lokal · {{ cloudCount }} in Cloud · {{ bothCount }} in beidem
       </div>
       <div class="mt-1 flex flex-wrap items-center gap-2">
@@ -509,7 +520,7 @@ async function cloudDelete(id: string): Promise<void> {
         >
           {{ cloudBusy ? 'Synchronisiert …' : cloudStatus.text }}
         </span>
-        <span v-if="backup.lastCloudSync.value" class="text-xs text-base-content/50">zuletzt {{ relTime(backup.lastCloudSync.value) }}</span>
+        <span v-if="backup.lastCloudSync.value" class="text-xs text-base-content/75">zuletzt {{ relTime(backup.lastCloudSync.value) }}</span>
       </div>
 
       <label class="mt-2 flex items-center gap-3">
@@ -527,7 +538,7 @@ async function cloudDelete(id: string): Promise<void> {
 
       <!-- Status/Ursache direkt am Toggle (nicht nur in der oberen „Jetzt sichern"-Karte), damit ein
            fehlgeschlagenes Aktivieren hier sichtbar begründet wird statt stumm zurückzuspringen. -->
-      <p v-if="backup.lastMessage.value" role="status" aria-live="polite" class="mt-2 text-xs text-base-content/70">
+      <p v-if="backup.lastMessage.value" role="status" aria-live="polite" class="mt-2 text-xs text-base-content/75">
         {{ backup.lastMessage.value }}
       </p>
 
@@ -536,19 +547,19 @@ async function cloudDelete(id: string): Promise<void> {
         <p><strong>Cloud-Sicherung aktivieren?</strong> Deine Sicherungen werden in dein <strong>eigenes Konto</strong>
           hochgeladen und zwischen deinen Geräten abgeglichen. Enthalten sind <strong>Vorlagen, gespeicherte Abschnitte,
           Textbausteine und deine PZN-Bibliothek — keine Einsatzeingaben.</strong> Wir erhalten keinen Zugriff.</p>
-        <p class="mt-2 text-base-content/70">
+        <p class="mt-2 text-base-content/75">
           ResQDocs verschlüsselt die Sicherungen nicht zusätzlich; der Anbieter (Google bzw. Apple) kann sie
           auch in den USA verarbeiten. Du kannst die Cloud-Sicherung jederzeit ausschalten — vorhandene
           Sicherungen bleiben dabei im Konto, du löschst sie einzeln in der Liste oder in deinem Konto.
           Details: <a class="link" href="https://resqdocs.app/datenschutz/" target="_blank" rel="noopener">Datenschutzerklärung</a>.
         </p>
-        <p v-if="backup.cloudKind === 'google'" class="mt-2 text-base-content/70">
+        <p v-if="backup.cloudKind === 'google'" class="mt-2 text-base-content/75">
           Beim Anmelden übermittelt Google dein <strong>Basis-Profil</strong> (Name, E-Mail, Bild) an die App — das
           verlangt Google beim Login, <strong>ResQDocs wertet davon nichts aus</strong>. Die App erhält nur Zugriff auf
           einen <strong>ausgeblendeten, app-eigenen Ordner</strong> in deinem Drive; deine übrigen Dateien bleiben
           unzugänglich.
         </p>
-        <p v-else-if="backup.cloudKind === 'icloud'" class="mt-2 text-base-content/70">
+        <p v-else-if="backup.cloudKind === 'icloud'" class="mt-2 text-base-content/75">
           Auf iPhone/iPad läuft das über <strong>iCloud</strong> — es nutzt dein bereits angemeldetes iCloud-Konto,
           <strong>ohne extra Login und ohne Profil-Freigabe</strong>. Gespeichert wird im Ordner <strong>„ResQDocs“
           in iCloud Drive</strong>; du siehst ihn in der Dateien-App.
@@ -575,9 +586,9 @@ async function cloudDelete(id: string): Promise<void> {
           >
             <span class="flex flex-col">
               <span class="text-sm">{{ absTime(c.createdAt) }}</span>
-              <span class="text-xs text-base-content/60">{{ c.total }} Einträge · Gerät {{ c.deviceId }}</span>
+              <span class="text-xs text-base-content/75">{{ c.total }} Einträge · Gerät {{ c.deviceId }}</span>
             </span>
-            <span class="text-base-content/50" aria-hidden="true">{{ openCloud === c.id ? '▾' : '▸' }}</span>
+            <span class="text-base-content/75" aria-hidden="true">{{ openCloud === c.id ? '▾' : '▸' }}</span>
           </button>
           <div v-if="openCloud === c.id && confirmCloudReplace !== c.id && confirmCloudDelete !== c.id" class="mt-2 flex flex-wrap gap-2 border-t border-base-300 pt-2">
             <button class="btn btn-outline btn-sm min-h-11" type="button" :disabled="cloudBusy" @click="cloudRestore(c.id)">Hinzufügen</button>
@@ -615,9 +626,9 @@ async function cloudDelete(id: string): Promise<void> {
       >
         {{ showAllCloud ? 'Weniger anzeigen' : `Ältere anzeigen (${backup.cloudFiles.value.length - VISIBLE})` }}
       </button>
-      <p v-if="backup.cloudEnabled.value && !backup.cloudFiles.value.length" class="mt-2 text-xs text-base-content/60">Noch keine Cloud-Sicherungen.</p>
+      <p v-if="backup.cloudEnabled.value && !backup.cloudFiles.value.length" class="mt-2 text-xs text-base-content/75">Noch keine Cloud-Sicherungen.</p>
       </template>
-      <p v-else class="mt-2 text-xs text-base-content/60">
+      <p v-else class="mt-2 text-xs text-base-content/75">
         Cloud-Sicherung ist nur in der App (iPhone/iPad oder Android) verfügbar. Der lokale Verlauf sowie
         Exportieren/Importieren funktionieren überall.
       </p>
@@ -626,7 +637,7 @@ async function cloudDelete(id: string): Promise<void> {
     <!-- Alle löschen -->
     <div class="rounded-lg border border-error/30 p-3">
       <p class="text-sm font-medium">Alle Sicherungen löschen</p>
-      <p class="mt-1 text-xs text-base-content/60">Löscht alle lokalen Sicherungen. Deine aktuellen Daten bleiben unberührt.</p>
+      <p class="mt-1 text-xs text-base-content/75">Löscht alle lokalen Sicherungen. Deine aktuellen Daten bleiben unberührt.</p>
       <button v-if="!confirmDeleteAll" class="btn btn-outline btn-error btn-sm mt-2 min-h-11" type="button" :disabled="busy" @click="confirmDeleteAll = true">
         Alle löschen
       </button>

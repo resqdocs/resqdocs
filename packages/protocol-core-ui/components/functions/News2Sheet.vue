@@ -71,59 +71,66 @@ function apply(): void {
 <template>
   <Teleport to="body">
     <div class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true" aria-label="NEWS2 berechnen">
-      <div class="modal-box flex max-h-[90vh] flex-col gap-3 overflow-y-auto pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <!-- space-y statt flex-col + gap: WebKit verdoppelt vertikale gap-Abstände beim ersten Layout (Wächter webkitGap.test.ts);
+           auf dem iPhone stand „SpO₂-Skala 2“ dadurch weit unter „Sauerstoffgabe“. -->
+      <div class="modal-box max-h-[90vh] space-y-3 overflow-y-auto pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <h3 class="text-base font-semibold">NEWS2 berechnen</h3>
 
         <div class="grid grid-cols-2 gap-2">
-          <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">Atemfrequenz /min</span>
+          <label class="flex flex-col space-y-1">
+            <span class="text-xs text-base-content/75">Atemfrequenz /min</span>
             <input v-model.number="rr" type="number" inputmode="numeric" min="0" step="1" placeholder="z. B. 16"
                    class="input input-sm w-full" aria-label="Atemfrequenz pro Minute" />
           </label>
-          <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">SpO₂ %</span>
+          <label class="flex flex-col space-y-1">
+            <span class="text-xs text-base-content/75">SpO₂ %</span>
             <input v-model.number="spo2" type="number" inputmode="numeric" min="0" max="100" step="1" placeholder="z. B. 98"
                    class="input input-sm w-full" :class="{ 'input-error': spo2TooHigh }" aria-label="Sauerstoffsättigung in Prozent" />
             <span v-if="spo2TooHigh" class="text-xs text-error">Höchstens 100 %.</span>
           </label>
-          <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">RR systolisch mmHg</span>
+          <label class="flex flex-col space-y-1">
+            <span class="text-xs text-base-content/75">RR systolisch mmHg</span>
             <input v-model.number="systolic" type="number" inputmode="numeric" min="0" step="1" placeholder="z. B. 120"
                    class="input input-sm w-full" aria-label="Systolischer Blutdruck in mmHg" />
           </label>
-          <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">Herzfrequenz /min</span>
+          <label class="flex flex-col space-y-1">
+            <span class="text-xs text-base-content/75">Herzfrequenz /min</span>
             <input v-model.number="pulse" type="number" inputmode="numeric" min="0" step="1" placeholder="z. B. 72"
                    class="input input-sm w-full" aria-label="Herzfrequenz pro Minute" />
           </label>
-          <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">Temperatur °C</span>
+          <label class="flex flex-col space-y-1">
+            <span class="text-xs text-base-content/75">Temperatur °C</span>
             <input v-model.number="temp" type="number" inputmode="decimal" min="0" step="0.1" placeholder="z. B. 36,8"
                    class="input input-sm w-full" aria-label="Körpertemperatur in Grad Celsius" />
           </label>
-          <label class="flex flex-col gap-1">
-            <span class="text-xs text-base-content/60">Bewusstsein (ACVPU)</span>
+          <label class="flex flex-col space-y-1">
+            <span class="text-xs text-base-content/75">Bewusstsein (ACVPU)</span>
             <select v-model="consciousness" class="select select-sm w-full" aria-label="Bewusstsein nach ACVPU">
               <option v-for="o in ACVPU" :key="o.v" :value="o.v">{{ o.label }}</option>
             </select>
           </label>
         </div>
 
-        <label class="flex min-h-11 cursor-pointer items-center gap-2 py-2">
+        <!-- Die beiden Schalter gehören zusammen: direkt untereinander, ohne Abstand dazwischen. -->
+        <div>
+        <label class="flex min-h-11 cursor-pointer items-center gap-2 py-1">
           <input v-model="onOxygen" type="checkbox" class="toggle toggle-sm shrink-0" />
           <span class="text-sm">Sauerstoffgabe (O₂)</span>
         </label>
-        <label class="flex min-h-11 cursor-pointer items-center gap-2 py-2">
+        <label class="flex min-h-11 cursor-pointer items-center gap-2 py-1">
           <input v-model="scale2" type="checkbox" class="toggle toggle-sm shrink-0" />
-          <span class="text-sm">SpO₂-Skala 2 <span class="text-base-content/50">(ärztl. Ziel 88–92 %, z. B. COPD)</span></span>
+          <span class="text-sm">SpO₂-Skala 2 <span class="text-base-content/75">(ärztl. Ziel 88–92 %, z. B. COPD)</span></span>
         </label>
+        </div>
 
-        <p class="rounded-lg bg-base-200 p-2 text-sm" role="status">
-          <template v-if="result">
+        <!-- Statuszeile: sagt, warum „Übernehmen“ gesperrt ist, statt nur die Standardbitte zu wiederholen. -->
+        <p class="rounded-lg p-2 text-sm" :class="spo2TooHigh ? 'bg-error/10' : 'bg-base-200'" role="status" data-news2-status>
+          <span v-if="spo2TooHigh" class="font-semibold text-error">SpO₂ {{ spo2 }} % ist nicht möglich (0–100 %). Bitte den Wert prüfen.</span>
+          <template v-else-if="result">
             <span class="badge badge-sm align-middle" :class="riskClass">NEWS2 {{ result.score }}</span>
-            <span class="ml-2 text-base-content/70">Risiko {{ result.risk }}</span>
+            <span class="ml-2 text-base-content/75">Risiko {{ result.risk }}</span>
           </template>
-          <span v-else class="italic text-base-content/50">Alle fünf Vitalwerte eingeben für Score + Risiko.</span>
+          <span v-else class="italic text-base-content/75">Alle fünf Vitalwerte eingeben für Score + Risiko.</span>
         </p>
 
         <div class="modal-action">

@@ -26,6 +26,7 @@ function kindAllowed(k: FunctionKind): boolean {
 }
 const anyFunctionAllowed = computed(() => ALL_FUNCTION_KINDS.some(kindAllowed))
 
+import { clozeEditRequest } from '../clozeEditRequest.ts'
 const props = defineProps<{ node: Node; depth: number }>()
 const tree = useTreeEditor()
 const addOpen = ref(false)
@@ -38,6 +39,8 @@ const confirmOpen = ref(false)
 const addUp = ref(false)
 // Hoehenbegrenzung des ＋-Menues (px): passt es nicht ganz in den sichtbaren Bereich, scrollt es in sich.
 const addMaxH = ref<number | null>(null)
+// Seitlicher Versatz: das Menü hängt rechts am ＋. Bei eingerückten Zeilen läge es sonst links aus dem Bild.
+const addShift = ref(0)
 const addAnchor = ref<HTMLElement | null>(null)
 const addMenu = ref<HTMLElement | null>(null)
 // Zwei-Stufen-＋-Menü: die vier Funktionen sind unter „Funktion" gebündelt, damit die Liste kurz bleibt.
@@ -78,6 +81,13 @@ async function placeAdd(): Promise<void> {
   const need = menu.scrollHeight
   addUp.value = need > below && above > below
   addMaxH.value = Math.max(120, Math.floor(addUp.value ? above : below))
+  // Waagerecht im Bild halten (Abstand 8 px zu beiden Rändern).
+  addShift.value = 0
+  await nextTick()
+  const m = menu.getBoundingClientRect()
+  const vw = document.documentElement.clientWidth
+  if (m.left < MARGIN) addShift.value = MARGIN - m.left
+  else if (m.right > vw - MARGIN) addShift.value = vw - MARGIN - m.right
 }
 function closeAdd(): void {
   addOpen.value = false
@@ -88,6 +98,7 @@ function toggleAdd(): void {
     addView.value = 'root'
     addUp.value = false
     addMaxH.value = null
+    addShift.value = 0
   }
   addOpen.value = !addOpen.value
   if (addOpen.value) void placeAdd()
@@ -98,6 +109,17 @@ function showAddView(view: 'root' | 'functions'): void {
 }
 function add(kind: 'container' | 'field' | 'function', functionKind?: FunctionKind): void {
   tree.addChild(props.node.id, kind, functionKind)
+  closeAdd()
+}
+/** Lückentext = ein Abschnitt, der einen Text mit Lücken ausgibt. Nach dem Anlegen öffnet sich das Einrichten. */
+function addCloze(): void {
+  const before = tree.selectedId.value
+  tree.addChild(props.node.id, 'container')
+  const id = tree.selectedId.value
+  if (id && id !== before && id !== props.node.id) {
+    tree.update(id, { title: 'Lückentext', cloze: { parts: [] } })
+    clozeEditRequest.value = id
+  }
   closeAdd()
 }
 function openSnippetPicker(): void {
@@ -148,9 +170,9 @@ function confirmDelete(): void {
       :style="{ paddingLeft: Math.min(depth, 8) * 10 + 4 + 'px' }"
     >
       <button type="button" class="flex min-w-0 flex-1 items-center gap-1 py-1.5 text-left text-sm" @click="tree.select(node.id)">
-        <span class="shrink-0 text-xs" :class="node.type === 'field' ? 'text-secondary' : node.type === 'function' ? 'text-accent' : 'text-base-content/40'" aria-hidden="true">{{ node.type === 'function' ? '⊕' : node.type === 'field' ? '◆' : '▸' }}</span>
+        <span class="shrink-0 text-xs" :class="node.type === 'field' ? 'text-secondary' : node.type === 'function' ? 'text-accent' : 'text-base-content/75'" aria-hidden="true">{{ node.type === 'function' ? '⊕' : node.type === 'field' ? '◆' : node.cloze ? '¶' : '▸' }}</span><span v-if="node.type === 'container' && node.cloze" class="sr-only">Lückentext:</span>
         <span class="truncate" :class="tree.isSelected(node.id) ? 'font-medium' : ''">{{ label(node) }}</span>
-        <span v-if="!node.title" class="shrink-0 text-xs text-base-content/40">{{ node.id }}</span>
+        <span v-if="!node.title" class="shrink-0 text-xs text-base-content/75">{{ node.id }}</span>
       </button>
 
       <!-- nur Container koennen Kinder bekommen -->
@@ -162,20 +184,21 @@ function confirmDelete(): void {
             ref="addMenu"
             class="overlay-surface absolute right-0 z-20 flex w-56 flex-col *:shrink-0 overflow-y-auto overscroll-contain rounded-box p-1"
             :class="addUp ? 'bottom-full mb-1' : 'mt-1'"
-            :style="addMaxH ? { maxHeight: addMaxH + 'px' } : undefined"
+            :style="{ maxHeight: addMaxH ? addMaxH + 'px' : undefined, transform: addShift ? `translateX(${addShift}px)` : undefined }"
           >
             <!-- Hauptebene: die vier Funktionen sind unter „Funktion" gebündelt, damit die Liste kurz bleibt -->
             <template v-if="addView === 'root'">
-              <div class="flex min-h-9 items-center justify-between pl-2 text-xs font-semibold text-base-content/60">Hinzufügen<InfoTip :info="INFO.addMenu" /></div>
+              <div class="flex min-h-9 items-center justify-between pl-2 text-xs font-semibold text-base-content/75">Hinzufügen<InfoTip :info="INFO.addMenu" /></div>
               <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('container')">Abschnitt</button>
               <button type="button" class="btn btn-ghost btn-xs justify-start" @click="add('field')">Feld</button>
-              <button v-if="anyFunctionAllowed" type="button" class="btn btn-ghost btn-xs justify-between" @click="showAddView('functions')">Funktion<span class="text-base-content/40" aria-hidden="true">›</span></button>
+              <button type="button" class="btn btn-ghost btn-xs justify-start" data-add-cloze @click="addCloze">Lückentext</button>
+              <button v-if="anyFunctionAllowed" type="button" class="btn btn-ghost btn-xs justify-between" @click="showAddView('functions')">Funktion<span class="text-base-content/75" aria-hidden="true">›</span></button>
               <button v-if="SnippetPicker" type="button" class="btn btn-ghost btn-xs justify-start" @click="openSnippetPicker">Textbaustein</button>
               <button type="button" class="btn btn-ghost btn-xs justify-start" @click="openBlockPicker">Gespeicherter Abschnitt</button>
             </template>
             <!-- Funktions-Auswahl: kurze Abfrage, welche Funktion eingefügt werden soll -->
             <template v-else>
-              <button type="button" class="btn btn-ghost btn-xs justify-start gap-1 text-base-content/60" @click="showAddView('root')"><span aria-hidden="true">‹</span> zurück</button>
+              <button type="button" class="btn btn-ghost btn-xs justify-start gap-1 text-base-content/75" @click="showAddView('root')"><span aria-hidden="true">‹</span> zurück</button>
               <!-- Beschriftung aus der Registry: derselbe Name, den die neue Funktion als Titel bekommt
                    (createFunction). Vorher stand hier „Ärzte", eingefuegt wurde „Ärzte & Kontaktpersonen". -->
               <template v-for="k in ALL_FUNCTION_KINDS" :key="k">
@@ -216,13 +239,13 @@ function confirmDelete(): void {
             </p>
             <ul class="my-2 rounded-lg bg-base-200 p-2 text-sm">
               <li v-for="(d, i) in descendantsShown" :key="i" class="flex items-center gap-1.5">
-                <span class="shrink-0 text-xs" :class="d.type === 'function' ? 'text-accent' : d.type === 'field' ? 'text-secondary' : 'text-base-content/40'" aria-hidden="true">{{ d.type === 'function' ? '⊕' : d.type === 'field' ? '◆' : '▸' }}</span>
+                <span class="shrink-0 text-xs" :class="d.type === 'function' ? 'text-accent' : d.type === 'field' ? 'text-secondary' : 'text-base-content/75'" aria-hidden="true">{{ d.type === 'function' ? '⊕' : d.type === 'field' ? '◆' : '▸' }}</span>
                 <span class="truncate">{{ d.label }}</span>
               </li>
-              <li v-if="descendantsMore" class="pl-5 text-base-content/50">… und {{ descendantsMore }} weitere</li>
+              <li v-if="descendantsMore" class="pl-5 text-base-content/75">… und {{ descendantsMore }} weitere</li>
             </ul>
           </template>
-          <p class="pt-1 text-sm text-base-content/70">Das lässt sich nicht rückgängig machen.</p>
+          <p class="pt-1 text-sm text-base-content/75">Das lässt sich nicht rückgängig machen.</p>
           <div class="modal-action">
             <button type="button" class="btn btn-ghost btn-sm" @click="confirmOpen = false">Abbrechen</button>
             <button type="button" class="btn btn-error btn-sm" @click="confirmDelete">Endgültig löschen</button>

@@ -258,7 +258,7 @@ function onFile(e: Event): void {
       <!-- Auswahl: eine oder mehrere Vorlagen. Mehrere gehen als Sammlung über Datei, Link und QR. -->
       <fieldset class="flex flex-col gap-1" data-export-selection>
         <div class="flex items-center justify-between gap-2">
-          <legend class="text-xs font-semibold text-base-content/60">Welche Vorlagen?</legend>
+          <legend class="text-xs font-semibold text-base-content/75">Welche Vorlagen?</legend>
           <button v-if="protocols.length > 1" class="btn btn-ghost btn-xs" type="button" @click="toggleAllSelected">
             {{ allSelected ? 'Nur aktive' : 'Alle' }}
           </button>
@@ -276,13 +276,13 @@ function onFile(e: Event): void {
           </label>
         </div>
         <p v-if="!selectedTemplates.length" class="text-xs text-warning">Mindestens eine Vorlage wählen.</p>
-        <p v-else-if="selectedTemplates.length > 1" class="text-xs text-base-content/60">
+        <p v-else-if="selectedTemplates.length > 1" class="text-xs text-base-content/75">
           {{ selectedTemplates.length }} Vorlagen gehen zusammen raus. Ältere ResQDocs-Versionen können nur einzelne Vorlagen empfangen.
         </p>
       </fieldset>
       <div v-if="focus !== 'link'" class="flex flex-col gap-2">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-semibold text-base-content/60">Exportieren — als Datei/JSON</span>
+          <span class="text-xs font-semibold text-base-content/75">Exportieren — als Datei/JSON</span>
           <div class="flex gap-1">
             <button class="btn btn-ghost btn-xs" type="button" :disabled="!selectedTemplates.length" @click="copyExport">{{ copied ? 'Kopiert' : 'JSON kopieren' }}</button>
             <button class="btn btn-ghost btn-xs" type="button" :disabled="sharing || !selectedTemplates.length" @click="downloadExport">Als Datei</button>
@@ -296,7 +296,7 @@ function onFile(e: Event): void {
       <div v-if="focus !== 'file'" ref="shareSection" :class="['flex flex-col gap-2', focus === 'all' ? 'border-t border-base-300 pt-2' : '']">
         <span class="text-xs font-semibold text-primary">Teilen — verschlüsselter Link + QR</span>
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <label class="flex items-center gap-1 text-xs font-semibold text-base-content/60">
+          <label class="flex items-center gap-1 text-xs font-semibold text-base-content/75">
             Gültig
             <select v-model="ttl" class="select select-xs" aria-label="Gültigkeit des Transfer-Links">
               <option v-for="o in TTL_LABELS" :key="o.value" :value="o.value">{{ o.label }}</option>
@@ -325,13 +325,13 @@ function onFile(e: Event): void {
 
     <div v-if="mode === 'import'" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
       <div v-if="focus !== 'link'" class="flex flex-col gap-2">
-        <span class="text-xs font-semibold text-base-content/60">Importieren — aus Datei/JSON</span>
+        <span class="text-xs font-semibold text-base-content/75">Importieren — aus Datei/JSON</span>
         <textarea v-model="importText" rows="5" class="textarea textarea-bordered w-full text-xs" placeholder='{"schema":"resqdocs-protocol","version":1,"tree":{ ... }}'></textarea>
         <div class="flex flex-wrap items-center gap-2">
           <button class="btn btn-primary btn-sm" type="button" :disabled="!importText.trim() || loadBusy || receiveBusy || incomingBusy" @click="load(importText)">Laden</button>
           <input type="file" accept="application/json,.json" class="file-input file-input-sm" @change="onFile" />
         </div>
-        <p class="text-xs text-base-content/50">Wird als neue Vorlage importiert — bei gleichem Namen wird gefragt.</p>
+        <p class="text-xs text-base-content/75">Wird als neue Vorlage importiert — bei gleichem Namen wird gefragt.</p>
       </div>
 
       <!-- Per Transfer-Link empfangen: entschlüsselt lokal und läuft durch dieselbe Erkennung wie ein Import.
@@ -349,7 +349,7 @@ function onFile(e: Event): void {
             {{ receiveBusy ? 'Lade …' : 'Empfangen' }}
           </button>
         </div>
-        <div class="divider my-0 text-xs text-base-content/40">oder</div>
+        <div class="divider my-0 text-xs text-base-content/75">oder</div>
         <button
           class="btn btn-outline btn-sm min-h-11 w-full gap-2"
           type="button"
@@ -364,7 +364,7 @@ function onFile(e: Event): void {
         </button>
       </div>
       <!-- Erfolgskette rueckwaerts: Vorlagen entstehen auch per eigenem LLM auf ai.resqdocs.app. -->
-      <p class="text-xs text-base-content/50">
+      <p class="text-xs text-base-content/75">
         Tipp: Auf
         <a :href="aiUrl" target="_blank" rel="noopener" class="link link-primary">ai.resqdocs.app</a>
         erstellst du Vorlagen mit deinem eigenen KI-Assistenten.

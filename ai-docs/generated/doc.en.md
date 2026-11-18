@@ -53,6 +53,7 @@ Additionally, individual **properties** are only available from a minimum versio
 | Dependency | `dependsOn` | field, container, function (The element only appears during a case once the conditions are met; until then it is hidden and not in the output. Shape: { "conditions": [ { "fieldId": "<id of a field with options>", "options": ["<exact option text>"] } ] }. A condition is met when one of the options is chosen in that field. Several conditions (at most three) must all be met; with "match": "any" one is enough. Always set together with defaultExcluded: true (on a container also excludable: true), not together with required. Older app versions ignore it: there the element starts as "not assessed" and is switched on by hand.) | 1.11.0 |
 | Conditional default | `defaultWhen` | field (While a condition is met, a different default applies instead of default. Shape: [ { "fieldId": "<id of a field with options>", "options": ["<exact option text>"], "value": "<default in this case>" } ]. The first matching rule applies (at most five). If the field itself has options, value must be one of them. The user's own input takes precedence. Older app versions ignore it and use default.) | 1.11.0 |
 | Line end | `config.lineEnd` | functions (character at the end of the result line of single-line functions (function configuration); empty = nothing. Older apps use their fixed default) | 1.12.0 |
+| Cloze text | `cloze` | container (The section outputs free-form text in which fields and functions appear as gaps. Shape: { "parts": [ "Patient is ", { "gap": "<id>" }, "." ] } – strings are fixed text, { "gap": "<id>" } is a gap. The id belongs to a field or function: a child of the section (the gap asks for the value) or an element elsewhere in the template (the gap shows that element's value). A gap contains only the value, without the title. Optional "askDefaults": true also asks for gaps that already have a default when filling in. Older app versions ignore it and show the children as a regular field list.) | 2.0.0 |
 
 **Gate rule:** a `functionKind` is available **only if its minimum version ≤ the user's version**. Otherwise do not offer it; if the user asks, say "that needs at least version X". **Never write** a `functionKind` into the JSON that the stated version does not know. Containers and fields work from version 1.0.0 onward. If the user states a version **before 1.0.0** (or none), assume the base — only `container` + `field`, no functions — and point out that functions and the template import itself need at least 1.0.0.
 
@@ -138,6 +139,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - `blankLineBefore` (boolean)
 - `separator` (string)
 - `emptyText` (string)
+- `cloze` (Cloze)
 - `children` (list) — required
 
 #### Field — input field
@@ -284,6 +286,10 @@ Three node types: **Container** (section with children), **Field** (input field)
           "type": "string",
           "description": "Optionaler Ersatztext in der AUSGABE, wenn der Container ANGEZEIGT wird, seine Kinder aber nichts ausgeben (alle leer/nicht erhoben). Fehlt -> kein Ersatz (leer bleibt leer)."
         },
+        "cloze": {
+          "$ref": "#/definitions/Cloze",
+          "description": "Lueckentext: statt der Kinder untereinander gibt der Abschnitt einen frei geschriebenen Text aus, in dem die Luecken an ihrer Stelle im Satz stehen. In der Ausgabe erscheint je Luecke nur der Wert (ohne Titel). Kinder, die in keiner Luecke stehen, folgen wie gewohnt unter dem Text. ADDITIV: aeltere App-Versionen ignorieren die Eigenschaft und zeigen die Kinder als normale Feldliste."
+        },
         "children": {
           "type": "array",
           "items": {
@@ -373,6 +379,47 @@ Three node types: **Container** (section with children), **Field** (input field)
       ],
       "additionalProperties": false,
       "description": "Eine Bedingung: im Auswahlfeld `fieldId` ist eine der `options` gewaehlt."
+    },
+    "Cloze": {
+      "type": "object",
+      "properties": {
+        "parts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ClozePart"
+          },
+          "description": "Der Text als Folge aus festen Stuecken und Luecken, in Lesereihenfolge."
+        },
+        "askDefaults": {
+          "type": "boolean",
+          "description": "Beim Ausfuellen auch Luecken abfragen, die schon einen Standardwert haben. Fehlt/false -> solche Luecken werden beim Durchtippen uebersprungen (man kann sie trotzdem antippen und aendern)."
+        }
+      },
+      "required": [
+        "parts"
+      ],
+      "additionalProperties": false,
+      "description": "Lueckentext: ein frei geschriebener Text mit Luecken. Er ist die AUSGABE-Form eines Abschnitts - die Luecken selbst sind normale Felder/Funktionen (Kinder des Abschnitts oder Elemente an anderer Stelle)."
+    },
+    "ClozePart": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "gap": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "gap"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Ein Stueck eines Lueckentexts: fester Text ODER eine Luecke. Die Luecke verweist per Kennung auf ein Feld oder eine Funktion der Vorlage. Liegt das Element direkt im Abschnitt des Lueckentexts, fragt die Luecke ihren Wert selbst ab; liegt es an anderer Stelle der Vorlage, uebernimmt sie dessen Wert."
     },
     "Node": {
       "anyOf": [
@@ -650,6 +697,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - **Side by side instead of stacked?** (`inline`) — Appends this node to the previous one on the same line. *Example: "Pulse: 80, BP: 120/80" on one line.*
 - **No separator before?** (`noSeparatorBefore`) — Omits the comma/space so something attaches directly. *Example: value + unit "80/min" without a comma.*
 - **Text when nothing is output?** (`emptyText`) — Replacement text when the section is shown but its fields output nothing. *Example: "unauffällig".*
+- **Output as cloze text?** (`cloze`, from app 2.0.0, sections only) — Instead of listing its fields one below the other, the section outputs free-form text in which the fields appear as gaps. A whole protocol can be a single cloze text. *Example: "Patient ist [wach], [zeitlich und örtlich] orientiert."*
 
 ### Fields only
 - **Prefill with a default?** (`default`) — Stays in the field until the user changes it. *Example: "Consciousness" starts as "alert, oriented".*
@@ -683,6 +731,7 @@ The app renders the template to plain text. Rules:
 - **Inline layout:** `inline: true` appends the node to the previous sibling, joined with the `separator` (inherited from the root, overridable per container; default `", "`). `noSeparatorBefore: true` omits the separator (e.g. value + unit).
 - **Not assessed (`excludable`):** a container marked "−" disappears entirely (including children) from the output.
 - **`emptyText`:** substitute text when the container is shown but its children output nothing.
+- **Cloze text (`cloze`, from app 2.0.0):** `cloze.parts` is a list of fixed text (strings, line breaks allowed) and gaps `{ "gap": "<id>" }`. The id points to a field or function: a child of this container (the gap asks for the value itself) or an element elsewhere in the template (the gap shows that element's value). A gap contains only the value, without the title. If a gap stays empty, the doubled space and a dangling comma are removed. Children that are not used in a gap follow below the text. `askDefaults: true` also asks for gaps that already have a default when filling in. Older app versions show the children as a regular field list.
 - **Field value:** by default the `default` (or `options[0]`, with `defaultEmpty` nothing); `options` turns the field into a select; `allowCustom` additionally allows free text; `multiline` is multi-line free text.
 - **FunctionNode:** medication list / doctors render their rows; `config.rowLayout` = `block` (stacked, optional `rowPrefix`/`rowSuffix` per row) or `inline` (one line, joined with `rowSeparator`). Pack-years, NEWS2, LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS and BMI output their result; `config.lineEnd` sets the character at the end of their line (missing = as before, empty = nothing); without entries or a result the `default` appears. LAMS, FAST4D, ZOPS, Sgarbossa and EGSYS read best as one line ("LAMS 4/5 (…)", "FAST4D positiv (…)", "ZOPS orientiert.", "Sgarbossa (mod. nach Smith) negativ."): `titleInline: true` and a `heading` with `"prefix": ""`, `"suffix": " "`.
 

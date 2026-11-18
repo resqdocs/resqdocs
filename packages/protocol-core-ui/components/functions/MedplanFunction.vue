@@ -22,6 +22,7 @@ import RequiredMark from '@resqdocs/protocol-core-ui/components/RequiredMark.vue
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
 import { shouldCloseCard, tapIsPending } from '@resqdocs/protocol-core-ui/cardFocusGuard'
 
+import { vFitKeyboard } from '../../keyboardInset.ts'
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
 // Wurzel der aktiven Einsatz-Vorlage (Singleton) -> Cross-Funktion-Suche (Arzt an eine Aerzte-Funktion).
@@ -314,7 +315,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
 </script>
 
 <template>
-  <div class="flex flex-col gap-2" :data-required-open="node.required && isOpen ? '' : undefined">
+  <div class="flex flex-col space-y-2" :data-required-open="node.required && isOpen ? '' : undefined">
     <div class="flex items-center gap-2">
       <!-- Tri-State (Slice 2): ✓ erhoben / − nicht erhoben; bei − entfaellt die Funktion in der Ausgabe. -->
       <FunctionFillToggle :node="node" />
@@ -328,9 +329,9 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
 
 
     <!-- nicht erhoben: Zeilen-Verwaltung aus, nur Hinweis. Daten bleiben erhalten und kommen beim Zurueckschalten wieder. -->
-    <p v-if="excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokolltext</p>
+    <p v-if="excluded" class="text-xs italic text-base-content/75">nicht erhoben — erscheint nicht im Protokolltext</p>
 
-    <div v-else-if="custom" class="flex flex-col gap-1">
+    <div v-else-if="custom" class="flex flex-col space-y-1">
       <!-- Freitext ersetzt in der Ausgabe die Zeilen; vorbelegt mit dem Standardtext, Zeilen bleiben erhalten. -->
       <textarea
         class="textarea textarea-bordered textarea-sm w-full"
@@ -340,7 +341,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
         :placeholder="node.default || 'z. B. Medikation siehe beiliegender Plan'"
         @input="setCustomText(($event.target as HTMLTextAreaElement).value)"
       ></textarea>
-      <p class="text-xs italic text-base-content/50">Freitext — ersetzt im Protokolltext die Einträge. Erfasste Einträge bleiben erhalten.</p>
+      <p class="text-xs italic text-base-content/75">Freitext — ersetzt im Protokolltext die Einträge. Erfasste Einträge bleiben erhalten.</p>
     </div>
 
     <template v-else>
@@ -355,13 +356,13 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
         @click="openEdit(i)"
       >
         <span class="min-w-0 flex-1 truncate text-sm">{{ summary(r) }}</span>
-        <span class="shrink-0 text-base-content/40" aria-hidden="true">✎</span>
+        <span class="shrink-0 text-base-content/75" aria-hidden="true">✎</span>
       </button>
 
       <!-- EDIT: Karte (Ring + Inputs + Fertig) -->
       <div
         v-else
-        class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
+        class="flex flex-col space-y-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
         @focusout="onFocusOut"
         @pointerdown="onCardTap"
         @mousedown="onCardTap"
@@ -386,26 +387,27 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
              (onCardTap/focusout) den Tap nicht als „Karte verlassen" wertet. Auswahl fuellt die Zeile. -->
         <div
           v-if="suggestForRow === i && suggestions.length"
+          v-fit-keyboard
           class="max-h-72 overflow-y-auto overscroll-contain rounded-box border border-base-300 bg-base-100"
         >
           <ul class="menu menu-sm w-full p-1" role="listbox" :aria-label="`Vorschläge für Medikament ${i + 1}`">
             <li v-for="s in suggestions" :key="s.pzn">
-              <button type="button" role="option" class="flex flex-col items-start gap-0 py-1 text-left" @click="chooseSuggestion(i, s)">
+              <button type="button" role="option" class="flex flex-col items-start space-y-0 py-1 text-left" @click="chooseSuggestion(i, s)">
                 <span class="font-medium">{{ s.wirkstoff || s.label }}</span>
-                <span class="text-xs text-base-content/60">
+                <span class="text-xs text-base-content/75">
                   <template v-if="s.staerke">{{ s.staerke }} · </template>PZN {{ s.pzn }}<template v-if="s.wirkstoff && s.label && s.label !== s.wirkstoff"> · {{ s.label }}</template>
                 </span>
               </button>
             </li>
           </ul>
-          <p v-if="suggestCapped" class="px-3 pb-2 pt-0 text-xs italic text-base-content/50">Viele Treffer — weiter tippen zum Eingrenzen.</p>
+          <p v-if="suggestCapped" class="px-3 pb-2 pt-0 text-xs italic text-base-content/75">Viele Treffer — weiter tippen zum Eingrenzen.</p>
         </div>
         <div class="flex gap-2">
           <input class="input input-sm min-w-0 flex-1" :value="r.staerke ?? ''" placeholder="Stärke (z. B. 400 mg)" aria-label="Wirkstärke" @input="setRow(i, { staerke: ($event.target as HTMLInputElement).value })" />
           <input class="input input-sm w-28 shrink-0 text-center font-mono" :value="r.dosierung ?? ''" placeholder="1-0-1-0" aria-label="Dosierung" @input="setRow(i, { dosierung: ($event.target as HTMLInputElement).value })" />
         </div>
         <input class="input input-sm w-full" :value="r.kommentar ?? ''" placeholder="Hinweis (z. B. nüchtern)" aria-label="Hinweis" @input="setRow(i, { kommentar: ($event.target as HTMLInputElement).value })" />
-        <button type="button" class="btn btn-primary btn-sm min-h-11 self-end" @click="closeEdit">Fertig</button>
+        <button type="button" class="kb-sticky btn btn-primary btn-sm min-h-11 self-end" @click="closeEdit">Fertig</button>
       </div>
     </template>
 
@@ -413,7 +415,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
          Aktionsleiste ab (Proximity, Apple ≥12pt). Rückfrage macht ihn NN/g-konform (Reset-Ausnahme:
          Formular wird je Einsatz neu gefüllt). -->
     <button v-if="rows.length" type="button" class="btn btn-ghost btn-sm mb-1 min-h-11 self-end text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
-    <p v-if="!rows.length" class="text-xs italic text-base-content/50">Noch keine Medikamente erfasst.</p>
+    <p v-if="!rows.length" class="text-xs italic text-base-content/75">Noch keine Medikamente erfasst.</p>
 
     <!-- Aktionsleiste: 1 Primaer (manuell) + 1 Sekundaer (Scannen, Kamera-Symbol) -> Auswahl-Sheet.
          Umbrechen statt ueberlaufen (wie bei Kontakte/Aerzte), sonst wird die Seite bei grosser Schrift zu breit. -->
@@ -438,7 +440,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
          backdrop-blur-Vorfahr des Einsatz-Shells fixed/Modal sonst einsperrt; schliesst VOR der Kamera -> kein z-Konflikt. -->
     <Teleport to="body">
       <div v-if="scanPickerOpen" class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true">
-        <div class="modal-box flex flex-col gap-2 pb-[env(safe-area-inset-bottom)]">
+        <div class="modal-box flex flex-col space-y-2 pb-[env(safe-area-inset-bottom)]">
           <h3 class="text-base font-semibold">Scannen</h3>
           <button type="button" class="flex min-h-14 w-full items-center gap-4 rounded-xl bg-base-200 px-3 text-base font-normal transition-colors active:bg-base-300" @click="pickScan('package')">
             <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
@@ -446,7 +448,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
             </span>
             <span class="flex flex-col text-left">
               <span>Packung scannen</span>
-              <span class="text-xs text-base-content/60">Einzelnes Medikament von der Packung</span>
+              <span class="text-xs text-base-content/75">Einzelnes Medikament von der Packung</span>
             </span>
           </button>
           <button type="button" class="flex min-h-14 w-full items-center gap-4 rounded-xl bg-base-200 px-3 text-base font-normal transition-colors active:bg-base-300" @click="pickScan('plan')">
@@ -455,7 +457,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
             </span>
             <span class="flex flex-col text-left">
               <span>Medikationsplan scannen</span>
-              <span class="text-xs text-base-content/60">Ganzer Plan mit der Kamera</span>
+              <span class="text-xs text-base-content/75">Ganzer Plan mit der Kamera</span>
             </span>
           </button>
           <button type="button" class="flex min-h-14 w-full items-center gap-4 rounded-xl bg-base-200 px-3 text-base font-normal transition-colors active:bg-base-300" @click="pickScan('external')">
@@ -464,7 +466,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
             </span>
             <span class="flex flex-col text-left">
               <span>Externer Scanner</span>
-              <span class="text-xs text-base-content/60">Ganzer Plan mit Bluetooth-/Kabel-Scanner</span>
+              <span class="text-xs text-base-content/75">Ganzer Plan mit Bluetooth-/Kabel-Scanner</span>
             </span>
           </button>
           <div class="mt-1 flex justify-end">
@@ -507,7 +509,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
       >
         <div class="modal-box">
           <h3 class="text-base font-semibold">Wirkstoffstärke übernehmen?</h3>
-          <p class="pt-2 text-sm text-base-content/70">
+          <p class="pt-2 text-sm text-base-content/75">
             Stärke <span class="font-medium">{{ pendingStaerke.value }}</span> in die Zeile übernehmen?
           </p>
           <div class="modal-action">

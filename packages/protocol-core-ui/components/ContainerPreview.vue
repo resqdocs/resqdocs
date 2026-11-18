@@ -23,7 +23,7 @@ const text = computed(() => render(props.root, showSample.value ? previewValues(
       <div class="card-body gap-2 p-4">
         <!-- Vorschau-Daten umschaltbar: Beispiel-Zeilen ODER leer (zeigt Standardtexte/Leerzustand). -->
         <div class="flex items-center justify-between gap-2">
-          <span class="text-xs text-base-content/50">Vorschau-Daten</span>
+          <span class="text-xs text-base-content/75">Vorschau-Daten</span>
           <div class="join" role="group" aria-label="Vorschau-Daten">
             <button type="button" class="btn btn-xs join-item" :class="showSample ? 'btn-primary' : 'btn-ghost'" @click="showSample = true">Beispiel</button>
             <button type="button" class="btn btn-xs join-item" :class="!showSample ? 'btn-primary' : 'btn-ghost'" @click="showSample = false">Leer</button>
@@ -34,7 +34,7 @@ const text = computed(() => render(props.root, showSample.value ? previewValues(
     </div>
     <div class="card bg-base-100 shadow">
       <div class="card-body gap-2 p-4">
-        <h4 class="text-sm font-semibold text-base-content/70">Vorschau · Einklappen testbar</h4>
+        <h4 class="text-sm font-semibold text-base-content/75">Vorschau · Einklappen testbar</h4>
         <ContainerPreviewNode :node="root" />
       </div>
     </div>

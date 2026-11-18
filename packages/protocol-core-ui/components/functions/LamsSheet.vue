@@ -60,14 +60,14 @@ function apply(): void {
 <template>
   <Teleport to="body">
     <div class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true" aria-label="LAMS berechnen">
-      <div class="modal-box flex max-h-[90vh] flex-col gap-3 overflow-y-auto pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div class="modal-box flex max-h-[90vh] flex-col space-y-3 overflow-y-auto pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <h3 class="text-base font-semibold">LAMS berechnen</h3>
 
         <div class="flex flex-col">
-          <div v-for="it in ITEMS" :key="it.id" class="flex flex-col gap-2 border-t border-base-300 py-3 first:border-t-0 first:pt-0">
+          <div v-for="it in ITEMS" :key="it.id" class="flex flex-col space-y-2 border-t border-base-300 py-3 first:border-t-0 first:pt-0">
             <div>
               <p class="text-sm font-semibold">{{ it.name }}</p>
-              <p class="text-xs text-base-content/60">{{ it.help }}</p>
+              <p class="text-xs text-base-content/75">{{ it.help }}</p>
             </div>
             <div class="join w-full" role="group" :aria-label="it.name">
               <button
@@ -91,9 +91,9 @@ function apply(): void {
           <p class="min-w-0 flex-1" role="status">
             <template v-if="result">
               <span class="badge badge-sm align-middle" :class="scoreClass">LAMS {{ result.score }}/5</span>
-              <span class="ml-2 text-base-content/70">{{ result.lvoSuspected ? 'Hinweis auf proximalen Verschluss (LVO)' : 'unter der Schwelle von 4' }}</span>
+              <span class="ml-2 text-base-content/75">{{ result.lvoSuspected ? 'Hinweis auf proximalen Verschluss (LVO)' : 'unter der Schwelle von 4' }}</span>
             </template>
-            <span v-else class="italic text-base-content/50">Alle drei Befunde wählen für den Score.</span>
+            <span v-else class="italic text-base-content/75">Alle drei Befunde wählen für den Score.</span>
           </p>
           <InfoTip :info="INFO.lamsColors" />
         </div>

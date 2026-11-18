@@ -234,7 +234,7 @@ onMounted(() => {
         </div>
 
         <div v-if="manualOpen" class="flex flex-col gap-2">
-          <p v-if="scannerMode" id="medplan-ext-scanner-hint" class="text-xs text-base-content/60">
+          <p v-if="scannerMode" id="medplan-ext-scanner-hint" class="text-xs text-base-content/75">
             Externer Scanner (per Bluetooth oder Kabel als Tastatur gekoppelt): Feld ist aktiv – jetzt den
             Medikationsplan-Code scannen. Er wird automatisch übernommen (oder „Übernehmen" tippen); Prüfung, PZN-Abgleich
             und Dosierung/Stärke laufen genau wie beim Kamera-Scan.
@@ -263,7 +263,7 @@ onMounted(() => {
           <!-- Aussteller (Opt-in; Default „nicht dokumentieren") - NUR wenn das Protokoll eine Aerzte-Funktion hat;
                ohne Aerzte-Funktion wird der Arzt aus dem Plan gar nicht gezeigt (und nie uebernommen). -->
           <div v-if="hasAerzte && aussteller" class="flex shrink-0 flex-col gap-1 rounded-lg bg-base-200 p-2">
-            <span class="text-xs text-base-content/60">Ausstellende Praxis aus dem Plan:</span>
+            <span class="text-xs text-base-content/75">Ausstellende Praxis aus dem Plan:</span>
             <span class="text-sm">{{ aussteller.name }}<template v-if="aussteller.ort">, {{ aussteller.ort }}</template><template v-if="aussteller.nummer">, {{ aussteller.nummer.typ }} {{ aussteller.nummer.wert }}</template><template v-if="aussteller.telefon">, Tel. {{ aussteller.telefon }}</template></span>
             <!-- Radios wie gehabt, aber kompakt: ohne min-h-11 je Option und mit kleinem Zeilenabstand - vorher entstanden
                  beim Umbrechen große Lücken zwischen den Optionen. -->
@@ -288,15 +288,15 @@ onMounted(() => {
             </li>
           </ul>
         </div>
-        <p v-else-if="!scanOpen" class="text-sm italic text-base-content/50">Noch nichts gescannt — „Code scannen" oder „Text einfügen".</p>
+        <p v-else-if="!scanOpen" class="text-sm italic text-base-content/75">Noch nichts gescannt — „Code scannen" oder „Text einfügen".</p>
 
         <!-- Aktionen -->
-        <div class="mt-auto flex justify-between gap-2 pt-2">
+        <div class="kb-actions mt-auto flex shrink-0 justify-between gap-2 pt-2">
           <button type="button" class="btn btn-ghost btn-sm min-h-11" @click="requestDiscard">Verwerfen</button>
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!medCount" @click="applyAndClose">{{ medCount }} Medikament{{ medCount === 1 ? '' : 'e' }} übernehmen</button>
         </div>
 
-        <p class="text-xs text-base-content/50">Nur auf dem Gerät, nichts wird gespeichert oder gesendet. Keine Patientendaten aus dem Code — Einträge vor der Übernahme prüfen.</p>
+        <p class="text-xs text-base-content/75">Nur auf dem Gerät, nichts wird gespeichert oder gesendet. Keine Patientendaten aus dem Code — Einträge vor der Übernahme prüfen.</p>
       </div>
     </div>
   </Teleport>

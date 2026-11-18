@@ -67,7 +67,7 @@ function toggleAll(): void {
         />
         <div class="flex min-w-0 flex-1 flex-col gap-1">
           <label class="flex flex-col gap-0.5">
-            <span class="text-xs text-base-content/60">Name · {{ x.elements }} {{ x.elements === 1 ? 'Element' : 'Elemente' }}</span>
+            <span class="text-xs text-base-content/75">Name · {{ x.elements }} {{ x.elements === 1 ? 'Element' : 'Elemente' }}</span>
             <input
               class="input input-sm w-full"
               :value="rows[x.i]?.name"
@@ -80,14 +80,14 @@ function toggleAll(): void {
           </label>
           <p v-if="x.blocked" class="text-xs text-warning">{{ x.blocked }}</p>
           <div v-else-if="x.clash && rows[x.i]?.take" class="flex flex-col gap-1" :data-pick-clash="x.i">
-            <span class="text-xs text-base-content/70">Eine Vorlage „{{ x.shown }}“ gibt es schon.</span>
+            <span class="text-xs text-base-content/75">Eine Vorlage „{{ x.shown }}“ gibt es schon.</span>
             <!-- Farben nach Bedeutung: die sichere Wahl grün, Überschreiben rot. Nicht btn-primary - die Hauptfarbe
                  des ResQDocs-Themes ist Rot und ließe „Als neue Vorlage“ wie eine Warnung aussehen. -->
             <div class="join w-full" role="group" :aria-label="`Was passiert mit „${x.shown}“?`">
               <button type="button" class="btn btn-xs join-item min-h-9 flex-1" :class="!rows[x.i]?.overwrite ? 'btn-success' : ''" :aria-pressed="!rows[x.i]?.overwrite" :data-pick-new="x.i" @click="patch(x.i, { overwrite: false })">Als neue Vorlage</button>
               <button type="button" class="btn btn-xs join-item min-h-9 flex-1" :class="rows[x.i]?.overwrite ? 'btn-error' : ''" :aria-pressed="!!rows[x.i]?.overwrite" :data-pick-overwrite="x.i" @click="patch(x.i, { overwrite: true })">Überschreiben</button>
             </div>
-            <span class="text-xs" :class="rows[x.i]?.overwrite ? 'text-error' : 'text-base-content/60'">
+            <span class="text-xs" :class="rows[x.i]?.overwrite ? 'text-error' : 'text-base-content/75'">
               {{ rows[x.i]?.overwrite ? `Ersetzt die vorhandene Vorlage „${x.shown}“.` : `Kommt als „${x.shown} (Import)“ dazu, nichts wird überschrieben.` }}
             </span>
           </div>

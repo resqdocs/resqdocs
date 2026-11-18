@@ -159,7 +159,7 @@ provide(snippetPickerKey, SnippetPicker)
     <!-- KI-Empfehlung fuer die erste Vorlage (einmalig wegklickbar) -->
     <AiToolNotice />
 
-    <p class="text-sm text-base-content/60">
+    <p class="text-sm text-base-content/75">
       Abschnitte anlegen, verschachteln und konfigurieren. Die Vorschau zeigt den Protokolltext.
     </p>
 
@@ -183,7 +183,7 @@ provide(snippetPickerKey, SnippetPicker)
         <div class="card overflow-visible bg-base-100 shadow">
           <div class="card-body gap-2 p-3">
             <div class="flex items-center gap-1">
-              <h3 class="text-sm font-semibold text-base-content/70">Aufbau</h3>
+              <h3 class="text-sm font-semibold text-base-content/75">Aufbau</h3>
               <!-- ab lg (drei Spalten, kein Umschalter) sitzen Rückgängig/Wiederholen hier -->
               <span class="ml-auto hidden gap-1 lg:flex">
                 <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canUndo.value" aria-label="Rückgängig" title="Rückgängig" @click="hist.undo()">↶</button>

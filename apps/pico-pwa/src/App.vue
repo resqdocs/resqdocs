@@ -12,6 +12,8 @@ import PznNoticeBanner from '@/components/PznNoticeBanner.vue'
 import AppUpdateDialog from '@/components/AppUpdateDialog.vue'
 import ImportChoiceDialog from '@/components/ImportChoiceDialog.vue'
 import TabGuide, { TAB_GUIDE_HINT_ID } from '@/components/TabGuide.vue'
+import TestPhaseScreen from './components/TestPhaseScreen.vue'
+import { TEST_PHASE } from './testPhase'
 import EinsatzView from '@/components/rebuild/EinsatzView.vue'
 import EditorView from '@/components/rebuild/EditorView.vue'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
@@ -28,7 +30,8 @@ import { useReworkCaseDraft } from '@/rebuild/useReworkCaseDraft'
 import { useUsageNotice } from '@/composables/useUsageNotice'
 import { useDisclaimer } from '@/composables/useDisclaimer'
 import { startIncomingOpen, setIncomingHold, incomingOpen } from '@/composables/useIncomingOpen'
-import { listCaptureKey, snippetSourceKey } from '@resqdocs/protocol-core-ui/injection'
+import { listCaptureKey, longTextSizeKey, snippetSourceKey } from '@resqdocs/protocol-core-ui/injection'
+import { useLongTextSize } from '@/composables/useLongTextSize'
 import { useBausteine } from '@/composables/useBausteine'
 import { appListCapture } from '@/components/rebuild/listCapture'
 
@@ -41,6 +44,8 @@ const storage = useStorage()
 // Medikationsplan/Kontakte im gemeinsamen Paket: Kamera-Scan, PZN-Vorschläge und Prüf-Sheets steckt NUR die App
 // ein (listCaptureKey) - an der Wurzel, damit jede Einsatz-Stelle sie bekommt.
 provide(listCaptureKey, appListCapture)
+// Schriftgröße im großen Textfeld: je Gerät gemerkt, gilt für jedes Schreib-Fenster der App.
+provide(longTextSizeKey, useLongTextSize())
 // Textbausteine für die gemeinsame Auswahl (Editor und Einsatz): die SQLite-Bibliothek der App.
 {
   const bausteine = useBausteine()
@@ -184,6 +189,8 @@ onBeforeUnmount(() => {
   <!-- Welcome-Seite: vollflaechig, erscheint nach dem Disclaimer
        (liegt unter dessen z-50); ueber das ?-Symbol im Header wieder abrufbar. -->
   <TabGuide />
+  <!-- Testversion (Testphase): ersetzt die Einführung durch den Hinweis auf die Testanleitung. -->
+  <TestPhaseScreen />
 
   <!-- Laeuft die Tipp-Anzeige, bekommt die Seite unten mehr Platz: sie liegt fest ueber der Tab-Leiste und
        wuerde sonst die untersten Knoepfe verdecken. -->
@@ -248,6 +255,17 @@ onBeforeUnmount(() => {
         >?</button>
       </div>
     </header>
+    <!-- Testversion: dauerhaft sichtbar, führt zur Testanleitung. -->
+    <a
+      v-if="TEST_PHASE"
+      :href="TEST_PHASE.url"
+      target="_blank"
+      rel="noopener"
+      class="flex min-h-11 items-center justify-center gap-2 bg-neutral px-3 text-sm font-semibold text-neutral-content"
+      data-test-phase-strip
+    >
+      Testversion „{{ TEST_PHASE.title }}“ · Testanleitung öffnen
+    </a>
 
     <!-- Globaler Firmware-Update-Hinweis: erscheint nach einem Bridge-Kontakt
          mit veralteter Firmware, auf allen Tabs; Update direkt im Banner. -->
