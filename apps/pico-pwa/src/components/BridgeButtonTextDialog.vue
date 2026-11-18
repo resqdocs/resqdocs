@@ -148,12 +148,12 @@ const remove = (): Promise<void> =>
           </span>
           <div class="flex flex-col gap-1" role="status">
             <p class="text-sm font-medium">{{ summary }}</p>
-            <p v-if="support === 'old'" class="text-sm text-base-content/70">Das Update findest du unter Einstellungen bei der Bridge.</p>
-            <p v-else class="text-sm text-base-content/70">Verbinde dein Handy mit dem WLAN der Bridge und tippe dann auf „Erneut prüfen“.</p>
-            <p v-if="support === 'offline' && failReason" class="text-xs text-base-content/50">Technischer Grund: {{ failReason }}</p>
+            <p v-if="support === 'old'" class="text-sm text-base-content/75">Das Update findest du unter Einstellungen bei der Bridge.</p>
+            <p v-else class="text-sm text-base-content/75">Verbinde dein Handy mit dem WLAN der Bridge und tippe dann auf „Erneut prüfen“.</p>
+            <p v-if="support === 'offline' && failReason" class="text-xs text-base-content/75">Technischer Grund: {{ failReason }}</p>
           </div>
         </div>
-        <p v-if="fromCase" class="text-xs text-base-content/60">Der Text aus dem Einsatz bleibt hier erhalten, bis du das Fenster schließt.</p>
+        <p v-if="fromCase" class="text-xs text-base-content/75">Der Text aus dem Einsatz bleibt hier erhalten, bis du das Fenster schließt.</p>
         <div class="flex flex-wrap gap-2">
           <button v-if="support !== 'old'" class="btn btn-primary btn-sm min-h-11" type="button" :disabled="checking" @click="recheck">
             <span v-if="checking" class="loading loading-spinner loading-sm"></span>
@@ -164,7 +164,7 @@ const remove = (): Promise<void> =>
       </div>
 
       <template v-else>
-        <p class="text-xs text-base-content/70">
+        <p class="text-xs text-base-content/75">
           <strong>Keine Patientendaten, keine Befehle.</strong> Der Text bleibt auf der Bridge gespeichert, bis du ihn
           änderst oder entfernst. Laden, Speichern und Entfernen gehen nur, während du den Knopf an der Bridge gedrückt hältst.
         </p>
@@ -184,7 +184,7 @@ const remove = (): Promise<void> =>
             aria-label="Text, den die Bridge auf Knopfdruck tippt"
             placeholder="Text, den die Bridge auf Knopfdruck tippt …"
           ></textarea>
-          <p class="text-xs" :class="tooLong ? 'text-error' : 'text-base-content/60'">
+          <p class="text-xs" :class="tooLong ? 'text-error' : 'text-base-content/75'">
             {{ chars }} von höchstens {{ TYPE_CHUNK_LIMIT }} Zeichen. Getippt wird mit deiner Tastatur-Einstellung und
             Tippgeschwindigkeit von jetzt.
           </p>

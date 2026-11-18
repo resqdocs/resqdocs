@@ -5,6 +5,7 @@
 import type { FunctionKind, FunctionNode, FieldFill, MedikamenteRow, ArztRow, PackYearsRow, NEWS2Row, LAMSRow, FAST4DRow, ZOPSRow, SgarbossaRow, EGSYSRow, BMIRow, FunctionRow, FunctionConfig } from '../model.ts'
 import { DEFAULT_HEADING } from '../model.ts'
 import { packYears, packYearsShort, bmi, news2, lams, fast4d, zops, sgarbossa, egsys, EGSYS_DEFAULT_TEXT } from '../tools/scores.mjs'
+import { fast4dComplete, fast4dInput, type Fast4dCompleteRow } from '../tools/fast4dDefs.mjs'
 
 /** Inline-Default fuer FUNKTIONS-Zeilen: Mittelpunkt statt DEFAULT_SEPARATOR ", " - das Komma ist
  *  seit dem Zeilenformat "Name Staerke, Schema" die Grenze INNERHALB einer Zeile; als
@@ -289,28 +290,9 @@ const lamsFn: FunctionDef = {
   },
 }
 
-const FAST4D_BEFUND_KEYS = ['fastFace', 'fastArm', 'fastSpeech', 'fastDiplopia', 'fastField', 'fastVertigo', 'fastAtaxia'] as const
-type Fast4dCompleteRow = FAST4DRow & Required<Pick<FAST4DRow, (typeof FAST4D_BEFUND_KEYS)[number]>>
-
-/** Vollstaendige FAST4D-Eingabe? (alle sieben Befunde gewaehlt). Seite und Zeit sind optional.
- *  scores.fast4d wirft sonst - darum VOR dem Aufruf pruefen (wie lamsComplete). */
-function fast4dComplete(r: FAST4DRow | undefined): r is Fast4dCompleteRow {
-  return !!r && FAST4D_BEFUND_KEYS.every((k) => ['neg', 'pos', 'na'].includes(r[k] as string))
-}
+// Zeichen, Werte und die Zuordnung Zeile -> Rechenkern kommen aus der einen Quelle (tools/fast4dDefs.mjs).
 function fast4dResult(r: Fast4dCompleteRow): ReturnType<typeof fast4d> {
-  return fast4d({
-    face: r.fastFace,
-    arm: r.fastArm,
-    speech: r.fastSpeech,
-    diplopia: r.fastDiplopia,
-    field: r.fastField,
-    vertigo: r.fastVertigo,
-    ataxia: r.fastAtaxia,
-    faceSide: r.fastFaceSide,
-    armSide: r.fastArmSide,
-    timeMode: r.fastTimeMode,
-    time: r.fastTime,
-  })
+  return fast4d(fast4dInput(r))
 }
 
 /** FAST4D (Schlaganfall-Screening): sieben Befunde, positiv ab EINEM auffaelligen. KEIN Punktescore und

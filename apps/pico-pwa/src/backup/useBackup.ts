@@ -19,7 +19,7 @@ import { createDriveCloudStore } from './driveCloudStore.ts'
 import { createICloudCloudStore } from './icloudCloudStore.ts'
 import { planCloudSync, cloudHistory, type CloudMeta, type CloudBackupStore } from './cloudBackup.ts'
 import { buildBackup, parseBackup, restoreBackup, type BackupEnvelope, type RestoreCounts } from './backup.ts'
-import { shareBinary, readBinaryFile } from '../utils/fileTransfer.ts'
+import { shareBinary, shareCacheFile, readBinaryFile } from '../utils/fileTransfer.ts'
 import { gzipString, decodeMaybeGzip } from '../utils/gzip.ts'
 import type { SnapshotMeta, SnapshotOrigin } from './backupRotation.ts'
 import {
@@ -320,6 +320,14 @@ async function exportCurrent(): Promise<boolean> {
 /** Einen Snapshot aus dem Verlauf teilen (Share-Sheet -> Nutzer wählt Ziel, z. B. iCloud Drive). */
 async function exportSnapshot(name: string): Promise<boolean> {
   if (!native()) return false
+  const filename = `resqdocs-vorlagen-${stamp()}.json.gz`
+  // Bevorzugt: die gespeicherte, schon gepackte Datei direkt kopieren und teilen (auch bei sehr großen
+  // Sicherungen mit PZN-Bibliothek ohne Datenmengen über die Bridge). Rückweg: lesen und neu packen.
+  const uri = store.copySnapshotToCache ? await store.copySnapshotToCache(name, filename) : null
+  if (uri) {
+    await shareCacheFile(filename, uri)
+    return true
+  }
   const json = await store.readSnapshot(name)
   if (!json) {
     lastMessage.value = 'Sicherung nicht lesbar.'

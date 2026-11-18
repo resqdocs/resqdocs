@@ -293,13 +293,13 @@ async function exportDownload(b: Container): Promise<void> {
 
       <!-- Import: Block-JSON einfügen oder Datei wählen (eigenes resqdocs-block-Schema, getrennt von Vorlagen) -->
       <div v-if="importOpen" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
-        <span class="text-xs font-semibold text-base-content/60">JSON einfügen oder Datei wählen</span>
+        <span class="text-xs font-semibold text-base-content/75">JSON einfügen oder Datei wählen</span>
         <textarea v-model="importText" rows="4" class="textarea textarea-bordered w-full text-xs" placeholder='{"schema":"resqdocs-block","version":1,"tree":{ … }}' aria-label="JSON"></textarea>
         <div class="flex flex-wrap items-center gap-2">
           <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="!importText.trim()" @click="doImport(importText)">Laden</button>
           <input type="file" accept="application/json,.json" class="file-input file-input-sm min-h-11" aria-label="Datei wählen" @change="onImportFile" />
         </div>
-        <p class="text-xs text-base-content/50">Wird als neuer gespeicherter Abschnitt importiert.</p>
+        <p class="text-xs text-base-content/75">Wird als neuer gespeicherter Abschnitt importiert.</p>
       </div>
       <p v-if="ioMsg" class="text-xs" :class="ioMsg.kind === 'ok' ? 'text-success' : 'text-error'">{{ ioMsg.text }}</p>
 
@@ -316,9 +316,9 @@ async function exportDownload(b: Container): Promise<void> {
         >
           <span class="min-w-0 flex-1 truncate text-sm">
             <span class="font-medium">{{ summaryTitle(b) }}</span>
-            <span class="text-base-content/50"> — {{ blockStructureLabel(b) }}</span>
+            <span class="text-base-content/75"> — {{ blockStructureLabel(b) }}</span>
           </span>
-          <span class="shrink-0 text-base-content/40" aria-hidden="true">✎</span>
+          <span class="shrink-0 text-base-content/75" aria-hidden="true">✎</span>
         </button>
 
         <!-- EDIT: Karte (Ring + Titel + read-only Struktur-Info + Fertig) -->
@@ -339,7 +339,7 @@ async function exportDownload(b: Container): Promise<void> {
             />
             <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`Abschnitt ${draftTitle || 'ohne Titel'} löschen`" @click="pendingDelete = b.id">✕</button>
           </div>
-          <p class="px-1 text-xs text-base-content/60">Gespeicherter Abschnitt · {{ blockStructureLabel(b) }}</p>
+          <p class="px-1 text-xs text-base-content/75">Gespeicherter Abschnitt · {{ blockStructureLabel(b) }}</p>
           <div class="flex flex-wrap justify-end gap-2">
             <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="copiedId === b.id ? 'JSON kopiert' : 'JSON kopieren'" title="Kopieren" @click="exportCopy(b)">
               <svg v-if="copiedId === b.id" class="size-5 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
@@ -356,7 +356,7 @@ async function exportDownload(b: Container): Promise<void> {
           <!-- Als-Link-teilen-Panel (verschlüsselter Kurzzeit-Transfer wie bei Vorlagen) -->
           <div v-if="shareOpenId === b.id" :ref="setSharePanel" class="flex flex-col gap-2 rounded-lg border border-base-300 bg-base-100 p-2 [scroll-margin-block-end:calc(6rem+env(safe-area-inset-bottom))] [scroll-margin-block-start:4.5rem]">
             <div class="flex flex-wrap items-center gap-2">
-              <label class="text-xs font-semibold text-base-content/60">Gültigkeit</label>
+              <label class="text-xs font-semibold text-base-content/75">Gültigkeit</label>
               <select v-model="shareTtl" class="select select-xs" aria-label="Gültigkeit des Transfer-Links">
                 <option v-for="t in TTL_LABELS" :key="t.value" :value="t.value">{{ t.label }}</option>
               </select>
@@ -369,13 +369,13 @@ async function exportDownload(b: Container): Promise<void> {
                 <button class="btn btn-ghost btn-xs" type="button" @click="copyBlockLink">{{ linkCopied ? 'Kopiert' : 'Kopieren' }}</button>
               </div>
               <QrCode :value="shareLink.link" :size="180" />
-              <p class="text-xs text-base-content/50">Der Link ist das Geheimnis — nur mit vertrauten Personen teilen. Läuft ab bzw. wird nach dem Lesen gelöscht.</p>
+              <p class="text-xs text-base-content/75">Der Link ist das Geheimnis — nur mit vertrauten Personen teilen. Läuft ab bzw. wird nach dem Lesen gelöscht.</p>
             </div>
           </div>
         </div>
       </template>
       </div>
-      <p v-if="!blocks.length" class="px-1 py-1 text-sm text-base-content/60">
+      <p v-if="!blocks.length" class="px-1 py-1 text-sm text-base-content/75">
         Noch keine gespeicherten Abschnitte. Im Vorlagen-Editor unter den Eigenschaften eines Abschnitts „Für andere Vorlagen speichern“ wählen.
       </p>
     </div>

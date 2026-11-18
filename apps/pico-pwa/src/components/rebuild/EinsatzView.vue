@@ -6,7 +6,7 @@
  * Umschalter (small-screen-first): Ausfuellen <-> Vorschau (Protokolltext); ab lg beides
  * nebeneinander, Vorschau klebt. Die Vorschau nutzt denselben reinen Renderer wie die Ausgabe.
  */
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, provide, watch } from 'vue'
 import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
@@ -32,6 +32,7 @@ import MedplanFunction from '@resqdocs/protocol-core-ui/components/functions/Med
 import AerzteFunction from '@resqdocs/protocol-core-ui/components/functions/AerzteFunction.vue'
 import ScoreFunction from '@resqdocs/protocol-core-ui/components/functions/ScoreFunction.vue'
 import OutputText from '@resqdocs/protocol-core-ui/components/OutputText.vue'
+import { templateRootKey } from '@resqdocs/protocol-core-ui/injection'
 import { entscheideUeberEntwurf } from '@/composables/caseDraftGuard'
 
 const { einsatzRoot: definitionRoot, protocols, einsatzActiveId, selectEinsatz } = useProtocolTree()
@@ -39,6 +40,8 @@ const { einsatzRoot: definitionRoot, protocols, einsatzActiveId, selectEinsatz }
 // Auswahlfeld eine bestimmte Option gewaehlt ist) und die Vorlage mit den gerade geltenden Standardwerten
 // verwenden. `root` ist ab hier diese wirksame Vorlage; die gespeicherte bleibt unberuehrt.
 const root = useDependencySync(definitionRoot)
+// Lückentexte finden darüber Felder an anderer Stelle der Vorlage.
+provide(templateRootKey, root)
 const { libraryLoaded, libraryError } = useProtocolPersistence()
 const caseValues = useCaseValues()
 const view = ref<'ausfuellen' | 'vorschau'>('ausfuellen')
@@ -387,7 +390,7 @@ onUnmounted(() => {
           <div v-if="protocols.length > 1" class="rounded-lg border border-base-300 bg-base-100 p-2">
             <button type="button" class="flex min-h-11 w-full items-center gap-2 px-1 text-left text-sm" :aria-expanded="!collapsed" @click="collapsed = !collapsed">
               <span aria-hidden="true">{{ collapsed ? '▸' : '▾' }}</span>
-              <span class="text-base-content/60">Vorlage:</span>
+              <span class="text-base-content/75">Vorlage:</span>
               <span class="truncate font-semibold">{{ activeTitle }}</span>
             </button>
             <template v-if="!collapsed">
@@ -405,7 +408,7 @@ onUnmounted(() => {
                   <button
                     type="button"
                     class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0"
-                    :class="p.id === storage.settings.defaultProtocolId ? 'text-primary' : 'text-base-content/30'"
+                    :class="p.id === storage.settings.defaultProtocolId ? 'text-primary' : 'text-base-content/75'"
                     :aria-pressed="p.id === storage.settings.defaultProtocolId"
                     :aria-label="p.id === storage.settings.defaultProtocolId ? `${titleOf(p)} ist die Standard-Vorlage. Antippen hebt das auf.` : `${titleOf(p)} als Standard-Vorlage festlegen`"
                     :title="p.id === storage.settings.defaultProtocolId ? 'Standard-Vorlage (antippen hebt auf)' : 'Als Standard-Vorlage festlegen'"
@@ -417,7 +420,7 @@ onUnmounted(() => {
                   </button>
                 </li>
               </ul>
-              <p class="mt-2 flex items-start gap-1.5 px-1 text-xs text-base-content/60">
+              <p class="mt-2 flex items-start gap-1.5 px-1 text-xs text-base-content/75">
                 <svg class="mt-px size-3.5 shrink-0 text-primary" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" /></svg>
                 <span>Standard-Vorlage: Mit ihr startet jeder neue Einsatz.</span>
               </p>
@@ -426,7 +429,7 @@ onUnmounted(() => {
 
           <div>
             <h2 class="text-base font-semibold">{{ (root.title && root.title.trim()) || 'Vorlage' }}</h2>
-            <p class="text-sm text-base-content/60">
+            <p class="text-sm text-base-content/75">
               Felder ausfüllen: tippe auf <span class="whitespace-nowrap">✓/✎/−</span> je Feld (bestätigt · eigener Wert · nicht erhoben). Die Vorschau zeigt den Protokolltext.
             </p>
           </div>
@@ -451,7 +454,7 @@ onUnmounted(() => {
               <EinsatzField v-else-if="child.type === 'field'" :node="child" />
             </template>
           </div>
-          <p v-else class="rounded-lg border border-dashed border-base-300 px-4 py-10 text-center text-sm text-base-content/50">
+          <p v-else class="rounded-lg border border-dashed border-base-300 px-4 py-10 text-center text-sm text-base-content/75">
             Noch keine Abschnitte. Lege in <TabRef tab="vorlagen" /> welche an — sie erscheinen hier sofort.
           </p>
         </div>
@@ -461,7 +464,7 @@ onUnmounted(() => {
       <div class="lg:block" :class="{ hidden: view !== 'vorschau' }">
         <div class="card bg-base-100 shadow lg:sticky lg:top-20">
           <div class="card-body gap-2 p-4">
-            <OutputText :text="text" label="Protokolltext" />
+            <OutputText :text="text" label="Protokolltext" wrap />
           </div>
         </div>
       </div>
@@ -477,7 +480,7 @@ onUnmounted(() => {
           {{ sending ? 'Sende …' : typing.busy.value ? 'Bridge tippt noch …' : 'An Zielgerät senden' }}
         </button>
         <p v-if="sendMsg" class="text-center text-xs" :class="sendMsg.kind === 'ok' ? 'text-success' : 'text-error'" role="status" aria-live="polite">{{ sendMsg.text }}</p>
-        <p v-else-if="reachable !== true" class="text-center text-xs text-base-content/50">Bridge nicht verbunden — Senden gesperrt.</p>
+        <p v-else-if="reachable !== true" class="text-center text-xs text-base-content/75">Bridge nicht verbunden — Senden gesperrt.</p>
         <!-- Den Protokolltext als festen Text fuer den Knopf an der Bridge ablegen (Geruest mit den Werten,
              die immer gleich sind). Oeffnet das Textfeld; gespeichert wird erst dort, mit gedruecktem Knopf. -->
         <!-- Gleiches Stick-Icon wie in der Kopfleiste: so erklaert sich die kurze Beschriftung. -->
@@ -500,7 +503,7 @@ onUnmounted(() => {
         <div class="divider my-1 w-full"></div>
 
         <button type="button" class="btn btn-ghost btn-sm text-error" @click="showConfirm = true">Abschließen</button>
-        <p class="text-center text-xs text-base-content/50">Löscht alle erfassten Werte dieses Einsatzes (Datenschutz).</p>
+        <p class="text-center text-xs text-base-content/75">Löscht alle erfassten Werte dieses Einsatzes (Datenschutz).</p>
       </div>
     </div>
 

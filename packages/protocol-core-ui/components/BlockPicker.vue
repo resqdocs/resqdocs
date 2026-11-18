@@ -46,9 +46,9 @@ function confirm(): void {
 <template>
   <Teleport to="body">
     <div class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true" :aria-label="title">
-      <div class="modal-box flex max-h-[80vh] flex-col gap-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div class="modal-box flex max-h-[80vh] flex-col space-y-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <h3 class="text-base font-semibold">{{ title }}</h3>
-        <p class="text-xs text-base-content/60">
+        <p class="text-xs text-base-content/75">
           Eingefügt wird eine <strong>Kopie</strong> der Struktur — keine Verknüpfung. Änderst du das Original später, füge es neu ein.
         </p>
 
@@ -56,15 +56,15 @@ function confirm(): void {
           <select v-model="sel" class="select select-bordered select-sm w-full" aria-label="Gespeicherten Abschnitt auswählen">
             <option v-for="b in blocks" :key="b.id" :value="b.id">{{ (b.title && b.title.trim()) || '(ohne Titel)' }}</option>
           </select>
-          <p v-if="selected" class="max-h-32 overflow-y-auto rounded-lg bg-base-200 p-2 text-xs text-base-content/70">
+          <p v-if="selected" class="max-h-32 overflow-y-auto rounded-lg bg-base-200 p-2 text-xs text-base-content/75">
             <span class="font-medium">{{ blockStructureLabel(selected) }}</span>
             <span v-if="childPreview"> — {{ childPreview }}</span>
           </p>
         </template>
-        <p v-else-if="loaded" class="px-2 py-6 text-center text-sm text-base-content/50">
+        <p v-else-if="loaded" class="px-2 py-6 text-center text-sm text-base-content/75">
           Noch keine gespeicherten Abschnitte. Unter den Eigenschaften eines Abschnitts „Für andere Vorlagen speichern“ wählen.
         </p>
-        <p v-else class="px-2 py-6 text-center text-sm text-base-content/50">Lade …</p>
+        <p v-else class="px-2 py-6 text-center text-sm text-base-content/75">Lade …</p>
 
         <div class="modal-action">
           <button type="button" class="btn btn-ghost btn-sm min-h-11" @click="emit('close')">Abbrechen</button>

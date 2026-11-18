@@ -202,7 +202,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
 
 
     <!-- nicht erhoben: Zeilen-Verwaltung aus, nur Hinweis. Daten bleiben erhalten und kommen beim Zurueckschalten wieder. -->
-    <p v-if="excluded" class="text-xs italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
+    <p v-if="excluded" class="text-xs italic text-base-content/75">nicht erhoben — erscheint nicht im Protokoll</p>
 
     <div v-else-if="custom" class="flex flex-col gap-1">
       <!-- Freitext ersetzt in der Ausgabe die Zeilen; vorbelegt mit dem Standardtext, Zeilen bleiben erhalten. -->
@@ -214,7 +214,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
         :placeholder="node.default || 'z. B. Arzt bekannt, Kontakt siehe Akte'"
         @input="setCustomText(($event.target as HTMLTextAreaElement).value)"
       ></textarea>
-      <p class="text-xs italic text-base-content/50">Freitext — ersetzt im Protokolltext die Einträge. Erfasste Einträge bleiben erhalten.</p>
+      <p class="text-xs italic text-base-content/75">Freitext — ersetzt im Protokolltext die Einträge. Erfasste Einträge bleiben erhalten.</p>
     </div>
 
     <template v-else>
@@ -229,7 +229,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
         @click="openEdit(i)"
       >
         <span class="min-w-0 flex-1 truncate text-sm">{{ summary(r) }}</span>
-        <span class="shrink-0 text-base-content/40" aria-hidden="true">✎</span>
+        <span class="shrink-0 text-base-content/75" aria-hidden="true">✎</span>
       </button>
 
       <!-- EDIT: Karte (Ring + Inputs + Fertig) -->
@@ -286,13 +286,13 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
             <span class="text-sm">Vollmacht/Betreuung liegt vor</span>
           </label>
         </div>
-        <button type="button" class="btn btn-primary btn-sm min-h-11 self-end" @click="closeEdit">Fertig</button>
+        <button type="button" class="kb-sticky btn btn-primary btn-sm min-h-11 self-end" @click="closeEdit">Fertig</button>
       </div>
     </template>
 
     <!-- Unterer Zurücksetzen-Button; mb-1 setzt ihn von der Aktionsleiste ab (Proximity, Apple ≥12pt). -->
     <button v-if="rows.length" type="button" class="btn btn-ghost btn-sm mb-1 min-h-11 self-end text-error" :aria-label="`Alle zurücksetzen: ${label}`" @click="requestRemoveAll">Alle zurücksetzen</button>
-    <p v-if="!rows.length" class="text-xs italic text-base-content/50">Noch nichts erfasst.</p>
+    <p v-if="!rows.length" class="text-xs italic text-base-content/75">Noch nichts erfasst.</p>
 
     <!-- Aktionsleiste: manuell anlegen + Plan scannen (zieht den ausstellenden Arzt aus dem BMP).
          flex-wrap + whitespace-normal: „Arzt aus Medikationsplan scannen" passt bei grosser Schrift nicht

@@ -35,6 +35,21 @@ export interface Heading {
   fillMode: FillMode
 }
 
+/** Ein Stueck eines Lueckentexts: fester Text ODER eine Luecke. Die Luecke verweist per Kennung auf ein
+ *  Feld oder eine Funktion der Vorlage. Liegt das Element direkt im Abschnitt des Lueckentexts, fragt die
+ *  Luecke ihren Wert selbst ab; liegt es an anderer Stelle der Vorlage, uebernimmt sie dessen Wert. */
+export type ClozePart = string | { gap: string }
+
+/** Lueckentext: ein frei geschriebener Text mit Luecken. Er ist die AUSGABE-Form eines Abschnitts - die
+ *  Luecken selbst sind normale Felder/Funktionen (Kinder des Abschnitts oder Elemente an anderer Stelle). */
+export interface Cloze {
+  /** Der Text als Folge aus festen Stuecken und Luecken, in Lesereihenfolge. */
+  parts: ClozePart[]
+  /** Beim Ausfuellen auch Luecken abfragen, die schon einen Standardwert haben. Fehlt/false -> solche
+   *  Luecken werden beim Durchtippen uebersprungen (man kann sie trotzdem antippen und aendern). */
+  askDefaults?: boolean
+}
+
 export interface Container {
   type: 'container'
   id: string
@@ -73,6 +88,11 @@ export interface Container {
   /** Optionaler Ersatztext in der AUSGABE, wenn der Container ANGEZEIGT wird, seine Kinder aber
    *  nichts ausgeben (alle leer/nicht erhoben). Fehlt -> kein Ersatz (leer bleibt leer). */
   emptyText?: string
+  /** Lueckentext: statt der Kinder untereinander gibt der Abschnitt einen frei geschriebenen Text aus,
+   *  in dem die Luecken an ihrer Stelle im Satz stehen. In der Ausgabe erscheint je Luecke nur der Wert
+   *  (ohne Titel). Kinder, die in keiner Luecke stehen, folgen wie gewohnt unter dem Text. ADDITIV:
+   *  aeltere App-Versionen ignorieren die Eigenschaft und zeigen die Kinder als normale Feldliste. */
+  cloze?: Cloze
   children: Node[]
 }
 

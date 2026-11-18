@@ -63,7 +63,7 @@ const barClass = computed(() => {
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0">
           <p class="text-sm font-medium">{{ title }}</p>
-          <p class="text-xs text-base-content/70">{{ detail }}</p>
+          <p class="text-xs text-base-content/75">{{ detail }}</p>
         </div>
         <button
           type="button"
@@ -76,7 +76,7 @@ const barClass = computed(() => {
 
       <progress class="progress mt-1 w-full" :class="barClass" :value="percent" max="100" :aria-label="`${percent} Prozent getippt`" />
 
-      <p v-if="hint" class="mt-1 text-xs text-base-content/60">{{ hint }}</p>
+      <p v-if="hint" class="mt-1 text-xs text-base-content/75">{{ hint }}</p>
 
       <div v-if="s.canControl" class="mt-2 flex gap-2">
         <button

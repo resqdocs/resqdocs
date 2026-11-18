@@ -15,12 +15,12 @@ onMounted(() => void refresh())
   <section class="card bg-base-100 shadow">
     <div class="card-body gap-3 p-4">
       <h3 class="font-medium">Text für den Knopf an der Bridge</h3>
-      <p class="text-sm text-base-content/70">
+      <p class="text-sm text-base-content/75">
         Die Bridge kann einen festen Text speichern und ihn ohne Handy tippen: Ein kurzer Druck auf ihren Knopf
         startet das Tippen, ein weiterer Druck bricht es ab.
       </p>
       <p v-if="summary" class="text-sm" role="status">{{ summary }}</p>
-      <p v-if="support === 'offline' && failReason" class="text-xs text-base-content/50">Technischer Grund: {{ failReason }}</p>
+      <p v-if="support === 'offline' && failReason" class="text-xs text-base-content/75">Technischer Grund: {{ failReason }}</p>
       <div class="flex flex-wrap items-center gap-2">
         <!-- Gesperrt nur, wenn die Bridge es sicher nicht kann (aeltere Firmware); sonst fragt der Dialog selbst neu. -->
         <button class="btn btn-sm min-h-11" type="button" :disabled="support === 'old' || checking" @click="requestButtonText()">Text bearbeiten</button>

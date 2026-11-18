@@ -80,7 +80,7 @@ onBeforeUnmount(close)
     ref="button"
     type="button"
     class="-mx-2.5 -my-3 inline-flex size-11 shrink-0 cursor-help items-center justify-center rounded-full align-middle hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
-    :class="open ? 'text-primary' : 'text-base-content/55'"
+    :class="open ? 'text-primary' : 'text-base-content/75'"
     :aria-label="`Erklärung: ${props.info.title}`"
     :aria-expanded="open"
     :aria-controls="open ? panelId : undefined"
@@ -115,7 +115,7 @@ onBeforeUnmount(close)
           </div>
         </dl>
         <div v-for="ex in props.info.examples" :key="ex.label">
-          <p class="text-xs text-base-content/60">{{ ex.label }}</p>
+          <p class="text-xs text-base-content/75">{{ ex.label }}</p>
           <pre class="overflow-x-auto rounded bg-base-200 px-2 py-1 font-mono text-xs whitespace-pre-wrap">{{ ex.output }}</pre>
         </div>
       </div>

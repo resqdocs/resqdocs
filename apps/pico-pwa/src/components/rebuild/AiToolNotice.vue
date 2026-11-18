@@ -53,7 +53,7 @@ async function dismiss(): Promise<void> {
       </p>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
         <a :href="aiUrl" target="_blank" rel="noopener" class="btn btn-primary btn-sm min-h-11">KI-Tool öffnen</a>
-        <span class="text-xs text-base-content/50">Import danach: ⋮ neben der Vorlage → „Daten" → „Importieren"</span>
+        <span class="text-xs text-base-content/75">Import danach: ⋮ neben der Vorlage → „Daten" → „Importieren"</span>
       </div>
     </div>
     <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11" aria-label="Hinweis ausblenden" @click="dismiss">✕</button>

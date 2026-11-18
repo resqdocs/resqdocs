@@ -34,25 +34,25 @@ function apply(): void {
 <template>
   <Teleport to="body">
     <div class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true" aria-label="BMI berechnen">
-      <div class="modal-box flex flex-col gap-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div class="modal-box flex flex-col space-y-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <h3 class="text-base font-semibold">BMI berechnen</h3>
 
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-base-content/60">Gewicht in kg</span>
+        <label class="flex flex-col space-y-1">
+          <span class="text-xs text-base-content/75">Gewicht in kg</span>
           <input v-model.number="weight" type="number" inputmode="decimal" min="1" step="0.1" placeholder="z. B. 80"
                  class="input input-sm w-full" aria-label="Gewicht in kg" @keyup.enter="apply" />
         </label>
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-base-content/60">Größe in cm</span>
+        <label class="flex flex-col space-y-1">
+          <span class="text-xs text-base-content/75">Größe in cm</span>
           <input v-model.number="height" type="number" inputmode="numeric" min="1" step="1" placeholder="z. B. 180"
                  class="input input-sm w-full" aria-label="Größe in cm" @keyup.enter="apply" />
         </label>
 
         <p class="rounded-lg bg-base-200 p-2 text-sm" role="status">
-          <template v-if="result"><strong>BMI {{ String(result.value).replace('.', ',') }}</strong> <span class="text-base-content/70">{{ result.klass }}</span></template>
-          <span v-else class="italic text-base-content/50">Beide Werte eingeben für das Ergebnis.</span>
+          <template v-if="result"><strong>BMI {{ String(result.value).replace('.', ',') }}</strong> <span class="text-base-content/75">{{ result.klass }}</span></template>
+          <span v-else class="italic text-base-content/75">Beide Werte eingeben für das Ergebnis.</span>
         </p>
-        <p class="text-xs text-base-content/60">Einordnung nach WHO, gilt für Erwachsene.</p>
+        <p class="text-xs text-base-content/75">Einordnung nach WHO, gilt für Erwachsene.</p>
 
         <div class="modal-action">
           <button type="button" class="btn btn-ghost btn-sm min-h-11" @click="emit('close')">Abbrechen</button>

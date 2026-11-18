@@ -30,7 +30,7 @@ function onDiagnostics(e: Event): void {
   <section class="card bg-base-100 shadow">
     <div class="card-body gap-3 p-4">
       <h3 class="font-medium">Scanner-Modus (Medikationsplan-Code)</h3>
-      <p class="text-sm text-base-content/70">
+      <p class="text-sm text-base-content/75">
         Strategie für den Medikationsplan-Scan. Für Vergleichstests umschaltbar;
         „WebView Standard" ist die Voreinstellung.
       </p>
@@ -51,7 +51,7 @@ function onDiagnostics(e: Event): void {
           {{ SCANNER_MODE_LABELS.native_zxingcpp }}{{ nativeHint }}
         </option>
       </select>
-      <p v-if="!nativeAvailable" class="text-xs text-base-content/60">
+      <p v-if="!nativeAvailable" class="text-xs text-base-content/75">
         „WebView Standard" ist die stabile Voreinstellung (schlanker Scan im WebView).
         „Nativ" öffnet in der App einen eigenen Kamerabildschirm mit Zoom, Tippen zum Scharfstellen
         und Licht; gelesen wird mit ZXing-C++. Kamerabilder werden weder gespeichert noch übertragen.

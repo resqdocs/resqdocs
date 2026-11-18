@@ -43,7 +43,7 @@ function close(): void {
 <template>
   <Teleport to="body">
     <div v-if="pendingImport" class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true" aria-label="Vorlagen übernehmen" data-import-choice>
-      <div class="modal-box flex max-h-[90vh] flex-col gap-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div class="modal-box flex max-h-[90vh] flex-col space-y-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <h3 class="text-base font-semibold">{{ pendingImport.trees.length === 1 ? 'Vorlage übernehmen' : 'Vorlagen übernehmen' }}</h3>
         <template v-if="!result">
           <ImportPickList v-model:rows="rows" :trees="pendingImport.trees" :existing-titles="existingTitles" />

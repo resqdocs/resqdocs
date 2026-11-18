@@ -33,13 +33,13 @@ function resetHints(): void {
         <li>Für Vorgehen, Bewertung und Dokumentation bleibst <strong>du verantwortlich</strong>.</li>
         <li>Keine Rechtsberatung, keine medizinische Garantie, keine Zusicherung vollständiger DSGVO-Konformität.</li>
       </ul>
-      <p class="text-sm text-base-content/70">
+      <p class="text-sm text-base-content/75">
         ResQDocs ist ein <strong>Open-Source-Projekt</strong> — Mitwirken (Issues, Beiträge) ist willkommen.
       </p>
       <div class="flex flex-wrap items-center gap-2">
         <button class="btn btn-sm min-h-11" type="button" @click="usageNotice.show()">Hinweis zur Nutzung</button>
         <button class="btn btn-sm min-h-11" type="button" @click="resetHints">Alle Hinweise erneut anzeigen</button>
-        <span v-if="!settings.dismissedHints.length" class="text-xs text-base-content/50">keine ausgeblendet</span>
+        <span v-if="!settings.dismissedHints.length" class="text-xs text-base-content/75">keine ausgeblendet</span>
       </div>
   </div>
 </template>

@@ -18,6 +18,7 @@ import { INFO } from '../terms.ts'
 import { defaultYields, withDefaultYield, moveDefaultYield } from '../defaultYield.ts'
 import { allowedFunctionKindsKey } from '../injection.ts'
 
+import ClozeSettings from './cloze/ClozeSettings.vue'
 const props = defineProps<{ root: Container }>()
 const tree = useTreeEditor()
 // Nur der Online-Editor stellt die Versions-Auswahl bereit. Dort gibt es keine Tab-Leiste, auf die ein Text verweisen koennte.
@@ -366,6 +367,8 @@ async function saveAsBaustein(): Promise<void> {
         <InfoTip :info="node.type === 'function' ? INFO.function : node.type === 'field' ? INFO.field : INFO.section" />
       </div>
 
+      <ClozeSettings v-if="node.type === 'container' && !isRoot" :node="node" :root="root" />
+
       <!-- ALLGEMEIN (eigener aufklappbarer Bereich, offen): das, was man fast immer einstellt - Titel und wie er im
            Protokolltext steht, Standardwert, Pflichtfeld, „nicht erhoben", gleiche Zeile. Abhaengige Einstellungen
            stehen eingerueckt direkt unter ihrem Schalter. Gleiches <details>-Muster wie „Erweitert" (siehe dort). -->
@@ -373,8 +376,8 @@ async function saveAsBaustein(): Promise<void> {
         <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <span class="shrink-0">Allgemein</span>
           <InfoTip :info="INFO.general" />
-          <span class="min-w-0 flex-1 truncate text-xs text-base-content/50">{{ node.title?.trim() || 'ohne Titel' }}</span>
-          <span class="shrink-0 text-base-content/50 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+          <span class="min-w-0 flex-1 truncate text-xs text-base-content/75">{{ node.title?.trim() || 'ohne Titel' }}</span>
+          <span class="shrink-0 text-base-content/75 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
         </summary>
         <!-- space-y statt flex-col+gap: WebKit/WKWebView rechnet vertikale gap-Abstaende beim ersten Layout
              doppelt (kam mit a2350bf zurueck). Waechter: webkitGap.test.ts. -->
@@ -398,7 +401,7 @@ async function saveAsBaustein(): Promise<void> {
       <fieldset v-if="node.type === 'function'" class="fieldset">
         <legend class="fieldset-legend">Standardwert (wenn leer / nicht erhoben)</legend>
         <input class="input w-full" :value="node.default ?? ''" :placeholder="isListFunction ? 'z. B. keine Dauermedikation bekannt' : 'z. B. Score nicht erhoben'" @input="set({ default: ($event.target as HTMLInputElement).value || undefined })" />
-        <p class="text-xs text-base-content/50">Steht im Protokolltext, wenn die Funktion nichts ausgibt (keine Einträge / kein Ergebnis). Erfasste Werte haben Vorrang.</p>
+        <p class="text-xs text-base-content/75">Steht im Protokolltext, wenn die Funktion nichts ausgibt (keine Einträge / kein Ergebnis). Erfasste Werte haben Vorrang.</p>
       </fieldset>
 
       <!-- BASIS: Ueberschrift/Titel in der Ausgabe (showTitle). Beim Feld = „Abschnitt mit Ueberschrift".
@@ -415,7 +418,7 @@ async function saveAsBaustein(): Promise<void> {
            zu gross und korrigiert erst nach einem Reflow (Tap) — margin-basierter Abstand umgeht den Bug.
            Quellen: Apple DevForums 737214, daisyUI #2410, Tailwind #3394, philipwalton/flexbugs. -->
       <div v-if="node.showTitle && hasTitle" class="space-y-3 border-l-2 border-base-300 pl-3" data-title-format>
-        <span class="text-xs font-semibold text-base-content/60">Titel-Format <InfoTip :info="INFO.titleFormat" /></span>
+        <span class="text-xs font-semibold text-base-content/75">Titel-Format <InfoTip :info="INFO.titleFormat" /></span>
         <fieldset class="fieldset">
           <legend class="fieldset-legend">Präfix <InfoTip :info="INFO.prefix" /></legend>
           <input class="input w-full font-mono" :value="heading.prefix" placeholder="## " @input="setHeading({ prefix: ($event.target as HTMLInputElement).value })" />
@@ -466,7 +469,7 @@ async function saveAsBaustein(): Promise<void> {
         :title="node.defaultExcluded ? 'Nicht zusammen mit „Startet auf \u201anicht erhoben\u2018\u201c moeglich.' : undefined"
       >
         <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.required === true" :disabled="node.defaultExcluded === true" @change="set({ required: ($event.target as HTMLInputElement).checked || undefined })" />
-        <span class="text-sm">Pflichtfeld <span class="whitespace-nowrap text-base-content/50">(✓ / ✎, kein „nicht erhoben")</span></span>
+        <span class="text-sm">Pflichtfeld <span class="whitespace-nowrap text-base-content/75">(✓ / ✎, kein „nicht erhoben")</span></span>
         <InfoTip :info="INFO.required" class="ml-auto" />
       </label>
 
@@ -496,7 +499,7 @@ async function saveAsBaustein(): Promise<void> {
           :disabled="node.required === true || !!node.dependsOn"
           @change="set({ defaultExcluded: ($event.target as HTMLInputElement).checked || undefined })"
         />
-        <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/50">(nur bei Bedarf einschalten)</span></span>
+        <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/75">(nur bei Bedarf einschalten)</span></span>
         <InfoTip :info="node.type === 'function' ? INFO.functionStartsExcluded : INFO.fieldStartsExcluded" class="ml-auto" />
       </label>
 
@@ -553,7 +556,7 @@ async function saveAsBaustein(): Promise<void> {
           :disabled="!!node.dependsOn"
           @change="set(($event.target as HTMLInputElement).checked ? { defaultExcluded: true, excludable: true } : { defaultExcluded: undefined })"
         />
-        <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/50">(nur bei Bedarf zuschalten)</span></span>
+        <span class="text-sm">Startet auf „nicht erhoben" <span class="whitespace-nowrap text-base-content/75">(nur bei Bedarf zuschalten)</span></span>
         <InfoTip :info="INFO.sectionStartsExcluded" class="ml-auto" />
       </label>
 
@@ -580,18 +583,18 @@ async function saveAsBaustein(): Promise<void> {
         <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <span class="shrink-0">Listenoptionen</span>
           <InfoTip :info="INFO.listOptions" />
-          <span class="min-w-0 flex-1 truncate text-xs text-base-content/50">{{ listSummary }}</span>
-          <span class="shrink-0 text-base-content/50 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+          <span class="min-w-0 flex-1 truncate text-xs text-base-content/75">{{ listSummary }}</span>
+          <span class="shrink-0 text-base-content/75 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
         </summary>
         <div class="space-y-2 px-4 pb-4">
-        <span class="text-xs font-semibold text-base-content/60">Auswahl-Optionen <span class="font-normal text-base-content/40">(leer = einfaches Feld)</span> <InfoTip :info="INFO.options" /></span>
+        <span class="text-xs font-semibold text-base-content/75">Auswahl-Optionen <span class="font-normal text-base-content/75">(leer = einfaches Feld)</span> <InfoTip :info="INFO.options" /></span>
         <div v-for="(opt, i) in (node.options ?? [])" :key="i" class="flex items-center gap-1">
           <input v-if="!(node.multiple && node.defaultEmpty) && new Set((node.options ?? []).filter((o) => o !== '')).size > 1" type="radio" class="radio radio-xs shrink-0" :name="`default-${node.id}`" :checked="effectiveFieldDefault === opt" :aria-label="`als Standardwert: ${opt}`" title="als Standard" @change="setDefaultOption(opt)" />
           <input class="input input-sm min-w-0 flex-1" :value="opt" placeholder="Option" @input="setOption(i, ($event.target as HTMLInputElement).value)" />
           <!-- Multi-Select: Option als „schliesst andere aus" (Keine/Normal) markieren -->
           <label v-if="node.multiple && opt !== ''" class="flex shrink-0 cursor-pointer items-center gap-1" :title="`„${opt}“ schließt andere Auswahlen aus`">
             <input type="checkbox" class="checkbox checkbox-xs" :checked="(node.exclusiveOptions ?? []).includes(opt)" :aria-label="`„${opt}“ schließt andere aus`" @change="toggleExclusiveOption(opt, ($event.target as HTMLInputElement).checked)" />
-            <span class="text-xs text-base-content/50">allein</span>
+            <span class="text-xs text-base-content/75">allein</span>
           </label>
           <button type="button" class="btn btn-ghost btn-xs px-1" :disabled="i === 0" aria-label="nach oben" @click="moveOption(i, -1)">↑</button>
           <button type="button" class="btn btn-ghost btn-xs px-1" :disabled="i === (node.options?.length ?? 0) - 1" aria-label="nach unten" @click="moveOption(i, 1)">↓</button>
@@ -613,13 +616,13 @@ async function saveAsBaustein(): Promise<void> {
             autocapitalize="off"
             spellcheck="false"
           />
-          <p class="text-xs text-base-content/50">Vorhandene Optionen bleiben; doppelte werden übersprungen.</p>
+          <p class="text-xs text-base-content/75">Vorhandene Optionen bleiben; doppelte werden übersprungen.</p>
           <div class="flex gap-1">
             <button type="button" class="btn btn-primary btn-xs" :disabled="!pasteText.trim()" @click="applyPastedOptions">Übernehmen</button>
             <button type="button" class="btn btn-ghost btn-xs" @click="pasteOpen = false; pasteText = ''">Abbrechen</button>
           </div>
         </div>
-        <p v-if="pasteInfo" class="text-xs text-base-content/60" role="status">{{ pasteInfo }}</p>
+        <p v-if="pasteInfo" class="text-xs text-base-content/75" role="status">{{ pasteInfo }}</p>
         <label v-if="node.options && node.options.length" class="flex w-full cursor-pointer items-center gap-2 py-0">
           <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.allowCustom === true" @change="set(($event.target as HTMLInputElement).checked ? { allowCustom: true } : { allowCustom: false, customMultiline: undefined })" />
           <span class="text-sm">„individuell" erlauben (Freitext als letzte Option)</span>
@@ -628,7 +631,7 @@ async function saveAsBaustein(): Promise<void> {
         <!-- Nur bei „individuell": frei schreiben im grossen Textfeld statt in einer Zeile. -->
         <label v-if="node.options && node.options.length && node.allowCustom" class="flex w-full cursor-pointer items-center gap-2 py-0">
           <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.customMultiline === true" @change="set({ customMultiline: ($event.target as HTMLInputElement).checked ? true : undefined })" />
-          <span class="text-sm">Großes Textfeld bei „individuell" <span class="text-base-content/50">(für längere Texte)</span></span>
+          <span class="text-sm">Großes Textfeld bei „individuell" <span class="text-base-content/75">(für längere Texte)</span></span>
           <InfoTip :info="INFO.customMultiline" class="ml-auto" />
         </label>
         <label v-if="node.options && node.options.length" class="flex w-full cursor-pointer items-center gap-2 py-0">
@@ -640,13 +643,13 @@ async function saveAsBaustein(): Promise<void> {
              Standard-Option wie bisher vorausgewaehlt. Beim Einschalten den (dann bedeutungslosen) Standard raeumen. -->
         <label v-if="node.multiple" class="flex w-full cursor-pointer items-center gap-2 py-0">
           <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.defaultEmpty === true" @change="set(($event.target as HTMLInputElement).checked ? { defaultEmpty: true, default: undefined } : { defaultEmpty: undefined })" />
-          <span class="text-sm">Startet ohne Auswahl <span class="text-base-content/50">(nichts vorausgewählt, z. B. Einsatzcodes)</span></span>
+          <span class="text-sm">Startet ohne Auswahl <span class="text-base-content/75">(nichts vorausgewählt, z. B. Einsatzcodes)</span></span>
           <InfoTip :info="INFO.defaultEmpty" class="ml-auto" />
         </label>
         <!-- Standardwert als pauschale Aussage (z. B. Normalbefund): weicht, sobald genauer gewaehlt wird. -->
         <label v-if="node.multiple && !node.defaultEmpty && effectiveFieldDefault" class="flex w-full cursor-pointer items-center gap-2 py-0">
           <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="defaultYield" @change="setDefaultYield(($event.target as HTMLInputElement).checked)" />
-          <span class="text-sm">Standardwert weicht <span class="text-base-content/50">(verschwindet, sobald etwas anderes gewählt wird)</span></span>
+          <span class="text-sm">Standardwert weicht <span class="text-base-content/75">(verschwindet, sobald etwas anderes gewählt wird)</span></span>
           <InfoTip :info="INFO.defaultYield" class="ml-auto" />
         </label>
         </div>
@@ -662,23 +665,23 @@ async function saveAsBaustein(): Promise<void> {
           <span class="shrink-0">Funktionskonfiguration</span>
           <InfoTip :info="INFO.functionConfig" />
           <span class="flex-1" aria-hidden="true"></span>
-          <span class="shrink-0 text-base-content/50 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+          <span class="shrink-0 text-base-content/75 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
         </summary>
         <div class="space-y-2 px-4 pb-4">
           <fieldset v-if="thresholdTextDef" class="fieldset">
             <legend class="fieldset-legend">{{ thresholdTextDef.label }} <InfoTip :info="INFO.thresholdText" /></legend>
             <input class="input w-full" :value="node.config?.thresholdText ?? ''" :placeholder="thresholdTextDef.standard" @input="setConfig({ thresholdText: ($event.target as HTMLInputElement).value.trim() ? ($event.target as HTMLInputElement).value : undefined })" />
-            <p class="text-xs text-base-content/50">leer = Standard „{{ thresholdTextDef.standard }}“</p>
+            <p class="text-xs text-base-content/75">leer = Standard „{{ thresholdTextDef.standard }}“</p>
           </fieldset>
           <fieldset v-if="lineEndDef" class="fieldset">
             <legend class="fieldset-legend">{{ lineEndDef.label }} <InfoTip :info="INFO.lineEnd" /></legend>
             <input class="input w-24 font-mono" :value="node.config?.lineEnd ?? lineEndDef.standard" @input="setLineEnd(($event.target as HTMLInputElement).value)" />
-            <p class="text-xs text-base-content/50">{{ lineEndDef.standard ? `Standard „${lineEndDef.standard}“ · leer = nichts am Ende` : 'Standard: nichts am Ende' }}</p>
+            <p class="text-xs text-base-content/75">{{ lineEndDef.standard ? `Standard „${lineEndDef.standard}“ · leer = nichts am Ende` : 'Standard: nichts am Ende' }}</p>
           </fieldset>
           <!-- Listen-Funktion (Medikamentenplan/Kontakte/Ärzte): Zeilen-Format. Score-Funktionen haben keine
                Zeilen-Liste -> kein Zeilen-Format. -->
           <template v-if="isListFunction">
-            <span class="text-xs font-semibold text-base-content/60">Zeilen-Format</span>
+            <span class="text-xs font-semibold text-base-content/75">Zeilen-Format</span>
             <label class="flex w-full cursor-pointer items-center gap-2 py-0">
               <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.config?.rowLayout === 'inline'" @change="setConfig(($event.target as HTMLInputElement).checked ? { rowLayout: 'inline', rowPrefix: undefined, rowSuffix: undefined } : { rowLayout: 'block', rowSeparator: undefined })" />
               <span class="text-sm">Hintereinander (eine Zeile, mit Trenner) statt untereinander</span>
@@ -689,7 +692,7 @@ async function saveAsBaustein(): Promise<void> {
               <legend class="fieldset-legend">Trenner zwischen Einträgen <InfoTip :info="INFO.rowSeparator" /></legend>
               <input class="input w-full font-mono" :value="node.config?.rowSeparator ?? ''" placeholder="z. B.  ·  oder ;" @input="setConfig({ rowSeparator: ($event.target as HTMLInputElement).value || undefined })" />
               <!-- Wert aus der Konstante, die der Renderer nutzt - sonst laufen Text und Ausgabe wieder auseinander. -->
-              <p class="text-xs text-base-content/50">leer = Standard-Trenner „{{ FUNCTION_ROW_INLINE_SEPARATOR }}“ (Mittelpunkt)</p>
+              <p class="text-xs text-base-content/75">leer = Standard-Trenner „{{ FUNCTION_ROW_INLINE_SEPARATOR }}“ (Mittelpunkt)</p>
             </fieldset>
             <!-- untereinander -> Praefix/Suffix je Zeile -->
             <template v-else>
@@ -712,8 +715,8 @@ async function saveAsBaustein(): Promise<void> {
         <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <span class="shrink-0">Abhängigkeit</span>
           <InfoTip :info="INFO.dependency" />
-          <span class="min-w-0 flex-1 truncate text-xs " :class="depBroken ? 'text-error' : 'text-base-content/50'">{{ depSummary }}</span>
-          <span class="shrink-0 text-base-content/50 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+          <span class="min-w-0 flex-1 truncate text-xs " :class="depBroken ? 'text-error' : 'text-base-content/75'">{{ depSummary }}</span>
+          <span class="shrink-0 text-base-content/75 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
         </summary>
         <div class="space-y-4 px-4 pb-4">
           <!-- ERSCHEINEN: das Element ist im Einsatz ausgeblendet, bis die Bedingungen zutreffen. -->
@@ -733,13 +736,13 @@ async function saveAsBaustein(): Promise<void> {
               <span class="text-sm">Nur anzeigen, wenn eine Bedingung zutrifft</span>
               <InfoTip :info="INFO.dependencyVisible" class="ml-auto" />
             </label>
-            <p v-if="!depCandidates.length && !node.dependsOn" class="text-xs text-base-content/60">
+            <p v-if="!depCandidates.length && !node.dependsOn" class="text-xs text-base-content/75">
               In dieser Vorlage gibt es noch kein anderes Feld mit Auswahl-Optionen, von dem dieses Element abhängen könnte.
             </p>
             <template v-if="node.dependsOn">
               <div v-for="(c, i) in depConditions" :key="i" class="space-y-2 rounded-lg border border-base-300 p-3">
                 <div class="flex items-center justify-between gap-2">
-                  <span class="text-xs font-semibold text-base-content/60">Bedingung {{ i + 1 }}</span>
+                  <span class="text-xs font-semibold text-base-content/75">Bedingung {{ i + 1 }}</span>
                   <button v-if="depConditions.length > 1" type="button" class="btn btn-ghost btn-xs text-error" @click="removeCondition(i)">Entfernen</button>
                 </div>
                 <ConditionEditor :root="root" :condition="c" :choices="depCandidates" options-label="Trifft zu, wenn eine davon gewählt ist" @update="updateCondition(i, $event)" />
@@ -747,7 +750,7 @@ async function saveAsBaustein(): Promise<void> {
               <button v-if="depConditions.length < MAX_CONDITIONS" type="button" class="btn btn-ghost btn-xs" @click="addCondition">＋ Weitere Bedingung</button>
               <label v-if="depConditions.length > 1" class="flex w-full cursor-pointer items-center gap-2 py-0">
                 <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.dependsOn.match === 'any'" @change="setMatchAny(($event.target as HTMLInputElement).checked)" />
-                <span class="text-sm">Eine Bedingung genügt <span class="text-base-content/50">(sonst müssen alle zutreffen)</span></span>
+                <span class="text-sm">Eine Bedingung genügt <span class="text-base-content/75">(sonst müssen alle zutreffen)</span></span>
                 <InfoTip :info="INFO.dependencyAny" class="ml-auto" />
               </label>
             </template>
@@ -761,7 +764,7 @@ async function saveAsBaustein(): Promise<void> {
             </div>
             <div v-for="(r, i) in defaultRules" :key="i" class="space-y-2 rounded-lg border border-base-300 p-3">
               <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-semibold text-base-content/60">Regel {{ i + 1 }}</span>
+                <span class="text-xs font-semibold text-base-content/75">Regel {{ i + 1 }}</span>
                 <button type="button" class="btn btn-ghost btn-xs text-error" @click="removeDefaultRule(i)">Entfernen</button>
               </div>
               <ConditionEditor :root="root" :condition="r" :choices="depCandidates" options-label="Gilt, wenn eine davon gewählt ist" @update="updateDefaultRule(i, $event)" />
@@ -775,11 +778,11 @@ async function saveAsBaustein(): Promise<void> {
                 <input v-else class="input w-full" :value="r.value" @input="updateDefaultRule(i, { value: ($event.target as HTMLInputElement).value })" />
               </fieldset>
             </div>
-            <p v-if="!depCandidates.length && !defaultRules.length" class="text-xs text-base-content/60">
+            <p v-if="!depCandidates.length && !defaultRules.length" class="text-xs text-base-content/75">
               Dafür braucht es ein anderes Feld mit Auswahl-Optionen.
             </p>
             <button v-if="defaultRules.length < MAX_DEFAULT_RULES" type="button" class="btn btn-ghost btn-xs" :disabled="!depCandidates.length" @click="addDefaultRule">＋ Regel hinzufügen</button>
-            <p v-if="defaultRules.length > 1" class="text-xs text-base-content/50">Treffen mehrere Regeln zu, gilt die oberste.</p>
+            <p v-if="defaultRules.length > 1" class="text-xs text-base-content/75">Treffen mehrere Regeln zu, gilt die oberste.</p>
           </div>
         </div>
       </details>
@@ -795,8 +798,8 @@ async function saveAsBaustein(): Promise<void> {
         <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <span class="shrink-0">Erweitert</span>
           <InfoTip :info="INFO.advanced" />
-          <code class="min-w-0 flex-1 truncate font-mono text-xs text-base-content/50">id: {{ node.id }}</code>
-          <span class="shrink-0 text-base-content/50 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+          <code class="min-w-0 flex-1 truncate font-mono text-xs text-base-content/75">id: {{ node.id }}</code>
+          <span class="shrink-0 text-base-content/75 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
         </summary>
         <div class="space-y-3 px-4 pb-4">
           <!-- Identifier (id): interner Schluessel, auto-vergeben, selten noetig. Sichtbare Inline-Validierung.
@@ -806,17 +809,17 @@ async function saveAsBaustein(): Promise<void> {
             <legend class="fieldset-legend">Kennung (id) <InfoTip :info="INFO.id" /></legend>
             <input class="input w-full font-mono" :class="idError ? 'input-error' : ''" v-model="idDraft" @change="commitId" @blur="commitId" />
             <p v-if="idError" role="alert" class="flex items-start gap-1 text-sm text-error"><span aria-hidden="true">⚠</span><span>{{ idError }}</span></p>
-            <p v-else class="text-xs text-base-content/50">Interne Kennung · wird automatisch vergeben · normalerweise nicht ändern</p>
+            <p v-else class="text-xs text-base-content/75">Interne Kennung · wird automatisch vergeben · normalerweise nicht ändern</p>
           </fieldset>
-          <p v-else class="text-xs text-base-content/50">Oberste Ebene der Vorlage · die Kennung „{{ node.id }}" wird über die Bibliothek verwaltet (Titel umbenennen).</p>
+          <p v-else class="text-xs text-base-content/75">Oberste Ebene der Vorlage · die Kennung „{{ node.id }}" wird über die Bibliothek verwaltet (Titel umbenennen).</p>
 
           <!-- CONTAINER: Ausgabe-Optionen (Feld-Trenner + Text wenn leer) -->
           <template v-if="node.type === 'container'">
             <fieldset v-if="node.children.length > 0" class="fieldset">
               <legend class="fieldset-legend">Feld-Trenner (zwischen inline-Elementen) <InfoTip :info="INFO.separator" /></legend>
               <input class="input w-full font-mono" :value="node.separator ?? ''" :placeholder="separatorPlaceholder" @input="setSeparator(($event.target as HTMLInputElement).value)" />
-              <p v-if="isRoot" class="text-xs text-base-content/50">Gilt für die ganze Vorlage · leer = „, "</p>
-              <p v-else class="text-xs text-base-content/50">leer = erbt · aktuell wirksam: „{{ effectiveSeparator }}"</p>
+              <p v-if="isRoot" class="text-xs text-base-content/75">Gilt für die ganze Vorlage · leer = „, "</p>
+              <p v-else class="text-xs text-base-content/75">leer = erbt · aktuell wirksam: „{{ effectiveSeparator }}"</p>
             </fieldset>
             <!-- „Text wenn leer" NICHT am Wurzel-Container: greift nur, wenn das GANZE Protokoll leer
                  rendert (render.ts:137-139) — ein komplett leeres Protokoll braucht ohnehin keine Ausgabe.
@@ -824,7 +827,7 @@ async function saveAsBaustein(): Promise<void> {
             <fieldset v-if="!isRoot" class="fieldset">
               <legend class="fieldset-legend">Text wenn leer <InfoTip :info="INFO.emptyText" /></legend>
               <input class="input w-full" :value="node.emptyText ?? ''" placeholder="z. B. unauffällig" @input="set({ emptyText: ($event.target as HTMLInputElement).value || undefined })" />
-              <p class="text-xs text-base-content/50">Steht im Protokolltext, wenn der Abschnitt angezeigt wird, seine Felder aber nichts ausgeben.</p>
+              <p class="text-xs text-base-content/75">Steht im Protokolltext, wenn der Abschnitt angezeigt wird, seine Felder aber nichts ausgeben.</p>
             </fieldset>
           </template>
 
@@ -832,7 +835,7 @@ async function saveAsBaustein(): Promise<void> {
       </details>
     </div>
   </div>
-  <p v-else class="text-sm text-base-content/50">Nichts ausgewählt — links unter „Aufbau" einen Eintrag wählen.</p>
+  <p v-else class="text-sm text-base-content/75">Nichts ausgewählt — links unter „Aufbau" einen Eintrag wählen.</p>
 
   <!-- Option loeschen: gleiches Modal wie Block-/Vorlagen-Loeschen (einheitlich, kein nativer confirm) -->
   <ConfirmDialog

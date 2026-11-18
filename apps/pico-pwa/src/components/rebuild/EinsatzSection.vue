@@ -20,12 +20,18 @@ import MedplanFunction from '@resqdocs/protocol-core-ui/components/functions/Med
 import AerzteFunction from '@resqdocs/protocol-core-ui/components/functions/AerzteFunction.vue'
 import ScoreFunction from '@resqdocs/protocol-core-ui/components/functions/ScoreFunction.vue'
 import ContainerFillToggle from './ContainerFillToggle.vue'
+import ClozeFill from '@resqdocs/protocol-core-ui/components/cloze/ClozeFill.vue'
+import { clozeOf, clozeLeftovers } from '@resqdocs/protocol-core/cloze'
 
 const props = defineProps<{ node: Container; depth: number; insideCollapse: boolean }>()
 const caseValues = useCaseValues()
 // Elemente, die eine Abhaengigkeit gerade ausblendet, erscheinen nicht im Formular.
 const dependencyHidden = useDependencyHidden()
-const visibleChildren = computed(() => props.node.children.filter((child) => !dependencyHidden.value.has(child.id)))
+// Lückentext: der Abschnitt zeigt seinen Text mit Lücken; darunter nur die Kinder, die in keiner Lücke stehen.
+const cloze = computed(() => clozeOf(props.node))
+const visibleChildren = computed(() =>
+  (cloze.value ? clozeLeftovers(props.node, cloze.value) : props.node.children).filter((child) => !dependencyHidden.value.has(child.id)),
+)
 
 // excludable + „nicht erhoben" -> ganze Sektion gedimmt, Kinder weg (entfallen in der Ausgabe).
 const excluded = computed(() => Boolean(props.node.excludable) && caseValues.get(props.node.id, props.node).state === 'excluded')
@@ -55,16 +61,16 @@ const headingTag = computed(() => `h${Math.min(props.depth + 3, 6)}`)
 // (docs/rework/einsatz-hierarchy.md; NN/g visual-hierarchy + GOV.UK headings)
 const headingClass = computed(() => {
   if (props.depth === 0) return 'text-sm font-semibold text-base-content/80'
-  return 'text-[11px] font-semibold uppercase tracking-wide text-base-content/55'
+  return 'text-[11px] font-semibold uppercase tracking-wide text-base-content/75'
 })
 </script>
 
 <template>
   <!-- nicht erhoben: gedimmter Kopf + Status, Kinder weg (entfallen in der Ausgabe) -->
-  <div v-if="excluded" class="flex items-center gap-2 opacity-60" :class="depth === 1 ? 'border-l border-base-200 pl-3' : ''">
+  <div v-if="excluded" class="flex items-center gap-2" :class="depth === 1 ? 'border-l border-base-200 pl-3' : ''">
     <ContainerFillToggle :node="node" />
     <component :is="headingTag" :class="headingClass">{{ label(node) }}</component>
-    <span class="text-xs italic text-base-content/50">nicht erhoben</span>
+    <span class="text-xs italic text-base-content/75">nicht erhoben</span>
   </div>
 
   <details v-else-if="renderAsCollapse" class="collapse-arrow collapse rounded-lg border border-base-300 bg-base-100" :open="open" @toggle="open = ($event.target as HTMLDetailsElement).open">
@@ -78,11 +84,12 @@ const headingClass = computed(() => {
              (der „*"-Sprachcode der Felder; amber = noch offen). -->
         <span v-if="openRequired > 0" class="badge badge-warning badge-sm gap-0.5" :title="`${openRequired} Pflichtfeld${openRequired === 1 ? '' : 'er'} noch offen`"><span aria-hidden="true">*</span>{{ openRequired }}<span class="sr-only"> Pflichtfeld(er) noch offen</span></span>
         <span v-if="deviations > 0" class="badge badge-warning badge-sm">{{ deviations }} abweichend</span>
-        <span v-else-if="openRequired === 0" class="text-xs text-base-content/40">Standard</span>
+        <span v-else-if="openRequired === 0" class="text-xs text-base-content/75">Standard</span>
       </span>
     </summary>
     <div class="collapse-content">
       <div class="flex flex-col gap-1.5 pt-1">
+        <ClozeFill v-if="cloze" :node="node" />
         <template v-for="child in visibleChildren" :key="child.id">
           <EinsatzSection v-if="child.type === 'container'" :node="child" :depth="depth + 1" :inside-collapse="childInside" />
           <MedplanFunction v-else-if="child.type === 'function' && child.functionKind === 'medikamentenplan'" :node="child" />
@@ -90,7 +97,7 @@ const headingClass = computed(() => {
           <ScoreFunction v-else-if="child.type === 'function'" :node="child" />
           <EinsatzField v-else-if="child.type === 'field'" :node="child" />
         </template>
-        <p v-if="!node.children.length" class="text-xs italic text-base-content/40">(noch keine Elemente)</p>
+        <p v-if="!node.children.length" class="text-xs italic text-base-content/75">(noch keine Elemente)</p>
       </div>
     </div>
   </details>
@@ -104,6 +111,7 @@ const headingClass = computed(() => {
       <component :is="headingTag" :class="headingClass">{{ label(node) }}</component>
       <span v-if="openRequired > 0" class="badge badge-warning badge-sm gap-0.5 shrink-0" :title="`${openRequired} Pflichtfeld${openRequired === 1 ? '' : 'er'} noch offen`"><span aria-hidden="true">*</span>{{ openRequired }}<span class="sr-only"> Pflichtfeld(er) noch offen</span></span>
     </div>
+    <ClozeFill v-if="cloze" :node="node" />
     <template v-if="node.children.length">
       <template v-for="child in visibleChildren" :key="child.id">
         <EinsatzSection v-if="child.type === 'container'" :node="child" :depth="depth + 1" :inside-collapse="childInside" />

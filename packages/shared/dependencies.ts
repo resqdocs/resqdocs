@@ -320,6 +320,17 @@ export function remapDependencyIds<T extends Node>(node: T, renamed: ReadonlyMap
     const rules = moved(out.defaultWhen)
     if (rules) out = { ...out, defaultWhen: rules }
   }
+  if (out.type === 'container' && out.cloze && Array.isArray(out.cloze.parts)) {
+    // Lücken eines Lückentexts zeigen ebenfalls per Kennung auf Elemente.
+    let moved = false
+    const parts = out.cloze.parts.map((part) => {
+      const target = part && typeof part === 'object' && typeof part.gap === 'string' ? renamed.get(part.gap) : undefined
+      if (target === undefined || typeof part === 'string' || target === part.gap) return part
+      moved = true
+      return { ...part, gap: target }
+    })
+    if (moved) out = { ...out, cloze: { ...out.cloze, parts } }
+  }
   if (out.type === 'container') {
     let changed = false
     const children = out.children.map((child) => {

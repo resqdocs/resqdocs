@@ -12,7 +12,7 @@ function label(n: Node): string {
 <template>
   <!-- Feld: Blatt mit Standardwert -->
   <div v-if="node.type === 'field'" class="text-sm">
-    <span class="text-secondary" aria-hidden="true">◆</span> {{ label(node) }}<span v-if="node.default" class="text-base-content/60">: {{ node.default }}</span>
+    <span class="text-secondary" aria-hidden="true">◆</span> {{ label(node) }}<span v-if="node.default" class="text-base-content/75">: {{ node.default }}</span>
   </div>
 
   <!-- Funktion: Blatt -->
@@ -25,7 +25,7 @@ function label(n: Node): string {
     <summary class="cursor-pointer px-2 py-1 text-sm font-medium">{{ label(node) }}</summary>
     <div class="flex flex-col gap-1 px-2 pb-2 pl-3">
       <ContainerPreviewNode v-for="child in node.children" :key="child.id" :node="child" />
-      <p v-if="!node.children.length" class="text-xs italic text-base-content/40">(leer)</p>
+      <p v-if="!node.children.length" class="text-xs italic text-base-content/75">(leer)</p>
     </div>
   </details>
 

@@ -118,7 +118,7 @@ async function runReset(): Promise<void> {
   <div class="flex flex-col gap-3">
     <h3 class="font-medium">Datenschutz &amp; lokale Daten</h3>
 
-    <ul class="list-disc pl-5 text-xs text-base-content/70">
+    <ul class="list-disc pl-5 text-xs text-base-content/75">
       <li>Patientendaten werden <strong>nicht dauerhaft gespeichert</strong>.</li>
       <li>
         Ein laufender Einsatz bleibt lokal erhalten (auch nach App-Neustart) und wird durch
@@ -141,7 +141,7 @@ async function runReset(): Promise<void> {
           <option v-for="h in TTL_OPTIONS" :key="h" :value="h">{{ h }} {{ h === 1 ? 'Stunde' : 'Stunden' }}</option>
         </select>
       </label>
-      <p class="mt-1 text-xs text-base-content/60">
+      <p class="mt-1 text-xs text-base-content/75">
         Jede Bearbeitung setzt die Zeit neu. Ohne Bearbeitung wird der laufende Einsatz nach dieser
         Frist automatisch gelöscht.
       </p>
@@ -170,12 +170,12 @@ async function runReset(): Promise<void> {
               'text-success': diagVerdict(diag).kind === 'ok',
               'text-warning': diagVerdict(diag).kind === 'warn',
               'text-error': diagVerdict(diag).kind === 'err',
-              'text-base-content/60': diagVerdict(diag).kind === 'info',
+              'text-base-content/75': diagVerdict(diag).kind === 'info',
             }"
           >
             {{ diagVerdict(diag).msg }}
           </p>
-          <p class="mt-1 text-[11px] text-base-content/40">
+          <p class="mt-1 text-[11px] text-base-content/75">
             Speicher: {{ diag.native ? diag.platform : 'web' }} ·
             Migrationsstand: {{ diag.migrationVersion ?? '–' }}
             <br />
@@ -185,14 +185,14 @@ async function runReset(): Promise<void> {
             Textbausteine: {{ diag.snippetRows ?? '–' }}
           </p>
         </template>
-        <p v-else class="mt-1 text-xs text-base-content/60">Status wird ermittelt …</p>
+        <p v-else class="mt-1 text-xs text-base-content/75">Status wird ermittelt …</p>
       </div>
     </div>
 
     <!-- Werksreset -->
     <div class="rounded-lg border border-error/30 p-3">
       <p class="text-sm font-medium">App zurücksetzen</p>
-      <p class="mt-1 text-xs text-base-content/60">
+      <p class="mt-1 text-xs text-base-content/75">
         Setzt die App auf den Auslieferungszustand zurück: löscht alle Vorlagen, gespeicherten Abschnitte, Textbausteine,
         Einstellungen und einen laufenden Einsatz. Gedacht für die Weitergabe oder Ausmusterung des Geräts.
       </p>

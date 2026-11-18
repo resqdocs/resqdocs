@@ -6,6 +6,7 @@
 import type { Container, Field, FunctionNode, FunctionKind, Node, FieldFill } from './model.ts'
 import { FUNCTION_REGISTRY } from './functions/registry.ts'
 import { remapDependencyIds } from './dependencies.ts'
+import { pruneCloze } from './cloze.ts'
 
 export function createContainer(id: string): Container {
   return { type: 'container', id, children: [] }
@@ -137,7 +138,8 @@ function addIn(node: Node, parentId: string, child: Node): Node {
 
 /** Immutabel: Knoten per id entfernen (die Wurzel selbst nicht). No-Op -> selbe Referenz. */
 export function removeNode(root: Container, id: string): Container {
-  return removeIn(root, id) as Container
+  const next = removeIn(root, id) as Container
+  return next === root ? root : pruneCloze(next) // Lücken, die auf das Entfernte zeigten, verschwinden mit
 }
 function removeIn(node: Node, id: string): Node {
   if (node.type !== 'container') return node

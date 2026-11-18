@@ -38,23 +38,23 @@ function apply(): void {
 <template>
   <Teleport to="body">
     <div class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true" aria-label="Pack-Years berechnen">
-      <div class="modal-box flex flex-col gap-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div class="modal-box flex flex-col space-y-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <h3 class="text-base font-semibold">Pack-Years berechnen</h3>
 
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-base-content/60">Zigaretten pro Tag</span>
+        <label class="flex flex-col space-y-1">
+          <span class="text-xs text-base-content/75">Zigaretten pro Tag</span>
           <input v-model.number="cig" type="number" inputmode="numeric" min="0" step="1" placeholder="z. B. 20"
                  class="input input-sm w-full" aria-label="Zigaretten pro Tag" @keyup.enter="apply" />
         </label>
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-base-content/60">Raucherjahre</span>
+        <label class="flex flex-col space-y-1">
+          <span class="text-xs text-base-content/75">Raucherjahre</span>
           <input v-model.number="yrs" type="number" inputmode="numeric" min="0" step="1" placeholder="z. B. 15"
                  class="input input-sm w-full" aria-label="Raucherjahre" @keyup.enter="apply" />
         </label>
 
         <p class="rounded-lg bg-base-200 p-2 text-sm" role="status">
-          <template v-if="previewText"><strong>{{ previewText }}</strong> <span class="text-base-content/60">(Zig./Tag ÷ 20 × Jahre)</span></template>
-          <span v-else class="italic text-base-content/50">Beide Werte eingeben für das Ergebnis.</span>
+          <template v-if="previewText"><strong>{{ previewText }}</strong> <span class="text-base-content/75">(Zig./Tag ÷ 20 × Jahre)</span></template>
+          <span v-else class="italic text-base-content/75">Beide Werte eingeben für das Ergebnis.</span>
         </p>
 
         <div class="modal-action">

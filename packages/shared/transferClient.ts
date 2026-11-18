@@ -16,6 +16,10 @@ export class TransferError extends Error {}
 
 export interface TransferConfig {
   baseUrl?: string
+  /** Kanal des Editors, der den Link erzeugt (z. B. 'dev' für einen Test-Editor). Er steht als
+   *  `?e=<kanal>` im Link; die Empfangsseite öffnet damit den passenden Editor aus ihrer festen Liste.
+   *  Fehlt er, sieht der Link aus wie bisher. */
+  editor?: string
   /** Test-Injektion; Default globalThis.fetch. */
   fetchImpl?: typeof fetch
 }
@@ -39,8 +43,11 @@ function doFetch(cfg: TransferConfig | undefined, url: string, init?: RequestIni
 
 /** Link aus baseUrl + id + Schlüssel bauen. Schlüssel steht im Fragment (#), nie im an den Server
  *  gesendeten Teil. */
-export function buildTransferLink(baseUrl: string, id: string, keyB64url: string): string {
-  return `${baseUrl.replace(/\/+$/, '')}/#${id}.${keyB64url}`
+export function buildTransferLink(baseUrl: string, id: string, keyB64url: string, editor?: string): string {
+  // Der Kanal ist ein kurzer Schlüssel, nie eine Adresse: alles andere wird weggelassen. Er steht VOR dem
+  // Fragment, damit jede Stelle, die nur `#id.schlüssel` liest (auch ältere App-Versionen), unberührt bleibt.
+  const channel = editor && /^[a-z0-9-]{1,16}$/.test(editor) ? `?e=${editor}` : ''
+  return `${baseUrl.replace(/\/+$/, '')}/${channel}#${id}.${keyB64url}`
 }
 
 /** Beliebige Nutzereingabe (voller Link ODER nacktes `id.key`) in id+Schlüssel zerlegen. Nimmt den Teil
@@ -75,7 +82,7 @@ export async function shareTransfer(
     // z. B. ein 200 mit Nicht-JSON-Body (Proxy-/Captive-Portal-Seite, leerer Body) -> saubere Meldung.
     throw new TransferError('Unerwartete Antwort des Transfer-Dienstes.')
   }
-  return { ...meta, keyB64url, link: buildTransferLink(base(cfg), meta.id, keyB64url) }
+  return { ...meta, keyB64url, link: buildTransferLink(base(cfg), meta.id, keyB64url, cfg?.editor) }
 }
 
 /** Vorlage empfangen: Link/Fragment zerlegen, Chiffrat holen, lokal entschlüsseln. Gibt den Klartext-

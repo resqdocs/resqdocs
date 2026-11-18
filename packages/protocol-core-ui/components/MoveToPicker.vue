@@ -76,9 +76,9 @@ function confirm(): void {
 
 <template>
   <div class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true">
-    <div class="modal-box flex max-h-[80vh] flex-col gap-3 pb-[env(safe-area-inset-bottom)]">
+    <div class="modal-box flex max-h-[80vh] flex-col space-y-3 pb-[env(safe-area-inset-bottom)]">
       <h3 class="text-base font-semibold">„{{ nodeLabel }}" verschieben nach …</h3>
-      <p class="text-xs text-base-content/60">Tippe die Stelle an (＋), an der „{{ nodeLabel }}" landen soll, dann „Einfügen".</p>
+      <p class="text-xs text-base-content/75">Tippe die Stelle an (＋), an der „{{ nodeLabel }}" landen soll, dann „Einfügen".</p>
 
       <!-- Bewusst KEINE role=tree: kein Tree-Tastaturmodell noetig; Slots sind klar beschriftete Buttons,
            Knotenzeilen reine Struktur-Anzeige (sourced move-picker-verify). -->
@@ -96,7 +96,7 @@ function confirm(): void {
             >
               <span
                 class="grid size-4 shrink-0 place-items-center rounded-full text-[10px] leading-none"
-                :class="selectedKey === row.key ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content/50'"
+                :class="selectedKey === row.key ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content/75'"
                 aria-hidden="true"
               >＋</span>
               <span class="flex-1 rounded-full" :class="selectedKey === row.key ? 'h-0.5 bg-primary' : 'h-px bg-base-content/15'"></span>
@@ -107,17 +107,17 @@ function confirm(): void {
           <!-- Knotenzeile: rein darstellend; bewegter Knoten gedimmt + markiert -->
           <li v-else :style="{ paddingLeft: indent(row.depth) }" :class="row.isMoving ? 'opacity-40' : ''">
             <div class="flex items-center gap-1 py-1.5 text-sm">
-              <span class="shrink-0 text-xs" :class="row.node.type === 'field' ? 'text-secondary' : row.node.type === 'function' ? 'text-accent' : 'text-base-content/40'" aria-hidden="true">{{ icon(row.node) }}</span>
+              <span class="shrink-0 text-xs" :class="row.node.type === 'field' ? 'text-secondary' : row.node.type === 'function' ? 'text-accent' : 'text-base-content/75'" aria-hidden="true">{{ icon(row.node) }}</span>
               <span class="truncate" :class="row.depth === 0 ? 'font-medium' : ''">{{ row.text }}</span>
-              <span v-if="row.isMoving" class="ml-auto shrink-0 text-xs text-base-content/50">(wird verschoben)</span>
+              <span v-if="row.isMoving" class="ml-auto shrink-0 text-xs text-base-content/75">(wird verschoben)</span>
             </div>
           </li>
         </template>
       </ul>
-      <p v-if="!hasSlots" class="px-2 py-3 text-center text-sm text-base-content/50">Keine andere Position möglich.</p>
+      <p v-if="!hasSlots" class="px-2 py-3 text-center text-sm text-base-content/75">Keine andere Position möglich.</p>
 
       <div class="flex items-center justify-between gap-2">
-        <p class="min-w-0 flex-1 truncate text-xs text-base-content/70" aria-live="polite">{{ selected?.a11yLabel ?? 'Position wählen …' }}</p>
+        <p class="min-w-0 flex-1 truncate text-xs text-base-content/75" aria-live="polite">{{ selected?.a11yLabel ?? 'Position wählen …' }}</p>
         <div class="flex shrink-0 gap-2">
           <button type="button" class="btn btn-ghost btn-sm" @click="emit('close')">Abbrechen</button>
           <button type="button" class="btn btn-primary btn-sm" :disabled="!selected" @click="confirm">Einfügen</button>

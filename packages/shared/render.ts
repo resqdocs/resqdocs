@@ -9,6 +9,8 @@ import type { Container, Field, FunctionNode, Heading, Node, FieldFill } from '.
 import { DEFAULT_HEADING, DEFAULT_SEPARATOR } from './model.ts'
 import { fillValue, defaultFill, functionStatus } from './fill.ts'
 import { FUNCTION_REGISTRY } from './functions/registry.ts'
+import { clozeOf, clozeLeftovers, joinCloze } from './cloze.ts'
+import type { Cloze } from './model.ts'
 
 type Values = Record<string, FieldFill>
 
@@ -19,6 +21,32 @@ type Values = Record<string, FieldFill>
 interface Rendered {
   text: string
   leadsPara: boolean
+}
+
+/** Zugriff auf Elemente an anderer Stelle der Vorlage - für Lücken, die ihren Wert von dort übernehmen.
+ *  Der Index entsteht erst beim ersten Zugriff; Vorlagen ohne solche Lücken zahlen nichts. */
+interface Ctx {
+  root: Container | null
+  index?: Map<string, { node: Node; hidden: boolean }>
+}
+
+/** Feld/Funktion an anderer Stelle der Vorlage. null, wenn es fehlt oder in einem Abschnitt liegt, der
+ *  „nicht erhoben" ist (dann steht sein Wert auch dort nicht in der Ausgabe). */
+function elsewhere(ctx: Ctx, values: Values, id: string): Field | FunctionNode | null {
+  if (!ctx.root) return null
+  if (!ctx.index) {
+    const index = new Map<string, { node: Node; hidden: boolean }>()
+    const walk = (node: Node, hidden: boolean): void => {
+      index.set(node.id, { node, hidden })
+      if (node.type !== 'container') return
+      const inner = hidden || (!!node.excludable && (values[node.id] ?? defaultFill(node)).state === 'excluded')
+      for (const child of node.children) walk(child, inner)
+    }
+    walk(ctx.root, false)
+    ctx.index = index
+  }
+  const hit = ctx.index.get(id)
+  return hit && !hit.hidden && hit.node.type !== 'container' ? hit.node : null
 }
 
 /** Eine Ueberschrift bauen: prefix + Titel + suffix, dann Fuellzeichen je Bezug.
@@ -80,9 +108,8 @@ function renderFieldR(field: Field, values: Values): Rendered | null {
 
 /** Funktions-Knoten zu Text (+ leadsPara): Body aus der Registry + optional Titel/Banner darueber.
  *  Leere Funktion ohne Titel -> null (entfaellt, wie excluded). Das Geschwister-Layout macht der Eltern-Join. */
-function renderFunctionR(node: FunctionNode, values: Values): Rendered | null {
+function functionBody(node: FunctionNode, fill: FieldFill | undefined): string | null {
   const def = FUNCTION_REGISTRY[node.functionKind]
-  const fill = values[node.id]
   const custom = fill?.state === 'function' && fill.status === 'custom'
   // Unbekannte Funktion (Versions-Skew/Fremd-Import): keine Registry-Zeilen. Sie entfaellt wie bisher
   // KOMPLETT (auch mit Titel) - AUSSER es gibt Freitext (✎) oder einen Standardtext; die duerfen nicht
@@ -96,7 +123,18 @@ function renderFunctionR(node: FunctionNode, values: Values): Rendered | null {
   // Freitext (✎ custom) ueberschreibt Zeilen/Standardtext; sonst die Zeilen aus der Registry (unbekannt:
   // keine), sonst der Standardtext-Fallback (node.default).
   const body = custom ? (fill.text ?? '') : (def?.renderBody(fill, node.config) ?? '') // config steuert das Zeilen-Layout
-  const effectiveBody = custom ? body : (body || (node.default ?? ''))
+  return custom ? body : body || (node.default ?? '')
+}
+
+/** Reiner Text eines Feldes oder einer Funktion OHNE Titel - das, was in einer Lücke eines Lückentexts
+ *  steht. '' = leer oder nicht erhoben. */
+export function gapText(node: Field | FunctionNode, fill: FieldFill | undefined): string {
+  return (node.type === 'field' ? fillValue(node, fill) : functionBody(node, fill)) ?? ''
+}
+
+function renderFunctionR(node: FunctionNode, values: Values): Rendered | null {
+  const effectiveBody = functionBody(node, values[node.id])
+  if (effectiveBody === null) return null
   let text: string | null
   if (node.title && node.showTitle) {
     // Mit Titel zeigt sich die Ueberschrift auch ohne Daten (Editor-Vorschau); titleInline = Titel inline.
@@ -118,12 +156,12 @@ function renderFunctionR(node: FunctionNode, values: Values): Rendered | null {
  *  - block (Default) = neue Zeile.  - leadsPara = Leerzeile davor.  - inline = an die laufende Zeile.
  *  Das ERSTE ausgegebene Kind bekommt hier nie einen fuehrenden Absatz (im selben Join steht nichts
  *  darueber); ob davor - eine Ebene hoeher - doch etwas steht, entscheidet der Eltern-Join via leadsPara. */
-function joinNodesR(children: Node[], values: Values, sep: string): { text: string; firstLeadsPara: boolean } {
+function joinNodesR(children: Node[], values: Values, sep: string, ctx: Ctx): { text: string; firstLeadsPara: boolean } {
   let out = ''
   let started = false
   let firstLeadsPara = false
   for (const child of children) {
-    const r = renderNodeR(child, values, sep)
+    const r = renderNodeR(child, values, sep, ctx)
     if (r === null || r.text === '') continue // leere/excluded Kinder zaehlen nicht als „vorheriges Element"
     if (!started) {
       out = r.text
@@ -142,14 +180,33 @@ function joinNodesR(children: Node[], values: Values, sep: string): { text: stri
   return { text: out, firstLeadsPara }
 }
 
-function renderContainerR(container: Container, values: Values, inheritedSep: string): Rendered | null {
+/** Lückentext eines Abschnitts: der Satz mit den Werten der Lücken, darunter die Kinder, die in keiner
+ *  Lücke stehen. In der Lücke steht nur der Wert (ohne Titel des Feldes). */
+function renderClozeR(container: Container, cloze: Cloze, values: Values, sep: string, ctx: Ctx): { text: string; firstLeadsPara: boolean } {
+  const own = new Map<string, Field | FunctionNode>()
+  for (const child of container.children) if (child.type !== 'container') own.set(child.id, child)
+  const sentence = joinCloze(
+    cloze.parts.map((part) => {
+      if (typeof part === 'string') return { text: part }
+      const node = own.get(part.gap) ?? elsewhere(ctx, values, part.gap)
+      return { gap: node ? gapText(node, values[node.id]) : '' }
+    }),
+  )
+  const rest = joinNodesR(clozeLeftovers(container, cloze), values, sep, ctx)
+  if (sentence === '') return rest
+  if (rest.text === '') return { text: sentence, firstLeadsPara: false }
+  return { text: `${sentence}${rest.firstLeadsPara ? '\n\n' : '\n'}${rest.text}`, firstLeadsPara: false }
+}
+
+function renderContainerR(container: Container, values: Values, inheritedSep: string, ctx: Ctx): Rendered | null {
   // 2-stufiger Container-Status: „nicht erhoben" -> ganzer Container (inkl. Kinder) entfaellt.
   // „Nicht erhoben" -> der ganze Container entfaellt. Der Ausgangszustand ist knotenabhaengig:
   // mit defaultExcluded (UNO Reverse) startet der Abschnitt ausgeblendet und erscheint erst, wenn
   // der Anwender ihn einschaltet.
   if (container.excludable && (values[container.id] ?? defaultFill(container)).state === 'excluded') return null
   const sep = container.separator ?? inheritedSep // zentral an der Wurzel, pro Container ueberschreibbar
-  const joined = joinNodesR(container.children, values, sep)
+  const cloze = clozeOf(container)
+  const joined = cloze ? renderClozeR(container, cloze, values, sep, ctx) : joinNodesR(container.children, values, sep, ctx)
   const hasBody = joined.text !== ''
   // Kinder leer UND emptyText gesetzt -> Ersatztext (Container bleibt sichtbar).
   const body = hasBody ? joined.text : (container.emptyText ?? '')
@@ -175,20 +232,32 @@ function renderContainerR(container: Container, values: Values, inheritedSep: st
   return { text: body, leadsPara: container.inline ? false : joined.firstLeadsPara }
 }
 
-function renderNodeR(node: Node, values: Values, sep: string): Rendered | null {
-  if (node.type === 'container') return renderContainerR(node, values, sep)
+function renderNodeR(node: Node, values: Values, sep: string, ctx: Ctx): Rendered | null {
+  if (node.type === 'container') return renderContainerR(node, values, sep, ctx)
   if (node.type === 'function') return renderFunctionR(node, values)
   return renderFieldR(node, values)
 }
 
 // --- Oeffentliche String-API (unveraendert fuer App + Tests) ---
 
-export function renderContainer(container: Container, values: Values = {}, inheritedSep: string = DEFAULT_SEPARATOR): string {
-  return renderContainerR(container, values, inheritedSep)?.text ?? ''
+// `root` = die ganze Vorlage. Nur nötig, wenn ein TEIL gerendert wird und ein Lückentext darin Werte von
+// anderer Stelle der Vorlage übernimmt; ohne Angabe wird nur im übergebenen Teil gesucht.
+export function renderContainer(
+  container: Container,
+  values: Values = {},
+  inheritedSep: string = DEFAULT_SEPARATOR,
+  root: Container | null = container,
+): string {
+  return renderContainerR(container, values, inheritedSep, { root })?.text ?? ''
 }
 
-export function renderNode(node: Node, values: Values = {}, sep: string = DEFAULT_SEPARATOR): string | null {
-  return renderNodeR(node, values, sep)?.text ?? null
+export function renderNode(
+  node: Node,
+  values: Values = {},
+  sep: string = DEFAULT_SEPARATOR,
+  root: Container | null = node.type === 'container' ? node : null,
+): string | null {
+  return renderNodeR(node, values, sep, { root })?.text ?? null
 }
 
 /** Wurzel-Container + Einsatz-Werte -> Klartext. */

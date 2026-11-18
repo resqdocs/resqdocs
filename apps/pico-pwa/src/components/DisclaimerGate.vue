@@ -40,7 +40,7 @@ const { ready, needsAck, acknowledge } = useDisclaimer()
               eine Haftung für Richtigkeit, Eignung oder Folgen der Nutzung wird nicht
               übernommen.
             </p>
-            <p class="text-base-content/70">
+            <p class="text-base-content/75">
               Patientendaten werden nicht dauerhaft gespeichert. Dieser Hinweis erscheint beim
               ersten Start und nach jedem Update erneut.
             </p>

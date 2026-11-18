@@ -63,7 +63,7 @@ function toggle(): void {
     :class="{
       'border-success bg-success text-success-content': status === 'confirmed',
       'border-primary bg-primary text-primary-content': status === 'custom',
-      'border-base-300 bg-base-200 text-base-content/50': status === 'excluded',
+      'border-base-300 bg-base-200 text-base-content/75': status === 'excluded',
     }"
     :title="TITLE[status]"
     :data-fill-toggle="status"

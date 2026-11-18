@@ -112,6 +112,15 @@ function onState(next: 'confirmed' | 'custom' | 'excluded'): void {
   if (next === 'custom') caseValues.set(props.node.id, { state: 'custom', value: restoreValue.value })
   else caseValues.set(props.node.id, { state: next })
 }
+// Leeres Freitext-Feld (kein Standardwert): ein Tipp auf den Hinweis unter dem Titel fuehrt DIREKT ins Schreiben -
+// ✎ setzen und das grosse Textfeld oeffnen bzw. den Cursor in die Zeile setzen. Der Schalter vor dem Titel bleibt
+// unveraendert; der Weg zu „nicht erhoben" kostet dadurch keinen Tipp mehr.
+const textLong = ref<InstanceType<typeof LongTextField> | null>(null)
+const textInput = ref<HTMLInputElement | null>(null)
+function writeDirectly(): void {
+  onState('custom')
+  void nextTick(() => (useLongText.value ? textLong.value?.open() : textInput.value?.focus()))
+}
 // „Zurueckholen"-Hinweis: zurueck in den ✎-Modus (Feld = Freitext, Select = individuell).
 function restorePreserved(): void {
   if (isSelect.value) pickIndividuell()
@@ -254,7 +263,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
 </script>
 
 <template>
-  <div class="flex flex-col gap-1" :class="!isSelect && excluded ? 'opacity-60' : ''" :data-required-open="node.required && isOpen ? '' : undefined">
+  <div class="flex flex-col gap-1" :data-required-open="node.required && isOpen ? '' : undefined">
     <!-- MULTI-SELECT (Feld.multiple): Checkboxen bei wenigen, Multi-Dropdown bei vielen. Status = Auswahl
          (nichts=nicht erhoben, Standard-Menge=confirmed, sonst custom). Exklusive „Keine/Normal"-Option
          verdraengt andere automatisch. −-Zustand nur, wenn nicht Pflichtfeld. -->
@@ -309,7 +318,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
           <span>{{ INDIVIDUELL }}</span>
         </button>
         <!-- Liste offen, aber nichts angekreuzt (letzte Option abgehakt): sagen, was das bedeutet -->
-        <p v-if="selectTriState === 'excluded'" class="mt-1 text-sm italic text-base-content/50">nichts ausgewählt — nicht erhoben</p>
+        <p v-if="selectTriState === 'excluded'" class="mt-1 text-sm italic text-base-content/75">nichts ausgewählt — nicht erhoben</p>
       </div>
 
       <!-- ✎ individuell: eigener Freitext — genau wie beim Single-Select (kein Feld unter den Checkboxen) -->
@@ -321,7 +330,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
       </div>
 
       <!-- − nicht erhoben -->
-      <p v-else class="pl-9 text-sm italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
+      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokoll</p>
     </template>
 
     <!-- SELECT: Tri-State wie Freitext — ✓ Auswahl (Optionen sichtbar) / ✎ individuell / − nicht erhoben.
@@ -372,7 +381,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
       </div>
 
       <!-- − nicht erhoben -->
-      <p v-else class="pl-9 text-sm italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
+      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokoll</p>
     </template>
 
     <!-- FREITEXT-Feld: Tri-State (Eingabe erst bei ✎) -->
@@ -390,13 +399,15 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
           </svg>
         </button>
       </div>
-      <p v-if="fill.state === 'confirmed'" class="pl-9 text-sm text-base-content/70" :class="useLongText ? 'whitespace-pre-wrap' : ''">{{ def || '(kein Standardwert)' }}</p>
+      <!-- ohne Standardwert gibt es nichts zu bestaetigen: der Hinweis ist die Flaeche zum Losschreiben -->
+      <button v-if="fill.state === 'confirmed' && !def" type="button" class="flex min-h-11 w-full items-center pl-9 text-left text-sm text-base-content/75" :aria-label="`${label}: Text eingeben`" data-write-directly @click="writeDirectly">(kein Standardwert) – antippen zum Schreiben</button>
+      <p v-else-if="fill.state === 'confirmed'" class="pl-9 text-sm text-base-content/75" :class="useLongText ? 'whitespace-pre-wrap' : ''">{{ def }}</p>
       <div v-else-if="fill.state === 'custom'" class="pl-9">
         <!-- mehrzeilig (Feld-Def ODER Wert mit Umbruechen) -> grosses Textfeld; sonst die einzeilige Zeile -->
-        <LongTextField v-if="useLongText" :model-value="customValue" :title="label" :required="node.required" @update:model-value="caseValues.setCustom(node.id, $event)" />
-        <input v-else class="input input-sm w-full" :value="customValue" :aria-label="`${label}: eigener Wert`" :aria-required="node.required || undefined" @input="onInput" />
+        <LongTextField v-if="useLongText" ref="textLong" :model-value="customValue" :title="label" :required="node.required" @update:model-value="caseValues.setCustom(node.id, $event)" />
+        <input v-else ref="textInput" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: eigener Wert`" :aria-required="node.required || undefined" @input="onInput" />
       </div>
-      <p v-else class="pl-9 text-sm italic text-base-content/50">nicht erhoben — erscheint nicht im Protokoll</p>
+      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokoll</p>
       <SnippetPicker v-if="snippetPickerOpen" multiple title="Textbausteine als Wert einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
     </template>
 

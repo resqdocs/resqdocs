@@ -26,6 +26,7 @@ const SUITES = [
   { name: 'ki-doku', cwd: '.', cmd: 'npm run -s test:ai-docs', about: 'Beispiele der KI-Doku' },
   { name: 'web-seo', cwd: '.', cmd: 'node --test scripts/web-seo.test.mjs', about: 'Editor, KI-Seite und Webseite: Suchmaschinen-Angaben, Icons, Vorschaubild', needs: 'scripts/web-seo.test.mjs' },
   { name: 'firmware-schutz', cwd: '.', cmd: 'bash firmware/test/storedguard/run.sh', about: 'Schutz des Knopf-Texts (Firmware)' },
+  { name: 'abhaengigkeiten', cwd: '.', cmd: 'node --test scripts/deps-check.test.mjs', about: 'Wochen-Check der Abhängigkeiten deckt jede package.json ab', needs: 'scripts/deps-check.test.mjs' },
   { name: 'editor-typen', cwd: 'apps/protocol-editor', cmd: 'npm run -s build', about: 'Editor: Typprüfung und Build', extra: true },
   { name: 'webseite-build', cwd: 'apps/landing-page', cmd: 'npm run -s build', about: 'Webseite: Typprüfung und Build', extra: true },
   { name: 'app-typen', cwd: 'apps/pico-pwa', cmd: 'npm run -s build', about: 'App: Typprüfung und Build', extra: true },

@@ -96,6 +96,18 @@ test('buildTransferLink / parseTransferInput Round-Trip', () => {
   assert.deepEqual(parseTransferInput('aB3xQ7.KEY-_123'), { id: 'aB3xQ7', keyB64url: 'KEY-_123' })
 })
 
+test('buildTransferLink: Editor-Kanal steht vor dem Fragment, der Link bleibt für jeden Empfänger lesbar', () => {
+  const link = buildTransferLink('https://transfer.resqdocs.app', 'aB3xQ7', 'KEY-_123', 'dev')
+  assert.equal(link, 'https://transfer.resqdocs.app/?e=dev#aB3xQ7.KEY-_123')
+  assert.deepEqual(parseTransferInput(link), { id: 'aB3xQ7', keyB64url: 'KEY-_123' })
+  // ohne Kanal: Zeichen für Zeichen wie bisher
+  assert.equal(buildTransferLink('https://transfer.resqdocs.app', 'aB3xQ7', 'KEY-_123', undefined), 'https://transfer.resqdocs.app/#aB3xQ7.KEY-_123')
+  // der Kanal ist ein kurzer Schlüssel, nie eine Adresse oder freier Text
+  for (const bad of ['https://evil.example', 'DEV', 'a b', '', 'x'.repeat(17), '../x', 'e=1&x']) {
+    assert.equal(buildTransferLink('https://transfer.resqdocs.app', 'aB3xQ7', 'KEY-_123', bad), 'https://transfer.resqdocs.app/#aB3xQ7.KEY-_123', bad)
+  }
+})
+
 test('SICHERHEIT: der Schlüssel steht in KEINEM an den Server gesendeten Request (Pfad/Query/Header) — nur im Fragment', async () => {
   await withService(async (base) => {
     const calls: { url: string; init?: RequestInit }[] = []

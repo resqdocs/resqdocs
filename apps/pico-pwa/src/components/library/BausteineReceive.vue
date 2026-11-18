@@ -44,7 +44,7 @@ function onQrDecoded(raw: string): void {
   <div class="card border border-base-300 bg-base-100">
     <div class="card-body gap-2 p-4">
       <h3 class="font-semibold">Empfangen — verschlüsselter Link + QR</h3>
-      <p class="text-xs text-base-content/60">
+      <p class="text-xs text-base-content/75">
         Link zu einem Textbaustein oder gespeicherten Abschnitt einfügen oder QR scannen — landet automatisch in der richtigen Liste.
       </p>
       <div class="flex items-center gap-2">
@@ -58,7 +58,7 @@ function onQrDecoded(raw: string): void {
           {{ busy ? 'Lade …' : 'Empfangen' }}
         </button>
       </div>
-      <div class="divider my-0 text-xs text-base-content/40">oder</div>
+      <div class="divider my-0 text-xs text-base-content/75">oder</div>
       <button class="btn btn-outline btn-sm min-h-11 w-full gap-2" type="button" :disabled="busy" @click="qrOpen = true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5 shrink-0" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 8.25V6A2.25 2.25 0 0 1 6 3.75h2.25M15.75 3.75H18A2.25 2.25 0 0 1 20.25 6v2.25M20.25 15.75V18A2.25 2.25 0 0 1 18 20.25h-2.25M8.25 20.25H6A2.25 2.25 0 0 1 3.75 18v-2.25" />

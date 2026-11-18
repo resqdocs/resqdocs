@@ -21,7 +21,7 @@ function toggle(): void {
   <button
     type="button"
     class="grid size-7 shrink-0 place-items-center rounded-md border text-base font-bold leading-none"
-    :class="excluded ? 'border-base-300 bg-base-200 text-base-content/50' : 'border-base-300 bg-base-100 text-base-content/70'"
+    :class="excluded ? 'border-[var(--rd-control-border)] bg-base-200 text-base-content/75' : 'border-[var(--rd-control-border)] bg-base-100 text-base-content/75'"
     :title="excluded ? 'nicht erhoben' : 'erhoben'"
     :aria-label="`${label}: ${excluded ? 'nicht erhoben' : 'erhoben'} - tippen wechselt`"
     @click.stop.prevent="toggle"
