@@ -2,7 +2,7 @@
 // eigenes Schema von der Empfaenger-Seite) oder eine ueber das Teilen-Menue uebergebene Vorlagen-Datei.
 // Rein -> node-getestet. Hier wird NICHTS abgerufen oder importiert: das Ergebnis fuehrt nur in den
 // vorhandenen Empfangs-/Importpfad (TemplateIO), der vor dem Abruf nachfragt.
-import { DEFAULT_TRANSFER_BASE_URL, buildTransferLink, parseTransferInput } from '@resqdocs/protocol-core/transferClient'
+import { DEFAULT_TRANSFER_BASE_URL, DEFAULT_SHORT_HOST, buildTransferLink, parseTransferInput, shortCodeOf } from '@resqdocs/protocol-core/transferClient'
 
 export type IncomingOpen =
   | { kind: 'transfer'; link: string }
@@ -38,6 +38,11 @@ export function classifyIncomingUrl(raw: string, transferBaseUrl: string = DEFAU
   if (!url || !base) return null
   const baseHref = transferBaseUrl.replace(/\/+$/, '')
 
+  // Kurzlink (resq.li/<code>): wird erst beim Empfang zum langen Link aufgelöst.
+  if (url.protocol === 'https:' && url.host === DEFAULT_SHORT_HOST) {
+    const code = shortCodeOf(url.href)
+    return code ? { kind: 'transfer', link: `https://${DEFAULT_SHORT_HOST}/${code}` } : null
+  }
   if (url.protocol === 'https:') {
     // Nur die Wurzel des Transfer-Dienstes mit Fragment; alles andere dieser oder fremder Hosts nicht.
     if (url.host !== base.host || url.pathname !== '/' || url.hash.length < 2) return null

@@ -67,3 +67,11 @@ test('eigenes Schema: Ziel auch dort erkannt, wo der WebView fremde Schemata nic
   assert.equal(appSchemeTarget({ hostname: '', pathname: '//anderes' }), 'anderes')
   assert.equal(appSchemeTarget({ hostname: '', pathname: '' }), '')
 })
+
+test('Kurzlink resq.li/<code> wird als Transfer erkannt; /editor, /ai und fremde Längen nicht', () => {
+  assert.deepEqual(classifyIncomingUrl('https://resq.li/Ab3k9'), { kind: 'transfer', link: 'https://resq.li/Ab3k9' })
+  assert.equal(classifyIncomingUrl('https://resq.li/editor'), null)
+  assert.equal(classifyIncomingUrl('https://resq.li/ai'), null)
+  assert.equal(classifyIncomingUrl('https://resq.li/'), null)
+  assert.equal(classifyIncomingUrl('https://resq.li.evil.example/Ab3k9'), null)
+})

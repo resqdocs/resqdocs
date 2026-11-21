@@ -83,9 +83,10 @@ test('Sammlung: leere Liste und fremde Einträge werden mit Position abgelehnt',
   const leer = detectAndParse('[]')
   assert.ok(!leer.ok && leer.kind === 'bundle')
   const ok = JSON.parse(exportTemplate(createContainer('a')))
+  // Textbaustein-Eintrag ohne gültige Hülle (Text gehört unter `snippet`): ganze Sammlung abgelehnt, mit Position
   const r = detectAndParse(JSON.stringify([ok, { schema: 'resqdocs-snippet', title: 'x', text: 'y' }]))
   assert.ok(!r.ok && r.kind === 'bundle')
-  assert.match(r.error, /Vorlage 2 von 2/)
+  assert.match(r.error, /Eintrag 2 von 2 \(Textbaustein\)/)
 })
 
 test('exportTemplates: eine Vorlage im Einzelformat, mehrere als Sammlung - beides wieder importierbar', async () => {

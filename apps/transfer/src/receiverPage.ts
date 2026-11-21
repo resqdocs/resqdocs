@@ -188,6 +188,7 @@ async function run(){
     try { res = await fetch('/v1/blob/' + parsed.id, { signal: ctrl.signal }); }
     catch (e) { fail('Der Transfer-Dienst ist nicht erreichbar (oder hat zu lange gebraucht).'); return; }
     if (res.status === 404) { fail('Der Transfer ist abgelaufen oder wurde bereits geöffnet.'); return; }
+    if (res.status === 409) { fail('Der Link wird gerade auf einem anderen Gerät geöffnet. In ein paar Minuten noch einmal versuchen.'); return; }
     if (!res.ok) { fail('Der Transfer konnte nicht geladen werden.'); return; }
     var bytes;
     try { bytes = new Uint8Array(await res.arrayBuffer()); }

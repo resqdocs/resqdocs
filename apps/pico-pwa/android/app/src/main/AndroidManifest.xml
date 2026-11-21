@@ -36,6 +36,17 @@
                 <data android:path="/" />
             </intent-filter>
 
+            <!-- Angetippter Kurzlink (App Link): https://resq.li/<code>, genau 5 Zeichen. /editor und /ai bleiben im
+                 Browser. Die App löst den Code beim Empfang zum langen Link auf. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="resq.li" />
+                <data android:pathPattern="/....." />
+            </intent-filter>
+
             <!-- Knopf „In der ResQDocs-App oeffnen" der Empfaenger-Seite: resqdocs://receive#<id>.<key> -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

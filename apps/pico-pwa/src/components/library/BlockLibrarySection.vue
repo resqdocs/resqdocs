@@ -11,6 +11,8 @@ import { useTransferShare } from '@resqdocs/protocol-core-ui/useTransferShare'
 import { shouldCloseCard, tapIsPending } from '@resqdocs/protocol-core-ui/cardFocusGuard'
 import type { TransferTtl } from '@resqdocs/protocol-core/transferClient'
 import QrCode from '@/components/QrCode.vue'
+import ShortLinkToggle from '@resqdocs/protocol-core-ui/components/ShortLinkToggle.vue'
+import { useShortLink } from '@resqdocs/protocol-core-ui/useShortLink'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 import InfoTip from '@resqdocs/protocol-core-ui/components/InfoTip.vue'
 import { INFO } from '@resqdocs/protocol-core-ui/terms'
@@ -188,6 +190,7 @@ const transferCfg = (import.meta.env.VITE_TRANSFER_URL as string | undefined)
   ? { baseUrl: import.meta.env.VITE_TRANSFER_URL as string }
   : undefined
 const { ttl: shareTtl, shareBusy, shareLink, shareError, share: shareStart, reset: shareReset } = useTransferShare(transferCfg)
+const { short: shortWanted, shortBusy, shortError, shownLink, displayLink } = useShortLink(() => shareLink.value, transferCfg)
 const shareOpenId = ref<string | null>(null)
 const linkCopied = ref(false)
 const TTL_LABELS: { value: TransferTtl; label: string }[] = [
@@ -213,7 +216,7 @@ function createBlockLink(b: Container): void {
 async function copyBlockLink(): Promise<void> {
   if (!shareLink.value) return
   try {
-    await navigator.clipboard.writeText(shareLink.value.link)
+    await navigator.clipboard.writeText(shownLink.value)
     linkCopied.value = true
     window.setTimeout(() => (linkCopied.value = false), 2000)
   } catch {
@@ -362,11 +365,12 @@ async function exportDownload(b: Container): Promise<void> {
               </select>
               <button class="btn btn-primary btn-xs ml-auto" type="button" :disabled="shareBusy" @click="createBlockLink(b)">{{ shareBusy ? 'Erstelle …' : 'Link erstellen' }}</button>
             </div>
+            <ShortLinkToggle v-model="shortWanted" :busy="shortBusy" :error="shortError" />
             <p v-if="shareError" class="text-xs text-error">{{ shareError }}</p>
             <div v-if="shareLink" class="flex flex-col items-stretch gap-1 rounded bg-base-200 p-2">
-              <div class="flex items-center gap-1">
-                <input :value="shareLink.link" readonly class="input input-xs w-full font-mono" aria-label="Transfer-Link" />
-                <button class="btn btn-ghost btn-xs" type="button" @click="copyBlockLink">{{ linkCopied ? 'Kopiert' : 'Kopieren' }}</button>
+              <div class="flex flex-col items-stretch gap-1">
+                <input :value="displayLink" readonly class="input input-xs w-full font-mono" aria-label="Transfer-Link" />
+                <button class="btn btn-ghost btn-sm min-h-11 self-end" type="button" @click="copyBlockLink">{{ linkCopied ? 'Kopiert' : 'Kopieren' }}</button>
               </div>
               <QrCode :value="shareLink.link" :size="180" />
               <p class="text-xs text-base-content/75">Der Link ist das Geheimnis — nur mit vertrauten Personen teilen. Läuft ab bzw. wird nach dem Lesen gelöscht.</p>

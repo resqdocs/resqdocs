@@ -9,9 +9,9 @@
  * Elements an anderer Stelle der Vorlage); alle weiteren Einstellungen stehen dort wie bei jedem Feld.
  * Fensteraufbau und Tastatur-Verhalten wie beim Ausfüll-Fenster.
  */
-import { computed, inject, nextTick, onBeforeUnmount, ref } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import type { Container, Field, FunctionKind } from '@resqdocs/protocol-core/model'
-import { clozeOf, clozeGaps } from '@resqdocs/protocol-core/cloze'
+import { clozeGaps } from '@resqdocs/protocol-core/cloze'
 import { applyText, foreignCandidates, gapFromRange, gapNames, removeGap, retargetGap, revertGap, sectionText, tokenize } from '@resqdocs/protocol-core/clozeEdit'
 import { collectIds, createField, createFunction } from '@resqdocs/protocol-core/creator'
 import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
@@ -24,7 +24,6 @@ const props = defineProps<{ node: Container; root: Container }>()
 const emit = defineEmits<{ close: [] }>()
 const tree = useTreeEditor()
 
-const cloze = computed(() => clozeOf(props.node))
 const text = computed(() => sectionText(props.node, props.root))
 const names = computed(() => gapNames(props.node, props.root))
 const gaps = computed(() => clozeGaps(props.root, props.node))
@@ -159,7 +158,7 @@ function setKind(value: string): void {
     const options = (base.options ?? []).filter((o) => o !== '')
     const next: Field =
       value === 'text'
-        ? { ...base, options: undefined, multiple: undefined, defaultEmpty: undefined, exclusiveOptions: undefined, allowCustom: undefined }
+        ? { ...base, options: undefined, multiple: undefined, defaultEmpty: undefined, exclusiveOptions: undefined, multiSeparator: undefined, allowCustom: undefined }
         : {
             ...base,
             options: options.length ? options : base.default ? [base.default] : undefined,
@@ -167,6 +166,7 @@ function setKind(value: string): void {
             // Mehrfachauswahl in einem Satz startet ohne Vorauswahl; sonst stünde die erste Antwort ungefragt im Text.
             defaultEmpty: value === 'multi' ? true : undefined,
             exclusiveOptions: value === 'multi' ? base.exclusiveOptions : undefined,
+            multiSeparator: value === 'multi' ? base.multiSeparator : undefined,
           }
     if (value === 'choice') pendingChoice.value = id
     commit(retargetGap(props.node, gap.id, id, next))
@@ -175,6 +175,13 @@ function setKind(value: string): void {
 }
 const ownField = computed(() => (current.value?.own && current.value.node.type === 'field' ? current.value.node : null))
 const optionsText = computed(() => (ownField.value?.options ?? []).join('\n'))
+// Entwurf der Antworten, solange das Feld bearbeitet wird. Ohne ihn setzt jedes Neuzeichnen des Fensters (z. B. wenn
+// die Tastatur auf- oder zugeht und der sichtbare Bereich neu gemessen wird) das Feld auf den gespeicherten Stand
+// zurück, weil erst beim Verlassen übernommen wird.
+const optionsDraft = ref<string | null>(null)
+watch(selected, () => {
+  optionsDraft.value = null
+})
 function setOptions(value: string): void {
   const field = ownField.value
   if (!field) return
@@ -194,9 +201,6 @@ function deleteGap(): void {
   if (!current.value) return
   commit(removeGap(props.node, current.value.id))
   selected.value = null
-}
-function setAskDefaults(on: boolean): void {
-  if (cloze.value) tree.update(props.node.id, { cloze: { ...cloze.value, askDefaults: on || undefined } })
 }
 
 const sizeRef = inject(longTextSizeKey, null)
@@ -342,7 +346,7 @@ defineExpose({ open, close })
                 </label>
                 <label v-if="kind === 'choice' || kind === 'multi'" class="block space-y-1">
                   <span class="text-sm font-medium">Antworten, eine je Zeile</span>
-                  <textarea class="textarea min-h-28 w-full text-base leading-normal" :value="optionsText" placeholder="wach&#10;somnolent&#10;soporös" data-cloze-editor-options @change="setOptions(($event.target as HTMLTextAreaElement).value)" />
+                  <textarea class="textarea min-h-28 w-full text-base leading-normal" :value="optionsDraft ?? optionsText" placeholder="wach&#10;somnolent&#10;soporös" data-cloze-editor-options @input="optionsDraft = ($event.target as HTMLTextAreaElement).value" @change="setOptions(($event.target as HTMLTextAreaElement).value)" @blur="optionsDraft = null" />
                   <span v-if="kind === 'choice'" class="block text-sm text-base-content/80">Die erste Antwort ist der Standardwert.</span>
                 </label>
                 <label v-else-if="kind === 'text' && ownField" class="block space-y-1">
@@ -366,10 +370,6 @@ defineExpose({ open, close })
 
             <div v-else class="space-y-2">
               <p class="text-sm">Tippe ein Wort an, um daraus eine Lücke zu machen. Tippe eine Lücke an, um sie einzustellen.</p>
-              <label class="flex min-h-11 w-full cursor-pointer items-center gap-3">
-                <input type="checkbox" class="toggle shrink-0" :checked="cloze?.askDefaults === true" data-cloze-editor-ask @change="setAskDefaults(($event.target as HTMLInputElement).checked)" />
-                <span class="text-sm">Beim Ausfüllen auch Lücken abfragen, die schon einen Standardwert haben</span>
-              </label>
             </div>
           </section>
         </template>

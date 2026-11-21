@@ -8,7 +8,7 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { DatabaseSync } from 'node:sqlite'
 import { createStore } from './store.ts'
-import { createTransferServer, clientKey } from './server.ts'
+import { createTransferServer, clientKey, limitKeyOf } from './server.ts'
 import { createRateLimiter } from './rateLimiter.ts'
 import { RECEIVER_CORE } from './receiverPage.ts'
 import { encryptTransfer, decryptTransfer } from '../../../packages/shared/transferCrypto.ts'
@@ -299,4 +299,117 @@ test('Smoke: der Dienst startet als eigener Prozess mit DEFAULT-Config und antwo
   } finally {
     child.kill('SIGKILL')
   }
+})
+
+test('„1× lesen“ über HTTP: X-Claim reserviert, consume verbraucht, release gibt frei, Header sind für Browser sichtbar', async () => {
+  await withServer(async (base) => {
+    const { blob } = await encryptTransfer('{"x":1}')
+    const { id } = (await (await postBlob(base, blob, 3600, true)).json()) as { id: string }
+    const a = await fetch(`${base}/v1/blob/${id}`, { headers: { 'X-Claim': '1' } })
+    assert.equal(a.status, 200)
+    const token = a.headers.get('x-claim-token')
+    assert.ok(token)
+    assert.equal(a.headers.get('x-prior-opens'), '0')
+    assert.match(a.headers.get('access-control-expose-headers') ?? '', /X-Claim-Token/)
+    await a.arrayBuffer()
+    assert.equal((await fetch(`${base}/v1/blob/${id}`)).status, 409, 'reserviert: Empfangsseite bekommt 409')
+    const opt = await fetch(`${base}/v1/blob/${id}`, { method: 'OPTIONS' })
+    assert.match(opt.headers.get('access-control-allow-headers') ?? '', /X-Claim-Token/)
+    assert.equal((await fetch(`${base}/v1/blob/${id}/release`, { method: 'POST', headers: { 'X-Claim-Token': 'falsch' } })).status, 404)
+    assert.equal((await fetch(`${base}/v1/blob/${id}/release`, { method: 'POST', headers: { 'X-Claim-Token': token! } })).status, 204)
+    const b = await fetch(`${base}/v1/blob/${id}`, { headers: { 'X-Claim': '1' } })
+    assert.equal(b.headers.get('x-prior-opens'), '1')
+    await b.arrayBuffer()
+    assert.equal((await fetch(`${base}/v1/blob/${id}/consume`, { method: 'POST', headers: { 'X-Claim-Token': b.headers.get('x-claim-token')! } })).status, 204)
+    assert.equal((await fetch(`${base}/v1/blob/${id}`, { headers: { 'X-Claim': '1' } })).status, 404)
+  })
+})
+
+async function withShortServer(fn: (base: string, get: (path: string) => Promise<Response>) => Promise<void>, missLimit = 0) {
+  const store = createStore(new DatabaseSync(':memory:'))
+  const server = createTransferServer({ store, shortHost: 'resq.li', publicBase: 'https://transfer.resqdocs.app', shortMissLimiter: missLimit ? createRateLimiter(missLimit, 60_000) : null })
+  await new Promise<void>((r) => server.listen(0, r))
+  const { port } = server.address() as AddressInfo
+  const base = `http://127.0.0.1:${port}`
+  // fetch setzt den Host selbst; für die Kurzlink-Domain einen rohen Request mit Host resq.li schicken.
+  const { request } = await import('node:http')
+  const get = (path: string) =>
+    new Promise<Response>((resolve, reject) => {
+      const req = request({ host: '127.0.0.1', port, path, method: 'GET', headers: { Host: 'resq.li' } }, (res) => {
+        const chunks: Buffer[] = []
+        res.on('data', (c: Buffer) => chunks.push(c))
+        res.on('end', () => resolve(new Response(res.statusCode === 302 ? null : Buffer.concat(chunks), { status: res.statusCode, headers: res.headers as Record<string, string> })))
+      })
+      req.on('error', reject)
+      req.end()
+    })
+  try {
+    await fn(base, get)
+  } finally {
+    await new Promise<void>((r) => server.close(() => r()))
+  }
+}
+
+test('Kurzlink: anlegen, über resq.li weiterleiten, per API auflösen; fremde Ziele abgelehnt', async () => {
+  await withShortServer(async (base, getShort) => {
+    const { blob, keyB64url } = await encryptTransfer('{"a":1}')
+    const { id } = (await (await postBlob(base, blob)).json()) as { id: string }
+    const link = `https://transfer.resqdocs.app/?e=dev#${id}.${keyB64url}`
+    const made = await fetch(`${base}/v1/short`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ link }) })
+    assert.equal(made.status, 201)
+    const { code, url } = (await made.json()) as { code: string; url: string }
+    assert.equal(url, `https://resq.li/${code}`)
+
+    const redirect = await getShort(`/${code}`)
+    assert.equal(redirect.status, 302)
+    assert.equal(redirect.headers.get('location'), link)
+    assert.equal(redirect.headers.get('cache-control'), 'no-store')
+
+    const api = await fetch(`${base}/v1/short/${code}`)
+    assert.equal(api.status, 200)
+    assert.deepEqual(await api.json(), { link })
+
+    const foreign = await fetch(`${base}/v1/short`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ link: `https://evil.example/#${id}.${keyB64url}` }) })
+    assert.equal(foreign.status, 400)
+    const unknown = await fetch(`${base}/v1/short`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ link: `https://transfer.resqdocs.app/#Unbekannt123.${keyB64url}` }) })
+    assert.equal(unknown.status, 404)
+  })
+})
+
+test('Kurzlink-Domain: unbekannter Code -> Seite „Link abgelaufen“; /, /editor, /ai leiten weiter; Empfangsseite nur auf dem Transfer-Host', async () => {
+  await withShortServer(async (base, getShort) => {
+    const gone = await getShort('/ZZZZZ')
+    assert.equal(gone.status, 404)
+    assert.match(await gone.text(), /Link abgelaufen/)
+    assert.equal((await getShort('/')).headers.get('location'), 'https://resqdocs.app/')
+    assert.equal((await getShort('/editor')).headers.get('location'), 'https://editor.resqdocs.app/')
+    assert.equal((await getShort('/ai')).headers.get('location'), 'https://ai.resqdocs.app/')
+    assert.equal((await fetch(`${base}/`)).status, 200)
+    assert.equal((await fetch(`${base}/v1/short/ZZZZZ`)).status, 404)
+  })
+})
+
+test('Kurzlink-Domain: abschließender Schrägstrich wird angenommen', async () => {
+  await withShortServer(async (base, getShort) => {
+    const { blob, keyB64url } = await encryptTransfer('{"a":1}')
+    const { id } = (await (await postBlob(base, blob)).json()) as { id: string }
+    const link = `https://transfer.resqdocs.app/#${id}.${keyB64url}`
+    const { code } = (await (await fetch(`${base}/v1/short`, { method: 'POST', body: JSON.stringify({ link }) })).json()) as { code: string }
+    assert.equal((await getShort(`/${code}/`)).headers.get('location'), link)
+  })
+})
+
+test('Kurzlinks: zu viele Fehlversuche sperren das Auflösen für diesen Anschluss bis zum Ende des Fensters', async () => {
+  await withShortServer(async (base) => {
+    for (let i = 0; i < 3; i++) assert.equal((await fetch(`${base}/v1/short/ZZZZ${i}`)).status, 404)
+    assert.equal((await fetch(`${base}/v1/short/ZZZZ9`)).status, 429)
+  }, 3)
+})
+
+test('Rate-Limit-Schlüssel: IPv6 je /64, IPv4 unverändert', () => {
+  assert.equal(limitKeyOf('2001:db8:1:2:aaaa::1'), '2001:db8:1:2::/64')
+  assert.equal(limitKeyOf('2001:db8:1:2:ffff:ffff:ffff:ffff'), '2001:db8:1:2::/64')
+  assert.equal(limitKeyOf('2001:db8::1'), '2001:db8:0:0::/64')
+  assert.equal(limitKeyOf('203.0.113.7'), '203.0.113.7')
+  assert.equal(limitKeyOf('::ffff:203.0.113.7'), '::ffff:203.0.113.7')
 })

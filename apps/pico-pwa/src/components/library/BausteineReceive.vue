@@ -2,11 +2,11 @@
 /**
  * Empfangen auf Bausteine-Ebene: nimmt einen verschlüsselten Transfer-Link (oder QR) entgegen und legt den
  * Inhalt AUTOMATISCH am richtigen Ort ab — Block → Block-Bibliothek, Snippet → Snippet-Bibliothek
- * (Protokolle wandern über routeImport in die Vorlagen). Reine UI über der bestehenden Logik: receiveTransfer
+ * (Protokolle wandern über routeImport in die Vorlagen). Reine UI über der bestehenden Logik: openTransfer
  * entschlüsselt lokal zu JSON, routeImport erkennt das Schema und routet. Symmetrisch zum Vorlagen-„Empfangen".
  */
 import { ref } from 'vue'
-import { receiveTransfer, TransferError } from '@resqdocs/protocol-core/transferClient'
+import { openTransfer, TransferError, type OpenedTransfer } from '@resqdocs/protocol-core/transferClient'
 import { routeImport } from '@/composables/useImportRouting'
 import CodeScanOverlay from '@/components/CodeScanOverlay.vue'
 import { QR_PROFILE } from '@/medplan/scanProfiles'
@@ -22,12 +22,19 @@ const msg = ref<{ kind: 'ok' | 'err'; text: string } | null>(null)
 async function receive(): Promise<void> {
   busy.value = true
   msg.value = null
+  let opened: OpenedTransfer | null = null
   try {
-    const json = await receiveTransfer(receiveText.value, transferCfg)
-    const outcome = await routeImport(json) // erkennt Block/Snippet/Vorlage und legt es am richtigen Ort ab
-    msg.value = { kind: outcome.ok ? 'ok' : 'err', text: outcome.message }
+    // „1× lesen“ gilt erst als geöffnet, wenn etwas übernommen ist (direkt oder im Auswahlfenster).
+    const link = await openTransfer(receiveText.value, transferCfg)
+    opened = link
+    const hint = link.priorOpens > 0 ? 'Dieser Link wurde vorher schon einmal geöffnet, aber nicht übernommen.' : undefined
+    const outcome = await routeImport(link.text, undefined, { onDone: () => void link.consume(), onCancel: () => void link.release(), hint })
+    if (!outcome.ok) void link.release()
+    else if (!outcome.pending) void link.consume()
+    msg.value = { kind: outcome.ok ? 'ok' : 'err', text: outcome.ok && !outcome.pending && hint ? `${outcome.message} ${hint}` : outcome.message }
     if (outcome.ok) receiveText.value = ''
   } catch (e) {
+    void opened?.release() // nach dem Öffnen gescheitert: Link nicht reserviert lassen (consume/release zählen nur einmal)
     msg.value = { kind: 'err', text: e instanceof TransferError ? e.message : 'Empfangen fehlgeschlagen.' }
   } finally {
     busy.value = false
@@ -51,7 +58,7 @@ function onQrDecoded(raw: string): void {
         <input
           v-model="receiveText"
           class="input input-bordered input-sm w-full font-mono text-xs"
-          placeholder="https://transfer.resqdocs.app/#…"
+          placeholder="resq.li/… oder https://transfer.resqdocs.app/#…"
           aria-label="Transfer-Link einfügen"
         />
         <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="!receiveText.trim() || busy" @click="receive">

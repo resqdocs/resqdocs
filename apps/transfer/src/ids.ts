@@ -23,3 +23,10 @@ export function newId(): string {
 export function newDeleteToken(): string {
   return randomString(32)
 }
+
+/** Kurzlink-Code (resq.li/<code>): 5 Zeichen ~ 460 Mio. Möglichkeiten. Kürzer als jede Blob-ID und als die
+ *  reservierten Pfade („editor“ hat 6 Zeichen, „ai“ 2), deshalb keine Überschneidung. */
+export const SHORT_CODE_LENGTH = 5
+export function newShortCode(): string {
+  return randomString(SHORT_CODE_LENGTH)
+}

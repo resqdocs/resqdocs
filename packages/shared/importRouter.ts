@@ -16,15 +16,16 @@ export type DetectResult =
   | { ok: true; kind: 'protocol'; tree: Container }
   | { ok: true; kind: 'block'; tree: Container }
   | { ok: true; kind: 'snippet'; snippet: SnippetPayload }
-  // Sammlung mehrerer Vorlagen: JSON-Liste von Vorlagen-Dateien (so exportiert „Alle“ im Online-Editor)
-  | { ok: true; kind: 'bundle'; trees: Container[] }
+  // Sammlung: JSON-Liste von Einzel-Hüllen - Vorlagen, seit collectionIO auch gespeicherte Abschnitte und
+  // Textbausteine (so exportieren „Alle“ im Online-Editor und das Teilen mehrerer Teile in der App)
+  | { ok: true; kind: 'bundle'; trees: Container[]; blocks: Container[]; snippets: SnippetPayload[] }
   // Fehler: kind gesetzt, wenn das Schema ERKANNT wurde, der Parser aber ablehnt (z. B. Version zu neu)
   // -> die UI kann "Vorlage erkannt, aber ..." statt eines nackten Schema-Fehlers zeigen.
   | { ok: false; kind?: DetectedKind; error: string }
 
 /** Nutzer-sichtbares Substantiv fuer den erkannten Typ (Meldung „Als <…> importiert"). */
 export function kindNoun(k: DetectedKind): string {
-  return k === 'protocol' ? 'Vorlage' : k === 'block' ? 'Gespeicherter Abschnitt' : k === 'bundle' ? 'Vorlagen-Sammlung' : 'Textbaustein'
+  return k === 'protocol' ? 'Vorlage' : k === 'block' ? 'Gespeicherter Abschnitt' : k === 'bundle' ? 'Sammlung' : 'Textbaustein'
 }
 
 /** JSON am schema-Feld erkennen und mit dem passenden Parser parsen. Reicht tree/snippet 1:1 durch. */
@@ -56,20 +57,34 @@ export function detectAndParse(json: string): DetectResult {
 }
 
 /**
- * Sammlung: jede Vorlage einzeln mit dem bestehenden Parser prüfen. Alles oder nichts - eine fehlerhafte
- * Vorlage wird mit ihrer Position gemeldet, statt still nur einen Teil zu übernehmen.
+ * Sammlung: jeden Eintrag einzeln mit dem bestehenden Parser seiner Art prüfen (Vorlage, gespeicherter Abschnitt,
+ * Textbaustein). Alles oder nichts - ein fehlerhafter Eintrag wird mit seiner Position gemeldet, statt still nur
+ * einen Teil zu übernehmen.
  */
 function parseBundle(items: unknown[]): DetectResult {
-  if (!items.length) return { ok: false, kind: 'bundle', error: 'Die Sammlung enthält keine Vorlage.' }
+  if (!items.length) return { ok: false, kind: 'bundle', error: 'Die Sammlung ist leer.' }
   const trees: Container[] = []
+  const blocks: Container[] = []
+  const snippets: SnippetPayload[] = []
   for (const [i, item] of items.entries()) {
-    const pos = `Vorlage ${i + 1} von ${items.length}`
-    if ((item as { schema?: unknown } | null)?.schema !== PROTOCOL_SCHEMA) {
-      return { ok: false, kind: 'bundle', error: `${pos} ist keine ResQDocs-Vorlage.` }
+    const pos = `Eintrag ${i + 1} von ${items.length}`
+    const schema = (item as { schema?: unknown } | null)?.schema
+    const json = JSON.stringify(item)
+    if (schema === PROTOCOL_SCHEMA) {
+      const r = parseTemplate(json)
+      if (!r.ok) return { ok: false, kind: 'bundle', error: `${pos} (Vorlage): ${r.error}` }
+      trees.push(r.tree)
+    } else if (schema === BLOCK_SCHEMA) {
+      const r = parseBlock(json)
+      if (!r.ok) return { ok: false, kind: 'bundle', error: `${pos} (gespeicherter Abschnitt): ${r.error}` }
+      blocks.push(r.tree)
+    } else if (schema === SNIPPET_SCHEMA) {
+      const r = parseSnippet(json)
+      if (!r.ok) return { ok: false, kind: 'bundle', error: `${pos} (Textbaustein): ${r.error}` }
+      snippets.push(r.snippet)
+    } else {
+      return { ok: false, kind: 'bundle', error: `${pos} ist keine ResQDocs-Vorlage, kein gespeicherter Abschnitt und kein Textbaustein.` }
     }
-    const r = parseTemplate(JSON.stringify(item))
-    if (!r.ok) return { ok: false, kind: 'bundle', error: `${pos}: ${r.error}` }
-    trees.push(r.tree)
   }
-  return { ok: true, kind: 'bundle', trees }
+  return { ok: true, kind: 'bundle', trees, blocks, snippets }
 }
