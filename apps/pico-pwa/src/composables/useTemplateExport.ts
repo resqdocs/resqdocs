@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { exportTemplate, exportTemplates } from '@resqdocs/protocol-core/templateIO'
+import { exportCollection, type Collection } from '@resqdocs/protocol-core/collectionIO'
 import { shareJson } from '@/utils/fileTransfer'
 
 /**
@@ -41,5 +42,20 @@ export function useTemplateExport() {
       sharing.value = false
     }
   }
-  return { sharing, shareTemplate, shareTemplates }
+  /** Sammlung mit gespeicherten Abschnitten und/oder Textbausteinen als Datei teilen; nur Vorlagen wie bisher. */
+  async function shareCollection(c: Collection): Promise<{ ok: boolean; error?: string }> {
+    if (!c.blocks.length && !c.snippets.length) return shareTemplates(c.templates)
+    if (sharing.value) return { ok: false }
+    sharing.value = true
+    try {
+      await shareJson('resqdocs-sammlung.json', exportCollection(c), 'Sammlung exportieren')
+      return { ok: true }
+    } catch (err) {
+      const m = err instanceof Error ? err.message : String(err)
+      return { ok: false, error: /cancel|abbruch/i.test(m) ? undefined : m }
+    } finally {
+      sharing.value = false
+    }
+  }
+  return { sharing, shareTemplate, shareTemplates, shareCollection }
 }

@@ -4,6 +4,7 @@
 // Browser-Clients direkt sprechen koennen. TLS/Rate-Limit terminieren bevorzugt am externen Proxy.
 import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { DatabaseSync } from 'node:sqlite'
+import { isIPv6 } from 'node:net'
 import { createStore, BlobTooLargeError, StoreFullError, MAX_BLOB_BYTES, DEFAULT_MAX_BLOBS, DEFAULT_MAX_TOTAL_BYTES, type BlobStore } from './store.ts'
 import { createRateLimiter, type RateLimiter } from './rateLimiter.ts'
 import { RECEIVER_HTML } from './receiverPage.ts'
@@ -33,7 +34,8 @@ const MAGIC = Buffer.from([0x52, 0x51, 0x44, 0x31])
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Expire, X-Burn, X-Delete-Token',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Expire, X-Burn, X-Delete-Token, X-Claim, X-Claim-Token',
+  'Access-Control-Expose-Headers': 'X-Claim-Token, X-Prior-Opens',
   'Access-Control-Max-Age': '86400',
 }
 
@@ -75,6 +77,16 @@ function readBody(req: IncomingMessage, res: ServerResponse, max: number): Promi
  *  genutzt, wenn der Verbindungs-Peer der konfigurierte `trustedProxy` ist. Von JEDEM anderen Peer wird
  *  X-Forwarded-For NIE vertraut (Spoofing-Schutz, CWE-348): dort bleibt es bei der Socket-Adresse. Rein
  *  fluechtig (rateLimiter-Map, maxKeys-begrenzt), nie persistiert. */
+/** IPv6-Adressen auf ihr /64-Netz kürzen: ein Anschluss hat meist ein ganzes /64, sonst zählte jede Adresse einzeln. */
+export function limitKeyOf(ip: string): string {
+  if (!isIPv6(ip) || /^::ffff:\d/.test(ip)) return ip
+  const [head, tail = ''] = ip.split('::')
+  const h = head ? head.split(':') : []
+  const t = tail ? tail.split(':') : []
+  const full = ip.includes('::') ? [...h, ...Array(8 - h.length - t.length).fill('0'), ...t] : h
+  return full.slice(0, 4).map((x) => x.toLowerCase().replace(/^0+(?=.)/, '')).join(':') + '::/64'
+}
+
 export function clientKey(req: IncomingMessage, trustedProxy?: string | null): string {
   const peer = req.socket.remoteAddress || 'unknown'
   if (trustedProxy && peer === trustedProxy) {
@@ -82,14 +94,38 @@ export function clientKey(req: IncomingMessage, trustedProxy?: string | null): s
     // als das Parsen von X-Forwarded-For, das bei falscher Proxy-Konfig (verbatim durchgereichtes XFF) vom
     // Client kontrollierbar waere. Fallback: letzter XFF-Hop. Beides nur vom vertrauenswuerdigen Peer.
     const real = req.headers['x-real-ip']
-    if (typeof real === 'string' && real.trim()) return `ip:${real.trim()}`
+    if (typeof real === 'string' && real.trim()) return `ip:${limitKeyOf(real.trim())}`
     const xff = req.headers['x-forwarded-for']
     if (typeof xff === 'string') {
       const last = xff.split(',').map((s) => s.trim()).filter(Boolean).pop()
-      if (last) return `xff:${last}`
+      if (last) return `xff:${limitKeyOf(last)}`
     }
   }
-  return `ip:${peer}`
+  return `ip:${limitKeyOf(peer)}`
+}
+
+/** Kurzlink-Domain und Ziel-Adresse der langen Links. */
+export const DEFAULT_SHORT_HOST = 'resq.li'
+export const DEFAULT_PUBLIC_BASE = 'https://transfer.resqdocs.app'
+const SHORT_CODE = /^[A-Za-z0-9]{5}$/
+/** Weiterleitungen auf der Kurzlink-Domain, falls der Proxy sie nicht schon erledigt. */
+const SHORT_HOST_REDIRECTS: Record<string, string> = {
+  '/': 'https://resqdocs.app/',
+  '/editor': 'https://editor.resqdocs.app/',
+  '/editor/': 'https://editor.resqdocs.app/',
+  '/ai': 'https://ai.resqdocs.app/',
+  '/ai/': 'https://ai.resqdocs.app/',
+}
+
+/** Langen Link prüfen: genau `<base>/` [+ `?e=<kanal>`] + `#<id>.<schlüssel>`. Gibt die Blob-ID zurück, sonst null. */
+export function longLinkBlobId(link: string, base: string): string | null {
+  const b = base.replace(/\/+$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const m = new RegExp(`^${b}/(?:\\?e=[a-z0-9-]{1,16})?#([A-Za-z0-9]{1,32})\\.([A-Za-z0-9_-]{16,64})$`).exec(link)
+  return m ? m[1] : null
+}
+
+function shortGonePage(): string {
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>ResQDocs – Link abgelaufen</title><style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:3rem auto;padding:0 1rem;color:#1f2a44}</style></head><body><h1>Link abgelaufen</h1><p>Dieser Kurzlink ist abgelaufen, wurde schon übernommen oder ist ungültig. Bitte die Person, die ihn geschickt hat, um einen neuen Link.</p></body></html>`
 }
 
 export interface ServerOptions {
@@ -101,14 +137,40 @@ export interface ServerOptions {
   trustedProxy?: string | null
   /** App-Zuordnung (Universal Links / App Links). Fehlt sie, antworten die .well-known-Pfade mit 404. */
   appLinks?: AppLinksConfig | null
+  /** Auflösen von Kurzlinks je Anschluss (eigenes, strengeres Limit als Blob-Abrufe). */
+  shortLimiter?: RateLimiter | null
+  /** Fehlversuche beim Auflösen je Anschluss: wer zu oft einen unbekannten Code abfragt, bekommt für den Rest des
+   *  Fensters 429. Gilt nur für diesen Anschluss; gültige Kurzlinks anderer bleiben erreichbar. */
+  shortMissLimiter?: RateLimiter | null
+  /** Anlegen von Kurzlinks je Anschluss (strenger als das Ablegen von Inhalten). */
+  shortCreateLimiter?: RateLimiter | null
+  /** Host der Kurzlinks (Standard resq.li); Anfragen mit diesem Host bekommen Weiterleitungen statt der Empfangsseite. */
+  shortHost?: string
+  /** Adresse der langen Links (Standard https://transfer.resqdocs.app); nur solche Ziele nimmt der Kurzlink an. */
+  publicBase?: string
 }
 
 export function createTransferServer(opts: ServerOptions) {
   const { store, postLimiter = null, getLimiter = null, deleteLimiter = null, trustedProxy = null, appLinks = null } = opts
+  const shortHost = (opts.shortHost ?? DEFAULT_SHORT_HOST).toLowerCase()
+  const publicBase = (opts.publicBase ?? DEFAULT_PUBLIC_BASE).replace(/\/+$/, '')
   // Einmal beim Start gebaut: statischer, oeffentlicher Inhalt (die Betriebssysteme rufen ihn selbst ab).
   const wellKnown: Record<string, string | null> = {
     '/.well-known/apple-app-site-association': appLinks ? buildAppleAppSiteAssociation(appLinks) : null,
     '/.well-known/assetlinks.json': appLinks ? buildAssetLinks(appLinks) : null,
+  }
+  const shortAasa = appLinks ? buildAppleAppSiteAssociation(appLinks, 'short') : null
+  const shortLimiter = opts.shortLimiter ?? null
+  const shortMissLimiter = opts.shortMissLimiter ?? null
+  const shortCreateLimiter = opts.shortCreateLimiter ?? null
+  /** false = dieser Anschluss ist am Limit (Anfragen insgesamt oder Fehlversuche). */
+  const mayResolve = (req: IncomingMessage): boolean => {
+    const key = clientKey(req, trustedProxy)
+    if (shortMissLimiter?.full(key)) return false
+    return !shortLimiter || shortLimiter.allow(key)
+  }
+  const countMiss = (req: IncomingMessage): void => {
+    shortMissLimiter?.allow(clientKey(req, trustedProxy))
   }
 
   const server = createHttpServer(async (req, res) => {
@@ -118,6 +180,64 @@ export function createTransferServer(opts: ServerOptions) {
 
     if (method === 'OPTIONS') return send(res, 204)
     if (method === 'GET' && path === '/healthz') return send(res, 200, 'ok')
+
+    // Kurzlink-Domain (resq.li): /<code> leitet auf den langen Link weiter. Keine Empfangsseite, keine API.
+    const host = String(req.headers.host ?? '').toLowerCase().replace(/:\d+$/, '')
+    if (host === shortHost && (method === 'GET' || method === 'HEAD')) {
+      if (path === '/.well-known/apple-app-site-association' || path === '/.well-known/assetlinks.json') {
+        const body = path.endsWith('assetlinks.json') ? wellKnown[path] : shortAasa
+        if (body === null) return send(res, 404, 'Nicht konfiguriert.')
+        return send(res, 200, method === 'HEAD' ? undefined : body, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600', 'X-Content-Type-Options': 'nosniff' })
+      }
+      if (Object.hasOwn(SHORT_HOST_REDIRECTS, path)) return send(res, 302, undefined, { Location: SHORT_HOST_REDIRECTS[path], 'Cache-Control': 'no-store' })
+      const code = path.slice(1).replace(/\/$/, '')
+      if (SHORT_CODE.test(code)) {
+        if (!mayResolve(req)) return send(res, 429, 'Zu viele Anfragen.')
+        const r = store.resolve(code)
+        if (r.kind === 'ok') return send(res, 302, undefined, { Location: r.target, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' })
+        if (r.kind === 'missing') countMiss(req)
+      }
+      return send(res, 404, method === 'HEAD' ? undefined : shortGonePage(), { ...PAGE_HEADERS, 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'" })
+    }
+
+    // POST /v1/short — Kurzlink zu einem langen Link anlegen (Body JSON {link}). Der Server kennt danach den
+    // Schlüssel, bis der Inhalt weg ist; deshalb nur auf ausdrücklichen Wunsch beim Teilen.
+    if (method === 'POST' && path === '/v1/short') {
+      const limiter = shortCreateLimiter ?? postLimiter
+      if (limiter && !limiter.allow(clientKey(req, trustedProxy))) return send(res, 429, 'Zu viele Anfragen.')
+      const body = await readBody(req, res, 2048)
+      if (body === null) return
+      let link = ''
+      try {
+        const parsed = JSON.parse(body.toString('utf8')) as { link?: unknown }
+        link = typeof parsed.link === 'string' ? parsed.link : ''
+      } catch {
+        return send(res, 400, 'Kein JSON.')
+      }
+      const blobId = longLinkBlobId(link, publicBase)
+      if (!blobId) return send(res, 400, 'Kein Transfer-Link.')
+      try {
+        const made = store.shorten(blobId, link)
+        if (!made) return send(res, 404, 'Nicht gefunden oder abgelaufen.')
+        return send(res, 201, JSON.stringify({ code: made.code, url: `https://${shortHost}/${made.code}`, expiresAt: made.expiresAt }), { 'Content-Type': 'application/json' })
+      } catch (err) {
+        if (err instanceof StoreFullError) return send(res, 507, 'Speicher voll — bitte spaeter erneut.')
+        return send(res, 500, 'Serverfehler.')
+      }
+    }
+
+    // GET /v1/short/:code — Kurzlink zum langen Link auflösen (App, Editor). 410 = abgelaufen/übernommen.
+    const shortMatch = method === 'GET' && /^\/v1\/short\/([A-Za-z0-9]+)$/.exec(path)
+    if (shortMatch) {
+      if (!mayResolve(req)) return send(res, 429, 'Zu viele Anfragen.')
+      const r = SHORT_CODE.test(shortMatch[1]) ? store.resolve(shortMatch[1]) : { kind: 'missing' as const }
+      if (r.kind === 'missing') {
+        countMiss(req)
+        return send(res, 404, 'Nicht gefunden.')
+      }
+      if (r.kind === 'expired') return send(res, 410, 'Abgelaufen.')
+      return send(res, 200, JSON.stringify({ link: r.target }), { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
+    }
 
     // GET / (+ HEAD) — Empfaenger-Seite. Ohne diese bekaemen Browser-Oeffner eines Links einen 404;
     // stattdessen entschluesselt diese self-contained Seite den Inhalt lokal aus dem URL-Fragment.
@@ -159,19 +279,41 @@ export function createTransferServer(opts: ServerOptions) {
       }
     }
 
-    // GET /v1/blob/:idOrCode — Chiffrat holen (Burn loescht nach Ausliefern)
+    // GET /v1/blob/:idOrCode — Chiffrat holen. „1× lesen“: ohne X-Claim sofort verbraucht (wie bisher), mit
+    // X-Claim: 1 nur reserviert, bis der Empfänger übernimmt (consume) oder abbricht (release).
     const getMatch = method === 'GET' && /^\/v1\/blob\/([A-Za-z0-9]+)$/.exec(path)
     if (getMatch) {
       if (getLimiter && !getLimiter.allow(clientKey(req, trustedProxy))) return send(res, 429, 'Zu viele Anfragen.')
-      const blob = store.get(getMatch[1])
-      if (!blob) return send(res, 404, 'Nicht gefunden oder abgelaufen.')
+      const r = store.fetch(getMatch[1], { claim: req.headers['x-claim'] === '1' })
+      if (r.kind === 'missing') return send(res, 404, 'Nicht gefunden oder abgelaufen.')
+      if (r.kind === 'busy') return send(res, 409, 'Wird gerade auf einem anderen Gerät geöffnet.')
       // no-store: kein zwischengeschalteter (Proxy-)Cache darf das Chiffrat ueber die serverseitige
       // Loeschung/Burn hinaus vorhalten (rueckstandsfreies Loeschen, Anforderung d). Ohne Key ohnehin wertlos.
-      return send(res, 200, Buffer.from(blob), {
+      return send(res, 200, Buffer.from(r.blob), {
         'Content-Type': 'application/octet-stream',
         'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
+        'X-Prior-Opens': String(r.priorOpens),
+        ...(r.claimToken ? { 'X-Claim-Token': r.claimToken } : {}),
       })
+    }
+
+    // POST /v1/blob/:id/consume | /release — reservierten „1× lesen“-Link verbrauchen bzw. freigeben (mit Token)
+    const claimMatch = method === 'POST' && /^\/v1\/blob\/([A-Za-z0-9]+)\/(consume|release)$/.exec(path)
+    if (claimMatch) {
+      if (deleteLimiter && !deleteLimiter.allow(clientKey(req, trustedProxy))) return send(res, 429, 'Zu viele Anfragen.')
+      const token = req.headers['x-claim-token']
+      const ok = typeof token === 'string' && (claimMatch[2] === 'consume' ? store.consume(claimMatch[1], token) : store.release(claimMatch[1], token))
+      return send(res, ok ? 204 : 404, ok ? undefined : 'Nicht gefunden.')
+    }
+
+    // DELETE /v1/blob/:id/short — Kurzlink zurücknehmen (mit dem Lösch-Token des Inhalts); der Inhalt bleibt.
+    const unshortMatch = method === 'DELETE' && /^\/v1\/blob\/([A-Za-z0-9]+)\/short$/.exec(path)
+    if (unshortMatch) {
+      if (deleteLimiter && !deleteLimiter.allow(clientKey(req, trustedProxy))) return send(res, 429, 'Zu viele Anfragen.')
+      const token = req.headers['x-delete-token']
+      const ok = typeof token === 'string' && store.unshorten(unshortMatch[1], token)
+      return send(res, ok ? 204 : 404, ok ? undefined : 'Nicht gefunden.')
     }
 
     // DELETE /v1/blob/:id — vorzeitig loeschen (mit Token)
@@ -218,6 +360,12 @@ if (isMain) {
   const postLimiter = rl ? createRateLimiter(60, 60_000) : null
   const getLimiter = rl ? createRateLimiter(300, 60_000) : null
   const deleteLimiter = rl ? createRateLimiter(60, 60_000) : null
+  // Kurzlinks: je Anschluss (IPv6 je /64) 20 Auflösungen pro Minute und höchstens 5 Fehlversuche pro Minute (danach
+  // für diesen Anschluss 429 bis zum Ende des Fensters); Anlegen höchstens 10 pro Minute. Bewusst keine Sperre für
+  // alle: sonst könnte ein Einzelner jeden Kurzlink unerreichbar machen.
+  const shortLimiter = rl ? createRateLimiter(20, 60_000) : null
+  const shortMissLimiter = rl ? createRateLimiter(5, 60_000) : null
+  const shortCreateLimiter = rl ? createRateLimiter(10, 60_000) : null
   // RIGOROSES Loeschen abgelaufener Blobs: SOFORT beim Start (falls Links waehrend eines Neustarts abliefen),
   // dann alle 60 s. secure_delete + auto_vacuum entfernen den Inhalt spurlos + geben Seiten sofort ans OS
   // zurueck; wal_checkpoint(TRUNCATE) spuelt zusaetzlich das WAL-Journal, damit dort keine Restspur bleibt.
@@ -228,7 +376,7 @@ if (isMain) {
   cleanup()
   setInterval(cleanup, 60_000).unref()
   const appLinks = parseAppLinksEnv(process.env)
-  const server = createTransferServer({ store, postLimiter, getLimiter, deleteLimiter, trustedProxy, appLinks })
+  const server = createTransferServer({ store, postLimiter, getLimiter, deleteLimiter, shortLimiter, shortMissLimiter, shortCreateLimiter, trustedProxy, appLinks, shortHost: process.env.SHORT_HOST || undefined, publicBase: process.env.PUBLIC_BASE || undefined })
   // Verbindungs-Obergrenze gegen Speicher-DoS: jede offene Verbindung kann bis zu 512 KB Body puffern.
   // Deckel * 512 KB haelt den Body-Speicher weit unter mem_limit (256m). Der Rate-Limiter zaehlt nur
   // Requests/Minute, nicht Gleichzeitigkeit — deshalb hier zusaetzlich harte Concurrency-Grenze. Am externen

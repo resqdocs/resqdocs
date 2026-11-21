@@ -9,18 +9,23 @@ import { ref, computed, watch, nextTick } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { useTreeEditor } from '@resqdocs/protocol-core-ui/treeEditor'
-import { exportTemplates } from '@resqdocs/protocol-core/templateIO'
+import { exportCollection, describeCollection } from '@resqdocs/protocol-core/collectionIO'
+import ShareExtrasPick from '@resqdocs/protocol-core-ui/components/ShareExtrasPick.vue'
+import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
+import { useBausteine } from '@/composables/useBausteine'
 import { detectAndParse, kindNoun } from '@resqdocs/protocol-core/importRouter'
-import { shareTransfer, receiveTransfer, TransferError, type TransferTtl } from '@resqdocs/protocol-core/transferClient'
+import { shareTransfer, openTransfer, TransferError, type OpenedTransfer, type TransferTtl } from '@resqdocs/protocol-core/transferClient'
 import QrCode from '@/components/QrCode.vue'
+import ShortLinkToggle from '@resqdocs/protocol-core-ui/components/ShortLinkToggle.vue'
+import { useShortLink } from '@resqdocs/protocol-core-ui/useShortLink'
 import CodeScanOverlay from '@/components/CodeScanOverlay.vue'
 import { QR_PROFILE } from '@/medplan/scanProfiles'
 import { routeDetected } from '@/composables/useImportRouting'
 import { useTemplateExport } from '@/composables/useTemplateExport'
 import { useAppVersion } from '@/composables/useAppVersion'
-import { incomingOpen, takeIncomingOpen } from '@/composables/useIncomingOpen'
-import { offerImport } from '@/composables/useImportChoice'
-import { readIncomingFile, discardIncomingFile } from '@/utils/fileTransfer'
+import { takeIncomingOpen } from '@/composables/useIncomingOpen'
+import { offerImport, offerCollection } from '@/composables/useImportChoice'
+import { readIncomingFile } from '@/utils/fileTransfer'
 
 // Optionaler Dev-Override der Transfer-Dienst-URL (sonst Default aus dem Client).
 const transferCfg = (import.meta.env.VITE_TRANSFER_URL as string | undefined)
@@ -39,7 +44,7 @@ const mode = ref<'closed' | 'export' | 'import'>('closed')
 const importText = ref('')
 const msg = ref<{ kind: 'ok' | 'err'; text: string } | null>(null)
 const copied = ref(false)
-const { sharing, shareTemplates } = useTemplateExport()
+const { sharing, shareCollection } = useTemplateExport()
 
 // Export-Auswahl: eine oder mehrere Vorlagen. Default = die aktive und folgt ihr, solange nur eine
 // gewählt ist. Mehrere = Sammlung (Datei, Link und QR); eine = Einzelformat, das auch ältere Apps lesen.
@@ -56,7 +61,30 @@ function toggleAllSelected(): void {
   selectedIds.value = allSelected.value ? [root.value.id] : protocols.value.map((p) => p.id)
   shareLink.value = null
 }
-const exportJson = computed(() => (selectedTemplates.value.length ? exportTemplates(selectedTemplates.value) : ''))
+// Zusätzlich gespeicherte Abschnitte und Textbausteine mitgeben (Häkchen, Standard aus). Alles zusammen geht als
+// eine Sammlung über Datei, Link und QR; auch ohne Vorlage möglich.
+const blockLib = useBlockLibrary()
+const bausteine = useBausteine()
+const withBlocks = ref(false)
+const withSnippets = ref(false)
+const blockIds = ref<string[]>([])
+const snippetIds = ref<string[]>([])
+const selectedBlocks = computed<Container[]>(() => (withBlocks.value ? blockLib.blocks.value.filter((b) => blockIds.value.includes(b.id)) : []))
+const selectedSnippets = computed(() =>
+  withSnippets.value ? bausteine.snippets.value.filter((s) => snippetIds.value.includes(s.id) && s.text.trim()).map((s) => ({ title: s.title, text: s.text })) : [],
+)
+const selectedCount = computed(() => selectedTemplates.value.length + selectedBlocks.value.length + selectedSnippets.value.length)
+const mitExtras = computed(() => selectedBlocks.value.length + selectedSnippets.value.length > 0)
+watch([withBlocks, withSnippets, blockIds, snippetIds], () => { shareLink.value = null })
+watch(mode, (m) => {
+  // Für die Auswahl die Bibliotheken laden (TemplateIO kann vor dem Bausteine-Tab geöffnet werden).
+  if (m !== 'export') return
+  if (!blockLib.loaded.value) void blockLib.reload().catch(() => {})
+  if (!bausteine.loaded.value) void bausteine.reload().catch(() => {})
+})
+const exportJson = computed(() =>
+  selectedCount.value ? exportCollection({ templates: selectedTemplates.value, blocks: selectedBlocks.value, snippets: selectedSnippets.value }) : '',
+)
 
 function toggle(m: 'export' | 'import'): void {
   mode.value = mode.value === m ? 'closed' : m
@@ -88,7 +116,9 @@ function openReceive(): void {
 function openImportFile(): void {
   mode.value = 'import'; focus.value = 'file'; msg.value = null
 }
-defineExpose({ openShare, openExport, openReceive, openImportFile })
+defineExpose({ openShare, openExport, openReceive, openImportFile, acceptIncoming })
+// Vorlage(n) übernommen: Das Ergebnis meldet das Übernehmen-Fenster; das Blatt „Daten“ hat dann nichts mehr zu zeigen.
+const emit = defineEmits<{ imported: [] }>()
 
 async function copyExport(): Promise<void> {
   try {
@@ -101,7 +131,7 @@ async function copyExport(): Promise<void> {
 }
 
 async function downloadExport(): Promise<void> {
-  const res = await shareTemplates(selectedTemplates.value)
+  const res = await shareCollection({ templates: selectedTemplates.value, blocks: selectedBlocks.value, snippets: selectedSnippets.value })
   if (!res.ok && res.error) msg.value = { kind: 'err', text: 'Export fehlgeschlagen: ' + res.error }
 }
 
@@ -114,8 +144,9 @@ const TTL_LABELS: { value: TransferTtl; label: string }[] = [
 ]
 const ttl = ref<TransferTtl>('burn')
 const shareBusy = ref(false)
-const shareLink = ref<{ link: string; code: string } | null>(null)
+const shareLink = ref<{ link: string; code: string; deleteToken: string } | null>(null)
 const linkCopied = ref(false)
+const { short: shortWanted, shortBusy, shortError, shownLink, displayLink } = useShortLink(() => shareLink.value, transferCfg)
 
 async function shareViaLink(): Promise<void> {
   shareBusy.value = true
@@ -123,7 +154,7 @@ async function shareViaLink(): Promise<void> {
   shareLink.value = null
   try {
     const r = await shareTransfer(exportJson.value, ttl.value, transferCfg)
-    shareLink.value = { link: r.link, code: r.code }
+    shareLink.value = { link: r.link, code: r.code, deleteToken: r.deleteToken }
   } catch (e) {
     msg.value = { kind: 'err', text: e instanceof TransferError ? e.message : 'Teilen fehlgeschlagen.' }
   } finally {
@@ -133,7 +164,7 @@ async function shareViaLink(): Promise<void> {
 async function copyLink(): Promise<void> {
   if (!shareLink.value) return
   try {
-    await navigator.clipboard.writeText(shareLink.value.link)
+    await navigator.clipboard.writeText(shownLink.value)
     linkCopied.value = true
     window.setTimeout(() => (linkCopied.value = false), 2000)
   } catch {
@@ -149,18 +180,48 @@ function onQrDecoded(raw: string): void {
   receiveText.value = raw
   void receiveViaLink() // gescannter Link -> derselbe Empfangs-Pfad wie eingefügt
 }
-async function receiveViaLink(): Promise<void> {
+// Per Link geholter Inhalt, der noch nicht übernommen ist. Ein „1× lesen“-Link ist bis dahin nur für dieses Gerät
+// reserviert: Übernehmen verbraucht ihn, Abbrechen gibt ihn wieder frei.
+// Jeder Import bekommt SEINEN Link mit (Parameter l): ein späterer Abruf oder Import darf weder den falschen Link
+// verbrauchen noch das Feld eines neueren Inhalts leeren.
+let link: OpenedTransfer | null = null
+function linkHint(l: OpenedTransfer | null): string | undefined {
+  return l && l.priorOpens > 0 ? 'Dieser Link wurde vorher schon einmal geöffnet, aber nicht übernommen.' : undefined
+}
+function consumeLink(l: OpenedTransfer | null): void {
+  if (link === l) link = null
+  void l?.consume()
+}
+async function releaseLink(l: OpenedTransfer | null): Promise<void> {
+  if (!l) return
+  if (link === l) link = null
+  // Freigegeben: der Link gilt wieder, der Inhalt muss hier nicht liegen bleiben. Das Feld nur anfassen, wenn dort
+  // noch der Inhalt DIESES Links steht (nicht der eines neueren Abrufs oder einer Datei).
+  const released = l.reserved && (await l.release())
+  if (importText.value !== l.text) return
+  if (released) {
+    importText.value = ''
+    return
+  }
+  // Schon verbraucht (älterer Transfer-Dienst) oder offline: den Inhalt zum späteren „Laden“ zeigen.
+  if (focus.value === 'link') focus.value = 'file'
+}
+
+async function receiveViaLink(incoming = false): Promise<void> {
   receiveBusy.value = true
   msg.value = null
   try {
-    const json = await receiveTransfer(receiveText.value, transferCfg)
+    // Ein noch offener früherer Abruf wird zuerst freigegeben (abwarten: derselbe Link wäre sonst noch reserviert).
+    await releaseLink(link)
+    link = await openTransfer(receiveText.value, transferCfg)
+    const json = link.text
     // Den entschlüsselten Klartext ZUERST in die Import-Textarea legen: schlägt die Erkennung fehl
     // (z. B. neuere Schema-Version), geht er NICHT verloren — das Burn-Blob ist serverseitig schon weg.
     // Bei Erfolg räumt load() importText selbst wieder ab.
     importText.value = json
     mode.value = 'import'
     receiveText.value = ''
-    await load(json)
+    await load(json, incoming)
   } catch (e) {
     msg.value = { kind: 'err', text: e instanceof TransferError ? e.message : 'Empfangen fehlgeschlagen.' }
   } finally {
@@ -168,16 +229,16 @@ async function receiveViaLink(): Promise<void> {
   }
 }
 
-// Von aussen geoeffnet (angetippter Link / geteilte Datei, useIncomingOpen): NIE ohne Nachfrage abrufen
-// oder importieren - ein „1× lesen"-Link waere sonst unbemerkt verbraucht. Bestaetigt laeuft es durch
-// dieselben Pfade wie Einfuegen bzw. Datei-Import (inkl. Ueberschreiben-Dialog).
+// Von aussen geoeffnet (angetippter Link / geteilte Datei, useIncomingOpen): gleich abrufen bzw. lesen, das
+// Antippen war die Entscheidung. Importiert wird erst nach „übernehmen“ im ImportChoiceDialog, auch bei einem
+// einzelnen gespeicherten Abschnitt oder Textbaustein. Ein „1× lesen“-Link gilt erst dann als geöffnet.
 const incomingBusy = ref(false)
-async function confirmIncoming(): Promise<void> {
+async function acceptIncoming(): Promise<void> {
   const item = takeIncomingOpen()
   if (!item) return
   if (item.kind === 'transfer') {
     receiveText.value = item.link
-    await receiveViaLink()
+    await receiveViaLink(true)
     return
   }
   incomingBusy.value = true
@@ -186,51 +247,65 @@ async function confirmIncoming(): Promise<void> {
   try {
     const text = await readIncomingFile(item.url)
     importText.value = text
-    await load(text)
+    await load(text, true)
   } catch {
     msg.value = { kind: 'err', text: 'Die Datei konnte nicht gelesen werden.' }
   } finally {
     incomingBusy.value = false
   }
 }
-function cancelIncoming(): void {
-  const item = takeIncomingOpen()
-  if (item?.kind === 'file') void discardIncomingFile(item.url)
-}
 
 /** Nach dem Übernehmen im ImportChoiceDialog: erste Vorlage öffnen, Import-Feld leeren. Bis dahin bleibt der
  *  empfangene Text im Feld stehen - bricht der Nutzer ab, geht ein schon verbrauchter „1× lesen“-Link nicht verloren. */
-function afterImport(added: Container[]): void {
+function afterImport(added: Container[], l: OpenedTransfer | null): void {
+  consumeLink(l)
   if (added[0]) editor.selectProtocol(added[0].id)
   importText.value = ''
   mode.value = 'closed'
+  emit('imported')
 }
 const loadBusy = ref(false)
-async function load(text: string): Promise<void> {
+async function load(text: string, incoming = false): Promise<void> {
   if (loadBusy.value) return // Doppelklick-Schutz (routeDetected speichert async -> sonst Duplikat)
   loadBusy.value = true
   try {
-    await runLoad(text)
+    await runLoad(text, incoming)
   } finally {
     loadBusy.value = false
   }
 }
-async function runLoad(text: string): Promise<void> {
+async function runLoad(text: string, incoming: boolean): Promise<void> {
   // Schema-erkennend: eine hier eingeworfene Baustein-/Snippet-Datei landet trotzdem am richtigen Ort.
+  // Gehört der Text zum zuletzt geöffneten Link? Wenn nicht (Datei, eingefügter oder geänderter Text), hat der Link
+  // mit diesem Import nichts zu tun und wird freigegeben statt später verbraucht.
+  const mine = link && link.text === text ? link : null
+  if (link && !mine) await releaseLink(link)
   const r = detectAndParse(text)
   if (!r.ok) {
     msg.value = { kind: 'err', text: (r.kind ? `${kindNoun(r.kind)} erkannt, aber ` : '') + r.error }
+    await releaseLink(mine)
     return
   }
+  const extras = { onCancel: () => void releaseLink(mine), hint: linkHint(mine) }
+  const done = (added: Container[]): void => afterImport(added, mine)
   if (r.kind === 'protocol' || r.kind === 'bundle') {
     // Vorlage(n): Name wählen, bei Namensgleichheit überschreiben oder als neue Vorlage - im ImportChoiceDialog
     // Überschrieben wird nur auf ausdrückliche Wahl; Standard ist „als neue Vorlage“.
     msg.value = null
-    offerImport(r.kind === 'bundle' ? r.trees : [r.tree], afterImport)
+    if (r.kind === 'bundle') offerCollection(r, done, extras) // auch gespeicherte Abschnitte und Textbausteine
+    else offerImport([r.tree], done, extras)
+    return
+  }
+  // Von aussen gekommen: auch ein einzelner gespeicherter Abschnitt oder Textbaustein erst nach „übernehmen“.
+  if (incoming) {
+    msg.value = null
+    offerCollection({ trees: [], blocks: r.kind === 'block' ? [r.tree] : [], snippets: r.kind === 'snippet' ? [r.snippet] : [] }, done, extras)
     return
   }
   // Baustein/Snippet: zentral ans richtige Ziel (landet in der Bausteine-Bibliothek).
   const outcome = await routeDetected(r)
+  if (outcome.ok) consumeLink(mine)
+  else await releaseLink(mine)
   msg.value = { kind: outcome.ok ? 'ok' : 'err', text: outcome.message }
   if (outcome.ok) {
     importText.value = ''
@@ -256,7 +331,7 @@ function onFile(e: Event): void {
 
     <div v-if="mode === 'export'" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
       <!-- Auswahl: eine oder mehrere Vorlagen. Mehrere gehen als Sammlung über Datei, Link und QR. -->
-      <fieldset class="flex flex-col gap-1" data-export-selection>
+      <fieldset class="flex min-w-0 flex-col gap-1" data-export-selection>
         <div class="flex items-center justify-between gap-2">
           <legend class="text-xs font-semibold text-base-content/75">Welche Vorlagen?</legend>
           <button v-if="protocols.length > 1" class="btn btn-ghost btn-xs" type="button" @click="toggleAllSelected">
@@ -275,17 +350,27 @@ function onFile(e: Event): void {
             <span class="min-w-0 flex-1 truncate text-sm">{{ (p.title && p.title.trim()) || p.id }}</span>
           </label>
         </div>
-        <p v-if="!selectedTemplates.length" class="text-xs text-warning">Mindestens eine Vorlage wählen.</p>
-        <p v-else-if="selectedTemplates.length > 1" class="text-xs text-base-content/75">
-          {{ selectedTemplates.length }} Vorlagen gehen zusammen raus. Ältere ResQDocs-Versionen können nur einzelne Vorlagen empfangen.
+        <ShareExtrasPick
+          v-model:block-ids="blockIds"
+          v-model:snippet-ids="snippetIds"
+          v-model:with-blocks="withBlocks"
+          v-model:with-snippets="withSnippets"
+          :blocks="blockLib.blocks.value"
+          :snippets="bausteine.snippets.value"
+        />
+        <p v-if="!selectedCount" class="text-xs text-warning">Mindestens eine Vorlage, einen gespeicherten Abschnitt oder einen Textbaustein wählen.</p>
+        <p v-else-if="selectedCount > 1" class="text-xs text-base-content/75">
+          {{ describeCollection({ templates: selectedTemplates, blocks: selectedBlocks, snippets: selectedSnippets }) }} gehen zusammen raus.
+          {{ mitExtras ? 'Zum Empfangen braucht die Gegenseite ResQDocs 2.1 oder neuer.' : 'Ältere ResQDocs-Versionen können nur einzelne Vorlagen empfangen.' }}
         </p>
       </fieldset>
       <div v-if="focus !== 'link'" class="flex flex-col gap-2">
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-semibold text-base-content/75">Exportieren — als Datei/JSON</span>
-          <div class="flex gap-1">
-            <button class="btn btn-ghost btn-xs" type="button" :disabled="!selectedTemplates.length" @click="copyExport">{{ copied ? 'Kopiert' : 'JSON kopieren' }}</button>
-            <button class="btn btn-ghost btn-xs" type="button" :disabled="sharing || !selectedTemplates.length" @click="downloadExport">Als Datei</button>
+        <!-- Darf umbrechen: bei 393 px passen Überschrift und beide Knöpfe nicht in eine Zeile („Als Datei“ ragte hinaus). -->
+        <div class="flex flex-wrap items-center justify-between gap-x-2">
+          <span class="min-w-0 text-xs font-semibold text-base-content/75">Exportieren — als Datei/JSON</span>
+          <div class="ml-auto flex shrink-0 gap-1">
+            <button class="btn btn-ghost btn-xs" type="button" :disabled="!selectedCount" @click="copyExport">{{ copied ? 'Kopiert' : 'JSON kopieren' }}</button>
+            <button class="btn btn-ghost btn-xs" type="button" :disabled="sharing || !selectedCount" @click="downloadExport">Als Datei</button>
           </div>
         </div>
         <pre class="max-h-60 overflow-auto rounded bg-base-200 p-2 text-xs"><code>{{ exportJson }}</code></pre>
@@ -302,14 +387,15 @@ function onFile(e: Event): void {
               <option v-for="o in TTL_LABELS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </label>
-          <button class="btn btn-primary btn-xs" type="button" :disabled="shareBusy || !selectedTemplates.length" @click="shareViaLink">
+          <button class="btn btn-primary btn-xs" type="button" :disabled="shareBusy || !selectedCount" @click="shareViaLink">
             {{ shareBusy ? 'Erstelle …' : 'Link erstellen' }}
           </button>
         </div>
+        <ShortLinkToggle v-model="shortWanted" :busy="shortBusy" :error="shortError" />
         <div v-if="shareLink" class="flex flex-col items-stretch gap-1 rounded bg-base-200 p-2">
-          <div class="flex items-center gap-2">
-            <input :value="shareLink.link" readonly class="input input-xs w-full font-mono" aria-label="Transfer-Link" />
-            <button class="btn btn-ghost btn-xs" type="button" @click="copyLink">{{ linkCopied ? 'Kopiert' : 'Kopieren' }}</button>
+          <div class="flex flex-col items-stretch gap-1">
+            <input :value="displayLink" readonly class="input input-xs w-full font-mono" aria-label="Transfer-Link" />
+            <button class="btn btn-ghost btn-sm min-h-11 self-end" type="button" @click="copyLink">{{ linkCopied ? 'Kopiert' : 'Kopieren' }}</button>
           </div>
           <!-- QR zum Abscannen mit einem anderen Gerät (trägt nur den Link, keine Nutzdaten). -->
           <div class="flex justify-center py-1">
@@ -342,10 +428,10 @@ function onFile(e: Event): void {
           <input
             v-model="receiveText"
             class="input input-bordered input-sm w-full font-mono text-xs"
-            placeholder="https://transfer.resqdocs.app/#…"
+            placeholder="resq.li/… oder https://transfer.resqdocs.app/#…"
             aria-label="Transfer-Link einfügen"
           />
-          <button class="btn btn-primary btn-sm" type="button" :disabled="!receiveText.trim() || receiveBusy" @click="receiveViaLink">
+          <button class="btn btn-primary btn-sm" type="button" :disabled="!receiveText.trim() || receiveBusy" @click="receiveViaLink()">
             {{ receiveBusy ? 'Lade …' : 'Empfangen' }}
           </button>
         </div>
@@ -376,28 +462,5 @@ function onFile(e: Event): void {
     <!-- QR-Scanner für den Empfang eines Transfer-Links (Vollbild-Overlay). -->
     <CodeScanOverlay v-if="qrScanOpen" :profile="QR_PROFILE" @decoded="onQrDecoded($event.text)" @cancel="qrScanOpen = false" />
 
-    <!-- Beide Rueckfragen per Teleport an body: TemplateIO sitzt im Daten-Blatt (.modal-bottom), dessen
-         Regeln sonst auf die verschachtelte modal-box durchschlagen (unten angeklebt, eckig, eingerueckt). -->
-    <Teleport to="body">
-    <!-- Von aussen geoeffnet: angetippter Transfer-Link oder geteilte Datei -> erst nachfragen -->
-    <div class="modal" :class="{ 'modal-open': incomingOpen !== null }" role="dialog" aria-modal="true">
-      <div class="modal-box">
-        <template v-if="incomingOpen?.kind === 'file'">
-          <h3 class="text-base font-semibold">Datei importieren?</h3>
-          <p class="py-3 text-sm"><strong class="break-all">{{ incomingOpen.name }}</strong> wird gelesen und importiert. Gibt es schon eine Vorlage mit gleichem Namen, wird vorher gefragt.</p>
-        </template>
-        <template v-else>
-          <h3 class="text-base font-semibold">Link empfangen?</h3>
-          <p class="py-3 text-sm">Der Inhalt wird abgerufen und auf diesem Gerät entschlüsselt. Ein Link mit der Einstellung „1× lesen“ ist danach verbraucht.</p>
-        </template>
-        <div class="modal-action flex-wrap">
-          <button type="button" class="btn btn-ghost btn-sm" @click="cancelIncoming">Abbrechen</button>
-          <button type="button" class="btn btn-primary btn-sm" @click="confirmIncoming">{{ incomingOpen?.kind === 'file' ? 'Importieren' : 'Empfangen' }}</button>
-        </div>
-      </div>
-      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="cancelIncoming"></button>
-    </div>
-
-    </Teleport>
   </div>
 </template>

@@ -45,8 +45,9 @@ export type ClozePart = string | { gap: string }
 export interface Cloze {
   /** Der Text als Folge aus festen Stuecken und Luecken, in Lesereihenfolge. */
   parts: ClozePart[]
-  /** Beim Ausfuellen auch Luecken abfragen, die schon einen Standardwert haben. Fehlt/false -> solche
-   *  Luecken werden beim Durchtippen uebersprungen (man kann sie trotzdem antippen und aendern). */
+  /** Nicht mehr setzen: Seit App 2.1 kommt beim Ausfuellen jede Luecke der Reihe nach dran. Die Angabe bleibt
+   *  nur, damit Vorlagen, die sie enthalten, unveraendert gelesen und geschrieben werden (App 2.0 wertet sie
+   *  noch aus). */
   askDefaults?: boolean
 }
 
@@ -135,6 +136,10 @@ export interface Field {
   /** Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein
    *  „Keine/Normalbefund" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv). */
   exclusiveOptions?: string[]
+  /** Bei multiple: Trenner zwischen den gewaehlten Werten in der Ausgabe, z. B. ", " oder "; ". Fehlt er,
+   *  gilt die deutsche Aufzaehlung („a, b und c"). Leerzeichen zaehlen mit; Zeilenumbrueche entfallen.
+   *  ADDITIV: aeltere App-Versionen ignorieren die Eigenschaft und geben die Aufzaehlung aus. */
+  multiSeparator?: string
   /** Bei multiple: „startet ohne Auswahl" - KEINE Option ist vorausgewaehlt (z. B. Einsatzcodes, wo eine
    *  Vorauswahl einen falschen Code dokumentieren wuerde). Ohne die Eigenschaft gilt wie bisher die
    *  Standard-Option (default, sonst die oberste). Eine leere Auswahl ist dann der Ausgangszustand (✓, nichts

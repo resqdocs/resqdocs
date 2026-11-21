@@ -55,7 +55,7 @@ test('fillValue: Select - leere Optionen ignoriert (oberste = erste nicht-leere)
 })
 
 // --- Multi-Select ---------------------------------------------------------------------------------
-import { joinFieldValues, toggleMultiOption, multiSelected, multiFill, defaultOptionValue } from './fill.ts'
+import { joinFieldValues, toggleMultiOption, multiSelected, multiFill, defaultOptionValue, multiSeparatorOf } from './fill.ts'
 
 const multiField: Field = {
   type: 'field', id: 'm', multiple: true,
@@ -70,6 +70,31 @@ test('joinFieldValues: deutsche Aufzählung (Komma + „und")', () => {
   assert.equal(joinFieldValues(['a', 'b']), 'a und b')
   assert.equal(joinFieldValues(['a', 'b', 'c']), 'a, b und c')
   assert.equal(joinFieldValues(['a', '', 'c']), 'a und c') // leere raus
+})
+
+test('joinFieldValues: eigener Trenner statt Aufzählung', () => {
+  assert.equal(joinFieldValues(['a', 'b', 'c'], '; '), 'a; b; c')
+  assert.equal(joinFieldValues(['a', 'b'], ', '), 'a, b')
+  assert.equal(joinFieldValues(['a'], '; '), 'a')
+  assert.equal(joinFieldValues(['a', '', 'c'], ' / '), 'a / c')
+  assert.equal(joinFieldValues(['a', 'b'], ''), 'a und b', 'leerer Trenner = Aufzählung')
+})
+
+test('multiSeparatorOf: fehlend, leer oder kein Text = Aufzählung; Zeilenumbruch wird Leerzeichen', () => {
+  assert.equal(multiSeparatorOf({}), undefined)
+  assert.equal(multiSeparatorOf({ multiSeparator: '' }), undefined)
+  assert.equal(multiSeparatorOf({ multiSeparator: 5 as unknown as string }), undefined)
+  assert.equal(multiSeparatorOf({ multiSeparator: '; ' }), '; ')
+  assert.equal(multiSeparatorOf({ multiSeparator: ',\n' }), ', ')
+})
+
+test('multiFill: Trenner aus der Vorlage, Auswahl und „individuell“ folgen ihm', () => {
+  const f: Field = { ...multiField, exclusiveOptions: [], multiSeparator: '; ' }
+  const fill = multiFill(f, ['Giemen', 'Brummen', 'feinblasige RGs'])
+  assert.deepEqual(fill, { state: 'custom', value: 'Giemen; feinblasige RGs; Brummen', values: ['Giemen', 'feinblasige RGs', 'Brummen'] })
+  assert.equal(individuellPrefill(f, fill), 'Giemen; feinblasige RGs; Brummen')
+  // ohne Eigenschaft unverändert die Aufzählung
+  assert.equal((multiFill({ ...f, multiSeparator: undefined }, ['Giemen', 'Brummen']) as { value: string }).value, 'Giemen und Brummen')
 })
 
 test('toggleMultiOption: hinzufügen/entfernen + options-Reihenfolge', () => {

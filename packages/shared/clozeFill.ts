@@ -24,17 +24,18 @@ export function gapState(node: GapNode, fill: FieldFill | undefined): GapState {
   return FUNCTION_REGISTRY[node.functionKind]?.hasData(fill) ? 'answered' : 'default'
 }
 
-/** Wird die Lücke beim Durchtippen abgefragt? Offene immer; solche mit Standardwert nur, wenn die Vorlage
- *  das verlangt. Was in diesem Durchgang schon dran war (`seen`), kommt nicht noch einmal - man bleibt
- *  nie an einer Lücke hängen und kann jede weiterhin direkt antippen. */
-export function needsAsking(state: GapState, askDefaults: boolean, seen: boolean): boolean {
-  if (seen) return false
-  return state === 'open' || (state === 'default' && askDefaults)
+/** Wird die Lücke beim Durchtippen abgefragt? Jede, der Reihe nach - Auswahl wie Freitext, mit oder ohne
+ *  Standardwert (Maintainer 2026-11-20): ein Standard, den niemand ansieht, landet sonst ungeprüft in der
+ *  Dokumentation, und eine Auswahl-Lücke hat immer einen (ihre erste Antwort). „Weiter“ übernimmt ihn mit
+ *  einem Tipp. Was in diesem Durchgang schon dran war (`seen`), kommt nicht noch einmal - man bleibt nie an
+ *  einer Lücke hängen und kann jede weiterhin direkt antippen. Quellen: docs/sources.md (Lückentext). */
+export function needsAsking(seen: boolean): boolean {
+  return !seen
 }
 
 /** Stelle der nächsten abzufragenden Lücke NACH `from` (-1 = von vorn). -1 = keine mehr. */
-export function nextAsking(states: readonly GapState[], seen: readonly boolean[], askDefaults: boolean, from: number): number {
-  for (let i = from + 1; i < states.length; i++) if (needsAsking(states[i], askDefaults, !!seen[i])) return i
+export function nextAsking(states: readonly GapState[], seen: readonly boolean[], from: number): number {
+  for (let i = from + 1; i < states.length; i++) if (needsAsking(!!seen[i])) return i
   return -1
 }
 

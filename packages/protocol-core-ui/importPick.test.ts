@@ -23,3 +23,15 @@ test('nur gewählte Zeilen werden zu Entscheidungen, mit Name und Überschreiben
   assert.equal(c[0].name, 'Neu')
   assert.equal(c[0].overwrite, true)
 })
+
+test('Sammlung: insgesamt ein Eintrag ist gewählt, mehrere nicht; Namen je Art vorausgefüllt', async () => {
+  const { initialCollectionRows, countTaken, toNamedChoices, snippetItems } = await import('./importPick.ts')
+  const v = { type: 'container', id: 'v', title: 'Vorlage', children: [] } as never
+  const eins = initialCollectionRows({ trees: [], blocks: [], snippets: [{ title: 'Übergabe', text: 'x' }] })
+  assert.deepEqual(eins.snippets, [{ take: true, name: 'Übergabe', overwrite: false }])
+  const mehr = initialCollectionRows({ trees: [v], blocks: [], snippets: [{ title: 'Übergabe', text: 'x' }] })
+  assert.equal(countTaken(mehr).total, 0)
+  assert.deepEqual(toNamedChoices([{ title: 'A', text: 'a' }, { title: 'B', text: 'b' }], [{ take: false, name: 'A', overwrite: false }, { take: true, name: 'B2', overwrite: true }]),
+    [{ item: { title: 'B', text: 'b' }, name: 'B2', overwrite: true }])
+  assert.deepEqual(snippetItems([{ title: 'A', text: 'abc' }]), [{ title: 'A', detail: '3 Zeichen' }])
+})

@@ -90,10 +90,22 @@ export function defaultOptionValue(field: Field): string {
 // Rein logisch + node-getestet. Der Ausgabe-Renderer bleibt unveraendert (er liest custom.value, das bei
 // Multi bereits der verkettete Fliesstext ist). values ist die DISKRETE Auswahl fuer die Checkbox-Anzeige.
 
-/** Deutsche Aufzaehlung: "" | "a" | "a und b" | "a, b und c". Leere Elemente entfallen. */
-export function joinFieldValues(values: readonly string[]): string {
+/** Trenner einer Mehrfachauswahl aus der Vorlage (`multiSeparator`). Fehlt er, ist leer oder kein Text,
+ *  gilt die deutsche Aufzaehlung (undefined). Zeilenumbrueche entfallen: sie wuerden beim Eintippen ueber
+ *  die Bridge zur Eingabetaste. */
+export function multiSeparatorOf(field: Pick<Field, 'multiSeparator'>): string | undefined {
+  const s = field.multiSeparator
+  if (typeof s !== 'string') return undefined
+  const clean = s.replace(/[\r\n]+/g, ' ')
+  return clean === '' ? undefined : clean
+}
+
+/** Gewaehlte Werte verketten. Ohne Trenner deutsche Aufzaehlung: "" | "a" | "a und b" | "a, b und c";
+ *  mit Trenner (z. B. "; ") schlicht dazwischen: "a; b; c". Leere Elemente entfallen. */
+export function joinFieldValues(values: readonly string[], separator?: string): string {
   const v = values.filter((s) => s.trim() !== '')
   if (v.length <= 1) return v[0] ?? ''
+  if (separator !== undefined && separator !== '') return v.join(separator)
   return v.slice(0, -1).join(', ') + ' und ' + v[v.length - 1]
 }
 
@@ -144,7 +156,7 @@ export function multiFill(field: Field, selection: readonly string[]): FieldFill
   if (v.length === 0) return startsEmpty(field) ? { state: 'confirmed' } : { state: 'excluded' }
   const d = defaultOptionValue(field)
   if (!startsEmpty(field) && v.length === 1 && v[0] === d) return { state: 'confirmed' }
-  return { state: 'custom', value: joinFieldValues(v), values: v }
+  return { state: 'custom', value: joinFieldValues(v, multiSeparatorOf(field)), values: v }
 }
 
 /** Vorbelegung des ✎-Freitexts („individuell") eines Auswahlfelds beim Wechsel aus der Auswahl (✓).

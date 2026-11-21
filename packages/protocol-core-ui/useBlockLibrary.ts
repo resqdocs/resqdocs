@@ -71,6 +71,23 @@ function create() {
     }
   }
 
+  /** Import mit „Überschreiben“: Inhalt eines vorhandenen gespeicherten Abschnitts ersetzen (id bleibt, damit er
+   *  an seiner Stelle in der Liste bleibt). Kein vorhandener Abschnitt mit dieser id -> Fehler, nichts angelegt. */
+  async function replaceBlock(id: string, container: Container, name: string): Promise<SaveBausteinOutcome> {
+    const cur = blocks.value.find((b) => b.id === id)
+    if (!cur) return { ok: false, error: 'Der zu ersetzende Abschnitt ist nicht mehr da.' }
+    const title = name.trim() || cur.title || 'Baustein'
+    const updated: Container = { ...container, id, title }
+    blocks.value = blocks.value.map((b) => (b.id === id ? updated : b))
+    try {
+      await (await getBlockRepository()).save(updated)
+      return { ok: true, title }
+    } catch (err) {
+      await reload().catch(() => {})
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
   async function deleteBlock(id: string): Promise<void> {
     blocks.value = blocks.value.filter((b) => b.id !== id) // optimistisch (kein reload-Fenster)
     try {
@@ -94,7 +111,7 @@ function create() {
     }
   }
 
-  return { blocks, loaded, libraryMode, reload, addBausteinFromContainer, renameBlock, deleteBlock, resetLibrary }
+  return { blocks, loaded, libraryMode, reload, addBausteinFromContainer, replaceBlock, renameBlock, deleteBlock, resetLibrary }
 }
 
 export function useBlockLibrary() {

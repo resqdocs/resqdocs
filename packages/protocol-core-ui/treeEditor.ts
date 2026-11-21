@@ -27,6 +27,9 @@ export interface TreeEditorApi {
   /** Aktive Vorlage wechseln: setzt editorActiveId UND selectedId auf deren Wurzel. */
   selectProtocol(id: string): void
   update(id: string, patch: Record<string, unknown>): void
+  /** Die aktive Vorlage als Ganzes in EINEM Schritt umbauen (ein Rückgängig holt alles zurück), z. B. Optionen
+   *  eines Feldes samt Verweisen anderer Elemente. `fn` ist rein und gibt ohne Änderung dieselbe Referenz zurück. */
+  transform(fn: (root: Container) => Container): void
   addChild(parentId: string, kind: 'container' | 'field' | 'function', functionKind?: FunctionKind): void
   /** Snippet als Feld-Vorgabe (Field mit default=text, showTitle=false; mehrzeilig -> multiline) an parentId anhaengen. */
   insertSnippet(parentId: string, text: string): void

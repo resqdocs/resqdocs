@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs'
 const FILES = [
   '../../apps/pico-pwa/src/components/ImportChoiceDialog.vue',
   'components/ContainerProperties.vue',
+  'components/OptionsDialog.vue',
   'components/LongTextDialog.vue',
   'components/cloze/ClozeEditorDialog.vue',
   'components/cloze/ClozeFill.vue',

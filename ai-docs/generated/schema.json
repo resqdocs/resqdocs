@@ -188,7 +188,7 @@
         },
         "askDefaults": {
           "type": "boolean",
-          "description": "Beim Ausfuellen auch Luecken abfragen, die schon einen Standardwert haben. Fehlt/false -> solche Luecken werden beim Durchtippen uebersprungen (man kann sie trotzdem antippen und aendern)."
+          "description": "Nicht mehr setzen: Seit App 2.1 kommt beim Ausfuellen jede Luecke der Reihe nach dran. Die Angabe bleibt nur, damit Vorlagen, die sie enthalten, unveraendert gelesen und geschrieben werden (App 2.0 wertet sie noch aus)."
         }
       },
       "required": [
@@ -296,6 +296,10 @@
             "type": "string"
           },
           "description": "Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein „Keine/Normalbefund\" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv)."
+        },
+        "multiSeparator": {
+          "type": "string",
+          "description": "Bei multiple: Trenner zwischen den gewaehlten Werten in der Ausgabe, z. B. \", \" oder \"; \". Fehlt er, gilt die deutsche Aufzaehlung („a, b und c\"). Leerzeichen zaehlen mit; Zeilenumbrueche entfallen. ADDITIV: aeltere App-Versionen ignorieren die Eigenschaft und geben die Aufzaehlung aus."
         },
         "defaultEmpty": {
           "type": "boolean",

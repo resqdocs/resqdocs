@@ -2,7 +2,7 @@
 /**
  * ai.resqdocs.app — „Bring dein eigenes LLM": Nutzer kopiert den (kurzen) Prompt, fuegt ihn in SEIN
  * LLM ein, das die Doku laedt (oder via Paste-Fallback) und ein Protokoll-JSON erzeugt -> Import in
- * der ResQDocs-App (Vorlagen -> ⋮ -> Daten -> Importieren; der Web-Editor ist kein Ziel mehr).
+ * der ResQDocs-App (Vorlagen -> „Aus Datei importieren…“; der Web-Editor ist kein Ziel mehr).
  * Prompt-primaer; Doku ist nur eine rohe Datei fuers LLM. Artefakte kommen aus public/ (aus ai-docs/).
  */
 import { ref, computed, onMounted, watch } from 'vue'
@@ -68,7 +68,7 @@ const TEXT = {
       { n: '1', t: 'Prompt kopieren', d: 'Ein Klick.' },
       { n: '2', t: 'In deinen KI-Assistenten einfügen', d: 'ChatGPT, Claude, Gemini — egal welches.' },
       { n: '3', t: 'Fragen beantworten', d: 'Er führt dich durch Titel, Abschnitte, Felder und zeigt eine Vorschau.' },
-      { n: '4', t: 'In der App importieren', d: 'ResQDocs-App: Vorlagen → ⋮ → Daten → Importieren.' },
+      { n: '4', t: 'In der App importieren', d: 'ResQDocs-App: Vorlagen → „Aus Datei importieren…“.' },
     ],
     fbTitle: 'Dein KI-Assistent kann die Anleitung nicht laden?',
     fbText: 'Bei Gemini ist das der Normalfall („Ich kann den Link nicht öffnen"); ChatGPT/Claude brauchen teils die aktivierte Websuche. Die KI sagt dir dann selbst Bescheid — dann hier die Anleitung kopieren und als Nachricht einfügen ODER herunterladen und als Datei anhängen:',
@@ -79,7 +79,7 @@ const TEXT = {
     powerTitle: 'Für Vielnutzer',
     powerText: 'Lege den Prompt einmal als System-Anweisung in einem ChatGPT-Custom-GPT, Claude-Project oder Gemini-Gem an — dann brauchst du ihn nicht jedes Mal zu kopieren.',
     importTitle: 'Ergebnis in die App importieren',
-    importText: 'Öffne die ResQDocs-App: Tab „Vorlagen" → oben rechts „⋮" → „Daten" → „Importieren" → JSON einfügen (oder .json-Datei wählen) → „Laden". Passt die Format-Version nicht zu deiner App-Version, sagt dir der Import klar Bescheid.',
+    importText: 'Öffne die ResQDocs-App: Tab „Vorlagen" → „Aus Datei importieren…" (unter der Liste) → JSON einfügen → „Laden" (oder .json-Datei wählen). Passt die Format-Version nicht zu deiner App-Version, sagt dir der Import klar Bescheid.',
     openEditor: 'ResQDocs-App laden',
     footer: 'Open Source · keine KI gehostet · keine Patientendaten',
     imprint: 'Impressum',
@@ -93,7 +93,7 @@ const TEXT = {
       { n: '1', t: 'Copy the prompt', d: 'One click.' },
       { n: '2', t: 'Paste into your LLM', d: 'ChatGPT, Claude, Gemini — any of them.' },
       { n: '3', t: 'Answer the questions', d: 'The model guides you through title, sections, fields and shows a preview.' },
-      { n: '4', t: 'Import in the app', d: 'ResQDocs app: Vorlagen → ⋮ → Daten → Importieren.' },
+      { n: '4', t: 'Import in the app', d: 'ResQDocs app: Vorlagen → "Aus Datei importieren…".' },
     ],
     fbTitle: 'Your LLM cannot load the docs?',
     fbText: 'With Gemini this is the normal case ("I cannot open the link"); ChatGPT/Claude may need web search enabled. The AI will tell you itself — then copy the docs here and paste them as a message OR download them and attach as a file:',
@@ -104,7 +104,7 @@ const TEXT = {
     powerTitle: 'For power users',
     powerText: 'Set the prompt up once as a system instruction in a ChatGPT custom GPT, Claude project or Gemini gem — then you do not need to copy it every time.',
     importTitle: 'Import the result into the app',
-    importText: 'Open the ResQDocs app: tab "Vorlagen" → "⋮" at the top right → "Daten" → "Importieren" → paste the JSON (or pick a .json file) → "Laden". If the format version does not match your app version, the import tells you clearly.',
+    importText: 'Open the ResQDocs app: tab "Vorlagen" → "Aus Datei importieren…" (below the list) → paste the JSON → "Laden" (or pick a .json file). If the format version does not match your app version, the import tells you clearly.',
     openEditor: 'Get the ResQDocs app',
     footer: 'Open source · no AI hosted · no patient data',
     imprint: 'Imprint',

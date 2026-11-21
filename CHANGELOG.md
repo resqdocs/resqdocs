@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [2.1.0] - 2026-11-21
+
+### Added
+
+- Sharing and export can include saved sections and text snippets; on import you choose what to take over and pick a new name when one is already taken
+- Short links: when sharing a link, an optional short link (resq.li/...) is easier to type and read out; with a short link the transfer service can read the content until it expires or is taken over, the QR code keeps the long link, and unticking the option deletes the short link
+- The options of a choice field are edited in a dedicated window: a full-screen list on phones, a table on tablets and in the online editor; renaming an option keeps defaults and rules that refer to it, and removing an option used by a rule asks first
+- Multiple choice: the selected values can be joined as a list ("a, b and c"), with commas, with semicolons or with a custom separator
+
+### Changed
+
+- "Read once" links count as opened only when the content is taken over; cancelling an import keeps the link usable
+- A tapped link opens the app and asks only once whether to take over the content
+- Cloze text: "Fill in" asks for every gap in turn, including choice gaps with a preset answer
+- The case preview shows the protocol text like the template preview, without line wrapping
+- Online editor: "Export" and "All" open the share dialog, where sections and text snippets can be added
+
+### Fixed
+
+- Long names no longer overflow when sharing on iPhone
+- The answers of a choice gap no longer reset when the keyboard closes
+- Deleting an option in the options table asks first
+- Bottom sheets keep their distance from the system navigation bar, so "Close" stays reachable
+- A new text snippet is scrolled into view after it is created
+- An import reports only what was actually saved
+
 ## [2.0.0] - 2026-11-18
 
 ### Added

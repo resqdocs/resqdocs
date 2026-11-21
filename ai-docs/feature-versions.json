@@ -75,6 +75,15 @@
       "minVersion": "1.4.0"
     },
     {
+      "prop": "multiSeparator",
+      "on": "field",
+      "de": "Trenner der Mehrfachauswahl",
+      "en": "Multi-select separator",
+      "note_de": "Bei Mehrfachauswahl: Text zwischen den gewählten Werten, z. B. \", \" oder \"; \" (Leerzeichen zählen mit). Ohne die Eigenschaft die Aufzählung „a, b und c“. Ältere App-Versionen geben die Aufzählung aus.",
+      "note_en": "with multi-select: text between the chosen values, e.g. \", \" or \"; \" (spaces count). Without it the enumeration \"a, b and c\". Older app versions output the enumeration.",
+      "minVersion": "2.1.0"
+    },
+    {
       "prop": "defaultExcluded",
       "on": "field, container",
       "de": "Startet auf „nicht erhoben\"",
@@ -142,8 +151,8 @@
       "on": "container",
       "de": "Lückentext",
       "en": "Cloze text",
-      "note_de": "Der Abschnitt gibt einen frei geschriebenen Text aus, in dem Felder und Funktionen als Lücken stehen. Form: { \"parts\": [ \"Patient ist \", { \"gap\": \"<id>\" }, \".\" ] } – Strings sind fester Text, { \"gap\": \"<id>\" } ist eine Lücke. Die id gehört zu einem Feld oder einer Funktion: einem Kind des Abschnitts (die Lücke fragt den Wert ab) oder einem Element an anderer Stelle der Vorlage (die Lücke übernimmt dessen Wert). In der Lücke steht nur der Wert, ohne Titel. Optional \"askDefaults\": true fragt beim Ausfüllen auch Lücken mit Standardwert ab. Ältere App-Versionen ignorieren die Angabe und zeigen die Kinder als normale Feldliste.",
-      "note_en": "The section outputs free-form text in which fields and functions appear as gaps. Shape: { \"parts\": [ \"Patient is \", { \"gap\": \"<id>\" }, \".\" ] } – strings are fixed text, { \"gap\": \"<id>\" } is a gap. The id belongs to a field or function: a child of the section (the gap asks for the value) or an element elsewhere in the template (the gap shows that element's value). A gap contains only the value, without the title. Optional \"askDefaults\": true also asks for gaps that already have a default when filling in. Older app versions ignore it and show the children as a regular field list.",
+      "note_de": "Der Abschnitt gibt einen frei geschriebenen Text aus, in dem Felder und Funktionen als Lücken stehen. Form: { \"parts\": [ \"Patient ist \", { \"gap\": \"<id>\" }, \".\" ] } – Strings sind fester Text, { \"gap\": \"<id>\" } ist eine Lücke. Die id gehört zu einem Feld oder einer Funktion: einem Kind des Abschnitts (die Lücke fragt den Wert ab) oder einem Element an anderer Stelle der Vorlage (die Lücke übernimmt dessen Wert). In der Lücke steht nur der Wert, ohne Titel. Beim Ausfüllen kommt jede Lücke der Reihe nach dran. Ältere App-Versionen ignorieren die Angabe und zeigen die Kinder als normale Feldliste.",
+      "note_en": "The section outputs free-form text in which fields and functions appear as gaps. Shape: { \"parts\": [ \"Patient is \", { \"gap\": \"<id>\" }, \".\" ] } – strings are fixed text, { \"gap\": \"<id>\" } is a gap. The id belongs to a field or function: a child of the section (the gap asks for the value) or an element elsewhere in the template (the gap shows that element's value). A gap contains only the value, without the title. When filling in, every gap comes up in order. Older app versions ignore it and show the children as a regular field list.",
       "minVersion": "2.0.0"
     }
   ],

@@ -5,6 +5,8 @@
 export interface RateLimiter {
   /** true = erlaubt, false = Limit erreicht (HTTP 429). */
   allow(key: string): boolean
+  /** true = dieser Schlüssel ist im laufenden Fenster am Limit; zählt selbst nicht. */
+  full(key: string): boolean
 }
 
 export function createRateLimiter(
@@ -15,6 +17,10 @@ export function createRateLimiter(
 ): RateLimiter {
   const hits = new Map<string, { count: number; resetAt: number }>()
   return {
+    full(key) {
+      const cur = hits.get(key)
+      return !!cur && now() < cur.resetAt && cur.count >= limit
+    },
     allow(key) {
       const t = now()
       const cur = hits.get(key)

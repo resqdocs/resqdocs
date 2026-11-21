@@ -8,7 +8,7 @@ import { shareTransfer, TransferError, type TransferTtl, type TransferConfig } f
 export function useTransferShare(cfg?: TransferConfig) {
   const ttl = ref<TransferTtl>('burn')
   const shareBusy = ref(false)
-  const shareLink = ref<{ link: string; code: string } | null>(null)
+  const shareLink = ref<{ link: string; code: string; deleteToken: string } | null>(null)
   const shareError = ref('')
 
   /** payloadJson = Ausgabe von exportTemplate/exportBlock/exportSnippet. Setzt shareLink bei Erfolg. */
@@ -18,7 +18,7 @@ export function useTransferShare(cfg?: TransferConfig) {
     shareLink.value = null
     try {
       const r = await shareTransfer(payloadJson, ttl.value, cfg)
-      shareLink.value = { link: r.link, code: r.code }
+      shareLink.value = { link: r.link, code: r.code, deleteToken: r.deleteToken }
     } catch (e) {
       shareError.value = e instanceof TransferError ? e.message : 'Teilen fehlgeschlagen.'
     } finally {
