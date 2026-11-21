@@ -77,3 +77,18 @@ CPU im Container — Missbrauchsresistenz hängt NICHT allein an der Proxy-Konfi
 (`secure_delete` + `auto_vacuum` + `wal_checkpoint(TRUNCATE)` → keine Restspur, Datei wächst nicht). Für lokale Builds eigene Konfigurationswerte in `.env` hinterlegen
 (siehe `.env.example`). Produktive Deploy-Skripte und Compose-Konfiguration liegen als eigene,
 nicht-öffentliche Infrastruktur bei.
+
+## Kurzlinks (resq.li)
+
+Auf ausdrücklichen Wunsch beim Teilen legt der Dienst einen Kurzlink an: `POST /v1/short` mit `{"link": "<langer Link>"}`
+liefert `{code, url, expiresAt}`; angenommen werden nur lange Links auf `PUBLIC_BASE` (Standard
+`https://transfer.resqdocs.app`) zu einem vorhandenen Inhalt. `GET /v1/short/<code>` löst auf (200 `{link}`, 410
+abgelaufen/übernommen, 404 unbekannt). Anfragen mit Host `SHORT_HOST` (Standard `resq.li`) bekommen auf `/<code>` eine
+Weiterleitung (302) auf den langen Link, auf `/`, `/editor`, `/ai` die Weiterleitungen zur Webseite, sonst die Seite
+„Link abgelaufen“. Ausnahme vom Ende-zu-Ende-Prinzip: Der Dienst speichert dafür den langen Link MIT Schlüssel. Er wird
+gelöscht, sobald der Inhalt abgelaufen, übernommen oder gelöscht ist; der Code bleibt danach 30 Tage gesperrt
+(`SHORT_LOCK_SECONDS`) und wird erst dann wieder vergeben. Der QR-Code in App und Editor ist immer der lange Link.
+`DELETE /v1/blob/<id>/short` mit `X-Delete-Token` nimmt den Kurzlink zurück (Haken beim Teilen wieder entfernt): das
+Ziel wird sofort gelöscht, der Inhalt bleibt. Grenzen je Anschluss (IPv6 je /64): 20 Auflösungen und 5 Fehlversuche
+pro Minute, 10 neue Kurzlinks pro Minute. Ist die Tabelle voll, werden die ältesten nur noch gesperrten Codes
+vorzeitig freigegeben.

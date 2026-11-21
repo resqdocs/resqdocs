@@ -69,6 +69,9 @@ const api: TreeEditorApi = {
       if (selectedId.value === id) selectedId.value = newId
     }
   },
+  transform(fn) {
+    change(null, () => tree.replace(fn(tree.root.value)))
+  },
   addChild(parentId, kind, functionKind) {
     let childId = ''
     change(null, () => (childId = tree.addChild(parentId, kind, functionKind).id))
@@ -165,13 +168,14 @@ provide(snippetPickerKey, SnippetPicker)
 
     <!-- small-screen-first: ein Bereich nach dem anderen; ab lg alle drei nebeneinander -->
     <!-- Umschalter: oben zentriert + sticky (unter dem App-Header, Safe-Area beachtet).
-         Nur < lg (ab lg drei Spalten nebeneinander). -->
-    <div class="sticky top-[calc(env(safe-area-inset-top,0px)+4rem)] z-[5] flex items-center justify-center gap-1 bg-base-200/95 py-2 backdrop-blur-sm lg:hidden">
+         Nur < lg (ab lg drei Spalten nebeneinander). Volle Breite (-mx-4), damit ↶/↷ mit 44 px und die drei
+         Knöpfe (13 px wie ein iOS-Segment) auch bei 360 px passen und nichts seitlich durchscheint. -->
+    <div class="sticky top-[calc(env(safe-area-inset-top,0px)+4rem)] z-[5] -mx-4 flex items-center justify-center gap-0.5 bg-base-200/95 px-1 py-2 backdrop-blur-sm lg:hidden">
       <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canUndo.value" aria-label="Rückgängig" title="Rückgängig" data-undo @click="hist.undo()">↶</button>
       <div class="join">
-        <button class="btn btn-sm join-item" :class="view === 'aufbau' ? 'btn-primary' : ''" @click="view = 'aufbau'">Aufbau</button>
-        <button class="btn btn-sm join-item" :class="view === 'eigenschaften' ? 'btn-primary' : ''" @click="view = 'eigenschaften'">Eigenschaften</button>
-        <button class="btn btn-sm join-item" :class="view === 'vorschau' ? 'btn-primary' : ''" @click="view = 'vorschau'">Vorschau</button>
+        <button class="btn btn-sm join-item px-2! text-[13px]!" :class="view === 'aufbau' ? 'btn-primary' : ''" @click="view = 'aufbau'">Aufbau</button>
+        <button class="btn btn-sm join-item px-2! text-[13px]!" :class="view === 'eigenschaften' ? 'btn-primary' : ''" @click="view = 'eigenschaften'">Eigenschaften</button>
+        <button class="btn btn-sm join-item px-2! text-[13px]!" :class="view === 'vorschau' ? 'btn-primary' : ''" @click="view = 'vorschau'">Vorschau</button>
       </div>
       <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canRedo.value" aria-label="Wiederholen" title="Wiederholen" data-redo @click="hist.redo()">↷</button>
     </div>

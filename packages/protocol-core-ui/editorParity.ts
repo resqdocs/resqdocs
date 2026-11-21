@@ -29,13 +29,16 @@ export const CAPABILITIES: Capability[] = [
   { id: 'export-mehrere', label: 'Eine oder mehrere Vorlagen exportieren', app: true, online: true, appAnchor: /exportTemplates\(/, onlineAnchor: /exportTemplates\(/ },
   { id: 'teilen-link', label: 'Teilen per verschlüsseltem Link', app: true, online: true, appAnchor: /shareTransfer\(/, onlineAnchor: /shareTransfer\(/ },
   { id: 'teilen-qr', label: 'QR-Code zum Link anzeigen', app: true, online: true, appAnchor: /<QrCode\b/, onlineAnchor: /<QrCode\b/ },
-  { id: 'empfangen-link', label: 'Empfangen per Link', app: true, online: true, appAnchor: /receiveTransfer\(/, onlineAnchor: /receiveTransfer\(/ },
+  { id: 'empfangen-link', label: 'Empfangen per Link', app: true, online: true, appAnchor: /openTransfer\(/, onlineAnchor: /openTransfer\(/ },
   {
     id: 'empfangen-qr-scan', label: 'QR-Code mit der Kamera scannen', app: true, online: false,
     appAnchor: /qrScanOpen/, onlineAnchor: /qrScanOpen|CodeScanOverlay/,
     reason: 'Kamera-Scan gibt es nur in der App; im Browser wird der Link eingefügt.',
   },
-  { id: 'import-auswahl', label: 'Import mit Auswahl, Name und Überschreiben/neu', app: true, online: true, appAnchor: /<ImportPickList\b/, onlineAnchor: /<ImportPickList\b/ },
+  { id: 'import-auswahl', label: 'Import mit Auswahl, Name und Überschreiben/neu (auch Abschnitte und Textbausteine einer Sammlung)', app: true, online: true, appAnchor: /<ImportCollectionPick\b/, onlineAnchor: /<ImportCollectionPick\b/ },
+  { id: 'teilen-mit-bausteinen', label: 'Teilen und Exportieren mit gespeicherten Abschnitten und Textbausteinen', app: true, online: true, appAnchor: /<ShareExtrasPick\b/, onlineAnchor: /<ShareExtrasPick\b/ },
+  // Optionen-Editor (OptionsDialog in den gemeinsamen Eigenschaften): Übernehmen braucht die Ein-Schritt-Änderung des Hosts.
+  { id: 'optionen-bearbeiten', label: 'Optionen einer Auswahl bearbeiten (Tabelle bzw. Vollbild-Liste), Umbenennen zieht Verweise nach', app: true, online: true, appAnchor: /transform\(fn\) \{/, onlineAnchor: /transform\(fn\) \{/ },
   {
     id: 'versionspruefung', label: 'Prüfung gegen eine gewählte App-Version', app: false, online: true,
     appAnchor: /validateTree\(/, onlineAnchor: /validateTree\(/,

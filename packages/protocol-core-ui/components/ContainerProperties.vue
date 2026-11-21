@@ -8,15 +8,17 @@ import { DEFAULT_HEADING, DEFAULT_SEPARATOR } from '@resqdocs/protocol-core/mode
 import { FUNCTION_REGISTRY, FUNCTION_ROW_INLINE_SEPARATOR } from '@resqdocs/protocol-core/functions/registry'
 import { findNode, findPath, suggestFreeId } from '@resqdocs/protocol-core/creator'
 import { sanitizeId } from '@resqdocs/protocol-core/ids'
-import { appendOptions } from '@resqdocs/protocol-core/optionList'
+import { applyOptionEdit, planOptionEdit, type OptionDraft } from '@resqdocs/protocol-core/optionDraft'
+import { joinFieldValues, multiSeparatorOf } from '@resqdocs/protocol-core/fill'
 import { dependencyCandidates } from '@resqdocs/protocol-core/dependencies'
 import { useTreeEditor } from '../treeEditor.ts'
-import ConfirmDialog from './ConfirmDialog.vue'
+import OptionsDialog from './OptionsDialog.vue'
 import InfoTip from './InfoTip.vue'
 import ConditionEditor from './ConditionEditor.vue'
 import { INFO } from '../terms.ts'
-import { defaultYields, withDefaultYield, moveDefaultYield } from '../defaultYield.ts'
+import { defaultYields, withDefaultYield } from '../defaultYield.ts'
 import { allowedFunctionKindsKey } from '../injection.ts'
+import { optionsEditRequest } from '../optionsEditRequest.ts'
 
 import ClozeSettings from './cloze/ClozeSettings.vue'
 const props = defineProps<{ root: Container }>()
@@ -166,6 +168,8 @@ const listSummary = computed<string>(() => {
   if (!f || !count) return 'keine'
   const parts = [count === 1 ? '1 Option' : `${count} Optionen`]
   if (f.multiple) parts.push('Mehrfachauswahl')
+  const sep = f.multiple ? multiSeparatorOf(f) : undefined
+  if (sep !== undefined) parts.push(`Trenner „${sep.trim() || sep}“`)
   if (f.allowCustom) parts.push('individuell')
   return parts.join(' · ')
 })
@@ -205,95 +209,73 @@ function setConfig(patch: Partial<FunctionConfig>): void {
   set({ config: Object.keys(next).length ? next : undefined })
 }
 
-// Select-Optionen (am Feld). Gesetzte options -> das Feld ist ein Select.
-function fieldOptions(): string[] {
-  return node.value?.type === 'field' && Array.isArray(node.value.options) ? node.value.options : []
-}
-function addOption(): void {
-  // Optionen -> Select; „mehrzeilig" gilt nur fuer Freitext -> beim Wechsel zum Select bereinigen.
-  // Banner-Zustand einfrieren, falls er nur ueber den mehrzeilig-Default kam (sonst springt er still aus).
-  set({ options: [...fieldOptions(), ''], multiline: undefined, titleInline: titleOwnLine.value ? false : node.value?.type === 'field' ? node.value.titleInline : undefined })
-}
-// „Liste einfuegen": viele Optionen auf einmal anlegen (z. B. Alarmierungscodes, eine pro Zeile).
-// Bestehende Optionen bleiben unangetastet; Doppeltes wird uebersprungen (Regeln: optionList.ts).
-const pasteOpen = ref(false)
-const pasteText = ref('')
-const pasteInfo = ref('')
+// Auswahl-Optionen (am Feld). Gesetzte options -> das Feld ist eine Auswahl. Bearbeitet werden sie im Fenster
+// „Optionen bearbeiten“ (OptionsDialog): Tabelle im Browser, Vollbild-Liste am Handy. Übernehmen ist EIN Schritt
+// und zieht Standard, „allein“ und Verweise anderer Elemente mit (optionDraft.ts).
+const optionsOpen = ref(false)
+// Beim Wechsel des Elements schließt das Fenster; ein Wunsch von außen (optionsEditRequest) öffnet es für sein Feld.
 watch(
-  () => node.value?.id,
-  () => {
-    pasteOpen.value = false
-    pasteText.value = ''
-    pasteInfo.value = ''
+  [() => node.value?.id, optionsEditRequest],
+  ([id, wanted], [oldId]) => {
+    if (id !== oldId) optionsOpen.value = false
+    if (wanted === null || wanted !== id || node.value?.type !== 'field') return
+    optionsEditRequest.value = null
+    optionsOpen.value = true
   },
+  { immediate: true },
 )
-function applyPastedOptions(): void {
-  const r = appendOptions(fieldOptions(), pasteText.value)
-  if (r.added === 0) {
-    pasteInfo.value = r.duplicates ? `Nichts Neues – ${r.duplicates} schon vorhanden.` : 'Keine Zeilen erkannt.'
-    return
-  }
-  // wie addOption: Optionen -> Select; „mehrzeilig" bereinigen, Banner-Zustand einfrieren.
-  set({ options: r.options, multiline: undefined, titleInline: titleOwnLine.value ? false : node.value?.type === 'field' ? node.value.titleInline : undefined })
-  pasteInfo.value = `${r.added} übernommen${r.duplicates ? `, ${r.duplicates} doppelt übersprungen` : ''}.`
-  pasteText.value = ''
-  pasteOpen.value = false
+const filledOptions = computed<string[]>(() => (fieldNode.value?.options ?? []).filter((o) => o !== ''))
+
+// --- Mehrfachauswahl: wie die gewaehlten Werte im Protokolltext verbunden werden (multiSeparator).
+// Auswahlknoepfe mit Beispiel aus den eigenen Optionen statt Klappliste (alle Varianten sichtbar, docs/sources.md).
+type SeparatorChoice = 'aufzaehlung' | 'komma' | 'semikolon' | 'eigen'
+const SEPARATOR_CHOICES: { key: SeparatorChoice; label: string; sep?: string }[] = [
+  { key: 'aufzaehlung', label: 'Aufzählung' },
+  { key: 'komma', label: 'Komma', sep: ', ' },
+  { key: 'semikolon', label: 'Semikolon', sep: '; ' },
+  { key: 'eigen', label: 'Eigener Trenner' },
+]
+const choiceOf = (sep: string | undefined): SeparatorChoice => (sep === undefined ? 'aufzaehlung' : (SEPARATOR_CHOICES.find((c) => c.sep === sep)?.key ?? 'eigen'))
+// „Eigener Trenner" ohne Text bleibt gewaehlt, bis man etwas eintippt (der Wert faellt so lange auf die Aufzaehlung zurueck).
+const separatorChoice = ref<SeparatorChoice>('aufzaehlung')
+watch(
+  () => [fieldNode.value?.id, fieldNode.value ? multiSeparatorOf(fieldNode.value) : undefined] as const,
+  ([id, sep], old) => {
+    const sameField = old !== undefined && old[0] === id
+    // Solange „Eigener Trenner“ gewählt ist, bleibt es dabei, auch wenn der getippte Wert gerade einer Vorgabe
+    // gleicht („; “ auf dem Weg zu „; – “): sonst spränge die Wahl um und das Feld verschwände beim Tippen.
+    if (!(sameField && separatorChoice.value === 'eigen')) separatorChoice.value = choiceOf(sep)
+  },
+  { immediate: true },
+)
+const customSeparator = computed<string>(() => (separatorChoice.value === 'eigen' ? (fieldNode.value?.multiSeparator ?? '') : ''))
+function separatorExample(sep: string | undefined): string {
+  // Eigene Optionen nur, solange das Beispiel kurz bleibt; sonst A, B, C.
+  const own = filledOptions.value.slice(0, 3)
+  return joinFieldValues(own.length >= 2 && own.every((o) => o.length <= 16) ? own : ['A', 'B', 'C'], sep)
 }
-function setOption(i: number, value: string): void {
-  const opts = fieldOptions().slice()
-  const old = opts[i]
-  opts[i] = value
-  const patch: Record<string, unknown> = { options: opts }
-  if (node.value?.type === 'field' && node.value.default === old) patch.default = value // Default mitziehen
-  // Exklusiv-Markierung referenziert den exakten String -> beim Umbenennen mitziehen, sonst wird sie „tot".
-  if (node.value?.type === 'field' && node.value.exclusiveOptions?.includes(old))
-    patch.exclusiveOptions = node.value.exclusiveOptions.map((o) => (o === old ? value : o))
-  set(patch)
+function chooseSeparator(key: SeparatorChoice): void {
+  separatorChoice.value = key
+  if (key !== 'eigen') set({ multiSeparator: SEPARATOR_CHOICES.find((c) => c.key === key)?.sep })
 }
-function removeOption(i: number): void {
-  const opts = fieldOptions().slice()
-  const removed = opts[i]
-  opts.splice(i, 1)
-  const patch: Record<string, unknown> = { options: opts.length ? opts : undefined }
-  if (node.value?.type === 'field' && node.value.default === removed) patch.default = undefined
-  if (!opts.length) {
-    patch.allowCustom = undefined // keine Optionen mehr -> kein „individuell"
-    patch.customMultiline = undefined
-    patch.multiple = undefined // ... und kein Multi-Select
-    patch.exclusiveOptions = undefined
-    patch.defaultEmpty = undefined
-  } else if (node.value?.type === 'field' && node.value.exclusiveOptions?.includes(removed)) {
-    const ex = node.value.exclusiveOptions.filter((o) => o !== removed)
-    patch.exclusiveOptions = ex.length ? ex : undefined
-  }
-  set(patch)
+function setCustomSeparator(raw: string): void {
+  const s = raw.replace(/[\r\n]+/g, ' ')
+  set({ multiSeparator: s === '' ? undefined : s })
 }
-// Option loeschen — bei nicht-leerer Option vorher via ConfirmDialog nachfragen (EINHEITLICH zum Block-/
-// Vorlagen-Loeschen, gleiches Modal). Leere (frische) Option direkt entfernen.
-const pendingOptionDelete = ref<number | null>(null)
-function confirmRemoveOption(i: number): void {
-  const opt = fieldOptions()[i]
-  if (opt && opt.trim() !== '') pendingOptionDelete.value = i
-  else removeOption(i)
-}
-function doDeleteOption(): void {
-  if (pendingOptionDelete.value !== null) removeOption(pendingOptionDelete.value)
-  pendingOptionDelete.value = null
-}
-/** Eine Option als „schliesst andere aus" markieren/entmarkieren (Multi-Select). Schreibt den exakten
- *  Options-String in exclusiveOptions — kein zweites Vokabular. */
-function toggleExclusiveOption(opt: string, on: boolean): void {
-  if (node.value?.type !== 'field') return
-  const cur = node.value.exclusiveOptions ?? []
-  const next = on ? [...new Set([...cur, opt])] : cur.filter((o) => o !== opt)
-  set({ exclusiveOptions: next.length ? next : undefined })
-}
-function moveOption(i: number, delta: number): void {
-  const opts = fieldOptions().slice()
-  const j = i + delta
-  if (j < 0 || j >= opts.length) return
-  ;[opts[i], opts[j]] = [opts[j], opts[i]]
-  set({ options: opts })
+const optionsPreview = computed<string>(() => {
+  const list = filledOptions.value
+  if (list.length <= 3) return list.join(' · ')
+  return `${list.slice(0, 3).join(' · ')} und ${list.length - 3} weitere`
+})
+function applyOptions(d: OptionDraft): void {
+  const f = fieldNode.value
+  if (!f) return
+  // Aus einem Textfeld wird eine Auswahl: „mehrzeilig“ gilt nur für Freitext; den Banner-Zustand einfrieren, falls er
+  // nur über den mehrzeilig-Standard kam (sonst springt er still aus).
+  const extra = filledOptions.value.length ? {} : { multiline: undefined, titleInline: titleOwnLine.value ? false : f.titleInline }
+  const id = f.id
+  tree.transform((root) => applyOptionEdit(root, id, planOptionEdit(root, id, d), extra))
+  optionsOpen.value = false
 }
 // Effektiver Default fuer die „als Standard"-Markierung: ein default, der keine (nicht-leere)
 // Option ist, faellt auf die oberste Option zurueck (deckungsgleich mit fillValue).
@@ -310,11 +292,6 @@ const defaultYield = computed(() => node.value?.type === 'field' && defaultYield
 function setDefaultYield(on: boolean): void {
   if (node.value?.type !== 'field') return
   set({ exclusiveOptions: withDefaultYield(node.value.exclusiveOptions, effectiveFieldDefault.value, on) })
-}
-/** Standard-Option wechseln; eine eingeschaltete „weicht"-Einstellung wandert mit auf die neue Option. */
-function setDefaultOption(opt: string): void {
-  if (node.value?.type !== 'field') return
-  set({ default: opt, exclusiveOptions: moveDefaultYield(node.value.exclusiveOptions, effectiveFieldDefault.value, opt) })
 }
 
 // id ist Identifier UND Key im Einsatz-Werte-Store: nur Buchstaben/Ziffern/_/-, eindeutig im Baum.
@@ -587,42 +564,21 @@ async function saveAsBaustein(): Promise<void> {
           <span class="shrink-0 text-base-content/75 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
         </summary>
         <div class="space-y-2 px-4 pb-4">
-        <span class="text-xs font-semibold text-base-content/75">Auswahl-Optionen <span class="font-normal text-base-content/75">(leer = einfaches Feld)</span> <InfoTip :info="INFO.options" /></span>
-        <div v-for="(opt, i) in (node.options ?? [])" :key="i" class="flex items-center gap-1">
-          <input v-if="!(node.multiple && node.defaultEmpty) && new Set((node.options ?? []).filter((o) => o !== '')).size > 1" type="radio" class="radio radio-xs shrink-0" :name="`default-${node.id}`" :checked="effectiveFieldDefault === opt" :aria-label="`als Standardwert: ${opt}`" title="als Standard" @change="setDefaultOption(opt)" />
-          <input class="input input-sm min-w-0 flex-1" :value="opt" placeholder="Option" @input="setOption(i, ($event.target as HTMLInputElement).value)" />
-          <!-- Multi-Select: Option als „schliesst andere aus" (Keine/Normal) markieren -->
-          <label v-if="node.multiple && opt !== ''" class="flex shrink-0 cursor-pointer items-center gap-1" :title="`„${opt}“ schließt andere Auswahlen aus`">
-            <input type="checkbox" class="checkbox checkbox-xs" :checked="(node.exclusiveOptions ?? []).includes(opt)" :aria-label="`„${opt}“ schließt andere aus`" @change="toggleExclusiveOption(opt, ($event.target as HTMLInputElement).checked)" />
-            <span class="text-xs text-base-content/75">allein</span>
-          </label>
-          <button type="button" class="btn btn-ghost btn-xs px-1" :disabled="i === 0" aria-label="nach oben" @click="moveOption(i, -1)">↑</button>
-          <button type="button" class="btn btn-ghost btn-xs px-1" :disabled="i === (node.options?.length ?? 0) - 1" aria-label="nach unten" @click="moveOption(i, 1)">↓</button>
-          <button type="button" class="btn btn-ghost btn-xs px-1 text-error" aria-label="Option löschen" @click="confirmRemoveOption(i)">✕</button>
-        </div>
-        <div class="flex flex-wrap gap-1">
-          <button type="button" class="btn btn-ghost btn-xs" @click="addOption">＋ Option hinzufügen</button>
-          <button type="button" class="btn btn-ghost btn-xs" :aria-expanded="pasteOpen" @click="pasteOpen = !pasteOpen; pasteInfo = ''">Liste einfügen</button>
-        </div>
-        <!-- „Liste einfuegen": z. B. mehrere hundert Codes „Zahl: Einsatzmeldung" auf einmal -->
-        <div v-if="pasteOpen" class="space-y-1">
-          <textarea
-            v-model="pasteText"
-            rows="6"
-            class="textarea textarea-bordered textarea-sm w-full font-mono"
-            :placeholder="'Eine Option pro Zeile, z. B.\n010: Bewusstlosigkeit\n011: ICB / SAB'"
-            aria-label="Optionen einfügen, eine pro Zeile"
-            autocorrect="off"
-            autocapitalize="off"
-            spellcheck="false"
-          />
-          <p class="text-xs text-base-content/75">Vorhandene Optionen bleiben; doppelte werden übersprungen.</p>
-          <div class="flex gap-1">
-            <button type="button" class="btn btn-primary btn-xs" :disabled="!pasteText.trim()" @click="applyPastedOptions">Übernehmen</button>
-            <button type="button" class="btn btn-ghost btn-xs" @click="pasteOpen = false; pasteText = ''">Abbrechen</button>
+        <!-- Übersicht; bearbeitet wird im Fenster „Optionen bearbeiten“ (Tabelle bzw. Vollbild-Liste) -->
+        <div class="space-y-2 rounded-lg border border-base-300 bg-base-100 p-3" data-options-summary>
+          <div class="flex items-center gap-1">
+            <span class="text-xs font-semibold text-base-content/75">Auswahl-Optionen</span>
+            <InfoTip :info="INFO.options" />
+            <span class="ml-auto text-xs text-base-content/75">{{ filledOptions.length === 1 ? '1 Option' : `${filledOptions.length} Optionen` }}</span>
           </div>
+          <template v-if="filledOptions.length">
+            <p class="text-sm [overflow-wrap:anywhere]">{{ optionsPreview }}</p>
+            <p v-if="!(node.multiple && node.defaultEmpty)" class="text-xs text-base-content/75 [overflow-wrap:anywhere]">Standard: {{ effectiveFieldDefault }}</p>
+            <p v-if="node.multiple && (node.exclusiveOptions ?? []).length" class="text-xs text-base-content/75">Schließt andere aus: {{ (node.exclusiveOptions ?? []).length === 1 ? '1 Option' : `${(node.exclusiveOptions ?? []).length} Optionen` }}</p>
+          </template>
+          <p v-else class="text-xs text-base-content/75">Noch keine Optionen: das Feld ist ein Textfeld.</p>
+          <button type="button" class="btn btn-outline btn-sm min-h-11 w-full" data-options-edit @click="optionsOpen = true">{{ filledOptions.length ? 'Optionen bearbeiten' : 'Auswahlliste anlegen' }}</button>
         </div>
-        <p v-if="pasteInfo" class="text-xs text-base-content/75" role="status">{{ pasteInfo }}</p>
         <label v-if="node.options && node.options.length" class="flex w-full cursor-pointer items-center gap-2 py-0">
           <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.allowCustom === true" @change="set(($event.target as HTMLInputElement).checked ? { allowCustom: true } : { allowCustom: false, customMultiline: undefined })" />
           <span class="text-sm">„individuell" erlauben (Freitext als letzte Option)</span>
@@ -635,7 +591,7 @@ async function saveAsBaustein(): Promise<void> {
           <InfoTip :info="INFO.customMultiline" class="ml-auto" />
         </label>
         <label v-if="node.options && node.options.length" class="flex w-full cursor-pointer items-center gap-2 py-0">
-          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.multiple === true" @change="set(($event.target as HTMLInputElement).checked ? { multiple: true } : { multiple: undefined, exclusiveOptions: undefined, defaultEmpty: undefined })" />
+          <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.multiple === true" @change="set(($event.target as HTMLInputElement).checked ? { multiple: true } : { multiple: undefined, exclusiveOptions: undefined, defaultEmpty: undefined, multiSeparator: undefined })" />
           <span class="text-sm">Mehrfachauswahl erlauben</span>
           <InfoTip :info="INFO.multiple" class="ml-auto" />
         </label>
@@ -652,6 +608,20 @@ async function saveAsBaustein(): Promise<void> {
           <span class="text-sm">Standardwert weicht <span class="text-base-content/75">(verschwindet, sobald etwas anderes gewählt wird)</span></span>
           <InfoTip :info="INFO.defaultYield" class="ml-auto" />
         </label>
+        <!-- Verbindung der gewaehlten Werte im Protokolltext; ohne Einstellung die deutsche Aufzaehlung. -->
+        <fieldset v-if="node.multiple" class="fieldset min-w-0" data-multi-separator>
+          <legend class="fieldset-legend">Verbindung im Protokolltext <InfoTip :info="INFO.multiSeparator" /></legend>
+          <div class="space-y-0">
+            <label v-for="c in SEPARATOR_CHOICES" :key="c.key" class="flex min-h-11 cursor-pointer items-center gap-2">
+              <input type="radio" class="radio radio-sm shrink-0" :name="`multi-separator-${node.id}`" :checked="separatorChoice === c.key" :data-multi-separator-choice="c.key" @change="chooseSeparator(c.key)" />
+              <span class="min-w-0 text-sm">{{ c.label }}<span v-if="c.key !== 'eigen'" class="text-base-content/75 [overflow-wrap:anywhere]">: „{{ separatorExample(c.sep) }}“</span></span>
+            </label>
+          </div>
+          <div v-if="separatorChoice === 'eigen'" class="flex min-w-0 items-center gap-2 pl-7">
+            <input class="input input-sm w-24 shrink-0 font-mono" data-multi-separator-input aria-label="Eigener Trenner" placeholder=" / " :value="customSeparator" @input="setCustomSeparator(($event.target as HTMLInputElement).value)" />
+            <span class="min-w-0 text-xs text-base-content/75 [overflow-wrap:anywhere]">„{{ separatorExample(customSeparator || undefined) }}“ · Leerzeichen zählen mit</span>
+          </div>
+        </fieldset>
         </div>
       </details>
 
@@ -837,13 +807,6 @@ async function saveAsBaustein(): Promise<void> {
   </div>
   <p v-else class="text-sm text-base-content/75">Nichts ausgewählt — links unter „Aufbau" einen Eintrag wählen.</p>
 
-  <!-- Option loeschen: gleiches Modal wie Block-/Vorlagen-Loeschen (einheitlich, kein nativer confirm) -->
-  <ConfirmDialog
-    v-if="pendingOptionDelete !== null && node?.type === 'field'"
-    :title="`Option „${(node.options ?? [])[pendingOptionDelete] ?? ''}“ löschen?`"
-    message="Die Option wird gelöscht."
-    confirm-label="Löschen"
-    @confirm="doDeleteOption"
-    @cancel="pendingOptionDelete = null"
-  />
+  <!-- Optionen bearbeiten: eigenes Fenster, schreibt erst bei „Übernehmen“/„Fertig“ -->
+  <OptionsDialog v-if="optionsOpen && fieldNode" :field="fieldNode" :root="root" @close="optionsOpen = false" @apply="applyOptions" />
 </template>

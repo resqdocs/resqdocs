@@ -301,7 +301,15 @@ gewählte Element beziehen.
   → Abfrage und „Weiter“ stehen unten, der Text oben.
 - Vorbelegen und Auswählen statt Tippen — Nielsen Norman Group, R. Budiu (2015):
   <https://www.nngroup.com/articles/mobile-input-checklist/>
-  → Lücken mit Standardwert werden beim Durchtippen übersprungen (je Lückentext umstellbar).
+  → ~~Lücken mit Standardwert werden beim Durchtippen übersprungen (je Lückentext umstellbar).~~ Überholt seit
+  2.1 (Maintainer 2026-11-20, Rückmeldung aus dem Test: Auswahl-Lücken fielen immer heraus, weil ihre erste
+  Antwort als Standard gilt): Beim Durchtippen kommt jede Lücke der Reihe nach dran; „Weiter“ übernimmt einen
+  Standard mit einem Tipp. Begründung: Standardwerte werden kaum geändert und landen sonst ungeprüft in der
+  Dokumentation — J. Nielsen, „The Power of Defaults“ (2005), zitiert bei
+  <https://blog.codinghorror.com/the-power-of-defaults/>: nicht mit der zufällig ersten Option vorbelegen;
+  Pennsylvania Patient Safety Authority (2013), 324 Ereignisse mit Standardwerten in Patientenakten, häufigste
+  Ursache ein nicht geänderter Standardwert:
+  <https://www.hcinnovationgroup.com/clinical-it/electronic-health-record-electronic-medical-record-ehr-emr/news/13021962/study-finds-ehr-errors-related-to-default-values-could-affect-patient-safety>
 - Rückweg und Kontrolle — Nielsen Norman Group, M. Rosala (2020):
   <https://www.nngroup.com/articles/user-control-and-freedom/>
   → jede Lücke bleibt antippbar, „Zurück in Text“ macht eine Lücke rückgängig, jede Antwort gilt sofort.
@@ -312,3 +320,38 @@ gewählte Element beziehen.
   als verbreitetes Muster — TextExpander, Fill-ins:
   <https://textexpander.com/learn/using/snippets/snippet-fill-ins>
   → Lücken stehen als Marken im Text, beim Schreiben als `{Name}`.
+
+## Optionen bearbeiten: Tabelle im Browser, Vollbild-Liste am Handy
+
+Fenster „Optionen bearbeiten“ einer Auswahl (`packages/protocol-core-ui/components/OptionsDialog.vue`).
+
+- Vollbild-Dialog am Handy für Eingaben mit Tastatur, die gesammelt gespeichert werden; Verwerfen (✕) oben
+  links, Bestätigen oben rechts — Material Design, Dialogs, Full-screen dialogs:
+  <https://m1.material.io/components/dialogs.html>
+  → am Handy ganzer Bildschirm mit ✕ und „Fertig“ im Kopf; erst „Fertig“/„Übernehmen“ schreibt ins Feld.
+- Tabellen am Handy: wenige Spalten, Details eines gewählten Eintrags statt Vergleich in Spalten —
+  Nielsen Norman Group, A. Schade (2017): <https://www.nngroup.com/articles/mobile-tables/>
+  → am Handy eine Liste mit Marken „Standard“/„allein“; Antippen öffnet das Eintrag-Feld. Ab 640 px Tabelle.
+- Lange Einträge als Titel listen, Inhalt in einer Detailansicht; Umsortieren schätzen Nutzer — Apple, Human
+  Interface Guidelines, Lists and tables: <https://developer.apple.com/design/human-interface-guidelines/lists-and-tables>
+  → Sortier-Griff an jeder Zeile (Ziehen oder Pfeiltasten), Text der Option im Eintrag-Feld.
+- Wischen zum Löschen wird kaum entdeckt — Nielsen Norman Group, Contextual Swipe:
+  <https://www.nngroup.com/articles/contextual-swipe/>
+  → Löschen sichtbar im Eintrag-Feld (mit Rückfrage) und über „Mehr …“ → „Mehrere löschen“, kein Wischen.
+
+## Mehrfachauswahl: Verbindung im Protokolltext
+
+Einstellung „Verbindung im Protokolltext“ einer Mehrfachauswahl (`multiSeparator`,
+`packages/protocol-core-ui/components/ContainerProperties.vue`, Ausgabe `joinFieldValues` in `packages/shared/fill.ts`).
+
+- Eine aus wenigen Möglichkeiten: Auswahlknöpfe, weil sie alle Varianten dauerhaft zeigen — Nielsen Norman
+  Group, Checkboxes vs. Radio Buttons, Richtlinie 8 („make all options permanently visible so that users can
+  easily compare them“): <https://www.nngroup.com/articles/checkboxes-vs-radio-buttons/>
+  → vier Knöpfe (Aufzählung, Komma, Semikolon, Eigener Trenner), je mit Beispiel aus den eigenen Optionen
+  (bei langen Optionen „A, B, C“),
+  damit man das Ergebnis vor dem Wählen sieht. Jede Zeile ≥ 44 px hoch.
+- Zusatzfrage erst nach der Wahl einblenden, nur wenn sie einfach ist — GOV.UK Design System, Radios,
+  „Conditionally revealing a related question“: <https://design-system.service.gov.uk/components/radios/>
+  → das Eingabefeld für den eigenen Trenner erscheint nur bei „Eigener Trenner“, mit Vorschau daneben.
+- Standard bleibt die deutsche Aufzählung (Maintainer, 2026-11-13); ohne Einstellung ändert sich keine Ausgabe.
+  Zeilenumbrüche im Trenner entfallen, weil die Bridge sie als Eingabetaste tippen würde.

@@ -14,8 +14,8 @@ onMounted(() => box.value?.scrollIntoView({ behavior: 'smooth', block: 'center' 
 
 <template>
   <div ref="box" class="scroll-mb-28 rounded-lg border border-info/40 bg-info/10 p-3 text-sm" data-share-confirm>
-    <p><strong>Sicherung teilen?</strong> Diese Datei enthält <strong>nur Vorlagen und Textbausteine — keine
-      Patientendaten.</strong> Legst du sie in iCloud, Drive, Mail o. Ä., verlässt sie dein Gerät und liegt
+    <p><strong>Sicherung teilen?</strong> Diese Datei enthält <strong>nur Vorlagen, gespeicherte Abschnitte,
+      Textbausteine und die PZN-Datenbank — keine Patientendaten.</strong> Legst du sie in iCloud, Drive, Mail o. Ä., verlässt sie dein Gerät und liegt
       außerhalb der App. <strong>Das wählst und verantwortest du selbst</strong> (kein Zurückholen möglich).</p>
     <p v-if="error" role="alert" class="mt-2 font-medium text-error" data-share-error>{{ error }}</p>
     <div class="mt-2 flex flex-wrap gap-2">

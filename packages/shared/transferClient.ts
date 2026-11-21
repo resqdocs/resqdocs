@@ -12,6 +12,10 @@ export const DEFAULT_TRANSFER_BASE_URL = 'https://transfer.resqdocs.app'
 export type TransferTtl = 'burn' | '1h' | '24h' | '7d'
 const TTL_SECONDS: Record<TransferTtl, number> = { burn: 604800, '1h': 3600, '24h': 86400, '7d': 604800 }
 
+/** Domain der Kurzlinks (resq.li/<code>). Ein Kurzlink verweist immer auf einen langen Link; den Schlüssel kennt
+ *  dabei der Dienst, bis der Inhalt abgelaufen oder übernommen ist. */
+export const DEFAULT_SHORT_HOST = 'resq.li'
+
 export class TransferError extends Error {}
 
 export interface TransferConfig {
@@ -58,6 +62,71 @@ export function parseTransferInput(input: string): { id: string; keyB64url: stri
   return parseTransferFragment(hash >= 0 ? trimmed.slice(hash + 1) : trimmed)
 }
 
+/** Code eines Kurzlinks (`resq.li/Ab3k9`, mit oder ohne https://); sonst null. */
+export function shortCodeOf(input: string): string | null {
+  const m = /^(?:https?:\/\/)?resq\.li\/([A-Za-z0-9]{5})\/?$/i.exec(input.trim())
+  return m ? m[1] : null
+}
+
+/** Kurzlink zu einem langen Link anlegen (nur auf ausdrücklichen Wunsch: der Dienst kennt danach den Schlüssel). */
+export async function shortenTransferLink(link: string, cfg?: TransferConfig): Promise<{ code: string; url: string }> {
+  let res: Response
+  try {
+    res = await doFetch(cfg, `${base(cfg)}/v1/short`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ link }) })
+  } catch {
+    throw new TransferError('Der Transfer-Dienst ist nicht erreichbar.')
+  }
+  if (res.status === 404) throw new TransferError('Der Inhalt ist schon abgelaufen oder übernommen.')
+  if (!res.ok) throw new TransferError('Der Kurzlink konnte nicht angelegt werden.')
+  try {
+    const r = (await res.json()) as { code: string; url: string }
+    if (typeof r.code !== 'string' || typeof r.url !== 'string') throw new Error()
+    return { code: r.code, url: r.url }
+  } catch {
+    throw new TransferError('Unerwartete Antwort des Transfer-Dienstes.')
+  }
+}
+
+/** Kurzlink eines geteilten Inhalts wieder entfernen: der Dienst löscht den gespeicherten langen Link (mit Schlüssel)
+ *  sofort. Braucht das Lösch-Token aus shareTransfer. true = entfernt. */
+export async function removeShortLink(link: string, deleteToken: string, cfg?: TransferConfig): Promise<boolean> {
+  const parsed = parseTransferInput(link)
+  if (!parsed || !/^[A-Za-z0-9]+$/.test(parsed.id)) return false
+  try {
+    const res = await doFetch(cfg, `${base(cfg)}/v1/blob/${parsed.id}/short`, { method: 'DELETE', headers: { 'X-Delete-Token': deleteToken } })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+/** Kurzlink zum langen Link auflösen. */
+export async function resolveShortLink(code: string, cfg?: TransferConfig): Promise<string> {
+  if (!/^[A-Za-z0-9]{5}$/.test(code)) throw new TransferError('Kein gültiger Kurzlink.')
+  let res: Response
+  try {
+    res = await doFetch(cfg, `${base(cfg)}/v1/short/${code}`)
+  } catch {
+    throw new TransferError('Der Transfer-Dienst ist nicht erreichbar.')
+  }
+  if (res.status === 410) throw new TransferError('Der Kurzlink ist abgelaufen oder wurde schon übernommen.')
+  if (res.status === 404) throw new TransferError('Diesen Kurzlink gibt es nicht. Bitte prüfen, ob er vollständig ist.')
+  if (!res.ok) throw new TransferError('Der Kurzlink konnte nicht aufgelöst werden.')
+  try {
+    const r = (await res.json()) as { link?: unknown }
+    if (typeof r.link !== 'string') throw new Error()
+    return r.link
+  } catch {
+    throw new TransferError('Unerwartete Antwort des Transfer-Dienstes.')
+  }
+}
+
+/** Eingabe für den Empfang: ein Kurzlink wird zuerst zum langen Link aufgelöst, alles andere bleibt. */
+export async function expandTransferInput(input: string, cfg?: TransferConfig): Promise<string> {
+  const code = shortCodeOf(input)
+  return code ? resolveShortLink(code, cfg) : input
+}
+
 /** Vorlage teilen: Klartext-String verschlüsseln, Chiffrat ablegen, Link+Code zurückgeben. */
 export async function shareTransfer(
   plaintext: string,
@@ -85,22 +154,69 @@ export async function shareTransfer(
   return { ...meta, keyB64url, link: buildTransferLink(base(cfg), meta.id, keyB64url, cfg?.editor) }
 }
 
-/** Vorlage empfangen: Link/Fragment zerlegen, Chiffrat holen, lokal entschlüsseln. Gibt den Klartext-
- *  String (die serialisierte Vorlage) zurück — der Aufrufer schickt ihn durch routeImport/detectAndParse.
- *  Wirft TransferError bei ungültigem Link, abgelaufenem/verbranntem Blob oder falschem Schlüssel. */
-export async function receiveTransfer(linkOrFragment: string, cfg?: TransferConfig): Promise<string> {
-  const parsed = parseTransferInput(linkOrFragment)
-  if (!parsed) throw new TransferError('Kein gültiger Transfer-Link.')
-  // id defensiv gegen den erlaubten Zeichensatz prüfen (kein Pfad-Unfug in die URL).
-  if (!/^[A-Za-z0-9]+$/.test(parsed.id)) throw new TransferError('Kein gültiger Transfer-Link.')
+/** Geöffneter Transfer. Bei „1× lesen“ reserviert der Dienst den Link nur; verbraucht ist er erst nach consume(). */
+export interface OpenedTransfer {
+  text: string
+  /** true = der Dienst hält den Link für dieses Gerät fest („1× lesen“); false = nichts zu verbrauchen oder älterer
+   *  Dienst, der „1× lesen“ schon beim Abruf verbraucht hat. */
+  reserved: boolean
+  /** So oft wurde der Link vorher schon geöffnet, aber nicht übernommen (nur „1× lesen“, sonst 0). */
+  priorOpens: number
+  /** Übernommen: Link verbrauchen. Ohne Reservierung (kein „1× lesen“, älterer Dienst) gibt es nichts zu tun. */
+  consume(): Promise<boolean>
+  /** Abgebrochen: Reservierung freigeben, der Link gilt wieder. */
+  release(): Promise<boolean>
+}
+
+/** Wie receiveTransfer, aber ein „1× lesen“-Link gilt erst als geöffnet, wenn consume() gerufen wird. Der Dienst
+ *  hält ihn bis dahin einige Minuten für dieses Gerät fest; ohne Rückmeldung gilt er danach wieder. */
+export async function openTransfer(linkOrFragment: string, cfg?: TransferConfig): Promise<OpenedTransfer> {
+  const parsed = parseTransferInput(await expandTransferInput(linkOrFragment, cfg))
+  if (!parsed || !/^[A-Za-z0-9]+$/.test(parsed.id)) throw new TransferError('Kein gültiger Transfer-Link.')
+  const res = await fetchBlob(cfg, parsed.id, { 'X-Claim': '1' })
+  const token = res.headers.get('X-Claim-Token')
+  const priorOpens = Number(res.headers.get('X-Prior-Opens')) || 0
+  let text: string
+  try {
+    text = await decryptResponse(res, parsed.keyB64url)
+  } catch (e) {
+    // Nicht lesbar (falscher Schlüssel, abgebrochener Abruf): die Reservierung sofort aufheben, sonst wäre der Link
+    // zehn Minuten für alle gesperrt.
+    if (token) await doFetch(cfg, `${base(cfg)}/v1/blob/${parsed.id}/release`, { method: 'POST', headers: { 'X-Claim-Token': token } }).catch(() => {})
+    throw e
+  }
+  const settle = async (action: 'consume' | 'release'): Promise<boolean> => {
+    if (!token) return true
+    try {
+      const r = await doFetch(cfg, `${base(cfg)}/v1/blob/${parsed.id}/${action}`, { method: 'POST', headers: { 'X-Claim-Token': token } })
+      return r.ok
+    } catch {
+      return false // offline: die Reservierung läuft von selbst ab, der Link gilt dann wieder
+    }
+  }
+  let done = false
+  const once = (action: 'consume' | 'release') => async (): Promise<boolean> => {
+    if (done) return true
+    done = true
+    return settle(action)
+  }
+  return { text, reserved: !!token, priorOpens, consume: once('consume'), release: once('release') }
+}
+
+async function fetchBlob(cfg: TransferConfig | undefined, id: string, headers?: Record<string, string>): Promise<Response> {
   let res: Response
   try {
-    res = await doFetch(cfg, `${base(cfg)}/v1/blob/${parsed.id}`)
+    res = await doFetch(cfg, `${base(cfg)}/v1/blob/${id}`, headers ? { headers } : undefined)
   } catch {
     throw new TransferError('Der Transfer-Dienst ist nicht erreichbar.')
   }
   if (res.status === 404) throw new TransferError('Der Transfer ist abgelaufen oder wurde bereits geöffnet.')
+  if (res.status === 409) throw new TransferError('Der Link wird gerade auf einem anderen Gerät geöffnet. In ein paar Minuten noch einmal versuchen.')
   if (!res.ok) throw new TransferError('Der Transfer konnte nicht geladen werden.')
+  return res
+}
+
+async function decryptResponse(res: Response, keyB64url: string): Promise<string> {
   let blob: Uint8Array<ArrayBuffer>
   try {
     blob = new Uint8Array(await res.arrayBuffer()) // Mid-Stream-Abbruch -> sauber als TransferError
@@ -108,8 +224,19 @@ export async function receiveTransfer(linkOrFragment: string, cfg?: TransferConf
     throw new TransferError('Der Transfer konnte nicht geladen werden.')
   }
   try {
-    return await decryptTransfer(blob, parsed.keyB64url)
+    return await decryptTransfer(blob, keyB64url)
   } catch {
     throw new TransferError('Der Link ist unvollständig oder beschädigt (Entschlüsselung fehlgeschlagen).')
   }
+}
+
+/** Vorlage empfangen: Link/Fragment zerlegen, Chiffrat holen, lokal entschlüsseln. Gibt den Klartext-
+ *  String (die serialisierte Vorlage) zurück — der Aufrufer schickt ihn durch routeImport/detectAndParse.
+ *  Wirft TransferError bei ungültigem Link, abgelaufenem/verbranntem Blob oder falschem Schlüssel. */
+export async function receiveTransfer(linkOrFragment: string, cfg?: TransferConfig): Promise<string> {
+  const parsed = parseTransferInput(await expandTransferInput(linkOrFragment, cfg))
+  if (!parsed) throw new TransferError('Kein gültiger Transfer-Link.')
+  // id defensiv gegen den erlaubten Zeichensatz prüfen (kein Pfad-Unfug in die URL).
+  if (!/^[A-Za-z0-9]+$/.test(parsed.id)) throw new TransferError('Kein gültiger Transfer-Link.')
+  return decryptResponse(await fetchBlob(cfg, parsed.id), parsed.keyB64url)
 }

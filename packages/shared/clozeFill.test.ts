@@ -25,19 +25,20 @@ test('gapState Funktion: Standardtext, Freitext, nicht erhoben', () => {
   assert.equal(gapState(med({ required: true }), { state: 'function', rows: [], status: 'excluded' }), 'open')
 })
 
-test('Durchtippen: offene immer, Standardwerte nur auf Wunsch, Gesehenes nicht noch einmal', () => {
-  assert.equal(needsAsking('open', false, false), true)
-  assert.equal(needsAsking('default', false, false), false)
-  assert.equal(needsAsking('default', true, false), true)
-  assert.equal(needsAsking('answered', true, false), false)
-  assert.equal(needsAsking('excluded', true, false), false)
-  assert.equal(needsAsking('open', true, true), false)
-  const states = ['default', 'open', 'answered', 'default', 'open'] as const
-  assert.equal(nextAsking(states, [], false, -1), 1)
-  assert.equal(nextAsking(states, [], false, 1), 4)
-  assert.equal(nextAsking(states, [], false, 4), -1)
-  assert.equal(nextAsking(states, [], true, -1), 0)
-  assert.equal(nextAsking(states, [true, true], true, -1), 3)
+test('Durchtippen: jede Lücke der Reihe nach, egal ob offen, mit Standard oder beantwortet; Gesehenes nicht noch einmal', () => {
+  assert.equal(needsAsking(false), true)
+  assert.equal(needsAsking(true), false)
+  // Auswahl, Freitext, Freitext, Auswahl, Auswahl, Freitext … (Auswahl-Lücken haben immer einen Standard)
+  const states = ['default', 'open', 'open', 'default', 'default', 'open', 'open', 'default', 'open'] as const
+  const order: number[] = []
+  const seen: boolean[] = []
+  for (let i = nextAsking(states, seen, -1); i >= 0; i = nextAsking(states, seen, i)) {
+    order.push(i + 1)
+    seen[i] = true
+  }
+  assert.deepEqual(order, [1, 2, 3, 4, 5, 6, 7, 8, 9])
+  assert.equal(nextAsking(['answered', 'excluded', 'default'], [], -1), 0)
+  assert.equal(nextAsking(states, [true, true], -1), 2, 'schon Gesehenes wird übersprungen')
 })
 
 test('clozeSummary: Pflicht geht vor, Einzahl und Mehrzahl', () => {

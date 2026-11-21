@@ -46,6 +46,7 @@ Additionally, individual **properties** are only available from a minimum versio
 | Contact persons with legal flags | `vollmacht` | functions (recorded during a case, do not write it into the JSON. Doctors function: contact persons (relatives/carers) with role + advance directive / power of attorney) | 1.3.0 |
 | Multi-select | `multiple` | field (option field allows several options at once (checkboxes ≤6 / multi-select dropdown >6); value = enumeration "a, b and c") | 1.4.0 |
 | Exclusive options | `exclusiveOptions` | field (with multi-select: "none/normal" options (exact option strings) that exclude all others) | 1.4.0 |
+| Multi-select separator | `multiSeparator` | field (with multi-select: text between the chosen values, e.g. ", " or "; " (spaces count). Without it the enumeration "a, b and c". Older app versions output the enumeration.) | 2.1.0 |
 | Starts as "not assessed" | `defaultExcluded` | field, container (Field or section starts as "not assessed" instead of "confirmed" and only appears in the output once the user deliberately switches it on. For content needed only in specific situations. On a container it also requires excludable; on a field it is mutually exclusive with required.) | 1.5.0 |
 | Starts as "not assessed" | `defaultExcluded` | functions (The function starts as "not assessed" and only appears in the output once the user switches it on or enters data. Mutually exclusive with required.) | 1.9.0 |
 | Starts without selection | `defaultEmpty` | field (with multi-select: no option is preselected (e.g. dispatch codes). Without it the default option (or the first one) applies. An empty selection outputs nothing; a required field stays open until something is chosen.) | 1.6.0 |
@@ -53,7 +54,7 @@ Additionally, individual **properties** are only available from a minimum versio
 | Dependency | `dependsOn` | field, container, function (The element only appears during a case once the conditions are met; until then it is hidden and not in the output. Shape: { "conditions": [ { "fieldId": "<id of a field with options>", "options": ["<exact option text>"] } ] }. A condition is met when one of the options is chosen in that field. Several conditions (at most three) must all be met; with "match": "any" one is enough. Always set together with defaultExcluded: true (on a container also excludable: true), not together with required. Older app versions ignore it: there the element starts as "not assessed" and is switched on by hand.) | 1.11.0 |
 | Conditional default | `defaultWhen` | field (While a condition is met, a different default applies instead of default. Shape: [ { "fieldId": "<id of a field with options>", "options": ["<exact option text>"], "value": "<default in this case>" } ]. The first matching rule applies (at most five). If the field itself has options, value must be one of them. The user's own input takes precedence. Older app versions ignore it and use default.) | 1.11.0 |
 | Line end | `config.lineEnd` | functions (character at the end of the result line of single-line functions (function configuration); empty = nothing. Older apps use their fixed default) | 1.12.0 |
-| Cloze text | `cloze` | container (The section outputs free-form text in which fields and functions appear as gaps. Shape: { "parts": [ "Patient is ", { "gap": "<id>" }, "." ] } – strings are fixed text, { "gap": "<id>" } is a gap. The id belongs to a field or function: a child of the section (the gap asks for the value) or an element elsewhere in the template (the gap shows that element's value). A gap contains only the value, without the title. Optional "askDefaults": true also asks for gaps that already have a default when filling in. Older app versions ignore it and show the children as a regular field list.) | 2.0.0 |
+| Cloze text | `cloze` | container (The section outputs free-form text in which fields and functions appear as gaps. Shape: { "parts": [ "Patient is ", { "gap": "<id>" }, "." ] } – strings are fixed text, { "gap": "<id>" } is a gap. The id belongs to a field or function: a child of the section (the gap asks for the value) or an element elsewhere in the template (the gap shows that element's value). A gap contains only the value, without the title. When filling in, every gap comes up in order. Older app versions ignore it and show the children as a regular field list.) | 2.0.0 |
 
 **Gate rule:** a `functionKind` is available **only if its minimum version ≤ the user's version**. Otherwise do not offer it; if the user asks, say "that needs at least version X". **Never write** a `functionKind` into the JSON that the stated version does not know. Containers and fields work from version 1.0.0 onward. If the user states a version **before 1.0.0** (or none), assume the base — only `container` + `field`, no functions — and point out that functions and the template import itself need at least 1.0.0.
 
@@ -75,7 +76,7 @@ Dialog rules:
 
 ## A5 Preview & final output
 Before you build the preview **and** before you output the final JSON: re-read §10 (format reminder) and run its self-check. First show the structure as a human-readable **outline** (sections, fields, layout — form as in §5) and ask **"Does this look right?"**. Only after confirmation, your final message consists of **one single** ```json code block (valid JSON with `schema`, `version`, `tree`) plus exactly one sentence after it:
-"Import: ResQDocs app → tab 'Vorlagen' → ⋮ → 'Daten' → 'Importieren' → paste the JSON → 'Laden'."
+"Import: ResQDocs app → tab 'Vorlagen' → 'Aus Datei importieren…' → paste the JSON → 'Laden'."
 
 The code block contains **only** the JSON: first character `{`, last character `}`. No `<escape>` or other tags or markers, no text before or after. The app accepts pure JSON only and corrects nothing. The user should copy it with the code block's copy button.
 
@@ -158,6 +159,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - `customMultiline` (boolean)
 - `multiple` (boolean)
 - `exclusiveOptions` (list of string)
+- `multiSeparator` (string)
 - `defaultEmpty` (boolean)
 - `multiline` (boolean)
 - `required` (boolean)
@@ -392,7 +394,7 @@ Three node types: **Container** (section with children), **Field** (input field)
         },
         "askDefaults": {
           "type": "boolean",
-          "description": "Beim Ausfuellen auch Luecken abfragen, die schon einen Standardwert haben. Fehlt/false -> solche Luecken werden beim Durchtippen uebersprungen (man kann sie trotzdem antippen und aendern)."
+          "description": "Nicht mehr setzen: Seit App 2.1 kommt beim Ausfuellen jede Luecke der Reihe nach dran. Die Angabe bleibt nur, damit Vorlagen, die sie enthalten, unveraendert gelesen und geschrieben werden (App 2.0 wertet sie noch aus)."
         }
       },
       "required": [
@@ -500,6 +502,10 @@ Three node types: **Container** (section with children), **Field** (input field)
             "type": "string"
           },
           "description": "Bei multiple: Optionen (exakte Strings aus options), die bei Auswahl alle ANDEREN verdraengen — ein „Keine/Normalbefund\" ersetzt jede andere Auswahl (und wird von jeder anderen ausgeschlossen; exklusiv)."
+        },
+        "multiSeparator": {
+          "type": "string",
+          "description": "Bei multiple: Trenner zwischen den gewaehlten Werten in der Ausgabe, z. B. \", \" oder \"; \". Fehlt er, gilt die deutsche Aufzaehlung („a, b und c\"). Leerzeichen zaehlen mit; Zeilenumbrueche entfallen. ADDITIV: aeltere App-Versionen ignorieren die Eigenschaft und geben die Aufzaehlung aus."
         },
         "defaultEmpty": {
           "type": "boolean",
@@ -703,7 +709,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - **Prefill with a default?** (`default`) — Stays in the field until the user changes it. *Example: "Consciousness" starts as "alert, oriented".*
 - **Select list instead of free text?** (`options`) — The user picks from fixed values (list of strings). *Example: "Handover to" with "ED/physician/nursing staff".*
 - **Additionally allow custom input?** (`allowCustom`) — Select plus the option to type something else. *Example: "Breathing" with fixed grades but also free text.* With `customMultiline: true` (from app 1.10.0) the custom input is a large text field instead of a single line, for longer texts.
-- **Allow multiple selections?** (`multiple`, from app 1.4.0) — Several options selectable at once (checkboxes for ≤6, multi-select dropdown for >6). *Example: "Auscultation" — ventilated bilaterally AND wheezing at the same time.* Only with `options`. The output joins the chosen values as an enumeration ("a, b and c"). Optional `exclusiveOptions` (subset of `options`): a "none/normal" option that excludes all others (and vice versa) — *example: "No cyanosis" excludes "central/peripheral cyanosis".*
+- **Allow multiple selections?** (`multiple`, from app 1.4.0) — Several options selectable at once (checkboxes for ≤6, multi-select dropdown for >6). *Example: "Auscultation" — ventilated bilaterally AND wheezing at the same time.* Only with `options`. The output joins the chosen values as an enumeration ("a, b and c"); with `multiSeparator` (from app 2.1.0) a custom separator is used instead, e.g. `"; "` → "a; b; c" (spaces count, useful for finding lists). Optional `exclusiveOptions` (subset of `options`): a "none/normal" option that excludes all others (and vice versa) — *example: "No cyanosis" excludes "central/peripheral cyanosis".*
 - **Large multi-line text field?** (`multiline`) — For longer texts with line breaks. *Example: "History" with several sentences.*
 - **Required field?** (`required`, from app 1.2.0) — The field cannot be set to "not collected" during a case; while empty it is marked as open. *Example: "Aktuelle Anamnese".* Not together with `defaultExcluded`. A single select without `default` uses the first option as its value, so the field is never empty.
 - **Switch on only when needed?** (`defaultExcluded`, from app 1.5.0) — The field starts as "not collected" and only enters the output when the user switches it on. *Example: a field needed only in certain situations.*
@@ -731,7 +737,7 @@ The app renders the template to plain text. Rules:
 - **Inline layout:** `inline: true` appends the node to the previous sibling, joined with the `separator` (inherited from the root, overridable per container; default `", "`). `noSeparatorBefore: true` omits the separator (e.g. value + unit).
 - **Not assessed (`excludable`):** a container marked "−" disappears entirely (including children) from the output.
 - **`emptyText`:** substitute text when the container is shown but its children output nothing.
-- **Cloze text (`cloze`, from app 2.0.0):** `cloze.parts` is a list of fixed text (strings, line breaks allowed) and gaps `{ "gap": "<id>" }`. The id points to a field or function: a child of this container (the gap asks for the value itself) or an element elsewhere in the template (the gap shows that element's value). A gap contains only the value, without the title. If a gap stays empty, the doubled space and a dangling comma are removed. Children that are not used in a gap follow below the text. `askDefaults: true` also asks for gaps that already have a default when filling in. Older app versions show the children as a regular field list.
+- **Cloze text (`cloze`, from app 2.0.0):** `cloze.parts` is a list of fixed text (strings, line breaks allowed) and gaps `{ "gap": "<id>" }`. The id points to a field or function: a child of this container (the gap asks for the value itself) or an element elsewhere in the template (the gap shows that element's value). A gap contains only the value, without the title. If a gap stays empty, the doubled space and a dangling comma are removed. Children that are not used in a gap follow below the text. When filling in, every gap comes up in order (choice and free text, with or without a default). Older app versions show the children as a regular field list.
 - **Field value:** by default the `default` (or `options[0]`, with `defaultEmpty` nothing); `options` turns the field into a select; `allowCustom` additionally allows free text; `multiline` is multi-line free text.
 - **FunctionNode:** medication list / doctors render their rows; `config.rowLayout` = `block` (stacked, optional `rowPrefix`/`rowSuffix` per row) or `inline` (one line, joined with `rowSeparator`). Pack-years, NEWS2, LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS and BMI output their result; `config.lineEnd` sets the character at the end of their line (missing = as before, empty = nothing); without entries or a result the `default` appears. LAMS, FAST4D, ZOPS, Sgarbossa and EGSYS read best as one line ("LAMS 4/5 (…)", "FAST4D positiv (…)", "ZOPS orientiert.", "Sgarbossa (mod. nach Smith) negativ."): `titleInline: true` and a `heading` with `"prefix": ""`, `"suffix": " "`.
 
@@ -1255,9 +1261,9 @@ B: Kein path Atemgeräusch/Atemmuster. Atmung ist suffizient. Keine Dyspnoe.
 How the user imports the JSON (tell them after the final output):
 
 1. Open the ResQDocs app → tab **"Vorlagen"**.
-2. Tap the **"⋮"** at the top right of the template bar — it directly opens the **"Daten"** sheet.
-3. Choose **"Importieren"** → paste the JSON (or pick a .json file) → **"Laden"**.
-4. If a template with the same name (the root's `title`) already exists, the app asks: overwrite or import as new.
+2. Below the list of templates, tap **"Aus Datei importieren…"** — it opens the **"Daten"** sheet.
+3. Paste the JSON into the text field → **"Laden"** (or pick the .json file below it).
+4. If a template with the same name (the root's `title`) already exists, the app asks: "Als neue Vorlage" (import as new) or "Überschreiben" (overwrite).
 
 If the app shows an error, help the user like this (messages verbatim from the app; the app UI is German):
 
@@ -1274,4 +1280,4 @@ If the app imports without a message but something is missing or looks wrong: th
 2. Only the three node types `container` | `field` | `function`; only properties from §2; `functionKind` only with documented values **and only up to the installed app version** (A3).
 3. Every `id` unique (`A–Z a–z 0–9 _ -`); numbers/booleans without quotes; `options` = list of strings; `heading` only complete (5 properties).
 4. No patient data in `title`, `default`, `options`, `emptyText`.
-5. **Self-check before sending:** wrapper complete? Only documented properties? `id`s unique? Every titled node with an explicit `heading`? **No `functionKind` above the stated app version (A3)?** No comments, no trailing commas, parsable with `JSON.parse`? Only then: output the JSON in **one** ```json code block, followed by exactly one sentence with the import steps from §9 (short form: tab "Vorlagen" → ⋮ → "Daten" → "Importieren" → paste → "Laden"). Does the code block start with `{`, end with `}`, and contain nothing else? The app does not check the content on import; you are the last check. If you can run code, also verify the JSON with `JSON.parse`.
+5. **Self-check before sending:** wrapper complete? Only documented properties? `id`s unique? Every titled node with an explicit `heading`? **No `functionKind` above the stated app version (A3)?** No comments, no trailing commas, parsable with `JSON.parse`? Only then: output the JSON in **one** ```json code block, followed by exactly one sentence with the import steps from §9 (short form: tab "Vorlagen" → "Aus Datei importieren…" → paste → "Laden"). Does the code block start with `{`, end with `}`, and contain nothing else? The app does not check the content on import; you are the last check. If you can run code, also verify the JSON with `JSON.parse`.

@@ -67,11 +67,10 @@ test('Zustand der Lücke ist nicht nur Farbe: je Zustand eine eigene Form und ei
   assert.match(text, /STATE_WORD/)
 })
 
-test('Vorschau: mit `wrap` brechen Inhaltszeilen um, Titelzeilen nicht; ohne bleibt die zeichengenaue Ansicht', () => {
+test('Vorschau: eine zeichengenaue Ansicht für Einsatz und Vorlage (Umbruch-Modus entfernt, Maintainer 2026-11-21)', () => {
   const out = read('components/OutputText.vue')
-  assert.match(out, /wrap\?: boolean/)
-  assert.match(out, /whitespace-pre-wrap/)
-  assert.match(out, /line\.banner \? 'overflow-hidden whitespace-pre'/)
+  assert.doesNotMatch(out, /wrap\?: boolean/)
+  assert.doesNotMatch(out, /whitespace-pre-wrap/)
   assert.match(out, /overflow-x-auto whitespace-pre /)
 })
 

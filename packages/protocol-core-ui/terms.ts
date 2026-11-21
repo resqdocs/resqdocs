@@ -83,6 +83,10 @@ export const INFO = {
     title: 'Standardwert weicht',
     text: 'Wählst du im {einsatz} eine weitere Option, verschwindet der Standardwert aus der Auswahl. Sinnvoll, wenn er eine pauschale Aussage ist, die jede genauere Angabe ersetzt, z. B. der Normalbefund beim EKG. Wählst du den Standardwert wieder, werden die anderen abgewählt.',
   },
+  multiSeparator: {
+    title: 'Verbindung im Protokolltext',
+    text: 'Legt fest, wie mehrere gewählte Optionen im Protokolltext stehen. Standard ist die Aufzählung mit „und“ vor dem letzten Wert. Für Befundlisten passt oft Komma oder Semikolon. Beim eigenen Trenner zählen Leerzeichen mit. Ältere App-Versionen geben weiter die Aufzählung aus.',
+  },
   defaultEmpty: {
     title: 'Startet ohne Auswahl',
     text: 'Im {einsatz} ist nichts vorausgewählt. Sinnvoll, wenn eine Vorauswahl etwas Falsches dokumentieren würde, z. B. bei Einsatzcodes. Ohne Auswahl gibt das Feld nichts aus.',

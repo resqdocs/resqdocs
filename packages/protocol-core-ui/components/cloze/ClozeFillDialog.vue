@@ -8,12 +8,12 @@
  *   Abfrage und „Weiter" hinter der Tastatur.
  * - Abschluss („Fertig") steht im Kopf und ist nie verdeckt. Jede Antwort gilt sofort, es gibt kein
  *   Abbrechen und nichts zu verlieren.
- * - Beim Durchtippen werden offene Lücken abgefragt; Lücken mit Standardwert nur, wenn die Vorlage das
- *   verlangt (`askDefaults`). Antippen geht immer.
+ * - Beim Durchtippen kommt jede Lücke der Reihe nach dran, auch Auswahl-Lücken und solche mit Standardwert
+ *   („Weiter“ übernimmt ihn). Antippen geht immer.
  */
 import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
-import { clozeOf, clozeGaps } from '@resqdocs/protocol-core/cloze'
+import { clozeGaps } from '@resqdocs/protocol-core/cloze'
 import { gapState, nextAsking, clozeSummary } from '@resqdocs/protocol-core/clozeFill'
 import { findPath } from '@resqdocs/protocol-core/creator'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
@@ -35,7 +35,6 @@ const caseValues = useCaseValues()
 const dependencyHidden = useDependencyHidden()
 
 const title = computed(() => (props.node.title && props.node.title.trim()) || 'Lückentext')
-const askDefaults = computed(() => !!clozeOf(props.node)?.askDefaults)
 const gaps = computed(() => clozeGaps(props.root, props.node).filter((g) => !dependencyHidden.value.has(g.id)))
 const states = computed(() => gaps.value.map((g) => gapState(g.node, caseValues.values.value[g.id])))
 const currentId = ref<string | null>(null)
@@ -57,7 +56,7 @@ const sourcePath = computed(() => {
 // In diesem Durchgang schon abgefragt - kommt beim Durchtippen nicht noch einmal.
 let seen = new Set<string>()
 function askingAfter(from: number): number {
-  return nextAsking(states.value, gaps.value.map((g) => seen.has(g.id)), askDefaults.value, from)
+  return nextAsking(states.value, gaps.value.map((g) => seen.has(g.id)), from)
 }
 function next(): void {
   if (current.value) seen.add(current.value.id)

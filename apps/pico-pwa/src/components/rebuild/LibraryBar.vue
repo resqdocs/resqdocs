@@ -134,8 +134,8 @@ function sheetDelete(): void {
 const dataOpen = ref(false)
 const dataIo = ref<InstanceType<typeof TemplateIO> | null>(null) // fuer die Direkt-Spruenge openShare/openReceive
 
-// Von aussen geoeffneter Link / geteilte Datei: Daten-Blatt im passenden Abschnitt aufmachen. Die
-// Nachfrage und der Import selbst liegen in TemplateIO.
+// Von aussen geoeffneter Link / geteilte Datei: Daten-Blatt im passenden Abschnitt aufmachen und gleich abrufen.
+// Das Antippen war die Entscheidung; gefragt wird erst beim Übernehmen (ImportChoiceDialog).
 watch(
   incomingOpen,
   async (item) => {
@@ -145,6 +145,7 @@ watch(
     await nextTick()
     if (item.kind === 'transfer') dataIo.value?.openReceive()
     else dataIo.value?.openImportFile()
+    void dataIo.value?.acceptIncoming()
   },
   { immediate: true },
 )
@@ -223,7 +224,7 @@ const collapsed = ref(false)
 
     <!-- Aktions-Sheet fuer die aktive Vorlage -->
     <div class="modal modal-bottom" :class="{ 'modal-open': sheetOpen }" role="dialog" aria-modal="true">
-      <div class="modal-box">
+      <div class="modal-box pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <h3 class="truncate text-sm font-semibold">{{ activeTitle }}</h3>
         <ul class="menu w-full px-0">
           <li><button type="button" class="min-h-12" @click="sheetRename">Umbenennen</button></li>
@@ -240,10 +241,10 @@ const collapsed = ref(false)
 
     <!-- Daten-Sheet: Export/Import (seltene Utility-Aktion, 1 Tap entfernt) -->
     <div class="modal modal-bottom" :class="{ 'modal-open': dataOpen }" role="dialog" aria-modal="true">
-      <div class="modal-box">
+      <div class="modal-box pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <h3 class="text-sm font-semibold">Daten</h3>
         <p class="pb-2 text-xs text-base-content/75"><b>Teilen/Empfangen</b> = verschlüsselter Link/QR. <b>Export/Import</b> = Datei/JSON.</p>
-        <TemplateIO ref="dataIo" />
+        <TemplateIO ref="dataIo" @imported="dataOpen = false" />
         <button type="button" class="kb-actions btn btn-ghost btn-block mt-2" @click="dataOpen = false">Schließen</button>
       </div>
       <button type="button" class="modal-backdrop" aria-label="Schließen" @click="dataOpen = false"></button>

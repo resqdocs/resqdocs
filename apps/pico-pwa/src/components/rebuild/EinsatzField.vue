@@ -14,7 +14,7 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import type { Field } from '@resqdocs/protocol-core/model'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
-import { multiSelected, toggleMultiOption, multiFill, joinFieldValues, individuellPrefill } from '@resqdocs/protocol-core/fill'
+import { multiSelected, toggleMultiOption, multiFill, joinFieldValues, multiSeparatorOf, individuellPrefill } from '@resqdocs/protocol-core/fill'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import TriStateToggle from '@/components/TriStateToggle.vue'
 import RequiredMark from '@resqdocs/protocol-core-ui/components/RequiredMark.vue'
@@ -287,7 +287,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
           :options="options"
           :label="label"
           :selected="selectedOptions"
-          :summary="selectedOptions.length ? joinFieldValues(selectedOptions) : 'auswählen …'"
+          :summary="selectedOptions.length ? joinFieldValues(selectedOptions, multiSeparatorOf(node)) : 'auswählen …'"
           :required="node.required"
           :custom-label="node.allowCustom ? INDIVIDUELL : undefined"
           @toggle="toggleMulti"
@@ -295,7 +295,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
         />
         <details v-else class="dropdown w-full">
           <summary class="select select-sm flex w-full items-center" :aria-label="label">
-            <span class="truncate">{{ selectedOptions.length ? joinFieldValues(selectedOptions) : 'auswählen …' }}</span>
+            <span class="truncate">{{ selectedOptions.length ? joinFieldValues(selectedOptions, multiSeparatorOf(node)) : 'auswählen …' }}</span>
           </summary>
           <ul class="menu dropdown-content z-10 mt-1 max-h-64 w-full flex-nowrap overflow-y-auto rounded-box border border-base-300 bg-base-100 p-2 shadow">
             <li v-for="opt in options" :key="opt">

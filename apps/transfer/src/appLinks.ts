@@ -49,15 +49,16 @@ export function parseAppLinksEnv(env: Record<string, string | undefined>): AppLi
 }
 
 /** Inhalt von /.well-known/apple-app-site-association; null = nicht konfiguriert. */
-export function buildAppleAppSiteAssociation(cfg: AppLinksConfig): string | null {
+export function buildAppleAppSiteAssociation(cfg: AppLinksConfig, kind: 'transfer' | 'short' = 'transfer'): string | null {
   if (cfg.iosAppIds.length === 0) return null
   return JSON.stringify({
     applinks: {
       details: [
         {
           appIDs: cfg.iosAppIds,
-          // Nur "/" MIT nicht-leerem Fragment. Die nackte Startseite und alle anderen Pfade bleiben im Browser.
-          components: [{ '/': '/', '#': '?*' }],
+          // Transfer: nur "/" MIT nicht-leerem Fragment. Kurzlink-Domain: nur Pfade aus genau 5 Zeichen (die Codes);
+          // Startseite, /editor und /ai bleiben im Browser.
+          components: kind === 'short' ? [{ '/': '/?????' }] : [{ '/': '/', '#': '?*' }],
         },
       ],
     },

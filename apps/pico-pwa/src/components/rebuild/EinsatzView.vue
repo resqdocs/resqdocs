@@ -464,7 +464,7 @@ onUnmounted(() => {
       <div class="lg:block" :class="{ hidden: view !== 'vorschau' }">
         <div class="card bg-base-100 shadow lg:sticky lg:top-20">
           <div class="card-body gap-2 p-4">
-            <OutputText :text="text" label="Protokolltext" wrap />
+            <OutputText :text="text" label="Protokolltext" />
           </div>
         </div>
       </div>

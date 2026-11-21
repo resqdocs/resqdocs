@@ -113,7 +113,7 @@ function create() {
   }
   /** Import: ein Snippet mit gegebenem Titel + Text als NEUES anlegen (frische id -> keine Kollision).
    *  Optimistisch wie addSnippet; oeffnet KEINE Edit-Karte (der Aufrufer zeigt nur eine Erfolgsmeldung). */
-  async function addSnippetFrom(title: string, text: string): Promise<string> {
+  async function addSnippetFrom(title: string, text: string, opts: { strict?: boolean } = {}): Promise<string> {
     // Vor dem Anlegen sicherstellen, dass die Liste geladen ist: createUniqueId ist DETERMINISTISCH
     // (snippet, snippet-2, …). Ohne geladene ids liefert es bei leerer Liste „snippet" und
     // saveSnippet (INSERT OR REPLACE) wuerde ein bestehendes DB-Snippet ueberschreiben. Der Import kann
@@ -136,20 +136,26 @@ function create() {
     snippets.value = [...snippets.value, snippet]
     try {
       await storage.getLibraryRepository().saveSnippet(snippet)
-    } catch {
+    } catch (err) {
       await reload()
+      // Import: der Aufrufer muss wissen, dass nichts gespeichert wurde (sonst meldet er „übernommen“).
+      if (opts.strict) throw err
     }
     return id
   }
-  async function updateSnippet(id: string, patch: { title?: string; text?: string }): Promise<void> {
+  async function updateSnippet(id: string, patch: { title?: string; text?: string }, opts: { strict?: boolean } = {}): Promise<void> {
     const cur = snippets.value.find((s) => s.id === id)
-    if (!cur) return
+    if (!cur) {
+      if (opts.strict) throw new Error('Textbaustein nicht gefunden.')
+      return
+    }
     const updated = { ...cur, ...patch, updatedAt: nowIso() }
     snippets.value = snippets.value.map((s) => (s.id === id ? updated : s))
     try {
       await storage.getLibraryRepository().saveSnippet(updated)
-    } catch {
+    } catch (err) {
       await reload()
+      if (opts.strict) throw err
     }
   }
   async function deleteSnippet(id: string): Promise<void> {
