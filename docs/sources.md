@@ -355,3 +355,24 @@ Einstellung „Verbindung im Protokolltext“ einer Mehrfachauswahl (`multiSepar
   → das Eingabefeld für den eigenen Trenner erscheint nur bei „Eigener Trenner“, mit Vorschau daneben.
 - Standard bleibt die deutsche Aufzählung (Maintainer, 2026-11-13); ohne Einstellung ändert sich keine Ausgabe.
   Zeilenumbrüche im Trenner entfallen, weil die Bridge sie als Eingabetaste tippen würde.
+
+## Aufbau der Vorlage am Handy: Abschnitte ein- und ausklappen
+
+> Recherche-Stand 2026-11-22. Angewandt in `packages/protocol-core-ui/components/ContainerTreeNode.vue`,
+> `packages/protocol-core-ui/treeFold.ts` und `apps/pico-pwa/src/components/rebuild/EditorView.vue`.
+
+- Ein- und Ausklappen ist ein Knopf, der seinen Zustand mitteilt — W3C, ARIA Authoring Practices Guide,
+  Disclosure Pattern („The element that shows and hides the content has role button“, `aria-expanded` true/false):
+  <https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/>
+  → der Pfeil ist ein eigener Knopf mit `aria-expanded` und dem Namen des Abschnitts.
+- Als Zeichen für „klappt an Ort und Stelle auf“ ist der Pfeil (Caret) am sichersten; Plus und Richtungspfeil
+  schneiden nicht besser ab als kein Zeichen — Nielsen Norman Group, P. Laubheimer und R. Budiu, „Accordion Icons:
+  Which Signifiers Work Best?“ (2020): <https://www.nngroup.com/articles/accordion-icons/>
+  → Pfeil nach rechts (zu) und nach unten (offen), größtes Zeichen der Zeile.
+- Dieselbe Quelle rät davon ab, Zeichen und Beschriftung getrennte Aktionen zu geben, weil rund 29 % der Tipps auf
+  der Beschriftung landen. Hier bewusst anders (Maintainer, 2026-11-22): Der Name springt wie bisher zu den
+  Eigenschaften, das ist die Hauptaufgabe der Zeile; nur der Pfeil klappt. Wer den Namen trifft, verliert nichts
+  und kommt über „Aufbau“ zurück, der Zustand bleibt.
+- Tippflächen wie im Abschnitt „Lückentext“ oben (NN/g Touch Targets, WCAG 2.5.8)
+  → Pfeil 44 × 44 px; die Knöpfe der Zeile bleiben 44 px breit, damit der Name Platz behält.
+- Wörter „Einklappen“ und „Ausklappen“ wie im Online-Editor (gleiche Begriffe in App und Editor).

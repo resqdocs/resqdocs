@@ -6,6 +6,7 @@ import { ref, computed, inject, nextTick } from 'vue'
 import type { Node, FunctionKind } from '@resqdocs/protocol-core/model'
 import { FUNCTION_KINDS, FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 import { useTreeEditor } from '../treeEditor.ts'
+import { useTreeFoldApi, countDescendants } from '../treeFold.ts'
 import { snippetPickerKey, allowedFunctionKindsKey } from '../injection.ts'
 import MoveToPicker from './MoveToPicker.vue'
 import BlockPicker from './BlockPicker.vue'
@@ -29,6 +30,11 @@ const anyFunctionAllowed = computed(() => ALL_FUNCTION_KINDS.some(kindAllowed))
 import { clozeEditRequest } from '../clozeEditRequest.ts'
 const props = defineProps<{ node: Node; depth: number }>()
 const tree = useTreeEditor()
+// Einklappen im Aufbau (nur Ansicht). Einklappen lässt sich jeder Abschnitt unter der Wurzel, der etwas enthält.
+const fold = useTreeFoldApi()
+const canFold = computed(() => props.node.type === 'container' && props.depth > 0 && props.node.children.length > 0)
+const isFolded = computed(() => canFold.value && fold.isFolded(props.node.id))
+const foldedCount = computed(() => (isFolded.value ? countDescendants(props.node) : 0))
 const addOpen = ref(false)
 const pickerOpen = ref(false)
 const snippetPickerOpen = ref(false)
@@ -166,18 +172,32 @@ function confirmDelete(): void {
   <div>
     <div
       class="flex items-center gap-0.5 rounded"
-      :class="tree.isSelected(node.id) ? 'bg-primary/10' : 'hover:bg-base-200'"
-      :style="{ paddingLeft: Math.min(depth, 8) * 10 + 4 + 'px' }"
+      :class="[tree.isSelected(node.id) ? 'bg-primary/10' : 'hover:bg-base-200', depth === 0 ? 'pl-1' : '']"
     >
+      <!-- Pfeil klappt den Abschnitt (bleibt im Aufbau); 44 px Tippfläche, ragt nach links in den Rand. Der Name
+           daneben wählt wie bisher aus und springt zu den Eigenschaften. -->
+      <button
+        v-if="canFold"
+        type="button"
+        class="-ml-3.5 flex h-11 w-11 shrink-0 items-center justify-center rounded text-base-content"
+        :aria-expanded="!isFolded"
+        :aria-label="`${isFolded ? 'Ausklappen' : 'Einklappen'}: ${label(node)}`"
+        :title="isFolded ? 'Ausklappen' : 'Einklappen'"
+        data-tree-fold
+        @click="fold.toggle(node.id)"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="size-[1.2rem] transition-transform motion-reduce:transition-none" :class="isFolded ? '' : 'rotate-90'" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6" /></svg>
+      </button>
       <button type="button" class="flex min-w-0 flex-1 items-center gap-1 py-1.5 text-left text-sm" @click="tree.select(node.id)">
-        <span class="shrink-0 text-xs" :class="node.type === 'field' ? 'text-secondary' : node.type === 'function' ? 'text-accent' : 'text-base-content/75'" aria-hidden="true">{{ node.type === 'function' ? '⊕' : node.type === 'field' ? '◆' : node.cloze ? '¶' : '▸' }}</span><span v-if="node.type === 'container' && node.cloze" class="sr-only">Lückentext:</span>
-        <span class="truncate" :class="tree.isSelected(node.id) ? 'font-medium' : ''">{{ label(node) }}</span>
+        <span v-if="!canFold || (node.type === 'container' && node.cloze)" class="shrink-0 text-xs" :class="[node.type === 'field' ? 'text-secondary' : node.type === 'function' ? 'text-accent' : 'text-base-content/75', depth > 0 && !canFold ? 'mr-3 w-4 text-center' : '']" aria-hidden="true">{{ node.type === 'function' ? '⊕' : node.type === 'field' ? '◆' : node.cloze ? '¶' : '▸' }}</span><span v-if="node.type === 'container' && node.cloze" class="sr-only">Lückentext:</span>
+        <span class="truncate" :class="depth > 0 && node.type === 'container' ? 'font-semibold' : tree.isSelected(node.id) ? 'font-medium' : ''">{{ label(node) }}</span>
         <span v-if="!node.title" class="shrink-0 text-xs text-base-content/75">{{ node.id }}</span>
       </button>
+      <span v-if="isFolded" class="shrink-0 rounded-full bg-base-200 px-1.5 text-xs leading-5 tabular-nums text-base-content/80" :title="foldedCount === 1 ? '1 Element' : `${foldedCount} Elemente`" data-tree-folded-count>{{ foldedCount }}<span class="sr-only">{{ foldedCount === 1 ? ' Element' : ' Elemente' }}</span></span>
 
       <!-- nur Container koennen Kinder bekommen -->
       <div v-if="node.type === 'container'" ref="addAnchor" class="relative">
-        <button type="button" class="btn btn-ghost btn-xs px-1.5" aria-label="Element hinzufügen" title="Element hinzufügen" @click="toggleAdd">＋</button>
+        <button type="button" class="btn btn-ghost btn-xs min-w-11 px-1.5!" aria-label="Element hinzufügen" title="Element hinzufügen" @click="toggleAdd">＋</button>
         <template v-if="addOpen">
           <button type="button" class="fixed inset-0 z-10 cursor-default" aria-label="Menü schließen" @click="closeAdd"></button>
           <div
@@ -214,13 +234,13 @@ function confirmDelete(): void {
       <!-- Direkte Aktionen (Maintainer-Wahl): Verschieben-Icon oeffnet die Sitemap (positionsgenau, ersetzt
            Hoch/Runter), Duplizieren (wenn der Host es anbietet), ✕ entfernt. Kein ⋮-Menue mehr. 44px-Ziele. -->
       <template v-if="depth > 0">
-        <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="`Verschieben: ${label(node)}`" title="Verschieben" @click="pickerOpen = true">
+        <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5!" :aria-label="`Verschieben: ${label(node)}`" title="Verschieben" @click="pickerOpen = true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" /></svg>
         </button>
-        <button v-if="tree.duplicate" type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="`Duplizieren: ${label(node)}`" title="Duplizieren" @click="tree.duplicate(node.id)">
+        <button v-if="tree.duplicate" type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5!" :aria-label="`Duplizieren: ${label(node)}`" title="Duplizieren" @click="tree.duplicate(node.id)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" /><path stroke-linecap="round" stroke-linejoin="round" d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></svg>
         </button>
-        <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5 text-error" :aria-label="`Löschen: ${label(node)}`" title="Löschen" @click="confirmOpen = true">✕</button>
+        <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5! text-error" :aria-label="`Löschen: ${label(node)}`" title="Löschen" @click="confirmOpen = true">✕</button>
       </template>
     </div>
 
@@ -255,8 +275,12 @@ function confirmDelete(): void {
       </div>
     </Teleport>
 
-    <template v-if="node.type === 'container'">
-      <ContainerTreeNode v-for="child in node.children" :key="child.id" :node="child" :depth="depth + 1" />
+    <template v-if="node.type === 'container' && !isFolded">
+      <!-- Führungslinie unter dem Pfeil: alles rechts davon gehört zu diesem Abschnitt. Je Ebene 12 px, ab der
+           neunten Ebene rückt nichts weiter ein (wie bisher), damit Name und Knöpfe am Handy Platz behalten. -->
+      <div data-tree-children :class="depth > 0 && depth <= 8 ? 'ml-[7px] border-l-2 border-base-content/20 pl-[3px]' : ''">
+        <ContainerTreeNode v-for="child in node.children" :key="child.id" :node="child" :depth="depth + 1" />
+      </div>
     </template>
   </div>
 </template>

@@ -9,7 +9,7 @@
     "npm": ">=12"
   },
   "scripts": {
-    "test": "node --test --experimental-strip-types blockId.test.ts blockSummary.test.ts infoTipPosition.test.ts defaultYield.test.ts terms.test.ts terms.examples.test.ts nomenclature.test.ts useProtocolTree.test.ts webkitGap.test.ts importPick.test.ts importNamed.test.ts editorParity.test.ts keineAppImporte.test.ts useTreeHistory.test.ts longTextSize.test.ts visibleViewport.test.ts longTextDialog.test.ts clozeFill.test.ts keyboardInset.test.ts contrast.test.ts shareConfirm.test.ts fieldsetMinWidth.test.ts importHinweise.test.ts handyBedienung.test.ts feldEntwurf.test.ts kurzlinkQr.test.ts"
+    "test": "node --test --experimental-strip-types blockId.test.ts blockSummary.test.ts infoTipPosition.test.ts defaultYield.test.ts terms.test.ts terms.examples.test.ts nomenclature.test.ts useProtocolTree.test.ts webkitGap.test.ts importPick.test.ts importNamed.test.ts editorParity.test.ts keineAppImporte.test.ts useTreeHistory.test.ts longTextSize.test.ts visibleViewport.test.ts longTextDialog.test.ts clozeFill.test.ts keyboardInset.test.ts contrast.test.ts shareConfirm.test.ts fieldsetMinWidth.test.ts importHinweise.test.ts handyBedienung.test.ts feldEntwurf.test.ts kurzlinkQr.test.ts treeFold.test.ts"
   },
   "dependencies": {
     "@resqdocs/protocol-core": "file:../shared"
