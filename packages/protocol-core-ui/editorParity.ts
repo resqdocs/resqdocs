@@ -60,9 +60,8 @@ export const CAPABILITIES: Capability[] = [
   { id: 'element-duplizieren', label: 'Element duplizieren', app: true, online: true, appAnchor: /duplicateNode\(/, onlineAnchor: /duplicateNode\(/ },
   { id: 'rueckgaengig', label: 'Rückgängig / Wiederholen beim Bauen (gemeinsamer Verlauf)', app: true, online: true, appAnchor: /useTreeHistory\(/, onlineAnchor: /useTreeHistory\(/ },
   {
-    id: 'einklappen-bauen', label: 'Abschnitte beim Bauen einklappen', app: false, online: true,
-    appAnchor: /toggleFold\(/, onlineAnchor: /toggleFold\(/,
-    reason: 'Arbeitsfläche für große Bildschirme; die App arbeitet mit Baum und Panel. Offen, ob nötig.',
+    id: 'einklappen-bauen', label: 'Abschnitte beim Bauen einklappen', app: true, online: true,
+    appAnchor: /provide\(TREE_FOLD/, onlineAnchor: /toggleFold\(/,
   },
 
   {

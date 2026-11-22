@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [2.1.2] - 2026-11-23
+
+### Added
+
+- Template structure: sections can be collapsed and expanded; the arrow in front of a section toggles it, and "Collapse" and "Expand" above the structure apply to all sections; a collapsed section shows how many elements it contains; tapping the name still opens the properties
+
+### Changed
+
+- Set up cloze text: there is a single view; tapping the text only places the cursor; a gap is created only with "Gap from selection", "Insert gap here" or by typing {Name}; gaps are highlighted in the text and listed below it for configuration
+- Template structure: guide lines show what belongs to which section, and section names are bold
+- Online editor: an open card is closed with "Done" instead of an X; "Save for other templates" carries the symbol of the saved sections and closes the card afterwards; saved sections and text snippets are deleted with a trash icon
+
 ## [2.1.1] - 2026-11-22
 
 ### Changed
