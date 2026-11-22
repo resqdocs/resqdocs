@@ -49,14 +49,16 @@
 /* Die Knopfzeile eines Fensters bleibt am unteren Rand stehen, wenn der Inhalt darüber scrollt
    (auch auf Android, wo das Fenster mit der Tastatur schrumpft). Ohne Scrollen ändert sich nichts.
    sticky hält sie über dem unteren Innenabstand des Fensters; der Schatten in Hintergrundfarbe deckt diesen
-   Streifen ab, sonst lief darunter Inhalt sichtbar weiter (Fenster „Daten“ mit langer JSON-Vorschau). */
+   Streifen ab, sonst lief darunter Inhalt sichtbar weiter (Fenster „Daten“ mit langer JSON-Vorschau).
+   Fenster am unteren Rand haben zusätzlich den Sicherheitsabstand (Home-Balken, Navigationsleiste) im
+   Innenabstand: der zweite Schatten deckt auch ihn ab, sonst lief dort Inhalt unter „Schließen“ durch (QR-Code). */
 .modal-box .modal-action,
 .kb-actions {
   position: sticky;
   bottom: 0;
   z-index: 1;
   background-color: var(--color-base-100);
-  box-shadow: 0 1.5rem 0 2px var(--color-base-100);
+  box-shadow: 0 1.5rem 0 2px var(--color-base-100), 0 calc(1.5rem + env(safe-area-inset-bottom, 0px)) 0 2px var(--color-base-100);
 }
 :root[data-keyboard-open] .modal-box .modal-action,
 :root[data-keyboard-open] .kb-actions {

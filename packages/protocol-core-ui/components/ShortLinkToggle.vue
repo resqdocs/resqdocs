@@ -16,7 +16,7 @@ const short = defineModel<boolean>({ required: true })
       <span v-if="busy" class="loading loading-spinner loading-xs" aria-label="Kurzlink wird angelegt" />
     </label>
     <p v-if="short" class="text-xs text-base-content/80" data-short-link-hint>
-      Einfacher zu tippen und vorzulesen. Dafür kann der Transfer-Dienst diesen Inhalt lesen, bis er abgelaufen oder übernommen ist, auch wenn er über den QR-Code geöffnet wird. Ohne Haken kann er das nicht.
+      Einfacher zu tippen und vorzulesen. Dafür kann der Transfer-Dienst diesen Inhalt lesen, bis er abgelaufen oder übernommen ist, auch wenn er über den QR-Code geöffnet wird. Ohne Haken kann er das nicht. Zum Weitergeben genügt der Code: Die Gegenseite gibt ihn in ResQDocs unter „Empfangen“ ein. „Kopieren“ kopiert den ganzen Link.
     </p>
     <p v-if="error" class="text-xs text-error" role="alert">{{ error }}</p>
   </div>
