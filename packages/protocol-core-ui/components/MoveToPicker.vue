@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * „Verschieben nach …" als SITEMAP mit positionsgenauen Einfuegestellen (sourced move-sitemap-picker).
- * Zeigt den ganzen Baum (Einrueckung wie ContainerTreeNode); zwischen/um die Eintraege liegen antippbare
+ * Zeigt den ganzen Baum (eigene Zeilen mit Einrueckung je Ebene, bis 8); zwischen/um die Eintraege liegen antippbare
  * Slots = Paar (targetParentId, index). Markieren + „Einfügen" (bewusst, kein Direkt-Tap, da kein Undo).
  * Der bewegte Knoten + sein Teilbaum sind kein Ziel; die zwei No-Op-Stellen an seiner aktuellen Position
  * sind unterdrueckt. KEINE neue Tree-Logik - nur das vorhandene reparent(id, parent, index).

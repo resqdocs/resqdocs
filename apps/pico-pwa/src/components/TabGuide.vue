@@ -142,11 +142,12 @@ function onTouchEnd(e: TouchEvent): void {
           <ReleaseTimeline v-model:open="newsOpen" :notes="NEWS" :app-version="version" />
         </div>
 
-        <!-- Seite „Begriffe“: die Teile einer Vorlage, mit denselben Zeichen wie im Aufbau und im Bausteine-Tab -->
+        <!-- Seite „Begriffe“: die Teile einer Vorlage, mit denselben Zeichen wie im Aufbau und im Bausteine-Tab.
+             Abschnitt: der Pfeil, der ihn im Aufbau ein- und ausklappt. -->
         <div v-else-if="page === 'begriffe'" class="flex flex-1 flex-col justify-center gap-4">
           <h1 class="text-center text-xl font-bold">So ist eine Vorlage aufgebaut</h1>
           <ul class="card flex flex-col gap-3 bg-base-100 p-4 shadow-sm">
-            <li class="flex items-start gap-3 text-sm"><span class="w-6 shrink-0 text-center text-base text-base-content/75" aria-hidden="true">▸</span><span><strong>Abschnitt:</strong> fasst Felder unter einer Überschrift zusammen.</span></li>
+            <li class="flex items-start gap-3 text-sm"><span class="flex h-6 w-6 shrink-0 items-center justify-center text-base-content" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="size-[1.2rem]"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6" /></svg></span><span><strong>Abschnitt:</strong> fasst Felder unter einer Überschrift zusammen.</span></li>
             <li class="flex items-start gap-3 text-sm"><span class="w-6 shrink-0 text-center text-base text-secondary" aria-hidden="true">◆</span><span><strong>Feld:</strong> eine einzelne Angabe, frei oder aus einer Liste.</span></li>
             <li class="flex items-start gap-3 text-sm"><span class="w-6 shrink-0 text-center text-base text-accent" aria-hidden="true">⊕</span><span><strong>Funktion:</strong> fertige Eingabehilfe, z. B. Medikationsplan oder NEWS2.</span></li>
             <li class="flex items-start gap-3 text-sm"><TabIcon tab="bausteine" class="size-6 shrink-0 text-primary" /><span><strong>Textbaustein:</strong> fertiger Text, den du immer wieder nutzt.</span></li>

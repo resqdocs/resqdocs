@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /**
- * Lückentext einrichten (Vorlage). Zwei Ansichten desselben Textes:
- *  - „Lücken": der Text mit antippbaren Wörtern. Ein Tipp auf ein Wort macht daraus eine Lücke, ein Tipp
- *    auf eine Lücke zeigt ihre Einstellungen (Art, Name, Antworten) darunter.
- *  - „Schreiben": der Text als Ganzes; jede Lücke steht als {Name}. Eine Markierung wird per Knopf zur
- *    Lücke, ein neu getippter {Name} legt eine Freitext-Lücke an.
+ * Lückentext einrichten (Vorlage). EINE Ansicht: der Text als Ganzes, jede Lücke steht als {Name} und ist farbig
+ * hinterlegt. Ein Tipp in den Text setzt nur die Schreibmarke, nie eine Lücke (Maintainer 2026-11-22: im früheren
+ * Modus „Lücken“ machte jeder Tipp ungewollt eine Lücke). Eine Lücke entsteht nur bewusst: Markierung und
+ * „Lücke aus Markierung“, „Lücke hier einfügen“ an der Schreibmarke oder ein getippter {Name}. Steht die
+ * Schreibmarke in einer Lücke, öffnet derselbe Knopf ihre Einstellungen; darunter stehen alle Lücken als Liste.
  * Jede Lücke ist ein normales Feld oder eine Funktion des Abschnitts (oder übernimmt den Wert eines
  * Elements an anderer Stelle der Vorlage); alle weiteren Einstellungen stehen dort wie bei jedem Feld.
  * Fensteraufbau und Tastatur-Verhalten wie beim Ausfüll-Fenster.
@@ -44,26 +44,59 @@ function commit(next: Container): void {
   if (next !== props.node) tree.update(props.node.id, { children: next.children, cloze: next.cloze })
 }
 
-// --- Ansicht „Schreiben" ---
-const mode = ref<'gaps' | 'write'>('gaps')
+// --- Text ---
 const draft = ref('')
 const area = ref<HTMLTextAreaElement | null>(null)
+const back = ref<HTMLDivElement | null>(null)
 const hasSelection = ref(false)
+const caret = ref(0)
 const notice = ref('')
 function readSelection(): void {
   const el = area.value
-  hasSelection.value = !!el && el.selectionEnd > el.selectionStart
+  if (!el) return
+  hasSelection.value = el.selectionEnd > el.selectionStart
+  caret.value = el.selectionStart
 }
+/** Getippten Text übernehmen (neue {Name} werden Lücken). Unverändert: nichts tun, sonst entstünde ein leerer Schritt. */
 function commitDraft(): void {
-  if (mode.value === 'write') commit(applyText(props.node, props.root, draft.value, idFactory()))
+  if (draft.value !== text.value) commit(applyText(props.node, props.root, draft.value, idFactory()))
 }
-function setMode(next: 'gaps' | 'write'): void {
-  if (next === mode.value) return
+// Ändert sich der Text von außen (Name einer Lücke, Zurück in Text, Löschen), zieht der Entwurf nach,
+// solange nicht gerade im Text getippt wird.
+watch(text, (t) => {
+  if (document.activeElement !== area.value) draft.value = t
+})
+/** Hinterlegung der Lücken: derselbe Text unter dem Eingabefeld, nur die {Name}-Stellen sichtbar eingefärbt. */
+const shades = computed(() => {
+  const out: { key: string; text: string; gap: boolean }[] = []
+  let at = 0
+  for (const m of draft.value.matchAll(/\{[^{}\n]+\}/g)) {
+    if (m.index > at) out.push({ key: `t${at}`, text: draft.value.slice(at, m.index), gap: false })
+    out.push({ key: `g${m.index}`, text: m[0], gap: true })
+    at = m.index + m[0].length
+  }
+  out.push({ key: `t${at}`, text: draft.value.slice(at) + '\n', gap: false })
+  return out
+})
+function syncScroll(): void {
+  if (back.value && area.value) back.value.scrollTop = area.value.scrollTop
+}
+/** Lücke, in der die Schreibmarke steht (nur bestehende Lücken mit Kennung). */
+const gapAtCaret = computed(() => {
+  if (hasSelection.value) return null
+  return tokenize(draft.value, names.value).find((t) => t.kind === 'gap' && t.id && caret.value > t.start && caret.value < t.end) ?? null
+})
+const markLabel = computed(() => (gapAtCaret.value ? `Lücke „${gapAtCaret.value.text}“ einstellen` : hasSelection.value ? 'Lücke aus Markierung' : 'Lücke hier einfügen'))
+function selectGap(id: string): void {
+  commitDraft()
   notice.value = ''
-  if (next === 'write') draft.value = text.value
-  else commitDraft()
-  mode.value = next
-  if (next === 'write') void nextTick(() => area.value?.focus())
+  selected.value = id
+}
+/** Der Knopf unter dem Text: Lücke an der Schreibmarke einstellen, sonst Markierung (oder Stelle) zur Lücke machen. */
+function onMark(): void {
+  const at = gapAtCaret.value
+  if (at?.id) return selectGap(at.id)
+  gapFromSelection()
 }
 /** Markierung (oder die Stelle der Schreibmarke) zur Lücke machen. */
 function gapFromSelection(): void {
@@ -78,48 +111,20 @@ function gapFromSelection(): void {
     return
   }
   commit(made.section)
+  draft.value = sectionText(made.section, props.root)
   notice.value = ''
   selected.value = made.id
-  mode.value = 'gaps'
+  hasSelection.value = false
 }
 
-// --- Ansicht „Lücken" ---
+// --- Gewählte Lücke ---
 const selected = ref<string | null>(null)
 const current = computed(() => gaps.value.find((g) => g.id === selected.value) ?? null)
-
-interface Piece {
-  key: string
-  kind: 'plain' | 'word' | 'gap'
-  text: string
-  start: number
-  end: number
-  id?: string
-}
-// Ein Wort darf Bindestrich, Schrägstrich, Punkt und Komma IN sich tragen (120/80, z.B., 36,5), nicht am Rand.
-const WORD = /[\p{L}\p{N}](?:[\p{L}\p{N}\-/.,]*[\p{L}\p{N}])?/gu
-const pieces = computed<Piece[]>(() => {
-  const out: Piece[] = []
-  for (const t of tokenize(text.value, names.value)) {
-    if (t.kind === 'gap') {
-      if (t.id) out.push({ key: `g${t.start}`, kind: 'gap', text: t.text, start: t.start, end: t.end, id: t.id })
-      continue
-    }
-    let at = 0
-    for (const m of t.text.matchAll(WORD)) {
-      if (m.index > at) out.push({ key: `p${t.start + at}`, kind: 'plain', text: t.text.slice(at, m.index), start: t.start + at, end: t.start + m.index })
-      at = m.index + m[0].length
-      out.push({ key: `w${t.start + m.index}`, kind: 'word', text: m[0], start: t.start + m.index, end: t.start + at })
-    }
-    if (at < t.text.length) out.push({ key: `p${t.start + at}`, kind: 'plain', text: t.text.slice(at), start: t.start + at, end: t.end })
-  }
-  return out
+// Öffnen sich die Einstellungen einer Lücke, verlässt der Fokus den Text: Am Handy geht die Tastatur zu, sonst
+// teilen sich Tastatur, Einstellungen und Text den Platz und der Text schrumpft auf nichts.
+watch(selected, (id) => {
+  if (id && document.activeElement === area.value) area.value?.blur()
 })
-function wordToGap(p: Piece): void {
-  const made = gapFromRange(props.node, props.root, text.value, p.start, p.end, idFactory())
-  if (!made) return
-  commit(made.section)
-  selected.value = made.id
-}
 
 // --- Einstellungen der gewählten Lücke ---
 const allowedKinds = inject(allowedFunctionKindsKey, null)
@@ -240,14 +245,15 @@ async function open(): Promise<void> {
   active.value = true
   selected.value = null
   notice.value = ''
-  // Leerer Lückentext: gleich schreiben. Sonst die Lücken-Ansicht.
-  mode.value = text.value === '' ? 'write' : 'gaps'
+  hasSelection.value = false
+  caret.value = 0
   draft.value = text.value
   measure()
   await nextTick()
   dialog.value?.showModal()
   track(true)
-  if (mode.value === 'write') requestAnimationFrame(() => area.value?.focus())
+  // Leerer Lückentext: gleich schreiben.
+  if (text.value === '') requestAnimationFrame(() => area.value?.focus())
 }
 async function close(): Promise<void> {
   commitDraft()
@@ -286,12 +292,16 @@ defineExpose({ open, close })
           <button type="button" class="btn btn-primary btn-sm min-h-11 shrink-0" data-cloze-editor-done @click="close">Fertig</button>
         </header>
 
-        <!-- Schreiben: der ganze Text, Lücken als {Name} -->
-        <template v-if="mode === 'write'">
+        <!-- Der Text: Lücken als {Name}, farbig hinterlegt. Ein Tipp setzt nur die Schreibmarke.
+             min-h-24: bleibt bei offener Tastatur und offenen Einstellungen sichtbar; schrumpfen und scrollen
+             müssen die Einstellungen darunter. -->
+        <div class="relative min-h-24 flex-1" data-cloze-editor-textbox>
+          <!-- Hinterlegung: gleicher Text, gleiche Maße, nur die Lücken sichtbar eingefärbt. -->
+          <div ref="back" aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap px-4 py-3 leading-normal text-transparent [overflow-wrap:anywhere] [scrollbar-gutter:stable]" :style="{ fontSize }" data-cloze-editor-shade><template v-for="sh in shades" :key="sh.key"><mark v-if="sh.gap" class="rounded bg-neutral/15 text-transparent">{{ sh.text }}</mark><template v-else>{{ sh.text }}</template></template></div>
           <textarea
             ref="area"
             v-model="draft"
-            class="min-h-0 w-full flex-1 resize-none border-0 bg-transparent px-4 py-3 leading-normal text-base-content outline-none placeholder:text-base-content/70"
+            class="relative block h-full min-h-0 w-full resize-none border-0 bg-transparent px-4 py-3 leading-normal text-base-content outline-none placeholder:text-base-content/70 [overflow-wrap:anywhere] [scrollbar-gutter:stable]"
             :style="{ fontSize }"
             placeholder="Text schreiben. Ein Wort markieren und „Lücke aus Markierung“ antippen – oder {Name} tippen."
             aria-label="Text des Lückentexts"
@@ -300,25 +310,42 @@ defineExpose({ open, close })
             @keyup="readSelection"
             @pointerup="readSelection"
             @input="readSelection"
+            @focus="selected = null"
+            @blur="commitDraft"
+            @scroll="syncScroll"
           />
-          <div class="shrink-0 space-y-2 border-t border-base-300 px-4 py-2">
-            <p v-if="notice" class="text-sm font-medium" role="status">{{ notice }}</p>
-            <!-- pointerdown.prevent: Fokus und Markierung bleiben im Text stehen. -->
-            <button type="button" class="btn btn-neutral btn-sm min-h-11 w-full" data-cloze-editor-mark @pointerdown.prevent @click="gapFromSelection">
-              {{ hasSelection ? 'Lücke aus Markierung' : 'Lücke hier einfügen' }}
+        </div>
+
+        <!-- Unten am Rand (ohne Tastatur, ohne Einstellungen) hält die Leiste Abstand zum Home-Balken. -->
+        <div class="shrink-0 space-y-2 border-t border-base-300 px-4 pt-2" :class="covered || current ? 'pb-2' : 'pb-[calc(0.5rem+env(safe-area-inset-bottom))]'" data-cloze-editor-actions>
+          <p v-if="notice" class="text-sm font-medium" role="status">{{ notice }}</p>
+          <!-- pointerdown.prevent: Fokus und Markierung bleiben im Text stehen. -->
+          <button type="button" class="btn btn-neutral btn-sm min-h-11 w-full" data-cloze-editor-mark @pointerdown.prevent @click="onMark">{{ markLabel }}</button>
+          <div v-if="gaps.length" class="flex flex-wrap gap-1.5" role="group" aria-label="Lücken in diesem Text" data-cloze-editor-gaps>
+            <button
+              v-for="g in gaps"
+              :key="g.id"
+              type="button"
+              class="btn btn-sm min-h-11 max-w-full [overflow-wrap:anywhere]"
+              :class="selected === g.id ? 'btn-neutral' : ''"
+              :aria-pressed="selected === g.id"
+              :aria-label="`Lücke ${names.get(g.id) ?? g.id} einstellen`"
+              :data-cloze-editor-gap="g.id"
+              @pointerdown.prevent
+              @click="selectGap(g.id)"
+            >
+              {{ names.get(g.id) ?? g.id }}
             </button>
           </div>
-        </template>
+          <p v-else class="text-sm text-base-content/80">Noch keine Lücken. Markiere ein Wort und tippe „Lücke aus Markierung“, oder tippe {Name} in den Text.</p>
+        </div>
 
-        <!-- Lücken: Wörter antippen, Lücken einstellen -->
-        <template v-else>
-          <div class="min-h-10 flex-1 overflow-y-auto px-4" :class="covered ? 'py-1.5' : 'py-3'" :style="{ fontSize }" data-cloze-editor-words>
-            <p v-if="!pieces.length" class="text-base-content/80">Noch kein Text. Unter „Schreiben“ beginnst du.</p>
-            <!-- Eine Zeile, damit zwischen den Stücken kein Leerraum aus der Vorlage des Bauteils entsteht. -->
-            <p v-else class="whitespace-pre-wrap leading-loose [overflow-wrap:anywhere]"><template v-for="p in pieces" :key="p.key"><template v-if="p.kind === 'plain'">{{ p.text }}</template><span v-else-if="p.kind === 'word'" role="button" tabindex="0" class="cursor-pointer rounded outline-none hover:bg-base-200 focus-visible:ring-2 focus-visible:ring-neutral" :aria-label="`${p.text}: zur Lücke machen`" data-cloze-word @click="wordToGap(p)" @keydown.enter.prevent="wordToGap(p)">{{ p.text }}</span><span v-else role="button" tabindex="0" class="cursor-pointer rounded px-[3px] py-0.5 outline-none [-webkit-box-decoration-break:clone] [box-decoration-break:clone] focus-visible:ring-2 focus-visible:ring-neutral" :class="p.id === selected ? 'bg-neutral text-neutral-content' : 'bg-base-200 font-medium underline decoration-base-content/70 underline-offset-4'" :aria-label="`Lücke ${p.text} einstellen`" :aria-current="p.id === selected ? 'true' : undefined" :data-cloze-gap="p.id" @click="selected = p.id ?? null" @keydown.enter.prevent="selected = p.id ?? null">{{ p.text }}</span></template></p>
+        <!-- Einstellungen der gewählten Lücke -->
+        <section v-if="current" class="max-h-[55%] min-h-0 shrink overflow-y-auto border-t border-base-300 px-4 pt-3" :class="covered ? 'pb-3' : 'pb-[calc(0.75rem+env(safe-area-inset-bottom))]'" data-cloze-editor-panel>
+          <div class="mb-2 flex items-center gap-2">
+            <h4 class="min-w-0 flex-1 text-sm font-semibold [overflow-wrap:anywhere]">Lücke „{{ names.get(current.id) ?? current.id }}“</h4>
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 shrink-0" title="Einstellungen der Lücke schließen" aria-label="Einstellungen der Lücke schließen" data-cloze-editor-panel-close @click="selected = null">Schließen</button>
           </div>
-
-          <section class="max-h-[62%] min-h-0 shrink overflow-y-auto border-t border-base-300 px-4 py-3" data-cloze-editor-panel>
             <div v-if="current" class="space-y-3">
               <label class="block space-y-1">
                 <span class="text-sm font-medium">Art der Lücke</span>
@@ -368,18 +395,7 @@ defineExpose({ open, close })
               </div>
             </div>
 
-            <div v-else class="space-y-2">
-              <p class="text-sm">Tippe ein Wort an, um daraus eine Lücke zu machen. Tippe eine Lücke an, um sie einzustellen.</p>
-            </div>
-          </section>
-        </template>
-
-        <footer class="flex shrink-0 items-center gap-2 border-t border-base-300 px-4 pt-2" :class="covered ? 'pb-2' : 'pb-[calc(0.5rem+env(safe-area-inset-bottom))]'">
-          <div class="join w-full" role="group" aria-label="Ansicht">
-            <button type="button" class="btn join-item btn-sm min-h-11 flex-1" :class="mode === 'gaps' ? 'btn-neutral' : ''" :aria-pressed="mode === 'gaps'" data-cloze-editor-mode="gaps" @click="setMode('gaps')">Lücken</button>
-            <button type="button" class="btn join-item btn-sm min-h-11 flex-1" :class="mode === 'write' ? 'btn-neutral' : ''" :aria-pressed="mode === 'write'" data-cloze-editor-mode="write" @click="setMode('write')">Schreiben</button>
-          </div>
-        </footer>
+        </section>
       </template>
     </div>
     <form method="dialog" class="modal-backdrop"><button aria-label="Schließen">close</button></form>

@@ -6,13 +6,14 @@
  * Small-screen-first: drei Segmente (Aufbau / Eigenschaften / Vorschau) einzeln am Handy,
  * ab lg drei Spalten. Zentrale Tree-API per provide/inject an die rekursiven Knoten.
  */
-import { ref, provide, toRaw, onMounted, onUnmounted } from 'vue'
+import { ref, computed, provide, toRaw, watch, onMounted, onUnmounted } from 'vue'
 import { useTreeHistory } from '@resqdocs/protocol-core-ui/useTreeHistory'
 import { duplicateNode } from '@resqdocs/protocol-core/treeOps'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { findNode, collectIds, canMoveUp as canMoveUpOp, canMoveDown as canMoveDownOp, canIndent as canIndentOp, canOutdent as canOutdentOp, moveTargets as moveTargetsOp } from '@resqdocs/protocol-core/creator'
 import { TREE_EDITOR, type TreeEditorApi } from '@resqdocs/protocol-core-ui/treeEditor'
+import { TREE_FOLD, sectionIds, useTreeFold } from '@resqdocs/protocol-core-ui/treeFold'
 import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
 import type { Container } from '@resqdocs/protocol-core/model'
 import ContainerTreeNode from '@resqdocs/protocol-core-ui/components/ContainerTreeNode.vue'
@@ -33,6 +34,12 @@ const view = ref<'aufbau' | 'eigenschaften' | 'vorschau'>('aufbau')
 // Tipp-Folgen an derselben Eigenschaft zählen als ein Schritt.
 const hist = useTreeHistory(tree, selectedId)
 const change = hist.change
+// Abschnitte im Aufbau einklappen (nur Ansicht, je Vorlage gemerkt, solange die App offen ist). Was neu eingefügt,
+// gewählt oder verschoben wird, klappt seine Abschnitte auf, damit es zu sehen ist.
+const fold = useTreeFold(tree.editorActiveId, root)
+provide(TREE_FOLD, fold)
+watch(selectedId, (id) => id && fold.reveal(id))
+const hasSections = computed(() => sectionIds(root.value).length > 0)
 
 // Ab lg alle drei Segmente gleichzeitig; darunter nur das aktive. Reaktiv per matchMedia (lg=1024px),
 // damit die teuren Ganzbaum-Segmente (Aufbau/Vorschau) mobil per v-if GAR NICHT gemountet sind, wenn man
@@ -66,6 +73,7 @@ const api: TreeEditorApi = {
     // id ist der Key im Einsatz-Werte-Store -> beim Umbenennen den Wert mit-migrieren.
     if (typeof newId === 'string' && newId.length > 0 && newId !== id) {
       caseValues.rename(id, newId)
+      fold.rename(id, newId) // ein eingeklappter Abschnitt bleibt eingeklappt
       if (selectedId.value === id) selectedId.value = newId
     }
   },
@@ -109,21 +117,27 @@ const api: TreeEditorApi = {
   },
   move(childId, delta) {
     change(null, () => tree.move(childId, delta))
+    fold.reveal(childId)
   },
   moveUp(id) {
     change(null, () => tree.moveUp(id))
+    fold.reveal(id)
   },
   moveDown(id) {
     change(null, () => tree.moveDown(id))
+    fold.reveal(id)
   },
   indent(id) {
     change(null, () => tree.indent(id))
+    fold.reveal(id)
   },
   outdent(id) {
     change(null, () => tree.outdent(id))
+    fold.reveal(id)
   },
   reparent(id, targetParentId, index) {
     change(null, () => tree.reparent(id, targetParentId, index))
+    fold.reveal(id)
   },
   duplicate(id) {
     if (id === root.value.id) return
@@ -186,10 +200,16 @@ provide(snippetPickerKey, SnippetPicker)
         <!-- overflow-visible: das absolute ⋮-Aktionsmenue darf ueber den Kartenrand hinausragen -->
         <div class="card overflow-visible bg-base-100 shadow">
           <div class="card-body gap-2 p-3">
-            <div class="flex items-center gap-1">
+            <!-- flex-wrap: ab lg (schmale Spalte) rutschen Rückgängig/Wiederholen in eine zweite Zeile statt aus der Karte -->
+            <div class="flex flex-wrap items-center gap-1">
               <h3 class="text-sm font-semibold text-base-content/75">Aufbau</h3>
+              <!-- Alle Abschnitte ein- oder ausklappen, Wörter wie im Online-Editor -->
+              <span v-if="hasSections" class="ml-auto flex gap-1">
+                <button type="button" class="btn btn-ghost btn-sm min-h-11 px-2!" title="Alle Abschnitte einklappen: nur die Überschriften bleiben" data-fold-all @click="fold.foldAll()">Einklappen</button>
+                <button type="button" class="btn btn-ghost btn-sm min-h-11 px-2!" title="Alle Abschnitte ausklappen" data-unfold-all @click="fold.unfoldAll()">Ausklappen</button>
+              </span>
               <!-- ab lg (drei Spalten, kein Umschalter) sitzen Rückgängig/Wiederholen hier -->
-              <span class="ml-auto hidden gap-1 lg:flex">
+              <span class="hidden gap-1 lg:flex" :class="hasSections ? '' : 'ml-auto'">
                 <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canUndo.value" aria-label="Rückgängig" title="Rückgängig" @click="hist.undo()">↶</button>
                 <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canRedo.value" aria-label="Wiederholen" title="Wiederholen" @click="hist.redo()">↷</button>
               </span>
