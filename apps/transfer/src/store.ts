@@ -154,6 +154,14 @@ export function createStore(
      *  consume() verbraucht den Link, release() gibt ihn frei. Während einer Reservierung bekommt jeder andere
      *  Abruf busy. priorOpens zählt frühere Abrufe, die nicht übernommen wurden (der Empfänger sieht so, dass
      *  jemand anderes den Link schon geöffnet hatte). Single-threaded/synchron -> atomar. */
+    /** Nur Angaben für die Empfangsseite („1× lesen“, Ablauf), ohne den Inhalt zu liefern, zu reservieren oder zu
+     *  verbrauchen. Abgelaufen oder unbekannt -> null. */
+    info(id: string): { burn: boolean; expiresIn: number } | null {
+      const row = db.prepare('SELECT burn, expires_at FROM blobs WHERE id = ?').get(id) as { burn: number; expires_at: number } | undefined
+      const t = nowSec()
+      if (!row || row.expires_at <= t) return null
+      return { burn: row.burn === 1, expiresIn: row.expires_at - t }
+    },
     fetch(id: string, opts: { claim?: boolean } = {}): FetchResult {
       const row = db.prepare('SELECT ciphertext, burn, expires_at, claim_until, opens FROM blobs WHERE id = ?').get(id) as
         | { ciphertext: unknown; burn: number; expires_at: number; claim_until: number | null; opens: number }
@@ -256,7 +264,7 @@ export function createStore(
         db.prepare('DELETE FROM shorts WHERE code IN (SELECT code FROM shorts WHERE target IS NULL ORDER BY lock_until LIMIT ?)').run(Math.max(1, Math.floor(maxBlobs / 4)))
         if (count() >= maxBlobs * 4) throw new StoreFullError()
       }
-      // Freie Codes: gesperrte und laufende sind belegt. Bei ~460 Mio. Codes ist ein Treffer selten.
+      // Freie Codes: gesperrte und laufende sind belegt. Bei ~550 Mio. Codes ist ein Treffer selten.
       for (let i = 0; i < 20; i++) {
         const code = newShortCode()
         const taken = db.prepare('SELECT 1 FROM shorts WHERE code = ?').get(code)

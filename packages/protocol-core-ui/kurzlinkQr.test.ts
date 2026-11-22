@@ -25,3 +25,16 @@ test('QR-Codes beim Teilen zeigen den langen Link, nie den Kurzlink', () => {
   assert.ok(qr.length >= 6, `erwartet 6 Teilen-Stellen, gefunden ${qr.length}`)
   for (const q of qr) assert.match(q, /: (shareLink|link)\.link$/, q)
 })
+
+test('„Kopieren“ kopiert an allen Teilen-Stellen den ganzen Link (copyShown), im Feld darf nur der Code stehen', () => {
+  const files = roots.flatMap(vueFiles).filter((f) => readFileSync(f, 'utf8').includes('useShortLink'))
+  assert.ok(files.length >= 6, `erwartet 6 Teilen-Stellen, gefunden ${files.length}`)
+  for (const f of files) {
+    const src = readFileSync(f, 'utf8')
+    assert.match(src, /await copyShown\(\)/, f)
+    assert.doesNotMatch(src, /writeText\(displayLink/, f)
+    assert.match(src, /data-share-full-link>\{\{ shownLink \}\}/, f)
+  }
+  const comp = readFileSync(join(here, 'useShortLink.ts'), 'utf8')
+  assert.match(comp, /navigator\.clipboard\.writeText\(shownLink\.value\)/)
+})

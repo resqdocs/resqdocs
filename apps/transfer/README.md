@@ -21,6 +21,8 @@ Klartext, nie den Schlüssel, nie den Vorlagentyp. Node + eingebautes `node:sqli
 - `POST /v1/blob` — Body = `RQD1‖IV‖Chiffrat`; Header `X-Expire` (Sek., auf Stufe geclampt), `X-Burn: 1`.
   → `201 {id, code, deleteToken, expiresAt}`. `413` > 512 KB, `415` ohne RQD1-Kennung, `429` Rate-Limit.
 - `GET /v1/blob/{idOrCode}` — Body = Blob; bei Burn danach atomar gelöscht. `404` abgelaufen/verbrannt.
+- `GET /v1/blob/{id}/info` — nur `{burn, expiresIn}` für die Empfangsseite; liefert, reserviert und verbraucht den Inhalt nicht. `404` abgelaufen/verbraucht.
+- `GET /og-transfer.png` — festes Vorschaubild (1200 × 630) für Link-Vorschauen. Empfangsseite und Seite „Link abgelaufen“ tragen allgemeine Open-Graph-Angaben, nie Titel oder Art des Inhalts (Messenger speichern Vorschauen auf ihren Servern). Vorschau-Dienste führen kein JavaScript aus und rufen den Inhalt nie ab.
 - `DELETE /v1/blob/{id}` mit `X-Delete-Token`.
 - `GET /healthz`.
 - `GET /.well-known/apple-app-site-association` und `GET /.well-known/assetlinks.json` — App-Zuordnung, damit

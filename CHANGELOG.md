@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [2.1.1] - 2026-11-22
+
+### Changed
+
+- Short links: when sharing, the field shows only the code (e.g. VLm6X) in a large font, and "Copy" still copies the full link; to receive, the code alone is enough, resq.li/... with or without https:// and the long link work as well; codes are case-sensitive
+- The ? in the top right opens the introduction and the guide; a "Guide" button in the top left of every introduction page leads to the guide on resqdocs.app
+- Online editor: cloze text is named and shown as in the app, with its own symbol
+- Transfer links show a preview image and description in messengers, and the receive page follows the look of the website
+
+### Fixed
+
+- Cloze text: gaps revealed by an answer come up next during "Fill in" and are included in the counter; before, the walk-through ended early
+- Content no longer shows through below the button bar of a window while scrolling (e.g. below "Close" in the "Data" window)
+- A typed short link or code clearly reports when it is incomplete or spelled incorrectly
+
 ## [2.1.0] - 2026-11-21
 
 ### Added

@@ -178,6 +178,12 @@ test('Kurzlink erkennen: resq.li/<5 Zeichen>, mit oder ohne https://', () => {
   assert.equal(shortCodeOf('https://resq.li/Ab3k9'), 'Ab3k9')
   assert.equal(shortCodeOf(' resq.li/Ab3k9/ '), 'Ab3k9')
   assert.equal(shortCodeOf('https://resq.li/editor'), null)
+  // Abgetippt: nur der Code, http:// oder www.
+  assert.equal(shortCodeOf(' ab3k9 '), 'ab3k9')
+  assert.equal(shortCodeOf('http://resq.li/ab3k9'), 'ab3k9')
+  assert.equal(shortCodeOf('www.resq.li/ab3k9'), 'ab3k9')
+  assert.equal(shortCodeOf('ab3k'), null)
+  assert.equal(shortCodeOf('ab3k9x'), null)
   assert.equal(shortCodeOf('https://transfer.resqdocs.app/#abc.def'), null)
 })
 
@@ -222,4 +228,27 @@ test('Kurzlink zurücknehmen: danach gilt er nicht mehr, der lange Link schon; n
     // Erneut gesetzt: derselbe Code gilt wieder.
     assert.equal((await shortenTransferLink(shared.link, cfg)).url, short.url)
   })
+})
+
+test('Nur der Code im Eingabefeld öffnet den Inhalt', async () => {
+  await withShortService(async (cfg) => {
+    const shared = await shareTransfer('{"x":"code"}', '1h', cfg)
+    const short = await shortenTransferLink(shared.link, cfg)
+    const code = short.url.split('/').pop()!
+    assert.equal(await receiveTransfer(code, cfg), '{"x":"code"}')
+    // Der Code muss exakt stimmen (Maintainer 2026-11-21): andere Schreibweise ist ein anderer Code.
+    const anders = code === code.toUpperCase() ? code.toLowerCase() : code.toUpperCase()
+    if (anders !== code) await assert.rejects(receiveTransfer(anders, cfg), TransferError)
+  })
+})
+
+test('Kurzlink abgetippt: unvollständig, unbekannt oder zu viele Versuche ergeben klare Meldungen', async () => {
+  await assert.rejects(receiveTransfer('resq.li/Ab3k'), (e: unknown) => e instanceof TransferError && /unvollständig/.test(e.message))
+  await assert.rejects(receiveTransfer('https://resq.li/Ab3k9x'), (e: unknown) => e instanceof TransferError && /unvollständig/.test(e.message))
+  // nur der Code, zu kurz oder zu lang
+  await assert.rejects(receiveTransfer('Ab3k'), (e: unknown) => e instanceof TransferError && /Code ist unvollständig/.test(e.message))
+  await assert.rejects(receiveTransfer(' Ab3k9x '), (e: unknown) => e instanceof TransferError && /Code ist unvollständig/.test(e.message))
+  const status = (code: number) => (async () => new Response('', { status: code })) as unknown as typeof fetch
+  await assert.rejects(receiveTransfer('Ab3k9', { fetchImpl: status(404) }), (e: unknown) => e instanceof TransferError && /Groß- und Kleinschreibung/.test(e.message))
+  await assert.rejects(receiveTransfer('Ab3k9', { fetchImpl: status(429) }), (e: unknown) => e instanceof TransferError && /Zu viele Versuche/.test(e.message))
 })
