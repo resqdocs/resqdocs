@@ -58,8 +58,12 @@ let seen = new Set<string>()
 function askingAfter(from: number): number {
   return nextAsking(states.value, gaps.value.map((g) => seen.has(g.id)), from)
 }
-function next(): void {
+async function next(): Promise<void> {
   if (current.value) seen.add(current.value.id)
+  // Erst die Regeln der Vorlage nachziehen lassen: Blendet die eben gegebene Antwort Lücken ein oder aus
+  // (z. B. „kritisch“ → Leitsymptom), gehören sie schon zu diesem Schritt. Ohne das Warten zählte der Zähler
+  // noch die alten Lücken, und der Durchgang endete, bevor die neuen dran waren.
+  await nextTick()
   let i = askingAfter(index.value)
   if (i < 0) i = askingAfter(-1) // weiter vorn ist noch etwas offen (man war direkt zu einer späteren Lücke gesprungen)
   currentId.value = i >= 0 ? gaps.value[i].id : null

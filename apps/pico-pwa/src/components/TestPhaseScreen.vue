@@ -4,16 +4,17 @@
  * es eine Testversion ist, und führt zur Testanleitung. Erscheint bei jedem Start der App nach dem
  * Haftungshinweis; „Weiter zur App“ schließt ihn bis zum nächsten Start.
  */
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useStorage } from '@/storage/useStorage'
 import { useDisclaimer } from '@/composables/useDisclaimer'
 import { useUsageNotice } from '@/composables/useUsageNotice'
 import { TEST_PHASE } from '@/testPhase'
+import { testNoticeClosed } from './tabGuideHints'
 
 const storage = useStorage()
 const disclaimer = useDisclaimer()
 const usage = useUsageNotice()
-const closed = ref(false)
+const closed = testNoticeClosed
 const visible = computed(
   // erst nach Haftungs- UND Nutzungshinweis, sonst laege der Testhinweis ueber dem Nutzungshinweis
   () => !!TEST_PHASE && !closed.value && storage.settingsLoaded.value && disclaimer.ready.value && !disclaimer.needsAck.value && !usage.visible.value,

@@ -12,6 +12,7 @@ import PznNoticeBanner from '@/components/PznNoticeBanner.vue'
 import AppUpdateDialog from '@/components/AppUpdateDialog.vue'
 import ImportChoiceDialog from '@/components/ImportChoiceDialog.vue'
 import TabGuide, { TAB_GUIDE_HINT_ID } from '@/components/TabGuide.vue'
+import { guideRequested, testNoticeClosed } from '@/components/tabGuideHints'
 import TestPhaseScreen from './components/TestPhaseScreen.vue'
 import { TEST_PHASE } from './testPhase'
 import EinsatzView from '@/components/rebuild/EinsatzView.vue'
@@ -78,8 +79,12 @@ watchEffect(() => {
 
 // ?-Symbol im Header: blendet die Tab-Erklaerung (TabGuide) wieder ein.
 function reshowGuide(): void {
-  storage.settings.dismissedHints = storage.settings.dismissedHints.filter((h) => h !== TAB_GUIDE_HINT_ID)
-  void storage.saveSettings()
+  guideRequested.value = true
+  // Testversion: die Kennung der Einführung nicht anfassen, sie gehört zur echten Version (siehe TabGuide.dismiss).
+  if (!TEST_PHASE) {
+    storage.settings.dismissedHints = storage.settings.dismissedHints.filter((h) => h !== TAB_GUIDE_HINT_ID)
+    void storage.saveSettings()
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -137,7 +142,9 @@ watchEffect(() => {
       disclaimer.needsAck.value ||
       usageNotice.visible.value ||
       !storage.settingsLoaded.value ||
-      !storage.settings.dismissedHints.includes(TAB_GUIDE_HINT_ID),
+      // Testversion: Die Einführung erscheint dort nicht von selbst; gewartet wird auf den Testhinweis und,
+      // falls über ? geöffnet, auf die Einführung. Sonst bliebe ein angetippter Link ohne Wirkung.
+      (TEST_PHASE ? !testNoticeClosed.value || guideRequested.value : !storage.settings.dismissedHints.includes(TAB_GUIDE_HINT_ID)),
   )
 })
 watch(incomingOpen, (item) => {
@@ -249,8 +256,8 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11"
-          aria-label="Einführung anzeigen"
-          title="Einführung anzeigen"
+          aria-label="Einführung und Anleitung"
+          title="Einführung und Anleitung"
           @click="reshowGuide"
         >?</button>
       </div>

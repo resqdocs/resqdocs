@@ -7,7 +7,8 @@ import { DatabaseSync } from 'node:sqlite'
 import { isIPv6 } from 'node:net'
 import { createStore, BlobTooLargeError, StoreFullError, MAX_BLOB_BYTES, DEFAULT_MAX_BLOBS, DEFAULT_MAX_TOTAL_BYTES, type BlobStore } from './store.ts'
 import { createRateLimiter, type RateLimiter } from './rateLimiter.ts'
-import { RECEIVER_HTML } from './receiverPage.ts'
+import { readFileSync } from 'node:fs'
+import { receiverHtml, goneHtml } from './receiverPage.ts'
 import { parseAppLinksEnv, buildAppleAppSiteAssociation, buildAssetLinks, type AppLinksConfig } from './appLinks.ts'
 
 // Sicherheits-Header der Empfaenger-Seite. no-referrer: beim „Im Editor oeffnen" darf weder Pfad noch
@@ -124,9 +125,8 @@ export function longLinkBlobId(link: string, base: string): string | null {
   return m ? m[1] : null
 }
 
-function shortGonePage(): string {
-  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>ResQDocs – Link abgelaufen</title><style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:3rem auto;padding:0 1rem;color:#1f2a44}</style></head><body><h1>Link abgelaufen</h1><p>Dieser Kurzlink ist abgelaufen, wurde schon übernommen oder ist ungültig. Bitte die Person, die ihn geschickt hat, um einen neuen Link.</p></body></html>`
-}
+// Vorschaubild für Link-Vorschauen (Open Graph), 1200 × 630. Liegt in src/, damit Deploy und Image es mitnehmen.
+const OG_PNG = readFileSync(new URL('./assets/og-transfer.png', import.meta.url))
 
 export interface ServerOptions {
   store: BlobStore
@@ -163,6 +163,8 @@ export function createTransferServer(opts: ServerOptions) {
   const shortLimiter = opts.shortLimiter ?? null
   const shortMissLimiter = opts.shortMissLimiter ?? null
   const shortCreateLimiter = opts.shortCreateLimiter ?? null
+  const receiverPage = receiverHtml(publicBase)
+  const gonePage = goneHtml(publicBase)
   /** false = dieser Anschluss ist am Limit (Anfragen insgesamt oder Fehlversuche). */
   const mayResolve = (req: IncomingMessage): boolean => {
     const key = clientKey(req, trustedProxy)
@@ -197,7 +199,7 @@ export function createTransferServer(opts: ServerOptions) {
         if (r.kind === 'ok') return send(res, 302, undefined, { Location: r.target, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' })
         if (r.kind === 'missing') countMiss(req)
       }
-      return send(res, 404, method === 'HEAD' ? undefined : shortGonePage(), { ...PAGE_HEADERS, 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'" })
+      return send(res, 404, method === 'HEAD' ? undefined : gonePage, { ...PAGE_HEADERS, 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'" })
     }
 
     // POST /v1/short — Kurzlink zu einem langen Link anlegen (Body JSON {link}). Der Server kennt danach den
@@ -243,7 +245,26 @@ export function createTransferServer(opts: ServerOptions) {
     // stattdessen entschluesselt diese self-contained Seite den Inhalt lokal aus dem URL-Fragment.
     // Der Schluessel erreicht den Server hier NIE (Fragment wird nicht mitgesendet).
     if ((method === 'GET' || method === 'HEAD') && path === '/') {
-      return send(res, 200, method === 'HEAD' ? undefined : RECEIVER_HTML, PAGE_HEADERS)
+      return send(res, 200, method === 'HEAD' ? undefined : receiverPage, PAGE_HEADERS)
+    }
+
+    // GET /og-transfer.png — festes Vorschaubild für Messenger (og:image der Empfangsseite).
+    if ((method === 'GET' || method === 'HEAD') && path === '/og-transfer.png') {
+      return send(res, 200, method === 'HEAD' ? undefined : OG_PNG, {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400',
+        'X-Content-Type-Options': 'nosniff',
+      })
+    }
+
+    // GET /v1/blob/:id/info — nur „1× lesen“ und Restlaufzeit für die Empfangsseite. Liefert, reserviert und
+    // verbraucht den Inhalt nicht; die id steht ohnehin im Link.
+    const infoMatch = method === 'GET' && /^\/v1\/blob\/([A-Za-z0-9]+)\/info$/.exec(path)
+    if (infoMatch) {
+      if (getLimiter && !getLimiter.allow(clientKey(req, trustedProxy))) return send(res, 429, 'Zu viele Anfragen.')
+      const info = store.info(infoMatch[1])
+      if (!info) return send(res, 404, 'Nicht gefunden oder abgelaufen.')
+      return send(res, 200, JSON.stringify(info), { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' })
     }
 
     // GET /.well-known/… — App-Zuordnung fuer angetippte Links. Muss ohne Umleitung als JSON kommen.

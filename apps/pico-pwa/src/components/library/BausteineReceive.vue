@@ -52,14 +52,18 @@ function onQrDecoded(raw: string): void {
     <div class="card-body gap-2 p-4">
       <h3 class="font-semibold">Empfangen — verschlüsselter Link + QR</h3>
       <p class="text-xs text-base-content/75">
-        Link zu einem Textbaustein oder gespeicherten Abschnitt einfügen oder QR scannen — landet automatisch in der richtigen Liste.
+        Code oder Link zu einem Textbaustein oder gespeicherten Abschnitt einfügen oder QR scannen — landet automatisch in der richtigen Liste.
       </p>
       <div class="flex items-center gap-2">
         <input
           v-model="receiveText"
           class="input input-bordered input-sm w-full font-mono text-xs"
-          placeholder="resq.li/… oder https://transfer.resqdocs.app/#…"
-          aria-label="Transfer-Link einfügen"
+          placeholder="Code, resq.li/… oder Transfer-Link"
+          aria-label="Code oder Transfer-Link einfügen"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+          spellcheck="false"
         />
         <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="!receiveText.trim() || busy" @click="receive">
           {{ busy ? 'Lade …' : 'Empfangen' }}

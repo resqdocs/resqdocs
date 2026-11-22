@@ -32,6 +32,7 @@ const SECTION = 'Fasst zusammengehörige Felder unter einer Überschrift zusamme
 const FIELD = 'Eine einzelne Angabe in der Vorlage, z. B. „Atmung“: frei eingeben oder aus einer Liste wählen.'
 const FUNCTION = 'Fertige Eingabehilfe für Aufwendigeres: Medikationsplan, Kontakte/Ärzte, Pack-Years, NEWS2, LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS und BMI.'
 const SNIPPET = 'Fertiger Text, den du einmal anlegst und immer wieder nutzt. In der Vorlage wird daraus ein Feld mit diesem Text, im {einsatz} landet er direkt im Feld.'
+const CLOZE = 'Ein frei geschriebener Text, in dem Felder als Lücken stehen. Im {einsatz} tippst du die Lücken mit „Ausfüllen“ der Reihe nach durch.'
 const SAVED_SECTION = 'Ein Abschnitt samt Inhalt, den du für andere Vorlagen gespeichert hast. Eingefügt wird immer eine Kopie: Spätere Änderungen wirken nicht auf bereits eingefügte Kopien.'
 
 export const INFO = {
@@ -40,6 +41,7 @@ export const INFO = {
     items: [
       { term: 'Abschnitt', text: SECTION },
       { term: 'Feld', text: FIELD },
+      { term: 'Lückentext', text: CLOZE },
       { term: 'Funktion', text: FUNCTION },
       { term: 'Textbaustein', text: SNIPPET },
       { term: 'Gespeicherter Abschnitt', text: SAVED_SECTION },

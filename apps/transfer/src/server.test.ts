@@ -201,6 +201,49 @@ test('Empfänger-Seite: GET / liefert die Seite (kein 404 für Browser-Öffner),
   })
 })
 
+test('Link-Vorschau: Empfangsseite trägt allgemeine Open-Graph-Angaben, Bild liegt beim Dienst', async () => {
+  await withServer(async (base) => {
+    const html = await (await fetch(`${base}/`)).text()
+    assert.match(html, /<meta property="og:title" content="Vorlage für ResQDocs empfangen" \/>/)
+    assert.match(html, /<meta property="og:description" content="[^"]+" \/>/)
+    assert.match(html, /<meta property="og:image" content="https:\/\/transfer\.resqdocs\.app\/og-transfer\.png" \/>/)
+    assert.match(html, /<meta name="twitter:card" content="summary_large_image" \/>/)
+    const img = await fetch(`${base}/og-transfer.png`)
+    assert.equal(img.status, 200)
+    assert.equal(img.headers.get('content-type'), 'image/png')
+    const bytes = new Uint8Array(await img.arrayBuffer())
+    assert.deepEqual([...bytes.subarray(1, 4)], [0x50, 0x4e, 0x47]) // PNG
+    assert.equal(new DataView(bytes.buffer).getUint32(16), 1200)
+    assert.equal(new DataView(bytes.buffer).getUint32(20), 630)
+  })
+})
+
+test('Angaben zum Link: „1× lesen“ und Restlaufzeit, ohne den Inhalt zu verbrauchen', async () => {
+  await withServer(async (base) => {
+    const { blob } = await encryptTransfer('{"a":1}')
+    const { id } = (await (await postBlob(base, blob, 3600, true)).json()) as { id: string }
+    for (let i = 0; i < 3; i++) {
+      const r = await fetch(`${base}/v1/blob/${id}/info`)
+      assert.equal(r.status, 200)
+      const info = (await r.json()) as { burn: boolean; expiresIn: number }
+      assert.equal(info.burn, true)
+      assert.ok(info.expiresIn > 3500 && info.expiresIn <= 3600)
+    }
+    assert.equal((await fetch(`${base}/v1/blob/${id}`)).status, 200, 'Inhalt nach den Abfragen noch da')
+    assert.equal((await fetch(`${base}/v1/blob/${id}/info`)).status, 404, 'verbraucht -> keine Angaben mehr')
+    assert.equal((await fetch(`${base}/v1/blob/Unbekannt123/info`)).status, 404)
+  })
+})
+
+test('Empfangsseite ruft beim Laden nur die Angaben ab, nie den Inhalt (Vorschau-Dienste verbrauchen nichts)', async () => {
+  await withServer(async (base) => {
+    const html = await (await fetch(`${base}/`)).text()
+    const start = html.slice(html.indexOf('// Beim Laden NICHT automatisch abrufen'))
+    assert.match(start, /loadInfo\(start\.id\)/)
+    assert.doesNotMatch(start, /run\(\)/)
+  })
+})
+
 test('App-Zuordnung: ohne Konfiguration 404, mit Konfiguration JSON ohne Umleitung', async () => {
   await withServer(async (base) => {
     assert.equal((await fetch(`${base}/.well-known/apple-app-site-association`)).status, 404)
@@ -380,7 +423,10 @@ test('Kurzlink-Domain: unbekannter Code -> Seite „Link abgelaufen“; /, /edit
   await withShortServer(async (base, getShort) => {
     const gone = await getShort('/ZZZZZ')
     assert.equal(gone.status, 404)
-    assert.match(await gone.text(), /Link abgelaufen/)
+    const goneHtml = await gone.text()
+    assert.match(goneHtml, /Link abgelaufen/)
+    assert.match(goneHtml, /<meta property="og:image" content="https:\/\/transfer\.resqdocs\.app\/og-transfer\.png" \/>/)
+    assert.match(gone.headers.get('content-security-policy') || '', /img-src data:/) // Signet als data:-Bild
     assert.equal((await getShort('/')).headers.get('location'), 'https://resqdocs.app/')
     assert.equal((await getShort('/editor')).headers.get('location'), 'https://editor.resqdocs.app/')
     assert.equal((await getShort('/ai')).headers.get('location'), 'https://ai.resqdocs.app/')

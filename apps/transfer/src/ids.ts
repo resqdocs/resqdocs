@@ -1,7 +1,7 @@
 // Zufaellige IDs/Token aus einem CSPRNG. Die Sicherheit des Transfers liegt im AES-Schluessel (im
 // Fragment), NICHT in der ID — die ID muss nur schwer erratbar/aufzaehlbar sein. Alphabet ohne
 // verwechselbare Zeichen (0/O, 1/I/l), damit die ID zugleich als tippbarer Kurzcode taugt.
-const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789' // 54 Zeichen
+const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789' // 56 Zeichen
 
 /** Unverzerrte Zufallszeichenkette (Rejection-Sampling gegen Modulo-Bias). */
 function randomString(len: number): string {
@@ -24,7 +24,7 @@ export function newDeleteToken(): string {
   return randomString(32)
 }
 
-/** Kurzlink-Code (resq.li/<code>): 5 Zeichen ~ 460 Mio. Möglichkeiten. Kürzer als jede Blob-ID und als die
+/** Kurzlink-Code (resq.li/<code>): 5 Zeichen ~ 550 Mio. Möglichkeiten. Kürzer als jede Blob-ID und als die
  *  reservierten Pfade („editor“ hat 6 Zeichen, „ai“ 2), deshalb keine Überschneidung. */
 export const SHORT_CODE_LENGTH = 5
 export function newShortCode(): string {

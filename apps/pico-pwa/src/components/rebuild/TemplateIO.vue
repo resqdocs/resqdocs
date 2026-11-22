@@ -146,7 +146,7 @@ const ttl = ref<TransferTtl>('burn')
 const shareBusy = ref(false)
 const shareLink = ref<{ link: string; code: string; deleteToken: string } | null>(null)
 const linkCopied = ref(false)
-const { short: shortWanted, shortBusy, shortError, shownLink, displayLink } = useShortLink(() => shareLink.value, transferCfg)
+const { short: shortWanted, shortBusy, shortError, shownLink, displayLink, displayLabel, isCode, copyFailed, copyShown } = useShortLink(() => shareLink.value, transferCfg)
 
 async function shareViaLink(): Promise<void> {
   shareBusy.value = true
@@ -164,11 +164,11 @@ async function shareViaLink(): Promise<void> {
 async function copyLink(): Promise<void> {
   if (!shareLink.value) return
   try {
-    await navigator.clipboard.writeText(shownLink.value)
+    await copyShown()
     linkCopied.value = true
     window.setTimeout(() => (linkCopied.value = false), 2000)
   } catch {
-    /* Clipboard nicht verfügbar — Nutzer kann den Link manuell markieren. */
+    /* Zwischenablage nicht verfügbar: der ganze Link wird unter dem Feld eingeblendet (copyFailed). */
   }
 }
 
@@ -394,7 +394,8 @@ function onFile(e: Event): void {
         <ShortLinkToggle v-model="shortWanted" :busy="shortBusy" :error="shortError" />
         <div v-if="shareLink" class="flex flex-col items-stretch gap-1 rounded bg-base-200 p-2">
           <div class="flex flex-col items-stretch gap-1">
-            <input :value="displayLink" readonly class="input input-xs w-full font-mono" aria-label="Transfer-Link" />
+            <input :value="displayLink" readonly class="input input-xs w-full font-mono" :class="isCode ? 'text-base! tracking-wider' : ''" :aria-label="displayLabel" data-share-link />
+            <p v-if="copyFailed" class="select-all break-all font-mono text-xs" data-share-full-link>{{ shownLink }}</p>
             <button class="btn btn-ghost btn-sm min-h-11 self-end" type="button" @click="copyLink">{{ linkCopied ? 'Kopiert' : 'Kopieren' }}</button>
           </div>
           <!-- QR zum Abscannen mit einem anderen Gerät (trägt nur den Link, keine Nutzdaten). -->
@@ -428,8 +429,12 @@ function onFile(e: Event): void {
           <input
             v-model="receiveText"
             class="input input-bordered input-sm w-full font-mono text-xs"
-            placeholder="resq.li/… oder https://transfer.resqdocs.app/#…"
-            aria-label="Transfer-Link einfügen"
+            placeholder="Code, resq.li/… oder Transfer-Link"
+            aria-label="Code oder Transfer-Link einfügen"
+            autocapitalize="off"
+            autocorrect="off"
+            autocomplete="off"
+            spellcheck="false"
           />
           <button class="btn btn-primary btn-sm" type="button" :disabled="!receiveText.trim() || receiveBusy" @click="receiveViaLink()">
             {{ receiveBusy ? 'Lade …' : 'Empfangen' }}

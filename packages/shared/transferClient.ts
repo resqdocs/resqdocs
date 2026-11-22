@@ -62,9 +62,9 @@ export function parseTransferInput(input: string): { id: string; keyB64url: stri
   return parseTransferFragment(hash >= 0 ? trimmed.slice(hash + 1) : trimmed)
 }
 
-/** Code eines Kurzlinks (`resq.li/Ab3k9`, mit oder ohne https://); sonst null. */
+/** Code eines Kurzlinks: `https://resq.li/Ab3k9`, `resq.li/Ab3k9` oder nur `Ab3k9` (abgetippt, Schreibweise exakt); sonst null. */
 export function shortCodeOf(input: string): string | null {
-  const m = /^(?:https?:\/\/)?resq\.li\/([A-Za-z0-9]{5})\/?$/i.exec(input.trim())
+  const m = /^(?:(?:https?:\/\/)?(?:www\.)?resq\.li\/)?([A-Za-z0-9]{5})\/?$/i.exec(input.trim())
   return m ? m[1] : null
 }
 
@@ -110,7 +110,8 @@ export async function resolveShortLink(code: string, cfg?: TransferConfig): Prom
     throw new TransferError('Der Transfer-Dienst ist nicht erreichbar.')
   }
   if (res.status === 410) throw new TransferError('Der Kurzlink ist abgelaufen oder wurde schon übernommen.')
-  if (res.status === 404) throw new TransferError('Diesen Kurzlink gibt es nicht. Bitte prüfen, ob er vollständig ist.')
+  if (res.status === 404) throw new TransferError('Diesen Kurzlink gibt es nicht. Bitte prüfen, ob er vollständig ist, und Groß- und Kleinschreibung beachten.')
+  if (res.status === 429) throw new TransferError('Zu viele Versuche. Bitte in einer Minute noch einmal.')
   if (!res.ok) throw new TransferError('Der Kurzlink konnte nicht aufgelöst werden.')
   try {
     const r = (await res.json()) as { link?: unknown }
@@ -124,7 +125,14 @@ export async function resolveShortLink(code: string, cfg?: TransferConfig): Prom
 /** Eingabe für den Empfang: ein Kurzlink wird zuerst zum langen Link aufgelöst, alles andere bleibt. */
 export async function expandTransferInput(input: string, cfg?: TransferConfig): Promise<string> {
   const code = shortCodeOf(input)
-  return code ? resolveShortLink(code, cfg) : input
+  if (code) return resolveShortLink(code, cfg)
+  // Angefangener Kurzlink (falsche Länge, Tippfehler): klare Meldung statt „abgelaufen“ für einen erfundenen Link.
+  if (/^(?:https?:\/\/)?(?:www\.)?resq\.li\b/i.test(input.trim()) && !input.includes('#')) {
+    throw new TransferError('Der Kurzlink ist unvollständig: Nach resq.li/ folgt ein Code aus genau 5 Zeichen.')
+  }
+  // Nur der Code, aber zu kurz oder zu lang (das Feld beim Teilen zeigt nur den Code).
+  if (/^[A-Za-z0-9]{2,8}$/.test(input.trim())) throw new TransferError('Der Code ist unvollständig: Ein Kurzlink-Code hat genau 5 Zeichen.')
+  return input
 }
 
 /** Vorlage teilen: Klartext-String verschlüsseln, Chiffrat ablegen, Link+Code zurückgeben. */

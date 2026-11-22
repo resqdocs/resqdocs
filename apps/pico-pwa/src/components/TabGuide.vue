@@ -13,7 +13,7 @@ import { useStorage } from '@/storage/useStorage'
 import { useDisclaimer } from '@/composables/useDisclaimer'
 import { useAppVersion } from '@/composables/useAppVersion'
 import { isReturningUser } from '@/releaseNotes/whatsNew'
-import { TAB_GUIDE_HINT_ID, WHATS_NEW } from './tabGuideHints'
+import { TAB_GUIDE_HINT_ID, WHATS_NEW, guideRequested } from './tabGuideHints'
 import ReleaseTimeline from './ReleaseTimeline.vue'
 import { TEST_PHASE } from '@/testPhase'
 
@@ -38,14 +38,13 @@ const aiUrl = computed(() => `https://ai.resqdocs.app?v=${encodeURIComponent(ver
 // Erst zeigen, wenn (a) die persistierten Einstellungen geladen sind (sonst
 // rendert die Tour kurz auf Defaults und verschwindet) und (b) der
 // Haftungsausschluss bestaetigt ist (kein Durchschimmern hinter dem Gate).
-// In einer Testversion ersetzt der Testhinweis (TestPhaseScreen) die Einführung.
+// In einer Testversion ersetzt beim Start der Testhinweis (TestPhaseScreen) die Einführung; über ? erscheint sie.
 const visible = computed(
   () =>
-    !TEST_PHASE &&
     storage.settingsLoaded.value &&
     disclaimer.ready.value &&
     !disclaimer.needsAck.value &&
-    !storage.settings.dismissedHints.includes(HINT_ID),
+    (TEST_PHASE ? guideRequested.value : !storage.settings.dismissedHints.includes(HINT_ID)),
 )
 
 const step = ref(0)
@@ -60,11 +59,13 @@ const page = computed(() => pages.value[step.value])
 const LAST = computed(() => pages.value.length - 1)
 
 function dismiss(): void {
-  if (!storage.settings.dismissedHints.includes(HINT_ID)) {
+  // Eine Testversion verbraucht die Einführung der echten Version nicht: dort nur schließen, nichts merken.
+  if (!TEST_PHASE && !storage.settings.dismissedHints.includes(HINT_ID)) {
     storage.settings.dismissedHints = [...storage.settings.dismissedHints, HINT_ID]
     void storage.saveSettings()
   }
   step.value = 0 // beim naechsten Abruf (?-Symbol) wieder vorn beginnen
+  guideRequested.value = false
 }
 // Jede Seite beginnt oben - sonst bliebe man nach einer langen Seite mitten in der naechsten stehen.
 const scroller = ref<HTMLElement | null>(null)
@@ -109,6 +110,18 @@ function onTouchEnd(e: TouchEvent): void {
       <!-- Überspringen: absolut in der ECHTEN oberen rechten Ecke des Overlays (unabhängig von der
            zentrierten, breitenbegrenzten Content-Spalte) — sonst driftet es auf iPad/Großbild an die
            Spaltenkante bzw. optisch in die vertikale Mitte. Safe-Area + 44pt-Touch-Target. -->
+      <!-- Anleitung: auf jeder Seite der Einführung erreichbar (Maintainer 2026-11-22: über das ? immer zur
+           Anleitung). Öffnet resqdocs.app/anleitung im Browser, nur auf Tipp. -->
+      <a
+        href="https://resqdocs.app/anleitung"
+        target="_blank"
+        rel="noopener"
+        class="btn btn-ghost absolute z-10 min-h-11 min-w-11 top-[max(12px,env(safe-area-inset-top))] left-[max(12px,env(safe-area-inset-left))]"
+        title="Anleitung auf resqdocs.app öffnen"
+        data-guide-manual
+      >
+        Anleitung
+      </a>
       <button
         type="button"
         class="btn btn-ghost absolute z-10 min-h-11 min-w-11 top-[max(12px,env(safe-area-inset-top))] right-[max(12px,env(safe-area-inset-right))]"
@@ -270,13 +283,13 @@ function onTouchEnd(e: TouchEvent): void {
             Zielgerät übertragen, automatisch gelöscht. <strong>Nichts davon geht an uns.</strong>
           </p>
           <p class="text-xs text-base-content/75">
-            Ausführliche Anleitung: <span class="font-medium">resqdocs.app/anleitung</span>
-            (auch unter <TabRef tab="einstellungen" /> → Info &amp; Hilfe).
+            Ausführliche Anleitung: <a href="https://resqdocs.app/anleitung" target="_blank" rel="noopener" class="link link-primary font-medium">resqdocs.app/anleitung</a>
+            (auch oben links über „Anleitung“ und unter <TabRef tab="einstellungen" /> → Info &amp; Hilfe).
           </p>
         </div>
 
         <p class="pt-4 text-center text-xs text-base-content/75">
-          Diese Einführung findest du jederzeit über das ?-Symbol oben rechts.
+          Diese Einführung und die Anleitung findest du jederzeit über das ?-Symbol oben rechts.
         </p>
 
         <!-- Fortschritts-Dots + Navigation: kleben am unteren Rand (sticky), der Inhalt scrollt dahinter.

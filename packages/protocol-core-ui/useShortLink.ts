@@ -17,6 +17,7 @@ export function useShortLink(source: MaybeRefOrGetter<SharedLink | null | undefi
   /** Haken „Kurzlink“; aus, bis jemand ihn setzt. */
   const short = ref(false)
   const shortUrl = ref<string | null>(null)
+  const shortCode = ref<string | null>(null) // Code aus der Antwort des Dienstes
   const shortBusy = ref(false)
   const shortError = ref('')
   let made: string | null = null // langer Link, zu dem shortUrl gehört
@@ -30,6 +31,7 @@ export function useShortLink(source: MaybeRefOrGetter<SharedLink | null | undefi
       const r = await shortenTransferLink(link, cfg)
       if (longLink.value === link) {
         shortUrl.value = r.url
+        shortCode.value = r.code
         made = link
       }
     } catch (e) {
@@ -55,6 +57,7 @@ export function useShortLink(source: MaybeRefOrGetter<SharedLink | null | undefi
       if (made === link) {
         made = null
         shortUrl.value = null
+        shortCode.value = null
       }
       if (short.value) void ensure() // inzwischen wieder gesetzt
       return
@@ -65,6 +68,7 @@ export function useShortLink(source: MaybeRefOrGetter<SharedLink | null | undefi
   watch(longLink, (link) => {
     if (link !== made) {
       shortUrl.value = null
+      shortCode.value = null
       made = null
       shortError.value = ''
     }
@@ -74,8 +78,24 @@ export function useShortLink(source: MaybeRefOrGetter<SharedLink | null | undefi
 
   /** Was zum Weitergeben kopiert wird: der Kurzlink, wenn gewählt und fertig, sonst der lange. */
   const shownLink = computed(() => (short.value && shortUrl.value ? shortUrl.value : (longLink.value ?? '')))
-  /** Anzeige ohne „https://“ (kürzer, besser lesbar); kopiert wird immer shownLink mit https://. Beide Formen lassen
-   *  sich in App und Editor wieder einfügen. */
-  const displayLink = computed(() => shownLink.value.replace(/^https:\/\//, ''))
-  return { short, shortUrl, shortBusy, shortError, shownLink, displayLink }
+  /** Anzeige: beim Kurzlink nur der Code (zum Abtippen), sonst der lange Link ohne „https://“. Kopiert wird immer
+   *  shownLink mit https://. Alle Formen lassen sich in App und Editor wieder einfügen. */
+  const isCode = computed(() => short.value && !!shortUrl.value && !!shortCode.value)
+  const displayLink = computed(() => (isCode.value ? (shortCode.value as string) : shownLink.value.replace(/^https:\/\//, '')))
+  /** Name des Anzeigefelds für Screenreader: was gerade drinsteht. */
+  const displayLabel = computed(() => (isCode.value ? 'Kurzlink-Code' : 'Transfer-Link'))
+  /** Kopieren: immer der vollständige Link. Geht die Zwischenablage nicht, wird er unter dem Feld eingeblendet (im Feld
+   *  steht beim Kurzlink nur der Code). Wirft weiter, damit der Aufrufer keine Bestätigung zeigt. */
+  const copyFailed = ref(false)
+  watch(shownLink, () => (copyFailed.value = false))
+  async function copyShown(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(shownLink.value)
+      copyFailed.value = false
+    } catch (e) {
+      copyFailed.value = true
+      throw e
+    }
+  }
+  return { short, shortUrl, shortBusy, shortError, shownLink, displayLink, displayLabel, isCode, copyFailed, copyShown }
 }

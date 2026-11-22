@@ -27,7 +27,10 @@ test('parseTestPhase: die Anleitung muss auf der eigenen Webseite unter /testpha
 
 test('Mit Testphase: Einführung aus, Testhinweis beim Start, Streifen oben', () => {
   const guide = readFileSync(new URL('./components/TabGuide.vue', import.meta.url), 'utf8')
-  assert.match(guide, /!TEST_PHASE &&/)
+  assert.match(guide, /\(TEST_PHASE \? guideRequested\.value : !storage\.settings\.dismissedHints\.includes\(HINT_ID\)\)/, 'beim Start aus, über ? erreichbar')
+  assert.match(guide, /if \(!TEST_PHASE && !storage\.settings\.dismissedHints\.includes\(HINT_ID\)\)/, 'Testversion verbraucht die Einführung der echten Version nicht')
+  const appVue = readFileSync(new URL('./App.vue', import.meta.url), 'utf8')
+  assert.match(appVue, /TEST_PHASE \? !testNoticeClosed\.value \|\| guideRequested\.value :/, 'angetippter Link wartet in der Testversion nur auf den Testhinweis')
   const app = readFileSync(new URL('./App.vue', import.meta.url), 'utf8')
   assert.match(app, /<TestPhaseScreen \/>/)
   assert.match(app, /data-test-phase-strip/)
@@ -37,4 +40,14 @@ test('Mit Testphase: Einführung aus, Testhinweis beim Start, Streifen oben', ()
   assert.match(screen, /!disclaimer\.needsAck\.value/, 'erst nach dem Haftungshinweis')
   assert.match(screen, /!usage\.visible\.value/, 'erst nach dem Nutzungshinweis')
   assert.match(screen, /!usage\.visible\.value/, 'erst nach dem Nutzungshinweis')
+})
+
+test('Anleitung ist über das ? immer erreichbar: Link oben links auf jeder Seite der Einführung', () => {
+  const guide = readFileSync(new URL('./components/TabGuide.vue', import.meta.url), 'utf8')
+  const link = guide.match(/<a\s[^>]*data-guide-manual[^>]*>/)?.[0] ?? guide.slice(guide.indexOf('href="https://resqdocs.app/anleitung"') - 20, guide.indexOf('data-guide-manual') + 20)
+  assert.match(link, /href="https:\/\/resqdocs\.app\/anleitung"/)
+  assert.match(link, /target="_blank"/)
+  assert.ok(guide.indexOf('data-guide-manual') < guide.indexOf('v-if="page'), 'außerhalb der einzelnen Seiten, also auf jeder Seite')
+  const app = readFileSync(new URL('./App.vue', import.meta.url), 'utf8')
+  assert.match(app, /aria-label="Einführung und Anleitung"/)
 })

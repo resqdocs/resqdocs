@@ -190,7 +190,7 @@ const transferCfg = (import.meta.env.VITE_TRANSFER_URL as string | undefined)
   ? { baseUrl: import.meta.env.VITE_TRANSFER_URL as string }
   : undefined
 const { ttl: shareTtl, shareBusy, shareLink, shareError, share: shareStart, reset: shareReset } = useTransferShare(transferCfg)
-const { short: shortWanted, shortBusy, shortError, shownLink, displayLink } = useShortLink(() => shareLink.value, transferCfg)
+const { short: shortWanted, shortBusy, shortError, shownLink, displayLink, displayLabel, isCode, copyFailed, copyShown } = useShortLink(() => shareLink.value, transferCfg)
 const shareOpenId = ref<string | null>(null)
 const linkCopied = ref(false)
 const TTL_LABELS: { value: TransferTtl; label: string }[] = [
@@ -216,11 +216,11 @@ function createBlockLink(b: Container): void {
 async function copyBlockLink(): Promise<void> {
   if (!shareLink.value) return
   try {
-    await navigator.clipboard.writeText(shownLink.value)
+    await copyShown()
     linkCopied.value = true
     window.setTimeout(() => (linkCopied.value = false), 2000)
   } catch {
-    /* Clipboard nicht verfügbar — Nutzer kann den Link manuell markieren. */
+    /* Zwischenablage nicht verfügbar: der ganze Link wird unter dem Feld eingeblendet (copyFailed). */
   }
 }
 
@@ -369,7 +369,8 @@ async function exportDownload(b: Container): Promise<void> {
             <p v-if="shareError" class="text-xs text-error">{{ shareError }}</p>
             <div v-if="shareLink" class="flex flex-col items-stretch gap-1 rounded bg-base-200 p-2">
               <div class="flex flex-col items-stretch gap-1">
-                <input :value="displayLink" readonly class="input input-xs w-full font-mono" aria-label="Transfer-Link" />
+                <input :value="displayLink" readonly class="input input-xs w-full font-mono" :class="isCode ? 'text-base! tracking-wider' : ''" :aria-label="displayLabel" data-share-link />
+                <p v-if="copyFailed" class="select-all break-all font-mono text-xs" data-share-full-link>{{ shownLink }}</p>
                 <button class="btn btn-ghost btn-sm min-h-11 self-end" type="button" @click="copyBlockLink">{{ linkCopied ? 'Kopiert' : 'Kopieren' }}</button>
               </div>
               <QrCode :value="shareLink.link" :size="180" />
