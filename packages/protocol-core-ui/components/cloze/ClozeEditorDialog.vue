@@ -89,11 +89,15 @@ const gapAtCaret = computed(() => {
 const markLabel = computed(() => (gapAtCaret.value ? `Lücke „${gapAtCaret.value.text}“ einstellen` : hasSelection.value ? 'Lücke aus Markierung' : 'Lücke hier einfügen'))
 function selectGap(id: string): void {
   commitDraft()
+  leavePanel()
   notice.value = ''
   selected.value = id
 }
 /** Der Knopf unter dem Text: Lücke an der Schreibmarke einstellen, sonst Markierung (oder Stelle) zur Lücke machen. */
-function onMark(): void {
+async function onMark(): Promise<void> {
+  // Erst die offenen Antworten sichern und den neuen Stand abwarten: Die neue Lücke wird aus dem ganzen Abschnitt
+  // gebaut und würde sonst mit dem Stand von vorher die gerade gesicherten Antworten überschreiben.
+  if (leavePanel()) await nextTick()
   const at = gapAtCaret.value
   if (at?.id) return selectGap(at.id)
   gapFromSelection()
@@ -187,6 +191,25 @@ const optionsDraft = ref<string | null>(null)
 watch(selected, () => {
   optionsDraft.value = null
 })
+const panel = ref<HTMLElement | null>(null)
+/**
+ * Vor jedem Wechsel der Lücke und vor dem Schließen: Getippte Antworten gehören der Lücke, bei der sie getippt
+ * wurden. Die Knöpfe der Lückenliste und der Knopf darüber nehmen dem Feld den Fokus nicht weg; ohne diesen Schritt
+ * käme die Übernahme erst nach dem Wechsel und träfe die nächste Lücke, während die erste leer bliebe.
+ */
+function commitOptions(): boolean {
+  if (optionsDraft.value == null) return false
+  setOptions(optionsDraft.value)
+  optionsDraft.value = null
+  return true
+}
+/** Gibt zurück, ob dabei Antworten übernommen wurden. */
+function leavePanel(): boolean {
+  const committed = commitOptions()
+  const el = document.activeElement as HTMLElement | null
+  if (el && panel.value?.contains(el)) el.blur()
+  return committed
+}
 function setOptions(value: string): void {
   const field = ownField.value
   if (!field) return
@@ -257,6 +280,7 @@ async function open(): Promise<void> {
 }
 async function close(): Promise<void> {
   commitDraft()
+  leavePanel()
   track(false)
   closing.value = true
   covered.value = false
@@ -266,6 +290,7 @@ async function close(): Promise<void> {
 }
 function onClosed(): void {
   commitDraft() // auch beim Schließen über Escape oder den Rand geht nichts Getipptes verloren
+  leavePanel()
   track(false)
   active.value = false
   emit('close')
@@ -341,7 +366,7 @@ defineExpose({ open, close })
         </div>
 
         <!-- Einstellungen der gewählten Lücke -->
-        <section v-if="current" class="max-h-[55%] min-h-0 shrink overflow-y-auto border-t border-base-300 px-4 pt-3" :class="covered ? 'pb-3' : 'pb-[calc(0.75rem+env(safe-area-inset-bottom))]'" data-cloze-editor-panel>
+        <section v-if="current" ref="panel" class="max-h-[55%] min-h-0 shrink overflow-y-auto border-t border-base-300 px-4 pt-3" :class="covered ? 'pb-3' : 'pb-[calc(0.75rem+env(safe-area-inset-bottom))]'" data-cloze-editor-panel>
           <div class="mb-2 flex items-center gap-2">
             <h4 class="min-w-0 flex-1 text-sm font-semibold [overflow-wrap:anywhere]">Lücke „{{ names.get(current.id) ?? current.id }}“</h4>
             <button type="button" class="btn btn-ghost btn-sm min-h-11 shrink-0" title="Einstellungen der Lücke schließen" aria-label="Einstellungen der Lücke schließen" data-cloze-editor-panel-close @click="selected = null">Schließen</button>
@@ -373,7 +398,7 @@ defineExpose({ open, close })
                 </label>
                 <label v-if="kind === 'choice' || kind === 'multi'" class="block space-y-1">
                   <span class="text-sm font-medium">Antworten, eine je Zeile</span>
-                  <textarea class="textarea min-h-28 w-full text-base leading-normal" :value="optionsDraft ?? optionsText" placeholder="wach&#10;somnolent&#10;soporös" data-cloze-editor-options @input="optionsDraft = ($event.target as HTMLTextAreaElement).value" @change="setOptions(($event.target as HTMLTextAreaElement).value)" @blur="optionsDraft = null" />
+                  <textarea class="textarea min-h-28 w-full text-base leading-normal" :value="optionsDraft ?? optionsText" placeholder="wach&#10;somnolent&#10;soporös" data-cloze-editor-options @input="optionsDraft = ($event.target as HTMLTextAreaElement).value" @change="commitOptions" @blur="optionsDraft = null" />
                   <span v-if="kind === 'choice'" class="block text-sm text-base-content/80">Die erste Antwort ist der Standardwert.</span>
                 </label>
                 <label v-else-if="kind === 'text' && ownField" class="block space-y-1">

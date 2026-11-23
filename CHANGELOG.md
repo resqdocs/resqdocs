@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [2.1.3] - 2026-11-23
+
+### Changed
+
+- Online editor: a notice appears when a new version is available; "Update now" saves first and then reloads the page
+
+### Fixed
+
+- Set up cloze text: answers typed for a choice gap stay with that gap when another gap is tapped right afterwards; before, they ended up on the second gap and were missing from the first
+- Set up cloze text: "Insert gap here" right after typing answers no longer removes the answers
+
 ## [2.1.2] - 2026-11-23
 
 ### Added
