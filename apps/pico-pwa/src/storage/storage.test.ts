@@ -26,7 +26,7 @@ test('Reset setzt die neuen Defaults (ResQDocs / System / WebView Standard)', as
   const adapter = createFakeKeyValueAdapter()
   const repo = createSettingsRepository(adapter)
   // vorher bewusst abweichend speichern (native_zxingcpp != neuer Default webview_standard)
-  await repo.saveSettings({ ...DEFAULT_SETTINGS, themeFamily: 'classic', theme: 'dark', scannerMode: 'native_zxingcpp' })
+  await repo.saveSettings({ ...DEFAULT_SETTINGS, theme: 'dark', scannerMode: 'native_zxingcpp' })
   await repo.resetSettings()
   const s = await repo.loadSettings()
   assert.equal(s.themeFamily, 'resqdocs')
@@ -34,13 +34,13 @@ test('Reset setzt die neuen Defaults (ResQDocs / System / WebView Standard)', as
   assert.equal(s.scannerMode, 'webview_standard')
 })
 
-test('Bestehende Installation: gueltige Werte (auch classic) bleiben erhalten', async () => {
-  const adapter = createFakeKeyValueAdapter()
+test('Bestehende Installation: gueltige Werte bleiben erhalten; das fruehere Design „classic“ wird zu „resqdocs“', async () => {
+  // So liegt es bei jemandem im Speicher, der früher „Klassisch“ gewählt hatte (auch in alten Sicherungen).
+  const adapter = createFakeKeyValueAdapter({ [SETTINGS_KEY]: JSON.stringify({ ...DEFAULT_SETTINGS, themeFamily: 'classic', theme: 'light', scannerMode: 'webview_optimized' }) })
   const repo = createSettingsRepository(adapter)
-  await repo.saveSettings({ ...DEFAULT_SETTINGS, themeFamily: 'classic', theme: 'light', scannerMode: 'webview_optimized' })
   const s = await repo.loadSettings()
-  assert.equal(s.themeFamily, 'classic', 'bewusst gewaehltes classic wird NICHT durch neuen Default ueberschrieben')
-  assert.equal(s.theme, 'light')
+  assert.equal(s.themeFamily, 'resqdocs', 'es gibt nur noch das Design ResQDocs')
+  assert.equal(s.theme, 'light', 'hell/dunkel/System bleibt, wie es gewählt war')
   assert.equal(s.scannerMode, 'webview_optimized')
 })
 
@@ -53,7 +53,7 @@ test('Update-Szenario: fehlender neuer Key bekommt Default, vorhandene bleiben',
   assert.equal(s.scannerMode, 'webview_standard', 'fehlender neuer Key -> Default')
   assert.equal(s.defaultOs, 'mac_de', 'vorhandener Key bleibt unveraendert')
   assert.equal(s.theme, 'dark')
-  assert.equal(s.themeFamily, 'classic')
+  assert.equal(s.themeFamily, 'resqdocs', 'früheres „classic“ wird umgestellt')
 })
 
 test('caseDraftTtlHours: Default 3, gueltig 1–5, sonst geklemmt/gerundet', async () => {
@@ -105,8 +105,8 @@ test('Migration: entfernter Wert scannerMode "auto" wird auf den Default webview
 test('Settings speichern und laden (Round-Trip)', async () => {
   const adapter = createFakeKeyValueAdapter()
   const repo = createSettingsRepository(adapter)
-  await repo.saveSettings({ defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40, pznAutoCheck: true, appUpdateCheck: false, scannerMode: 'webview_standard', scannerDiagnostics: true, caseDraftTtlHours: 4, typingDelayMs: 30 })
-  assert.deepEqual(await repo.loadSettings(), { defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40, pznAutoCheck: true, appUpdateCheck: false, scannerMode: 'webview_standard', scannerDiagnostics: true, caseDraftTtlHours: 4, typingDelayMs: 30 })
+  await repo.saveSettings({ defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40, pznAutoCheck: true, appUpdateCheck: false, scannerMode: 'webview_standard', scannerDiagnostics: true, caseDraftTtlHours: 4, typingDelayMs: 30, hapticsLevel: 1 })
+  assert.deepEqual(await repo.loadSettings(), { defaultOs: 'ios', theme: 'dark', lastSelectedProtocolId: 'p1', defaultProtocolId: 'p2', privacyNoticeAccepted: true, picoBaseUrl: 'http://10.0.0.5', themeFamily: 'resqdocs' as const, dismissedHints: ['tristate'], headingPattern: '## {titel} ', headingFill: '-', headingWidth: 40, pznAutoCheck: true, appUpdateCheck: false, scannerMode: 'webview_standard', scannerDiagnostics: true, caseDraftTtlHours: 4, typingDelayMs: 30, hapticsLevel: 1 })
 })
 
 test('Settings zurücksetzen', async () => {
@@ -128,8 +128,26 @@ test('Settings-Repository speichert NUR die bekannten Felder (kein Protokoll/Fre
     protocols: [{ id: 'x' }], patientName: 'Mustermann',
   })
   const stored = JSON.parse(adapter.dump()[SETTINGS_KEY])
-  assert.deepEqual(Object.keys(stored).sort(), ['appUpdateCheck', 'caseDraftTtlHours', 'defaultOs', 'defaultProtocolId', 'dismissedHints', 'headingFill', 'headingPattern', 'headingWidth', 'lastSelectedProtocolId', 'picoBaseUrl', 'privacyNoticeAccepted', 'pznAutoCheck', 'scannerDiagnostics', 'scannerMode', 'theme', 'themeFamily', 'typingDelayMs'])
+  assert.deepEqual(Object.keys(stored).sort(), ['appUpdateCheck', 'caseDraftTtlHours', 'defaultOs', 'defaultProtocolId', 'dismissedHints', 'hapticsLevel', 'headingFill', 'headingPattern', 'headingWidth', 'lastSelectedProtocolId', 'picoBaseUrl', 'privacyNoticeAccepted', 'pznAutoCheck', 'scannerDiagnostics', 'scannerMode', 'theme', 'themeFamily', 'typingDelayMs'])
   assert.ok(!('protocols' in stored) && !('patientName' in stored))
+})
+
+test('hapticsLevel: Standard „Normal“, auch für alte Speicherstände und Sicherungen; nur die Stufen 0 bis 3', async () => {
+  assert.equal(DEFAULT_SETTINGS.hapticsLevel, 2)
+  const load = async (stored: unknown): Promise<number> =>
+    (await createSettingsRepository(createFakeKeyValueAdapter({ [SETTINGS_KEY]: JSON.stringify(stored) })).loadSettings()).hapticsLevel
+  // Alter Speicherstand ohne das Feld: lädt vollständig, mit dem Standard.
+  const { hapticsLevel: _, ...ohneFeld } = DEFAULT_SETTINGS
+  assert.equal(await load(ohneFeld), 2)
+  assert.deepEqual(await createSettingsRepository(createFakeKeyValueAdapter({ [SETTINGS_KEY]: JSON.stringify({ ...ohneFeld, defaultOs: 'ios' }) })).loadSettings(), { ...DEFAULT_SETTINGS, defaultOs: 'ios' })
+  // Jede gültige Stufe bleibt, auch „Aus“.
+  for (const level of [0, 1, 2, 3]) assert.equal(await load({ ...DEFAULT_SETTINGS, hapticsLevel: level }), level)
+  // Ungültiges wird zum Standard, nicht zur nächsten Stufe.
+  for (const bad of [4, -1, 1.5, '3', null, true, {}, []]) assert.equal(await load({ ...DEFAULT_SETTINGS, hapticsLevel: bad }), 2, JSON.stringify(bad))
+  // Speichern schreibt nur gültige Stufen.
+  const adapter = createFakeKeyValueAdapter()
+  await createSettingsRepository(adapter).saveSettings({ ...DEFAULT_SETTINGS, hapticsLevel: 99 })
+  assert.equal(JSON.parse(adapter.dump()[SETTINGS_KEY]).hapticsLevel, 2)
 })
 
 test('appUpdateCheck: Default an, auch fuer Bestandsdaten ohne Feld; bewusstes Aus bleibt', async () => {
@@ -289,4 +307,15 @@ test('preferencesAdapter nutzt @capacitor/preferences (nicht rohen Browser-Stora
   const src = readFileSync(new URL('./preferencesAdapter.ts', import.meta.url), 'utf8')
   assert.ok(/@capacitor\/preferences/.test(src))
   assert.ok(!RAW_STORAGE.test(src))
+})
+
+test('Einstellungen: Auswahl „Design“ bleibt, mit ResQDocs als einziger Möglichkeit (kein „Klassisch“)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../components/settings/AppSettingsSection.vue', import.meta.url), 'utf8')
+  const at = src.indexOf('data-design-select')
+  assert.ok(at > 0, 'Auswahl ist da')
+  const select = src.slice(src.lastIndexOf('<select', at), src.indexOf('</select>', at))
+  assert.match(select, /v-model="settings\.themeFamily"/)
+  assert.deepEqual([...select.matchAll(/<option value="([^"]+)"/g)].map((m) => m[1]), ['resqdocs'])
+  assert.doesNotMatch(src, /Klassisch|value="classic"/)
 })

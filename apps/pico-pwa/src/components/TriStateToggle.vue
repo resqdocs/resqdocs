@@ -47,6 +47,7 @@ function cycle(): void {
     }"
     :title="TITLE[modelValue]"
     :aria-label="`${label}: ${TITLE[modelValue]} - tippen wechselt`"
+    data-haptic="statusToggle"
     @click="cycle"
   >
     <span v-if="modelValue === 'confirmed'" aria-hidden="true">✓</span>

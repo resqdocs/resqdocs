@@ -32,10 +32,10 @@ async function onSync(): Promise<void> {
       </div>
       <p v-if="msg" class="text-sm text-base-content/75">{{ msg }}</p>
 
-      <label class="flex cursor-pointer items-start gap-2 text-sm">
+      <label class="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
         <input
           type="checkbox"
-          class="checkbox checkbox-sm mt-0.5"
+          class="toggle toggle-primary shrink-0"
           :checked="storage.settings.pznAutoCheck"
           @change="storage.saveSettings({ pznAutoCheck: ($event.target as HTMLInputElement).checked })"
         />

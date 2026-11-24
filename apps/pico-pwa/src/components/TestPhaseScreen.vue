@@ -7,17 +7,15 @@
 import { computed } from 'vue'
 import { useStorage } from '@/storage/useStorage'
 import { useDisclaimer } from '@/composables/useDisclaimer'
-import { useUsageNotice } from '@/composables/useUsageNotice'
 import { TEST_PHASE } from '@/testPhase'
 import { testNoticeClosed } from './tabGuideHints'
 
 const storage = useStorage()
 const disclaimer = useDisclaimer()
-const usage = useUsageNotice()
 const closed = testNoticeClosed
 const visible = computed(
-  // erst nach Haftungs- UND Nutzungshinweis, sonst laege der Testhinweis ueber dem Nutzungshinweis
-  () => !!TEST_PHASE && !closed.value && storage.settingsLoaded.value && disclaimer.ready.value && !disclaimer.needsAck.value && !usage.visible.value,
+  // erst nach dem Hinweis beim Start, sonst laege der Testhinweis neben ihm
+  () => !!TEST_PHASE && !closed.value && storage.settingsLoaded.value && disclaimer.ready.value && !disclaimer.needsAck.value,
 )
 </script>
 
@@ -43,8 +41,8 @@ const visible = computed(
           <p><strong>Deine Vorlagen bleiben erhalten.</strong> Lösche die App nicht und installiere sie nicht neu, sonst sind die Daten auf dem Handy weg. Sichere sie vorher wie in der Anleitung beschrieben.</p>
         </div>
         <div class="space-y-2">
-          <a :href="TEST_PHASE.url" target="_blank" rel="noopener" class="btn btn-primary min-h-12 w-full text-base" data-test-phase-open>Testanleitung öffnen</a>
-          <button type="button" class="btn btn-ghost min-h-12 w-full text-base" data-test-phase-close @click="closed = true">Weiter zur App</button>
+          <a draggable="false" :href="TEST_PHASE.url" target="_blank" rel="noopener" class="btn btn-primary min-h-12 w-full text-base" data-test-phase-open>Testanleitung öffnen</a>
+          <button type="button" class="btn btn-ghost min-h-12 w-full text-base" data-test-phase-close data-back-close @click="closed = true">Weiter zur App</button>
         </div>
         <p class="text-center text-sm text-base-content/80">Die Anleitung ist jederzeit über den Streifen „Testversion“ oben erreichbar.</p>
       </div>

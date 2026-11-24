@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { PROTOCOL_SCHEMA, PROTOCOL_VERSION, parseTemplate } from '../../packages/shared/templateIO.ts'
 import { render } from '../../packages/shared/render.ts'
+import { TYPEABLE_NON_ASCII } from '../../packages/shared/typeable.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const OUT = join(ROOT, 'ai-docs', 'generated')
@@ -229,6 +230,9 @@ for (const lang of ['de', 'en']) {
       .replaceAll('{{DOC_URL}}', docUrl)
       .replaceAll('{{FEATURE_VERSIONS}}', buildFeatureVersions(lang))
       .replaceAll('{{APP_BASELINE}}', appBaseline)
+      // Zeichen, die die Bridge ausserhalb von ASCII tippen kann - aus derselben Liste wie App und Editor
+      // (typeable.ts, per Test gegen die Firmware-Tabellen geprueft), damit die Regel in §5 nicht driftet.
+      .replaceAll('{{TYPEABLE_NON_ASCII}}', [...TYPEABLE_NON_ASCII].join(' '))
       .replaceAll('{{SCHEMA_JSON}}', schemaJson)
       .replaceAll('{{FORMAT_REFERENCE}}', buildReference(wrapped.definitions, lang))
       .replaceAll('{{EXAMPLES}}', buildExamples(lang))

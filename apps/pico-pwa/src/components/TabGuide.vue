@@ -112,7 +112,7 @@ function onTouchEnd(e: TouchEvent): void {
            Spaltenkante bzw. optisch in die vertikale Mitte. Safe-Area + 44pt-Touch-Target. -->
       <!-- Anleitung: auf jeder Seite der Einführung erreichbar (Maintainer 2026-11-22: über das ? immer zur
            Anleitung). Öffnet resqdocs.app/anleitung im Browser, nur auf Tipp. -->
-      <a
+      <a draggable="false"
         href="https://resqdocs.app/anleitung"
         target="_blank"
         rel="noopener"
@@ -125,6 +125,7 @@ function onTouchEnd(e: TouchEvent): void {
       <button
         type="button"
         class="btn btn-ghost absolute z-10 min-h-11 min-w-11 top-[max(12px,env(safe-area-inset-top))] right-[max(12px,env(safe-area-inset-right))]"
+        data-back-close
         @click="dismiss"
       >
         Überspringen
@@ -159,8 +160,8 @@ function onTouchEnd(e: TouchEvent): void {
 
         <!-- Seite 1: Willkommen / Wertversprechen -->
         <div v-else-if="page === 'willkommen'" class="flex flex-1 flex-col items-center justify-center gap-5 text-center">
-          <img src="/brand.svg" alt="ResQDocs" class="brand-logo brand-logo-light h-20 w-auto" />
-          <img src="/brand-dark.svg" alt="ResQDocs" class="brand-logo brand-logo-dark h-20 w-auto" />
+          <img draggable="false" src="/brand.svg" alt="ResQDocs" class="brand-logo brand-logo-light h-20 w-auto" />
+          <img draggable="false" src="/brand-dark.svg" alt="ResQDocs" class="brand-logo brand-logo-dark h-20 w-auto" />
           <h1 class="text-2xl font-bold">Willkommen!</h1>
           <p class="text-base-content/80">
             Saubere Einsatzdokumentation - auf dem Handy verfasst,
@@ -239,7 +240,7 @@ function onTouchEnd(e: TouchEvent): void {
               </div>
             </div>
             <!-- KI-Empfehlung: der einfachste Weg zur ersten Vorlage; jederzeit hier im Guide auffindbar. -->
-            <a :href="aiUrl" target="_blank" rel="noopener" class="card border border-primary/30 bg-primary/5 shadow-sm transition hover:bg-primary/10">
+            <a draggable="false" :href="aiUrl" target="_blank" rel="noopener" class="card border border-primary/30 bg-primary/5 shadow-sm transition hover:bg-primary/10">
               <div class="card-body flex-row items-start gap-3 p-4">
                 <span class="rounded-lg bg-primary/15 p-2 text-primary">
                   <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -284,7 +285,7 @@ function onTouchEnd(e: TouchEvent): void {
             Zielgerät übertragen, automatisch gelöscht. <strong>Nichts davon geht an uns.</strong>
           </p>
           <p class="text-xs text-base-content/75">
-            Ausführliche Anleitung: <a href="https://resqdocs.app/anleitung" target="_blank" rel="noopener" class="link link-primary font-medium">resqdocs.app/anleitung</a>
+            Ausführliche Anleitung: <a draggable="false" href="https://resqdocs.app/anleitung" target="_blank" rel="noopener" class="link link-primary font-medium">resqdocs.app/anleitung</a>
             (auch oben links über „Anleitung“ und unter <TabRef tab="einstellungen" /> → Info &amp; Hilfe).
           </p>
         </div>

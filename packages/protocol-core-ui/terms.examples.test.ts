@@ -55,7 +55,7 @@ const EXPECTED: Record<string, string[]> = {
   ],
   emptyText: [out(root(emptySection({ emptyText: 'unauffällig' }))), out(root(emptySection({})))],
   rowLayout: [out(list({ rowLayout: 'inline' }), rows), out(list({ rowLayout: 'block' }), rows)],
-  rowSeparator: [out(list({ rowLayout: 'inline', rowSeparator: '; ' }), rows)],
+  rowSeparator: [out(list({ rowLayout: 'inline' }), rows), out(list({ rowLayout: 'inline', rowSeparator: ' | ' }), rows)],
   rowPrefix: [out(list({ rowLayout: 'block', rowPrefix: '- ' }), rows)],
   rowSuffix: [out(list({ rowLayout: 'block', rowSuffix: ';' }), rows)],
   lineEnd: [

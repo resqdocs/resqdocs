@@ -19,9 +19,12 @@ anwendbares Recht zulässigen Umfang (siehe Abschnitte 15 und 16 der GPL-3.0).
 Die App ist auf Datenminimierung ausgelegt:
 - **Keine dauerhafte Speicherung von Patientendaten.** In den Einsatz eingegebene Inhalte sind
   flüchtig und dienen nur der unmittelbaren Verarbeitung.
-- **Lokal auf dem Gerät.** Daten verlassen das Gerät nicht; es gibt **keine Telemetrie** und —
-  abgesehen von der lokalen Bridge und dem nutzerinitiierten Öffnen externer Links — **keinen**
-  Netzwerk-/Cloud-Versand von Eingaben.
+- **Lokal auf dem Gerät.** Einsatzeingaben verlassen das Gerät nur, wenn der Anwender es auslöst:
+  über die Bridge im lokalen Netz an sein Zielgerät oder indem er den Protokolltext kopiert. Es gibt
+  **keine Telemetrie**. Verbindungen ins Internet gibt es nur für die Prüfung auf eine neue
+  App-Version (abschaltbar) und für Funktionen, die der Anwender selbst auslöst oder einschaltet
+  (Teilen von Vorlagen per Link, Cloud-Sicherung, Laden einer eigenen PZN-Bibliothek);
+  Einsatzeingaben sind darin nicht enthalten.
 - **Keine Roh-Scan-Speicherung.** Rohe Barcode-/BMP-Payloads, Kamerabilder und Frames werden nicht
   dauerhaft gespeichert; aus Scans wird nur der benötigte Arbeitsstand übernommen.
 - **Temporärer Einsatzentwurf mit Ablauf.** Ein laufender Entwurf kann lokal kurzfristig fortgesetzt

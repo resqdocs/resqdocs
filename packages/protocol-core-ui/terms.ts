@@ -11,6 +11,9 @@
 //   Bridge (nicht Geraet, Pico) · Bridge-ID · Zielgeraet (nicht NIDA, Ziel-OS) · An Zielgeraet senden
 //   Sicherung (nicht Backup) · Exportieren (nicht als Datei sichern) · Loeschen (was weg ist) · Einfuehrung (nicht Tour)
 //   KI-Assistent = dein eigenes LLM, KI-Tool = unsere Seite (nicht LLM, KI-Hilfe)
+//   Protokolltext (nicht Protokoll allein) · gespeicherter Abschnitt (nicht Baustein; „Abschnitte“ allein nur im Aufbau)
+//   Bausteine = nur der Tab · Einsatzentwurf (eine Schreibweise) · Einsatz löschen (nicht Abschließen) · Link & QR
+//   Vorlage ohne Titel: „Unbenannte Vorlage“, Element ohne Titel: „Feld ohne Titel“ usw. (nodeLabel.ts, nie die Kennung)
 
 export type TabName = 'einsatz' | 'vorlagen' | 'bausteine' | 'einstellungen'
 export const TAB_LABEL: Record<TabName, string> = {
@@ -266,12 +269,12 @@ export const INFO = {
   rowLayout: {
     title: 'Hintereinander',
     text: 'Schreibt alle Einträge in eine Zeile. Das spart bei vielen Einträgen Platz, ist aber schwerer zu lesen.',
-    examples: [{ label: 'Hintereinander', output: 'Medikament A · Medikament B' }, { label: 'Untereinander', output: 'Medikament A\nMedikament B' }],
+    examples: [{ label: 'Hintereinander', output: 'Medikament A; Medikament B' }, { label: 'Untereinander', output: 'Medikament A\nMedikament B' }],
   },
   rowSeparator: {
     title: 'Trenner zwischen Einträgen',
-    text: 'Steht zwischen den Einträgen, wenn sie in einer Zeile stehen. Standard ist der Mittelpunkt, weil innerhalb eines Eintrags schon Kommas vorkommen können.',
-    examples: [{ label: 'Trenner „; “', output: 'Medikament A; Medikament B' }],
+    text: 'Steht zwischen den Einträgen, wenn sie in einer Zeile stehen. Standard ist das Semikolon, weil innerhalb eines Eintrags schon Kommas vorkommen können.',
+    examples: [{ label: 'Standard', output: 'Medikament A; Medikament B' }, { label: 'Trenner „ | “', output: 'Medikament A | Medikament B' }],
   },
   functionConfig: {
     title: 'Funktionskonfiguration',
@@ -296,6 +299,14 @@ export const INFO = {
     title: 'Suffix je Zeile',
     text: 'Steht hinter jedem Eintrag, z. B. als Satzzeichen.',
     examples: [{ label: 'Suffix „;“', output: 'Medikament A;\nMedikament B;' }],
+  },
+  untypeable: {
+    title: 'Zeichen, die die Bridge nicht tippen kann',
+    text: 'Die Bridge tippt wie eine deutsche Tastatur: Buchstaben, Ziffern, die üblichen Satzzeichen, ä ö ü ß, dazu € § ° µ und é è ê à â î ô û á í ó ú. Für andere Zeichen wie ç, ñ oder É hat sie keine Taste. An ihrer Stelle steht am Zielgerät [?], am iPad {?}. Senden geht trotzdem.',
+    items: [
+      { term: 'Wird von selbst ersetzt', text: 'Typografische Anführungszeichen, Gedankenstriche und Auslassungspunkte, wie sie die Handy-Tastatur einsetzt, stehen im Protokolltext als gerade Anführungszeichen ("), Bindestrich (-) und drei Punkte (...).' },
+      { term: 'Smileys und Symbole', text: 'Entfallen im Protokolltext, auch Zeichen wie ©, ™, ♀ oder ⚠. Im {einsatz} verschwinden sie schon beim Eingeben wieder aus dem Feld.' },
+    ],
   },
 } satisfies Record<string, InfoText>
 

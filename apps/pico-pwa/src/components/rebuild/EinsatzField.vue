@@ -11,6 +11,7 @@
  *   excluded. Ein Tap fuer alles, kein vorgeschalteter Modus-Tap.
  * Modell/Renderer unveraendert - der Renderer rendert nur den String.
  */
+import { nodeLabel } from '@resqdocs/protocol-core-ui/nodeLabel'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import type { Field } from '@resqdocs/protocol-core/model'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
@@ -22,6 +23,7 @@ import LongTextField from '@resqdocs/protocol-core-ui/components/LongTextField.v
 import SnippetPicker from '@resqdocs/protocol-core-ui/components/SnippetPicker.vue'
 import OptionSearchList from './OptionSearchList.vue'
 import { OPTION_SEARCH_MIN } from '@resqdocs/protocol-core/textSearch'
+import { stripEmoji } from '@resqdocs/protocol-core/typeable'
 
 const props = defineProps<{ node: Field }>()
 const caseValues = useCaseValues()
@@ -43,7 +45,7 @@ const def = computed(() => {
   if (opts.length) return d != null && opts.includes(d) ? d : opts[0]
   return d ?? ''
 })
-const label = computed(() => (props.node.title && props.node.title.trim()) || props.node.id)
+const label = computed(() => nodeLabel(props.node))
 // Pflichtfeld „noch offen": liefert keinen Wert (leer). Reiner visueller Hinweis, kein Gate.
 const isOpen = computed(() => isRequiredOpen(props.node, fill.value))
 const customValue = computed(() => (fill.value.state === 'custom' ? fill.value.value : def.value))
@@ -138,7 +140,8 @@ function onInsertSnippet(text: string): void {
   // trimEnd: endet die Basis schon auf Umbruch/Whitespace, sonst entstünde eine doppelte Leerzeile.
   const base = (fill.value.state === 'custom' ? fill.value.value : preservedText.value).trimEnd()
   const combined = base !== '' ? `${base}\n\n${text}` : text
-  caseValues.setCustom(props.node.id, combined)
+  // Wie beim Tippen: Das Feld nimmt keine Emojis an, auch nicht aus einem Textbaustein.
+  caseValues.setCustom(props.node.id, stripEmoji(combined))
   snippetPickerOpen.value = false
 }
 
@@ -330,7 +333,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
       </div>
 
       <!-- − nicht erhoben -->
-      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokoll</p>
+      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokolltext</p>
     </template>
 
     <!-- SELECT: Tri-State wie Freitext — ✓ Auswahl (Optionen sichtbar) / ✎ individuell / − nicht erhoben.
@@ -381,7 +384,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
       </div>
 
       <!-- − nicht erhoben -->
-      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokoll</p>
+      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokolltext</p>
     </template>
 
     <!-- FREITEXT-Feld: Tri-State (Eingabe erst bei ✎) -->
@@ -399,15 +402,16 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
           </svg>
         </button>
       </div>
-      <!-- ohne Standardwert gibt es nichts zu bestaetigen: der Hinweis ist die Flaeche zum Losschreiben -->
-      <button v-if="fill.state === 'confirmed' && !def" type="button" class="flex min-h-11 w-full items-center pl-9 text-left text-sm text-base-content/75" :aria-label="`${label}: Text eingeben`" data-write-directly @click="writeDirectly">(kein Standardwert) – antippen zum Schreiben</button>
+      <!-- ohne Standardwert gibt es nichts zu bestaetigen: der Hinweis ist die Flaeche zum Losschreiben. Beim grossen
+           Textfeld so hoch wie dessen Vorschau (LongTextField), damit der erste Tipp nichts verschiebt. -->
+      <button v-if="fill.state === 'confirmed' && !def" type="button" class="flex w-full items-center pl-9 text-left text-sm text-base-content/75" :class="useLongText ? 'h-[4.125rem]' : 'min-h-11'" :aria-label="`${label}: Text eingeben`" data-write-directly @click="writeDirectly">(kein Standardwert) – antippen zum Schreiben</button>
       <p v-else-if="fill.state === 'confirmed'" class="pl-9 text-sm text-base-content/75" :class="useLongText ? 'whitespace-pre-wrap' : ''">{{ def }}</p>
       <div v-else-if="fill.state === 'custom'" class="pl-9">
         <!-- mehrzeilig (Feld-Def ODER Wert mit Umbruechen) -> grosses Textfeld; sonst die einzeilige Zeile -->
         <LongTextField v-if="useLongText" ref="textLong" :model-value="customValue" :title="label" :required="node.required" @update:model-value="caseValues.setCustom(node.id, $event)" />
         <input v-else ref="textInput" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: eigener Wert`" :aria-required="node.required || undefined" @input="onInput" />
       </div>
-      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokoll</p>
+      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokolltext</p>
       <SnippetPicker v-if="snippetPickerOpen" multiple title="Textbausteine als Wert einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
     </template>
 

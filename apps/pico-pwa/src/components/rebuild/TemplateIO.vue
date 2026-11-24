@@ -8,6 +8,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
+import { templateLabel } from '@resqdocs/protocol-core-ui/nodeLabel'
 import { useTreeEditor } from '@resqdocs/protocol-core-ui/treeEditor'
 import { exportCollection, describeCollection } from '@resqdocs/protocol-core/collectionIO'
 import ShareExtrasPick from '@resqdocs/protocol-core-ui/components/ShareExtrasPick.vue'
@@ -26,6 +27,7 @@ import { useAppVersion } from '@/composables/useAppVersion'
 import { takeIncomingOpen } from '@/composables/useIncomingOpen'
 import { offerImport, offerCollection } from '@/composables/useImportChoice'
 import { readIncomingFile } from '@/utils/fileTransfer'
+import { ohneEigeneVorlage } from './aiToolHint'
 
 // Optionaler Dev-Override der Transfer-Dienst-URL (sonst Default aus dem Client).
 const transferCfg = (import.meta.env.VITE_TRANSFER_URL as string | undefined)
@@ -116,7 +118,7 @@ function openReceive(): void {
 function openImportFile(): void {
   mode.value = 'import'; focus.value = 'file'; msg.value = null
 }
-defineExpose({ openShare, openExport, openReceive, openImportFile, acceptIncoming })
+defineExpose({ openShare, openExport, openReceive, openImportFile, acceptIncoming, loadFile })
 // Vorlage(n) übernommen: Das Ergebnis meldet das Übernehmen-Fenster; das Blatt „Daten“ hat dann nichts mehr zu zeigen.
 const emit = defineEmits<{ imported: [] }>()
 
@@ -314,12 +316,20 @@ async function runLoad(text: string, incoming: boolean): Promise<void> {
 }
 
 function onFile(e: Event): void {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // dieselbe Datei lässt sich danach erneut wählen
+  if (file) loadFile(file)
+}
+/** Gewählte Datei lesen und wie eingefügten Text importieren (auch aus der Dateiauswahl der Vorlagenliste). */
+function loadFile(file: File): void {
+  msg.value = null
   const reader = new FileReader()
   reader.onload = () => load(String(reader.result ?? ''))
+  reader.onerror = () => (msg.value = { kind: 'err', text: 'Die Datei konnte nicht gelesen werden.' })
   reader.readAsText(file)
 }
+const fileInput = ref<HTMLInputElement | null>(null)
 </script>
 
 <template>
@@ -347,7 +357,7 @@ function onFile(e: Event): void {
               :data-export-pick="p.id"
               @change="toggleSelected(p.id, ($event.target as HTMLInputElement).checked)"
             />
-            <span class="min-w-0 flex-1 truncate text-sm">{{ (p.title && p.title.trim()) || p.id }}</span>
+            <span class="min-w-0 flex-1 truncate text-sm">{{ templateLabel(p) }}</span>
           </label>
         </div>
         <ShareExtrasPick
@@ -379,7 +389,7 @@ function onFile(e: Event): void {
       <!-- Verschlüsselter Kurzzeit-Transfer: erzeugt einen Link, der die Vorlage verschlüsselt beim
            Dienst ablegt. Der Schlüssel steckt im Link selbst (nicht beim Server). -->
       <div v-if="focus !== 'file'" ref="shareSection" :class="['flex flex-col gap-2', focus === 'all' ? 'border-t border-base-300 pt-2' : '']">
-        <span class="text-xs font-semibold text-primary">Teilen — verschlüsselter Link + QR</span>
+        <span class="text-xs font-semibold text-primary">Teilen — verschlüsselter Link & QR</span>
         <div class="flex flex-wrap items-center justify-between gap-2">
           <label class="flex items-center gap-1 text-xs font-semibold text-base-content/75">
             Gültig
@@ -411,20 +421,21 @@ function onFile(e: Event): void {
     </div>
 
     <div v-if="mode === 'import'" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
+      <!-- Datei zuerst (Hauptweg), Einfügen als zweiter Weg. „Weiter“ führt zu „Vorlage übernehmen“. -->
       <div v-if="focus !== 'link'" class="flex flex-col gap-2">
-        <span class="text-xs font-semibold text-base-content/75">Importieren — aus Datei/JSON</span>
-        <textarea v-model="importText" rows="5" class="textarea textarea-bordered w-full text-xs" placeholder='{"schema":"resqdocs-protocol","version":1,"tree":{ ... }}'></textarea>
-        <div class="flex flex-wrap items-center gap-2">
-          <button class="btn btn-primary btn-sm" type="button" :disabled="!importText.trim() || loadBusy || receiveBusy || incomingBusy" @click="load(importText)">Laden</button>
-          <input type="file" accept="application/json,.json" class="file-input file-input-sm" @change="onFile" />
-        </div>
+        <span v-if="focus === 'all'" class="text-xs font-semibold text-base-content/75">Importieren — aus Datei/JSON</span>
+        <button class="btn btn-primary min-h-11 w-full" type="button" :disabled="loadBusy || receiveBusy || incomingBusy" data-import-file @click="fileInput?.click()">Datei auswählen…</button>
+        <input ref="fileInput" type="file" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true" @change="onFile" />
         <p class="text-xs text-base-content/75">Wird als neue Vorlage importiert — bei gleichem Namen wird gefragt.</p>
+        <label class="pt-1 text-xs font-semibold text-base-content/75" for="template-import-text">Oder Text einfügen</label>
+        <textarea id="template-import-text" v-model="importText" rows="5" class="textarea textarea-bordered w-full text-xs" placeholder="Inhalt der Datei oder Antwort des KI-Assistenten hier einfügen"></textarea>
+        <button class="btn btn-sm min-h-11 self-end" type="button" :disabled="!importText.trim() || loadBusy || receiveBusy || incomingBusy" data-import-paste @click="load(importText)">Weiter</button>
       </div>
 
       <!-- Per Transfer-Link empfangen: entschlüsselt lokal und läuft durch dieselbe Erkennung wie ein Import.
            Zwei klar getrennte Wege — Link einfügen ODER QR scannen (Scan empfängt sofort, kein zweiter Tap). -->
       <div v-if="focus !== 'file'" ref="receiveSection" :class="['flex flex-col gap-2', focus === 'all' ? 'border-t border-base-300 pt-2' : '']">
-        <span class="text-xs font-semibold text-primary">Empfangen — verschlüsselter Link + QR</span>
+        <span class="text-xs font-semibold text-primary">Empfangen — verschlüsselter Link & QR</span>
         <div class="flex items-center gap-2">
           <input
             v-model="receiveText"
@@ -454,10 +465,11 @@ function onFile(e: Event): void {
           QR-Code scannen
         </button>
       </div>
-      <!-- Erfolgskette rueckwaerts: Vorlagen entstehen auch per eigenem LLM auf ai.resqdocs.app. -->
-      <p class="text-xs text-base-content/75">
+      <!-- Erfolgskette rueckwaerts: Vorlagen entstehen auch per eigenem LLM auf ai.resqdocs.app. Nur solange es keine
+           Vorlage mit Inhalt gibt, wie die Karte über der Liste (sonst warb der Bildschirm zweimal dafür). -->
+      <p v-if="ohneEigeneVorlage(protocols)" class="text-xs text-base-content/75">
         Tipp: Auf
-        <a :href="aiUrl" target="_blank" rel="noopener" class="link link-primary">ai.resqdocs.app</a>
+        <a draggable="false" :href="aiUrl" target="_blank" rel="noopener" class="link link-primary">ai.resqdocs.app</a>
         erstellst du Vorlagen mit deinem eigenen KI-Assistenten.
       </p>
     </div>

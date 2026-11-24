@@ -16,6 +16,9 @@ const OLD_TERMS = [
   'Ausgabetext', 'Text-Ausgabe', 'in der Ausgabe', 'Geräte-ID', 'Bridge / Gerät', 'Bridge/Gerät', 'Gerät / Pico', 'Pico-Bridge',
   'BMP-Code', 'Medikamentenplan', 'Normalbefund', 'Mustertext', 'Als Baustein', 'Backup-', 'Live-Bibliothek', 'An Gerät senden',
   'In Zielgerät tippen', 'Diese Tour', 'Identifier (id)', 'KI-Hilfe', 'Standardtext', 'Protokoll-Vorlage', 'Protokoll-Editor', 'Ziel-OS',
+  // Protokolltext statt Protokoll, gespeicherte Abschnitte statt Bausteine, eine Schreibweise, Umlaute im Text.
+  'im Protokoll<', 'Protokoll wird', 'ungültiges Protokoll', 'Bausteine, Textbausteine', 'unter Bausteine gespeichert', 'Einsatz-Entwurf',
+  'Geraet', 'liess sich', 'Link + QR', 'Abschließen', 'Einsatz abschließen',
 ]
 // Die Seite „Neu“ der Einfuehrung nennt die alten Namen bewusst.
 const ALLOWED_IN = { 'TabGuide.vue': ['Medikamentenplan'] } as Record<string, string[]>
@@ -40,4 +43,30 @@ test('keine Altbegriffe in sichtbaren Texten', () => {
     }
   }
   assert.deepEqual(hits, [])
+})
+
+const read = (rel: string): string => readFileSync(join(ROOT, rel), 'utf8')
+
+test('die löschende Aktion im Einsatz nennt das Löschen', () => {
+  const einsatz = read('apps/pico-pwa/src/components/rebuild/EinsatzView.vue')
+  assert.match(einsatz, /data-einsatz-loeschen @click="showConfirm = true">Einsatz löschen</)
+  assert.match(einsatz, /<h3 class="text-base font-semibold">Einsatz löschen\?<\/h3>/)
+  // Dezent wie bisher: Textknopf, kein Hauptknopf.
+  assert.match(einsatz, /class="btn btn-ghost btn-sm text-error" data-einsatz-loeschen/)
+})
+
+test('Vorlagen ohne Titel heißen überall gleich, nie nach ihrer Kennung', () => {
+  const files = [
+    'apps/pico-pwa/src/components/rebuild/LibraryBar.vue',
+    'apps/pico-pwa/src/components/rebuild/EinsatzView.vue',
+    'apps/pico-pwa/src/components/rebuild/TemplateIO.vue',
+    'apps/protocol-editor/src/App.vue',
+    'apps/protocol-editor/src/components/ShareDialog.vue',
+  ].filter((f) => existsSync(join(ROOT, f)))
+  for (const f of files) {
+    const s = read(f)
+    assert.doesNotMatch(s, /\|\| (p|active\.value\?)\.id\b/, `${f} zeigt die Kennung als Namen`)
+    assert.match(s, /templateLabel\(/, f)
+  }
+  assert.doesNotMatch(read('apps/pico-pwa/src/components/rebuild/EinsatzView.vue'), /\|\| 'Vorlage'/)
 })

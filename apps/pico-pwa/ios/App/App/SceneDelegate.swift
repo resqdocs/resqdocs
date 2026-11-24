@@ -9,6 +9,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        // Erscheinung der App (Hell, Dunkel, System) aus den gespeicherten Einstellungen, BEVOR die Seite zeichnet:
+        // Fläche hinter der WebView, Statusleiste, Tastatur und prefers-color-scheme folgen dem Fenster. Ohne das
+        // startete die App bei abweichendem Systemthema in der falschen Farbe und sprang dann um
+        // (AppChromePlugin.swift). Später führt die App das Fenster über das Plugin ResQChrome nach.
+        let style = AppAppearance.storedStyle()
+        window?.overrideUserInterfaceStyle = style
+        (scene as? UIWindowScene)?.windows.forEach { $0.overrideUserInterfaceStyle = style }
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }
 

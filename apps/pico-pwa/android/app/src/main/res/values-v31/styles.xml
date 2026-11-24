@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ab Android 12 zeigt das System beim Start sein eigenes Startbild: eine Farbe und ein Symbol in der Mitte.
+         Beides wird hier über die Attribute der Plattform gesetzt, bewusst OHNE die Bibliothek
+         androidx.core:core-splashscreen (im Projekt ausgeschlossen, siehe app/build.gradle).
+         Farbe: appChrome (hell und dunkel in values(-night)/colors.xml). Symbol: die Wort-Bild-Marke auf
+         durchsichtigem Grund (drawable(-night)-<dichte>/splash_icon.png, 288 dp, Marke innerhalb des sichtbaren
+         Kreises von 192 dp); neu erzeugen mit `node scripts/make-splash.mjs`.
+         Ein Stil in values-v31 ersetzt den aus values/ ganz, deshalb steht der Fensterhintergrund hier noch einmal. -->
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:windowSplashScreenBackground">@color/appChrome</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+    </style>
+</resources>

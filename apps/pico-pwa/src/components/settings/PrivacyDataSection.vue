@@ -19,7 +19,7 @@ import {
  *  - Zeitfaktor: wie lange ein laufender Einsatz-Entwurf ohne Bearbeitung erhalten bleibt.
  *  - Werksreset: setzt die App vollständig auf den Auslieferungszustand zurück (für Geräte-Ausmusterung).
  * Bewusst KEINE Teil-Löschknöpfe mehr: die einzige sensible Sache (der temporäre Einsatzentwurf) endet
- * ohnehin durch „Abschließen" und durch Ablauf; alles Übrige ist neutrales Arbeitsmaterial.
+ * ohnehin durch „Einsatz löschen“ und durch Ablauf; alles Übrige ist neutrales Arbeitsmaterial.
  */
 const storage = useStorage()
 const bausteine = useBausteine()
@@ -122,7 +122,7 @@ async function runReset(): Promise<void> {
       <li>Patientendaten werden <strong>nicht dauerhaft gespeichert</strong>.</li>
       <li>
         Ein laufender Einsatz bleibt lokal erhalten (auch nach App-Neustart) und wird durch
-        <strong>„Abschließen"</strong> im <TabRef tab="einsatz" /> sowie nach Ablauf der unten gewählten Zeit
+        <strong>„Einsatz löschen“</strong> im <TabRef tab="einsatz" /> sowie nach Ablauf der unten gewählten Zeit
         <strong>ohne Bearbeitung</strong> automatisch gelöscht.
       </li>
       <li>Vorlagen, gespeicherte Abschnitte und Textbausteine sind <strong>neutrale Vorlagen</strong> — keine Patientendaten.</li>
@@ -212,7 +212,7 @@ async function runReset(): Promise<void> {
           ein laufender Einsatz werden gelöscht. Das lässt sich nicht rückgängig machen.</span
         >
         <div class="flex gap-2">
-          <button class="btn btn-error btn-xs min-h-11" type="button" :disabled="busy" @click="runReset">
+          <button class="btn btn-error btn-xs min-h-11" type="button" :disabled="busy" data-haptic="confirmDelete" @click="runReset">
             {{ busy ? 'Wird zurückgesetzt …' : 'Alles löschen' }}
           </button>
           <button class="btn btn-ghost btn-xs min-h-11" type="button" :disabled="busy" @click="confirming = false">

@@ -9,6 +9,7 @@
  *    Ebene 2+ nicht weiter eindellen (Hierarchie ueber Ueberschrift-Groesse + Weissraum).
  *  - Gruppierung primaer ueber Weissraum, keine flaechigen Kaesten fuer offene Sektionen.
  */
+import { nodeLabel } from '@resqdocs/protocol-core-ui/nodeLabel'
 import { computed, ref } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
@@ -46,9 +47,7 @@ const openRequired = computed(() => countOpenRequired(props.node, caseValues.val
 // steht; bei Abweichungen offen. Danach FREI toggelbar - `open` ist nur der Initialwert aus deviations.
 const open = ref(deviations.value > 0)
 
-function label(n: Container): string {
-  return (n.title && n.title.trim()) || n.id
-}
+const label = (n: Container): string => nodeLabel(n)
 const renderAsCollapse = computed(() => Boolean(props.node.collapsible) && !props.insideCollapse)
 const childInside = computed(() => props.insideCollapse || renderAsCollapse.value)
 // Heading-RANG folgt der Schachtelungstiefe (a11y: nicht abwaerts ueberspringen). Die

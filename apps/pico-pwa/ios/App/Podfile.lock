@@ -11,6 +11,10 @@ PODS:
   - CapacitorFilesystem (8.1.5):
     - Capacitor
     - IONFilesystemLib (= 2.0.1)
+  - CapacitorHaptics (8.0.2):
+    - Capacitor
+  - CapacitorKeyboard (8.0.6):
+    - Capacitor
   - CapacitorNativeSettings (8.2.0):
     - Capacitor
   - CapacitorPreferences (8.0.1):
@@ -36,6 +40,8 @@ DEPENDENCIES:
   - "CapacitorCommunitySqlite (from `../../node_modules/@capacitor-community/sqlite`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
+  - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
+  - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
   - CapacitorNativeSettings (from `../../node_modules/capacitor-native-settings`)
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
@@ -58,6 +64,10 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorFilesystem:
     :path: "../../node_modules/@capacitor/filesystem"
+  CapacitorHaptics:
+    :path: "../../node_modules/@capacitor/haptics"
+  CapacitorKeyboard:
+    :path: "../../node_modules/@capacitor/keyboard"
   CapacitorNativeSettings:
     :path: "../../node_modules/capacitor-native-settings"
   CapacitorPreferences:
@@ -79,6 +89,8 @@ SPEC CHECKSUMS:
   CapacitorCommunitySqlite: 785553c54e52da62d058238d4571db5692c022c4
   CapacitorCordova: 8e68a712e47128cf5b97e88b9c2b406b9b956b22
   CapacitorFilesystem: e3bc7123acb1554df1b7b099fa5847064b9e1bd4
+  CapacitorHaptics: 296f771ecd89c7a1bd92a7b6826a7d268e2e70f5
+  CapacitorKeyboard: f9e85e685082e9f63404de15db4a4291448b0912
   CapacitorNativeSettings: 3f12e9700e0a10cb5d0e22aec00de29d72589a12
   CapacitorPreferences: cca2021f386efb75947c850334447d9ff22b14f1
   CapacitorShare: 5b5e53347556bee89ae6163ed20b5b3c25fe75f1
@@ -87,6 +99,6 @@ SPEC CHECKSUMS:
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
   zxing-cpp: 2f0de2db44d59dba9fcd170d8ba7dca920ef3f60
 
-PODFILE CHECKSUM: a26971bd6e019a1363fc654f7c12cfe6cf73b32c
+PODFILE CHECKSUM: 93b55edf52fb6d61f19e8707706a0ac4f2df4841
 
 COCOAPODS: 1.17.0

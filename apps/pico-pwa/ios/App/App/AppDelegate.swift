@@ -70,5 +70,14 @@ class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(ICloudBackupPlugin())
         bridge?.registerPluginInstance(ScannerPlugin()) // nativer Code-Scanner
         bridge?.registerPluginInstance(KeepAwakePlugin()) // Bildschirm an, solange die Bridge tippt
+        bridge?.registerPluginInstance(BridgeWifiPlugin()) // direkt ins WLAN der Bridge
+        bridge?.registerPluginInstance(AppChromePlugin()) // Fenster folgt der in der App gewählten Erscheinung
+        // Grund der WebView in der Farbe des Startbilds (Assets: SplashBackground, hell und dunkel), bis die Seite
+        // ihr erstes Bild zeichnet. Capacitor nimmt sonst die Systemfarbe, im dunklen Thema also Schwarz: zwischen
+        // Startbild und App blitzte eine andere Farbe auf.
+        if let splash = UIColor(named: "SplashBackground") {
+            webView?.backgroundColor = splash
+            webView?.scrollView.backgroundColor = splash
+        }
     }
 }

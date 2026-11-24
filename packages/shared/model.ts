@@ -178,8 +178,9 @@ export type FunctionKind = 'medikamentenplan' | 'aerzte' | 'packYears' | 'news2'
 export interface FunctionConfig {
   /** untereinander (block, je Zeile eigene Zeile) vs hintereinander (inline, mit Separator). Default 'block'. */
   rowLayout?: 'block' | 'inline'
-  /** Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> " · " (Mittelpunkt:
-   *  hebt die Zeilengrenze vom Komma im Zeilenformat "Name Staerke, Schema" ab). */
+  /** Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> "; " (Semikolon:
+   *  hebt die Zeilengrenze vom Komma im Zeilenformat "Name Staerke, Schema" ab und ist auf jeder
+   *  Tastaturbelegung tippbar). Der fruehere Standard " · " (Mittelpunkt) gilt wie nicht gesetzt. */
   rowSeparator?: string
   /** Praefix je Zeile bei rowLayout='block'. */
   rowPrefix?: string

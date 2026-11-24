@@ -249,7 +249,10 @@ gewählte Element beziehen.
 - Der Text endet über der Tastatur: „User-interface features like the on-screen keyboard (OSK) can shrink the
   visual viewport without affecting the layout viewport“ — MDN, Visual Viewport API:
   <https://developer.mozilla.org/en-US/docs/Web/API/Visual_Viewport_API>
-  → die Höhe des Fensters folgt dem sichtbaren Bereich; die Schreibmarke verschwindet nicht hinter der Tastatur.
+  → im Online-Editor (iOS-Safari) folgt die Höhe des Fensters dem sichtbaren Bereich; die Schreibmarke verschwindet
+  nicht hinter der Tastatur. In der App verkleinert die Tastatur seit der App-Hülle das Layout selbst (Abschnitt
+  „App-Hülle und Tastatur“ unten): das Fenster ist so hoch wie das Layout und passt sich einmal an, statt
+  nachzugleiten (Maintainer, 2026-11-23).
 - Der Platzhalter ersetzt keine Beschriftung: „the best solution is to have clear, visible labels that are placed
   outside empty form fields“ — Nielsen Norman Group, K. Sherwin (2014):
   <https://www.nngroup.com/articles/form-design-placeholders/>
@@ -280,6 +283,35 @@ gewählte Element beziehen.
   nur 0,63 % der Tastenanschläge fielen in einer Feldstudie im Querformat (Buschek et al., zitiert in Palin et al.,
   MobileHCI 2019): <https://www.pokristensson.com/pubs/PalinEtAlMobileHCI2019.pdf>
   → das Hochformat bleibt der Standard, die App dreht weiter frei mit.
+
+## App-Hülle und Tastatur
+
+> Recherche-Stand 2026-11-23. Angewandt in `apps/pico-pwa` (`App.vue`, `style.css`, `capacitor.config.ts`,
+> `src/shell/`) und in `packages/protocol-core-ui` (`keyboard.css`, `keyboardViewport.css`, `fullscreenKeyboard.ts`).
+> Anlass: Rückmeldung eines Testers (iOS-Simulator), die App verhielt sich bei offener Tastatur wie eine Webseite.
+
+- Auf iOS verkleinert die Tastatur nur den sichtbaren Bereich, nicht das Layout: „User-interface features like the
+  on-screen keyboard (OSK) can shrink the visual viewport without affecting the layout viewport“ — MDN, Visual
+  Viewport API: <https://developer.mozilla.org/en-US/docs/Web/API/Visual_Viewport_API>
+  → die App scrollt nicht mehr als Dokument. Kopfzeile, Inhalt und Tab-Leiste bilden eine feste Hülle (`h-dvh`),
+  jeder Tab scrollt in einem eigenen Bereich.
+- Die Tastatur verkleinert die WebView: `resize: 'native'` — „The whole native Web View will be resized when the
+  keyboard shows/hides. This affects the `vh` relative unit.“ — Capacitor, Keyboard API:
+  <https://capacitorjs.com/docs/apis/keyboard>; auf Android verkleinert Capacitor die Ansicht selbst,
+  `resizeOnFullScreen` ist nur eine Umgehung für den Vollbildmodus (ebenda)
+  → beide Plattformen nach demselben Modell: das Layout endet an der Tastatur, Fenster richten sich danach.
+- Die WebView selbst scrollt nicht: `ios.scrollEnabled` — „Configure whether the scroll view is scrollable.“ —
+  Capacitor, Konfiguration: <https://capacitorjs.com/docs/config>
+  → iOS kann die Seite beim Fokus in ein Feld nicht mehr samt Kopfzeile hochschieben.
+- Die Leiste ↑ ↓ ✓ über der Tastatur: „We recommend disabling the accessory bar for short forms (login, signup,
+  etc.)“ — Capacitor, Keyboard API (wie oben)
+  → aus (Maintainer, 2026-11-23). Ersatz für den Haken: Enter-Taste „Fertig“ (`enterkeyhint`, MDN:
+  <https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/enterkeyhint>) schließt einzeilige
+  Felder, ein Tipp neben das Feld schließt die Tastatur, Vollbild-Fenster haben „Fertig“ im Kopf.
+- Am Ende eines Bereichs läuft das Wischen nicht weiter: „The overscroll-behavior CSS property controls what happens
+  when scrolling reaches the edge of a scroll container.“ — MDN, overscroll-behavior:
+  <https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior>
+  → `contain` an Tab-Bereichen und Fenstern, `none` am Dokument.
 
 ## Lückentext: Ausfüllen und Einrichten am Handy
 
@@ -376,3 +408,32 @@ Einstellung „Verbindung im Protokolltext“ einer Mehrfachauswahl (`multiSepar
 - Tippflächen wie im Abschnitt „Lückentext“ oben (NN/g Touch Targets, WCAG 2.5.8)
   → Pfeil 44 × 44 px; die Knöpfe der Zeile bleiben 44 px breit, damit der Name Platz behält.
 - Wörter „Einklappen“ und „Ausklappen“ wie im Online-Editor (gleiche Begriffe in App und Editor).
+
+## Zeichen, die die Bridge tippen kann: Ersetzen, Hinweis, Emojis
+
+Die Bridge tippt als Tastatur mit deutscher Belegung; welche Zeichen sie kennt, steht in ihren Tabellen
+(`firmware/bridge/libraries/Typer/src/Typer.cpp`). `packages/shared/typeable.ts` hält dieselbe Menge, ein Test
+vergleicht beide.
+
+- Gleichwertigkeit zusammengesetzter Zeichen (ein „a“ mit nachgestellten Punkten und das fertige „ä“ sind
+  derselbe Text): Unicode Standard Annex 15, „Unicode Normalization Forms“, Form NFC:
+  <https://unicode.org/reports/tr15/>
+  → der Protokolltext wird vor dem Vergleich mit der Zeichenmenge in NFC gebracht.
+- Was ein Emoji ist, legt Unicode Technical Standard 51 fest („Unicode Emoji“): Zeichen mit Emoji-Darstellung
+  von Haus aus (`Emoji_Presentation`), Schriftzeichen, die erst durch U+FE0F zum Emoji werden, sowie Folgen mit
+  U+200D, Hauttönen, Regional-Buchstaben (Flaggen), U+20E3 (Tasten) und Tag-Zeichen:
+  <https://www.unicode.org/reports/tr51/>
+  → entfernt wird jedes Bildzeichen (Eigenschaft `Extended_Pictographic`), also auch Symbole wie ©, ♀ oder ☑
+  ohne Emoji-Zusatz (Maintainer, 2026-11-24). Zeichen außerhalb dieser Eigenschaft (✓, ☐, →) bleiben und
+  erscheinen im Hinweis.
+- Eingaben lassen sich vor dem Einfügen ablehnen (`beforeinput`, abbrechbar für `insertText` und
+  `insertReplacementText`), während einer Komposition aber nicht (`insertCompositionText` ist nicht abbrechbar):
+  W3C, „Input Events Level 2“: <https://www.w3.org/TR/input-events-2/>
+  → ein Emoji allein wird abgelehnt (das Feld ändert sich nicht, die Schreibmarke bleibt); alles andere wird nach
+  dem Einfügen bereinigt.
+- Während einer Komposition (Eingabemethoden, Wortvorschläge) gehört der Text im Feld der Tastatur; verändert die
+  Seite ihn, bricht die Eingabe ab. MDN, „Element: compositionstart event“ und „compositionend event“:
+  <https://developer.mozilla.org/en-US/docs/Web/API/Element/compositionstart_event>
+  → zwischen `compositionstart` und `compositionend` greift der Filter nicht ein, bereinigt wird am Ende.
+- Hinweis statt Sperre (Maintainer, 2026-11-24): Zeichen ohne Taste nennt die App vor dem Senden mit Anzahl;
+  Senden bleibt möglich. Die Erklärung steht hinter dem ⓘ (Tippfläche 44 × 44 px, wie im Abschnitt „Lückentext“).

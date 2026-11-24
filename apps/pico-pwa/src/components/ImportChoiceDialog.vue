@@ -15,6 +15,8 @@ import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
 import { useBausteine } from '@/composables/useBausteine'
 import { pendingImport, clearImport } from '@/composables/useImportChoice'
+import { activeTab } from '@/composables/useActiveTab'
+import { importOrt, type ImportZiel } from './importNote'
 
 const tree = useProtocolTree()
 const blockLib = useBlockLibrary()
@@ -23,9 +25,11 @@ const leer: CollectionRows = { trees: [], blocks: [], snippets: [] }
 const rows = ref<CollectionRows>(leer)
 // Ergebnis nach dem Übernehmen: verschwindet von selbst, Antippen schließt es früher.
 /** Ergebnis-Hinweis: Text und wo das Übernommene liegt (Tab-Verweis mit Icon). */
-const note = ref<{ text: string; where: 'vorlagen' | 'bausteine' | 'beide' } | null>(null)
+const note = ref<{ text: string; where: ImportZiel } | null>(null)
+// Der Ortshinweis nennt nur Tabs, in denen man gerade nicht ist.
+const ort = computed(() => (note.value ? importOrt(note.value.where, activeTab.value) : 'keiner'))
 let noteTimer: number | undefined
-function showNote(text: string, where: 'vorlagen' | 'bausteine' | 'beide'): void {
+function showNote(text: string, where: ImportZiel): void {
   window.clearTimeout(noteTimer)
   note.value = { text, where }
   // Lesezeit nach Länge: 4 bis 10 Sekunden.
@@ -104,7 +108,7 @@ function close(): void {
         <p v-if="pendingImport.hint" class="text-sm text-warning" data-import-hint>{{ pendingImport.hint }}</p>
         <ImportCollectionPick v-model:rows="rows" :content="pendingImport" :existing="existing" />
         <div class="modal-action mt-0">
-          <button type="button" class="btn btn-ghost btn-sm min-h-11" @click="close">Abbrechen</button>
+          <button type="button" class="btn btn-ghost btn-sm min-h-11" data-back-close @click="close">Abbrechen</button>
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!taken.total || busy" data-import-take @click="take">{{ knopf }}</button>
         </div>
       </div>
@@ -113,9 +117,11 @@ function close(): void {
     <div class="pointer-events-none fixed inset-x-0 z-[1000] flex justify-center px-4" style="bottom: calc(4.5rem + env(safe-area-inset-bottom))" role="status" aria-live="polite">
       <button v-if="note" type="button" class="pointer-events-auto max-w-md rounded-box border border-base-300 bg-base-100 px-4 py-3 text-left text-sm shadow-lg" data-import-note @click="hideNote">
         {{ note.text }}
-        <template v-if="note.where === 'vorlagen'">Du findest sie in <TabRef tab="vorlagen" />.</template>
-        <template v-else-if="note.where === 'bausteine'">Du findest sie in <TabRef tab="bausteine" />.</template>
-        <template v-else>Vorlagen findest du in <TabRef tab="vorlagen" />, gespeicherte Abschnitte und Textbausteine in <TabRef tab="bausteine" />.</template>
+        <template v-if="ort === 'vorlagen'">Du findest sie in <TabRef tab="vorlagen" />.</template>
+        <template v-else-if="ort === 'bausteine'">Du findest sie in <TabRef tab="bausteine" />.</template>
+        <template v-else-if="ort === 'nurVorlagen'">Vorlagen findest du in <TabRef tab="vorlagen" />.</template>
+        <template v-else-if="ort === 'nurBausteine'">Gespeicherte Abschnitte und Textbausteine findest du in <TabRef tab="bausteine" />.</template>
+        <template v-else-if="ort === 'beide'">Vorlagen findest du in <TabRef tab="vorlagen" />, gespeicherte Abschnitte und Textbausteine in <TabRef tab="bausteine" />.</template>
       </button>
     </div>
   </Teleport>

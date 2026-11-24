@@ -78,6 +78,13 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- „Mit Bridge-WLAN verbinden": Die App bittet Android, sie mit dem WLAN der Bridge zu verbinden
+         (WifiNetworkSpecifier, ab Android 10). Das System sucht und zeigt die Auswahl selbst, deshalb
+         KEINE Standortberechtigung. Beide Berechtigungen gelten ohne Rueckfrage:
+         CHANGE_NETWORK_STATE = Netz anfragen, ACCESS_WIFI_STATE = pruefen, ob WLAN eingeschaltet ist. -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
     <!-- Werbe-ID (AD_ID) beim Manifest-Merge hart entfernen: die App nutzt KEINE
          Werbe-ID (keine Ads-/Analytics-/Firebase-SDKs). tools:node="remove" wirft die
          Berechtigung raus, egal welche transitive Abhaengigkeit sie einschleust, damit

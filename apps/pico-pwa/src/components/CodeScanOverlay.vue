@@ -316,6 +316,7 @@ onBeforeUnmount(() => {
           class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-base-300 text-base-content active:bg-base-content/20"
           type="button"
           aria-label="Scanner schließen"
+          data-back-close
           @click="emit('cancel')"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" class="h-6 w-6" aria-hidden="true">

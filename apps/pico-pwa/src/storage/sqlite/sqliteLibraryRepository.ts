@@ -39,7 +39,7 @@ export function createLibraryRepositoryOnClient(
     async saveProtocol(protocol) {
       const res = assertValidProtocolDraft(protocol)
       if (!res.valid) {
-        throw new Error(`Speichern abgelehnt — ungültiges Protokoll: ${res.errors.join('; ')}`)
+        throw new Error(`Speichern abgelehnt — ungültige Vorlage: ${res.errors.join('; ')}`)
       }
       // created_at erhalten, falls der Datensatz bereits existiert.
       const existing = await client.query('SELECT created_at FROM library_protocols WHERE id = ?', [protocol.id])

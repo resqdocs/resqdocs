@@ -6,6 +6,9 @@ import { usePicoDevice } from '@/pico/usePicoDevice'
 import { useFirmwareUpdate } from '@/pico/useFirmwareUpdate'
 import { isValidSsidId } from '@/pico/picoClient'
 import { normalizeBridgeUrl } from '@/pico/bridgeUrl'
+import { useBridgeConnection } from '@/pico/useBridgeConnection'
+import { useBridgeWifi } from '@/pico/bridgeWifi'
+import BridgePasswordCopy from '@/components/BridgePasswordCopy.vue'
 
 /**
  * Bridge. Bindet die gekapselte
@@ -77,6 +80,27 @@ async function openWifiSettings(): Promise<void> {
   }
 }
 
+// „Mit Bridge-WLAN verbinden“ wie im Einsatz (BridgeConnectDialog): das Handy tritt dem WLAN direkt bei.
+// Hält die App das WLAN, steht hier „Bridge-WLAN trennen“. Auf Android ist das der Weg zurück ins Internet:
+// Solange die App das Bridge-WLAN hält, läuft ihr ganzer Netzverkehr darüber (siehe bridgeWifi.ts).
+const { reachable: bridgeReachable } = useBridgeConnection()
+const { supported: wifiSupported, held: wifiHeld, joining: wifiJoining, joinBridgeWifi, leaveBridgeWifi } = useBridgeWifi()
+const wifiMsg = ref<string | null>(null)
+const showLeave = computed(() => wifiHeld.value && (platform === 'android' || bridgeReachable.value === true))
+// Hinweis auf beiden Plattformen, sobald die Verbindung zur Bridge steht: Das Bridge-WLAN hat kein Internet.
+const showNoInternet = computed(() => showLeave.value || bridgeReachable.value === true)
+async function onJoinWifi(): Promise<void> {
+  wifiMsg.value = null
+  const r = await joinBridgeWifi()
+  wifiMsg.value = r.status === 'connected' ? 'Verbunden.' : r.status === 'cancelled' ? 'Nicht verbunden.' : r.status === 'error' ? r.message : null
+  await checkHealth()
+}
+async function onLeaveWifi(): Promise<void> {
+  wifiMsg.value = null
+  await leaveBridgeWifi()
+  await checkHealth()
+}
+
 async function onSetSsid(): Promise<void> {
   ssidMsg.value = null
   const id = ssidDraft.value.trim()
@@ -110,20 +134,44 @@ async function onSetSsid(): Promise<void> {
            die app-weite user-select:none-Sperre für diese Werte auf (kopierbar). -->
       <div class="rounded-lg bg-base-200 p-3 text-sm">
         <p class="mb-1 font-medium">Handy mit dem Bridge-WLAN verbinden</p>
-        <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+        <dl class="grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-0.5">
           <dt class="text-base-content/75">WLAN</dt>
           <dd><code class="select-text font-mono">ResQDocs-&lt;ID&gt;</code></dd>
           <dt class="text-base-content/75">Passwort</dt>
-          <dd><code class="select-text font-mono">resqdocs2026</code></dd>
+          <dd><BridgePasswordCopy /></dd>
           <dt class="text-base-content/75">Adresse</dt>
           <dd><code class="select-text font-mono">http://10.10.10.1</code></dd>
         </dl>
-        <button
-          v-if="platform === 'android'"
-          class="btn btn-outline btn-sm mt-2 min-h-11"
-          type="button"
-          @click="openWifiSettings"
-        >WLAN-Einstellungen öffnen</button>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button
+            v-if="wifiSupported === true && showLeave"
+            class="btn btn-outline btn-sm min-h-11"
+            type="button"
+            data-bridge-leave
+            @click="onLeaveWifi"
+          >Bridge-WLAN trennen</button>
+          <button
+            v-else-if="wifiSupported === true"
+            class="btn btn-primary btn-sm min-h-11"
+            type="button"
+            :disabled="wifiJoining"
+            data-bridge-join
+            @click="onJoinWifi"
+          >
+            <span v-if="wifiJoining" class="loading loading-spinner loading-sm"></span>
+            Mit Bridge-WLAN verbinden
+          </button>
+          <button
+            v-if="platform === 'android'"
+            class="btn btn-outline btn-sm min-h-11"
+            type="button"
+            @click="openWifiSettings"
+          >WLAN-Einstellungen öffnen</button>
+        </div>
+        <p v-if="wifiMsg" class="mt-1 text-xs" role="status" aria-live="polite">{{ wifiMsg }}</p>
+        <p v-if="showNoInternet" class="mt-1 text-xs text-base-content/75" data-bridge-held-note>
+          Solange die App mit dem Bridge-WLAN verbunden ist, hat sie kein Internet.
+        </p>
         <p class="mt-1 text-xs text-base-content/75">
           Das Passwort ist für alle Bridges gleich und bewusst öffentlich — die Bridge tippt nur
           Text und speichert nichts.
@@ -221,8 +269,9 @@ async function onSetSsid(): Promise<void> {
           aria-label="Testtext"
         />
       </label>
-      <div class="flex items-center gap-2">
-        <select v-model="os" class="select select-bordered select-sm w-32 min-h-11" aria-label="Zielgerät">
+      <!-- Auswahl am Handy in voller Breite (eigene Zeile): „Windows DE (z. B. NIDA)“ wurde sonst abgeschnitten. -->
+      <div class="flex flex-wrap items-center gap-2">
+        <select v-model="os" class="select select-bordered select-sm min-h-11 w-full sm:w-auto" aria-label="Zielgerät">
           <option value="win_de">Windows DE (z. B. NIDA)</option>
           <option value="mac_de">macOS</option>
           <option value="ios">iPad (ios)</option>

@@ -27,6 +27,8 @@ Direkte Runtime-Abhängigkeiten (`apps/pico-pwa/package.json`):
 | @capacitor/ios | 8.x | MIT | Copyright (c) 2017-present Drifty Co. | <https://github.com/ionic-team/capacitor> |
 | @capacitor/android | 8.x | MIT | Copyright (c) 2017-present Drifty Co. | <https://github.com/ionic-team/capacitor> |
 | @capacitor/filesystem | 8.x | MIT | Copyright (c) 2025 Ionic | <https://github.com/ionic-team/capacitor-plugins> |
+| @capacitor/haptics | 8.0.x | MIT | Copyright 2020-present Ionic | <https://github.com/ionic-team/capacitor-haptics> |
+| @capacitor/keyboard | 8.0.x | MIT | Copyright 2020-present Ionic | <https://github.com/ionic-team/capacitor-keyboard> |
 | @capacitor/preferences | 8.x | MIT | Copyright 2020-present Ionic | <https://github.com/ionic-team/capacitor-plugins> |
 | @capacitor/share | 8.x | MIT | Copyright 2020-present Ionic | <https://github.com/ionic-team/capacitor-plugins> |
 | @capacitor/camera | 8.2.x | MIT | Copyright 2020-present Ionic | <https://github.com/ionic-team/capacitor-plugins> |

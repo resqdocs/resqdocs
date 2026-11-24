@@ -14,6 +14,7 @@ import { useTransferShare } from '@resqdocs/protocol-core-ui/useTransferShare'
 import { shouldCloseCard, tapIsPending } from '@resqdocs/protocol-core-ui/cardFocusGuard'
 import type { TransferTtl } from '@resqdocs/protocol-core/transferClient'
 import QrCode from '@/components/QrCode.vue'
+import { scrollIntoViewSoon } from '@/shell/tabScroll'
 import ShortLinkToggle from '@resqdocs/protocol-core-ui/components/ShortLinkToggle.vue'
 import { useShortLink } from '@resqdocs/protocol-core-ui/useShortLink'
 
@@ -90,41 +91,6 @@ function setEditCard(el: unknown): void {
 function setSharePanel(el: unknown): void {
   if (el) sharePanelEl.value = el as HTMLElement
   else if (!el) sharePanelEl.value = null
-}
-
-/** Ein frisch aufgeklapptes Element ins Bild holen. „nearest" scrollt nur, wenn noetig, und reisst die
- *  Liste nicht unnoetig herum; den Abstand zu Dock und Header liefert das scroll-margin am Element
- *  selbst (siehe Template) - scrollIntoView kennt weder die feste Dock-Leiste noch den sticky Header
- *  und schiebt sonst bis buendig an den Viewport-Rand, also HINTER das Dock.
- *
- *  Auf iOS verkleinert die Tastatur den sichtbaren Bereich (visualViewport), waehrend das Layout gleich
- *  bleibt - scrollIntoView rechnet aber mit dem Layout-Viewport. Deshalb einmal nachziehen, sobald sich
- *  der sichtbare Bereich nach dem Aufklappen aendert. Einmalig und zeitlich begrenzt, damit spaeteres
- *  eigenes Scrollen des Nutzers nicht ueberschrieben wird.
- *
- *  Instanceof-Pruefung bewusst streng: bei einer String-Ref in einem v-for liefert Vue ein ARRAY, und
- *  der Aufruf schlug dann still im requestAnimationFrame fehl (bekanntes Scroll-Problem). */
-function scrollIntoViewSoon(el: unknown): void {
-  if (!(el instanceof HTMLElement)) return
-  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-  const doScroll = (): void => el.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
-  requestAnimationFrame(() => requestAnimationFrame(doScroll))
-
-  // Nachziehen, wenn die Tastatur den sichtbaren Bereich verkleinert (einmalig, max. 1 s Fenster).
-  const vv = window.visualViewport
-  if (!vv) return
-  let done = false
-  const once = (): void => {
-    if (done) return
-    done = true
-    vv.removeEventListener('resize', once)
-    requestAnimationFrame(doScroll)
-  }
-  vv.addEventListener('resize', once)
-  window.setTimeout(() => {
-    done = true
-    vv.removeEventListener('resize', once)
-  }, 1000)
 }
 
 // Pre-Kill-Flush + Speichern OHNE Schliessen (Muster EinsatzView.vue:157-167).
@@ -224,6 +190,7 @@ function confirmDelete(): void {
 
 // --- Export/Import als Datei/JSON (eigenes resqdocs-snippet-Schema; Muster wie BlockLibrarySection) ---
 const importOpen = ref(false)
+const importFile = ref<HTMLInputElement | null>(null)
 const importText = ref('')
 const ioMsg = ref<{ kind: 'ok' | 'err'; text: string } | null>(null)
 
@@ -341,10 +308,13 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
       <!-- Import: Snippet-JSON einfügen oder Datei wählen (eigenes resqdocs-snippet-Schema, getrennt von Blöcken/Vorlagen) -->
       <div v-if="importOpen" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
         <span class="text-xs font-semibold text-base-content/75">JSON einfügen oder Datei wählen</span>
-        <textarea v-model="importText" rows="4" class="textarea textarea-bordered w-full text-xs" placeholder='{"schema":"resqdocs-snippet","version":1,"snippet":{ … }}' aria-label="JSON"></textarea>
+        <textarea v-model="importText" rows="4" class="textarea textarea-bordered w-full text-xs" placeholder="Inhalt der Datei eines Textbausteins hier einfügen" aria-label="Inhalt einfügen"></textarea>
         <div class="flex flex-wrap items-center gap-2">
           <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="!importText.trim()" @click="doImport(importText)">Laden</button>
-          <input type="file" accept="application/json,.json" class="file-input file-input-sm min-h-11" aria-label="Datei wählen" @change="onImportFile" />
+          <!-- Datei: ein Knopf öffnet die Dateiauswahl des Systems, wie bei den Vorlagen (kein Datei-Feld im
+               Browser-Stil). Das Feld selbst ist unsichtbar, aber nicht display:none (iOS öffnet es sonst nicht). -->
+          <button class="btn btn-sm min-h-11" type="button" data-import-file @click="importFile?.click()">Datei auswählen…</button>
+          <input ref="importFile" type="file" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true" @change="onImportFile" />
         </div>
         <p class="text-xs text-base-content/75">Wird als neuer Textbaustein importiert.</p>
       </div>
@@ -373,7 +343,7 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
         <!-- EDIT: Karte (Ring + Titel + Text + Fertig) -->
         <div
           v-else
-          class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20 [scroll-margin-block-end:max(calc(6rem+env(safe-area-inset-bottom)),calc(var(--kb-inset,0px)+1rem))] [scroll-margin-block-start:4.5rem]"
+          class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20 [scroll-margin-block-end:1rem] [scroll-margin-block-start:1rem]"
           :ref="setEditCard"
           @focusout="onFocusOut" @pointerdown="onCardTap" @mousedown="onCardTap"
           @keydown.esc="closeEdit"
@@ -417,7 +387,7 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
             <button type="button" class="btn btn-primary btn-sm min-h-11" @click="closeEdit">Fertig</button>
           </div>
           <!-- Als-Link-teilen-Panel (verschlüsselter Kurzzeit-Transfer wie bei Vorlagen/Blöcken) -->
-          <div v-if="shareOpenId === s.id" :ref="setSharePanel" class="flex flex-col gap-2 rounded-lg border border-base-300 bg-base-100 p-2 [scroll-margin-block-end:calc(6rem+env(safe-area-inset-bottom))] [scroll-margin-block-start:4.5rem]">
+          <div v-if="shareOpenId === s.id" :ref="setSharePanel" class="flex flex-col gap-2 rounded-lg border border-base-300 bg-base-100 p-2 [scroll-margin-block-end:1rem] [scroll-margin-block-start:1rem]">
             <div class="flex flex-wrap items-center gap-2">
               <label class="text-xs font-semibold text-base-content/75">Gültigkeit</label>
               <select v-model="shareTtl" class="select select-xs" aria-label="Gültigkeit des Transfer-Links">

@@ -1,20 +1,24 @@
 /* Tailwind CSS v4 + daisyUI 5 — CSS-first config (no tailwind.config.js). */
 @import "tailwindcss";
-/* Fenster und Knopfzeilen über der Bildschirmtastatur (gemeinsam für App und Online-Editor). */
+/* Fenster und Knopfzeilen über der Bildschirmtastatur (gemeinsam für App und Online-Editor). Die Regeln für den
+   sichtbaren Bereich von iOS-Safari (keyboardViewport.css) braucht nur der Online-Editor: in der App verkleinert
+   die Tastatur das Layout (@capacitor/keyboard). */
 @import "../../../packages/protocol-core-ui/keyboard.css";
 /* Die geteilten Editor-Komponenten liegen im Paket @resqdocs/protocol-core-ui (ausserhalb dieses
    Projektordners). Tailwind scannt Projekt-eigene Dateien automatisch, aber NICHT das Paket -> ohne
    diese Quelle fehlen dessen Utility-Klassen (z. B. das absolute ＋-Menue w-44/right-0) im CSS. */
 @source "../../../packages/protocol-core-ui";
 @plugin "daisyui" {
-  themes: light --default, dark --prefersdark;
+  themes: false;
 }
 
-/* Theme-Familie "ResQDocs": Logofarben, WCAG-geprueft (design/colors.md).
+/* Design "ResQDocs": Logofarben, WCAG-geprueft (design/colors.md).
    Zurueckhaltend gem. Serioes-Direktive: Koralle nur als Akzent.
-   "Klassisch" = eingebaute light/dark-Themes (unveraendert). */
+   Das einzige Design der App: die eingebauten daisyUI-Themen (frueher "Klassisch") sind abgeschaltet.
+   default/prefersdark: gilt schon, bevor die App das Thema per data-theme setzt (kein Farbsprung beim Start). */
 @plugin "daisyui/theme" {
   name: "resqdocs";
+  default: true;
   color-scheme: light;
   --color-base-100: #ffffff;
   --color-base-200: #f7f8fb;
@@ -48,6 +52,7 @@
 
 @plugin "daisyui/theme" {
   name: "resqdocs-dark";
+  prefersdark: true;
   color-scheme: dark;
   --color-base-100: #141b30;
   --color-base-200: #1a2340;
@@ -125,14 +130,41 @@
   z-index: 4;
 }
 
-/* Mobile-first base: full-height app, comfortable touch defaults. */
+/* Mobile-first base: full-height app, comfortable touch defaults.
+   App-Hülle (App.vue): das Dokument scrollt nie und federt nicht; gescrollt wird nur im Bereich des aktiven Tabs.
+   Damit hängen Kopfzeile und Tab-Leiste nicht mehr an einem Seiten-Scroll, den das System beim Fokus in ein Feld
+   verschieben kann, und die Scrollsperre von daisyUI (:root, solange ein .modal offen ist) greift ins Leere. */
 html,
 body,
 #app {
   height: 100%;
 }
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 body {
   margin: 0;
+}
+/* Tab-Wechsel: Der Bereich des neu gewählten Tabs blendet kurz ein (nur Deckkraft, kein Schieben). Die Bereiche
+   bleiben per v-show eingehängt; die Animation beginnt von selbst, sobald ein Bereich wieder sichtbar wird, und läuft
+   nicht erneut, wenn derselbe Tab noch einmal getippt wird. Sie hält nichts fest (kein fill-mode): danach gilt wieder
+   die normale Darstellung, Scrollposition und Tab-Leiste sind nicht beteiligt. Ohne „Bewegung reduzieren“. */
+@keyframes rd-tab-in {
+  from { opacity: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-tab-scroll] {
+    animation: rd-tab-in 150ms ease-out;
+  }
+}
+/* Fenster und Blätter: Wischen am Ende ihres Inhalts läuft nicht auf den Tab darunter über. */
+.modal,
+.modal-box,
+.overlay-backdrop,
+.overlay-surface {
+  overscroll-behavior: contain;
 }
 
 /* App-Gefuehl statt Webseite (iOS/WKWebView):
@@ -193,7 +225,7 @@ textarea,
 }
 
 /* Kopfzeilen-Marke: helle Variante (Navy hell) auf dunklen Themes, sonst Navy.
-   Deckt alle Theme-Faelle ab (classic/resqdocs x hell/dunkel/system). */
+   Deckt hell, dunkel und System ab. */
 .brand-logo-dark { display: none; }
 [data-theme="dark"] .brand-logo-light,
 [data-theme="resqdocs-dark"] .brand-logo-light { display: none; }

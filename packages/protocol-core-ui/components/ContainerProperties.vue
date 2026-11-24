@@ -5,7 +5,8 @@
 import { computed, inject, ref, watch } from 'vue'
 import type { Condition, ConditionalDefault, Container, Field, Node, Heading, FunctionConfig } from '@resqdocs/protocol-core/model'
 import { DEFAULT_HEADING, DEFAULT_SEPARATOR } from '@resqdocs/protocol-core/model'
-import { FUNCTION_REGISTRY, FUNCTION_ROW_INLINE_SEPARATOR } from '@resqdocs/protocol-core/functions/registry'
+import TabRef from './TabRef.vue'
+import { FUNCTION_REGISTRY, FUNCTION_ROW_INLINE_SEPARATOR, LEGACY_ROW_INLINE_SEPARATOR } from '@resqdocs/protocol-core/functions/registry'
 import { findNode, findPath, suggestFreeId } from '@resqdocs/protocol-core/creator'
 import { sanitizeId } from '@resqdocs/protocol-core/ids'
 import { applyOptionEdit, planOptionEdit, type OptionDraft } from '@resqdocs/protocol-core/optionDraft'
@@ -299,7 +300,8 @@ function setDefaultYield(on: boolean): void {
 const idDraft = ref('')
 const idError = ref<string | null>(null)
 // „Als Baustein speichern": dezenter Erfolg/Fehler-Status; beim Knotenwechsel zurueckgesetzt (node-watch).
-const saveOutcome = ref<{ ok: boolean; msg: string } | null>(null)
+// ok: Titel des gespeicherten Abschnitts (Meldung nennt den Ort je nach App/Editor), sonst die Fehlermeldung.
+const saveOutcome = ref<{ ok: true; title: string } | { ok: false; msg: string } | null>(null)
 watch(
   node,
   (n) => {
@@ -332,7 +334,7 @@ async function saveAsBaustein(): Promise<void> {
   // Hat der Nutzer waehrend des (nativen, async) Speicherns den Knoten gewechselt, das Outcome NICHT
   // unter dem neuen Knoten anzeigen (der node-watch hat saveOutcome laengst zurueckgesetzt) - Verify.
   if (!node.value || node.value.id !== targetId) return
-  saveOutcome.value = r.ok ? { ok: true, msg: `„${r.title}“ unter Bausteine gespeichert.` } : { ok: false, msg: r.error }
+  saveOutcome.value = r.ok ? { ok: true, title: r.title } : { ok: false, msg: r.error }
 }
 </script>
 
@@ -543,7 +545,11 @@ async function saveAsBaustein(): Promise<void> {
           <button type="button" class="btn btn-outline btn-sm" @click="saveAsBaustein">Für andere Vorlagen speichern</button>
           <InfoTip :info="isOnlineEditor ? INFO.saveForOtherTemplatesEditor : INFO.saveForOtherTemplates" class="ml-1" />
         </div>
-        <p v-if="saveOutcome" class="text-xs" :class="saveOutcome.ok ? 'text-success' : 'text-error'">{{ saveOutcome.msg }}</p>
+        <p v-if="saveOutcome" class="text-xs" :class="saveOutcome.ok ? 'text-success' : 'text-error'" data-save-outcome>
+          <template v-if="!saveOutcome.ok">{{ saveOutcome.msg }}</template>
+          <template v-else-if="isOnlineEditor">„{{ saveOutcome.title }}“ unter „Gespeicherte Abschnitte“ gespeichert.</template>
+          <template v-else>„{{ saveOutcome.title }}“ unter <TabRef tab="bausteine" /> gespeichert.</template>
+        </p>
       </div>
         </div>
       </details>
@@ -660,9 +666,11 @@ async function saveAsBaustein(): Promise<void> {
             <!-- hintereinander -> freier Trenner -->
             <fieldset v-if="node.config?.rowLayout === 'inline'" class="fieldset">
               <legend class="fieldset-legend">Trenner zwischen Einträgen <InfoTip :info="INFO.rowSeparator" /></legend>
-              <input class="input w-full font-mono" :value="node.config?.rowSeparator ?? ''" placeholder="z. B.  ·  oder ;" @input="setConfig({ rowSeparator: ($event.target as HTMLInputElement).value || undefined })" />
+              <input class="input w-full font-mono" :value="node.config?.rowSeparator ?? ''" placeholder="z. B.  |  oder  / " @input="setConfig({ rowSeparator: ($event.target as HTMLInputElement).value || undefined })" />
               <!-- Wert aus der Konstante, die der Renderer nutzt - sonst laufen Text und Ausgabe wieder auseinander. -->
-              <p class="text-xs text-base-content/75">leer = Standard-Trenner „{{ FUNCTION_ROW_INLINE_SEPARATOR }}“ (Mittelpunkt)</p>
+              <p class="text-xs text-base-content/75">leer = Standard-Trenner „{{ FUNCTION_ROW_INLINE_SEPARATOR }}“ (Semikolon)</p>
+              <!-- Der frühere Standard: Der Renderer behandelt ihn wie „leer“ (rowSeparatorOf), das Feld zeigt ihn aber noch. -->
+              <p v-if="node.config?.rowSeparator === LEGACY_ROW_INLINE_SEPARATOR" class="text-xs text-base-content/75" data-legacy-separator>Der Mittelpunkt war früher der Standard, die Bridge kann ihn nicht tippen. Im Protokolltext steht dafür „{{ FUNCTION_ROW_INLINE_SEPARATOR }}“.</p>
             </fieldset>
             <!-- untereinander -> Praefix/Suffix je Zeile -->
             <template v-else>

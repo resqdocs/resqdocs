@@ -18,7 +18,10 @@ import { useFirmwareNotice } from './useFirmwareNotice'
 
 // Modul-State (Singleton) — über alle Composable-Aufrufe geteilt.
 const reachable = ref<boolean | null>(null) // null = noch nicht geprüft
-const checking = ref(false)
+const checking = ref(false) // irgendeine Prüfung läuft, auch die stille im Hintergrund
+// Eine ausdrücklich angeforderte Prüfung läuft (Tipp auf das Symbol, Verbinden, Nachsehen nach einem Sendefehler).
+// Nur sie zeigt die Kopfzeile als Lade-Kreis; die Hintergrundprüfung alle paar Sekunden bleibt unsichtbar.
+const requested = ref(false)
 let lastCheck = 0
 const MIN_INTERVAL_MS = 2000 // ohne force höchstens alle 2 s (Start + Tabwechsel bündeln)
 
@@ -42,9 +45,13 @@ export function useBridgeConnection() {
   async function check(force = false): Promise<boolean> {
     // Läuft schon eine Prüfung (z. B. Hintergrund-Poll), nutzt ein Tippen auf den Indikator deren
     // Ergebnis mit — der Zustand aktualisiert sich danach korrekt (kein zweiter paralleler Request).
-    if (checking.value) return reachable.value === true
+    if (checking.value) {
+      if (force) requested.value = true // die laufende Prüfung gilt ab jetzt als angefordert
+      return reachable.value === true
+    }
     if (!force && Date.now() - lastCheck < MIN_INTERVAL_MS) return reachable.value === true
     checking.value = true
+    requested.value = force
     try {
       const ok = await client.health()
       reachable.value = ok
@@ -54,6 +61,7 @@ export function useBridgeConnection() {
       return ok
     } finally {
       checking.value = false
+      requested.value = false
     }
   }
 
@@ -92,5 +100,5 @@ export function useBridgeConnection() {
     if (pollTimer) { clearTimeout(pollTimer); pollTimer = null }
   }
 
-  return { reachable, checking, check, markReachable, startPolling, stopPolling }
+  return { reachable, checking, requested, check, markReachable, startPolling, stopPolling }
 }

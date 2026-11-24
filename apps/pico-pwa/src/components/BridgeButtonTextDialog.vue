@@ -6,6 +6,9 @@ import { countChars } from '@/pico/typingProgress'
 import { checkStoredText, guardMessage, normalizeStoredText } from '@/pico/storedTextGuard'
 import { useButtonTextStatus } from '@/pico/useButtonTextStatus'
 import { buttonTextRequest, takeButtonTextRequest } from '@/pico/buttonTextEntry'
+import { normalizeForTyping } from '@resqdocs/protocol-core/typeable'
+import { typingMarker } from '@resqdocs/protocol-core-ui/untypeableNotice'
+import UntypeableHint from '@resqdocs/protocol-core-ui/components/UntypeableHint.vue'
 
 /**
  * Text fuer den Knopf an der Bridge: ein schlichtes Textfeld. Der Text liegt auf der Bridge und wird
@@ -33,10 +36,15 @@ const busy = ref(false)
 const msg = ref<{ kind: 'ok' | 'err' | 'hint'; text: string } | null>(null)
 
 const BUTTON_HINT = 'Knopf an der Bridge gedrückt halten und erneut tippen.'
-const chars = computed(() => countChars(text.value))
+// Der Text so, wie er auf die Bridge geht: gleichwertige Zeichen ersetzt (typografische Anführungszeichen,
+// Gedankenstriche …), Emojis und unsichtbare Zeichen entfernt - derselbe Weg wie beim Senden aus dem Einsatz.
+// Gezählt, geprüft und gespeichert wird dieser Text; im Feld bleibt stehen, was getippt wurde.
+const typed = computed(() => normalizeForTyping(text.value))
+const marker = computed(() => typingMarker(storage.settings.defaultOs))
+const chars = computed(() => countChars(typed.value))
 const tooLong = computed(() => chars.value > TYPE_CHUNK_LIMIT)
 // Dieselbe Pruefung wie auf der Bridge, schon beim Schreiben: der Knopf tippt nur Text, keine Befehle.
-const guard = computed(() => checkStoredText(normalizeStoredText(text.value)))
+const guard = computed(() => checkStoredText(typed.value))
 const guardText = computed(() => guardMessage(guard.value))
 /** Das Textfeld ist zu sehen - nur dann braucht das Blatt die volle Hoehe. */
 const editing = computed(() => support.value === 'ok' && loaded.value)
@@ -96,7 +104,7 @@ const load = (): Promise<void> =>
 const save = (): Promise<void> =>
   withButton(async () => {
     await client.storeText({
-      text: normalizeStoredText(text.value),
+      text: typed.value,
       os: storage.settings.defaultOs ?? 'win_de',
       delayMs: storage.settings.typingDelayMs,
       savedAt: Math.floor(Date.now() / 1000),
@@ -183,11 +191,13 @@ const remove = (): Promise<void> =>
             class="textarea textarea-bordered w-full flex-1 text-base"
             aria-label="Text, den die Bridge auf Knopfdruck tippt"
             placeholder="Text, den die Bridge auf Knopfdruck tippt …"
+            data-emoji-free
           ></textarea>
           <p class="text-xs" :class="tooLong ? 'text-error' : 'text-base-content/75'">
             {{ chars }} von höchstens {{ TYPE_CHUNK_LIMIT }} Zeichen. Getippt wird mit deiner Tastatur-Einstellung und
             Tippgeschwindigkeit von jetzt.
           </p>
+          <UntypeableHint :text="typed" :marker="marker" />
           <p v-if="guardText" class="text-sm text-error" role="alert">{{ guardText }}</p>
           <!-- Aus dem Einsatz: ausdrueckliche Bestaetigung, denn dort stehen sonst Patientendaten. -->
           <label v-if="fromCase" class="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-sm">

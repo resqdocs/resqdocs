@@ -50,7 +50,7 @@ function onQrDecoded(raw: string): void {
 <template>
   <div class="card border border-base-300 bg-base-100">
     <div class="card-body gap-2 p-4">
-      <h3 class="font-semibold">Empfangen — verschlüsselter Link + QR</h3>
+      <h3 class="font-semibold">Empfangen — verschlüsselter Link &amp; QR</h3>
       <p class="text-xs text-base-content/75">
         Code oder Link zu einem Textbaustein oder gespeicherten Abschnitt einfügen oder QR scannen — landet automatisch in der richtigen Liste.
       </p>
