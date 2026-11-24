@@ -34,35 +34,29 @@ const listEl = ref<HTMLUListElement | null>(null)
 const listMaxPx = ref<number | null>(null)
 const query = ref('')
 
-// Die Liste SCHWEBT bewusst und darf weder unter der Tab-Leiste (dock) noch unter der Tastatur
-// enden - sonst waeren die untersten Treffer nicht antippbar. Hoehe = Platz bis zur Oberkante von Dock bzw.
-// sichtbarem Bereich, begrenzt auf 3 Zeilen .. 16rem. Neu gemessen beim Oeffnen und bei jeder Groessen-/
-// Scroll-Aenderung (Tastatur faehrt ein/aus, Seite scrollt).
+// Die Liste SCHWEBT bewusst und darf weder unter der Tab-Leiste noch unter der Tastatur enden - sonst
+// waeren die untersten Treffer nicht antippbar. Hoehe = Platz bis zum unteren Rand des Tab-Bereichs (App-Hülle:
+// endet an der Tab-Leiste bzw. an der Tastatur, die das Layout verkleinert), begrenzt auf 3 Zeilen .. 16rem. Neu
+// gemessen beim Oeffnen und bei jeder Groessen-/Scroll-Aenderung (Tastatur faehrt ein/aus, Tab scrollt).
 const LIST_MIN_PX = 120
 const LIST_MAX_PX = 256
 const CUSTOM_ROW_PX = 48 // fester Eintrag unter der Liste (min-h-11 + Rand) - muss mit in den sichtbaren Bereich
 function fitToViewport(): void {
   const list = listEl.value
   if (!detailsEl.value?.open || !list) return
-  const vv = window.visualViewport
-  const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight
-  const dockTop = document.querySelector<HTMLElement>('.dock')?.getBoundingClientRect().top ?? viewBottom
-  const room = Math.min(viewBottom, dockTop) - 8 - (props.customLabel ? CUSTOM_ROW_PX : 0) - list.getBoundingClientRect().top
+  const viewBottom = window.innerHeight
+  const areaBottom = list.closest('[data-tab-scroll]')?.getBoundingClientRect().bottom ?? viewBottom
+  const room = Math.min(viewBottom, areaBottom) - 8 - (props.customLabel ? CUSTOM_ROW_PX : 0) - list.getBoundingClientRect().top
   listMaxPx.value = Math.round(Math.max(LIST_MIN_PX, Math.min(LIST_MAX_PX, room)))
 }
 let listening = false
 function watchViewport(on: boolean): void {
   if (on === listening) return
   listening = on
-  const vv = window.visualViewport
   if (on) {
-    vv?.addEventListener('resize', fitToViewport)
-    vv?.addEventListener('scroll', fitToViewport)
     window.addEventListener('resize', fitToViewport)
     window.addEventListener('scroll', fitToViewport, true)
   } else {
-    vv?.removeEventListener('resize', fitToViewport)
-    vv?.removeEventListener('scroll', fitToViewport)
     window.removeEventListener('resize', fitToViewport)
     window.removeEventListener('scroll', fitToViewport, true)
   }

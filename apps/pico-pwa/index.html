@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -7,7 +7,16 @@
          maximum-scale/user-scalable: App-UI ohne Pinch-/Fokus-Zoom (WKWebView respektiert das;
          der System-Zoom der Bedienungshilfen bleibt verfuegbar). -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-    <title>pico-pwa-base</title>
+    <title>ResQDocs</title>
+    <!-- Farbe der App schon vor dem ersten Skript (base-100 der Themen, wie das Startbild): Zwischen Startbild und
+         erstem Bild der App blitzt nichts Weißes auf, auch nicht im dunklen Systemthema. Gilt nur, bis die App ihr
+         Thema setzt (data-theme); danach bestimmen die Themen in style.css. -->
+    <style>
+      html:not([data-theme]) { background-color: #ffffff; }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme]) { background-color: #141b30; }
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>

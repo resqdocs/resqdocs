@@ -20,8 +20,9 @@ export interface AppSettings {
   privacyNoticeAccepted: boolean
   /** Basis-URL der lokalen Pico-Bridge (S2-Default 10.10.10.1). Keine Patientendaten/Secrets. */
   picoBaseUrl: string
-  /** Theme-Familie: 'classic' = bisherige daisyUI-Themes, 'resqdocs' = Logofarben. */
-  themeFamily: 'classic' | 'resqdocs'
+  /** Design der App. Derzeit gibt es nur „resqdocs“ (Logofarben); das frühere „classic“ wird beim Laden umgestellt.
+   *  Feld und Auswahl in den Einstellungen bleiben: Später sollen weitere Designs dazukommen. */
+  themeFamily: 'resqdocs'
   /** Gesehene/verstandene Erklär-Hinweise, ids. */
   dismissedHints: string[]
   /** Überschriftenmuster der Ausgabe: '{titel}'-Platzhalter. */
@@ -63,6 +64,11 @@ export interface AppSettings {
    * Default 60 (= bisheriger fester Firmware-Wert; ohne Zustimmung wird nichts schneller).
    */
   typingDelayMs: number
+  /**
+   * Haptik (Regler „Vibration“): an wie vielen Stellen die App eine Rückmeldung gibt. 0 = aus, 1 = wenig
+   * (nur Ergebnisse), 2 = normal, 3 = viel. Standard 2. Zuordnung der Stellen: shell/hapticsRules.ts.
+   */
+  hapticsLevel: number
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -84,6 +90,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   scannerDiagnostics: false,
   caseDraftTtlHours: 3,
   typingDelayMs: 45,
+  hapticsLevel: 2,
 }
 
 /** Neutraler, wiederverwendbarer Block (z. B. „Mitfahrtverweigerung"). KEINE Patientendaten. */

@@ -147,18 +147,25 @@ test('typeText() Multi-Chunk: kein Request über der Grenze, Reihenfolge erhalte
   assert.equal(r.typed, TYPE_CHUNK_LIMIT * 2 + 7)
 })
 
-test('typeText() zerreißt an der Chunk-Grenze keine Surrogate-Paare (Emoji/Umlaute)', async () => {
+test('typeText() zerreißt an der Chunk-Grenze keine Surrogate-Paare (Zeichen außerhalb der Grundebene/Umlaute)', async () => {
   const adapter = createCountingAdapter()
   const client = createPicoClient(adapter, BASE)
-  // 16383 ASCII + Emoji (Surrogate-Paar) direkt an der Grenze + Umlaut-Rest
-  const text = 'a'.repeat(TYPE_CHUNK_LIMIT - 1) + '😀' + 'äöü'
+  // 16383 ASCII + ein Zeichen aus zwei Code-Einheiten (Surrogate-Paar) direkt an der Grenze + Umlaut-Rest.
+  // Kein Emoji: Die entfernt typeText() vorher (siehe unten), sie kämen an der Grenze gar nicht an.
+  const text = 'a'.repeat(TYPE_CHUNK_LIMIT - 1) + '𝒳' + 'äöü'
   await client.typeText({ text, os: 'win_de' })
   assert.equal(adapter.calls.length, 2)
   const first = (adapter.calls[0].body as { text: string }).text
   const second = (adapter.calls[1].body as { text: string }).text
-  assert.ok(first.endsWith('😀'), 'Emoji muss vollständig im ersten Chunk bleiben')
+  assert.ok(first.endsWith('𝒳'), 'das Zeichen muss vollständig im ersten Chunk bleiben')
   assert.equal(second, 'äöü')
   assert.equal(first + second, text, 'kein Zeichenverlust an der Grenze')
+})
+
+test('typeText() schickt den Text in der getippten Form: gleichwertige Zeichen ersetzt, Emojis entfernt', async () => {
+  const adapter = createFakeHttpAdapter(() => ({ status: 200, data: { typed: 1 } }))
+  await createPicoClient(adapter, BASE).typeText({ text: '„Test“ – 1…2 😀 ç ©\r\nZeile', os: 'win_de' })
+  assert.deepEqual(adapter.calls[0].body, { text: '"Test" - 1...2 ç \nZeile', os: 'win_de' })
 })
 
 test('typeText() Fehler im 2. Chunk: wirft mit bereits getippter Menge, ohne Payload', async () => {
@@ -393,6 +400,16 @@ test('storeText(): Text nur im Body, mit Tastatur und Tippgeschwindigkeit; 403 �
       (e: unknown) => e instanceof TextNotAllowedError && e.reason === reason && !e.message.includes('geheim'),
     )
   }
+})
+
+test('storeText(): der Text geht in der getippten Form auf die Bridge, die Länge zählt danach', async () => {
+  const adapter = createFakeHttpAdapter(() => ({ status: 200, data: { ok: true, chars: 9 } }))
+  const client = createPicoClient(adapter, BASE)
+  await client.storeText({ text: '„RTW“ – ok… 👍', os: 'ios', delayMs: 45, savedAt: 1 })
+  assert.equal((adapter.calls[0].body as { text: string }).text, '"RTW" - ok... ')
+  // Aus einem Auslassungszeichen werden drei Punkte: Die Grenze gilt für den Text, der ankommt.
+  await assert.rejects(() => client.storeText({ text: '…'.repeat(TYPE_CHUNK_LIMIT / 2), os: 'ios', delayMs: 45, savedAt: 1 }), /zu lang/)
+  assert.equal(adapter.calls.length, 1)
 })
 
 test('storeText(): zu langer Text wird ohne Request abgelehnt; Fehler nennen den Text nicht', async () => {

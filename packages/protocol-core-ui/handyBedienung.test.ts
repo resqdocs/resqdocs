@@ -7,7 +7,7 @@ const read = (f: string): string => readFileSync(new URL(f, import.meta.url), 'u
 
 test('Vorlagen-Tab: Umschalter mit ↶/↷ passt in 360 px und läuft über die volle Breite', () => {
   const t = read('../../apps/pico-pwa/src/components/rebuild/EditorView.vue')
-  const zeile = t.match(/<div class="sticky top-\[calc\(env\(safe-area-inset-top,0px\)\+4rem\)\][^"]*"/)?.[0] ?? ''
+  const zeile = t.match(/<div class="sticky top-0 [^"]*"/)?.[0] ?? ''
   assert.match(zeile, /-mx-4/, 'Zeile nutzt die volle Breite')
   assert.match(zeile, /px-1/)
   // mit ! : auf Touch-Geräten setzt style.css für .btn-sm 1rem Innenabstand und 14 px (ohne Layer, schlägt Utilities)

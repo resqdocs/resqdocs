@@ -3,14 +3,15 @@
  * Ausfüll-Fenster eines Lückentexts. Oben der Text mit seinen Lücken, darunter groß die Abfrage der
  * gewählten Lücke; man tippt sich mit „Weiter" durch oder tippt eine Lücke direkt an.
  *
- * - Am Handy füllt das Fenster den Bildschirm. Seine Höhe folgt dem SICHTBAREN Bereich (visualViewport):
- *   iOS legt die Tastatur über die Seite, ohne das Layout zu verkleinern - ohne diese Anpassung lägen
- *   Abfrage und „Weiter" hinter der Tastatur.
+ * - Am Handy füllt das Fenster den Bildschirm und endet über der Tastatur, sonst lägen Abfrage und „Weiter"
+ *   hinter ihr. In der App verkleinert die Tastatur das Layout, das Fenster passt sich einmal an; im
+ *   Online-Editor folgt es dem sichtbaren Bereich von iOS-Safari (fullscreenKeyboard.ts).
  * - Abschluss („Fertig") steht im Kopf und ist nie verdeckt. Jede Antwort gilt sofort, es gibt kein
  *   Abbrechen und nichts zu verlieren.
  * - Beim Durchtippen kommt jede Lücke der Reihe nach dran, auch Auswahl-Lücken und solche mit Standardwert
  *   („Weiter“ übernimmt ihn). Antippen geht immer.
  */
+import { nodeLabel } from '../../nodeLabel'
 import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import { clozeGaps } from '@resqdocs/protocol-core/cloze'
@@ -19,7 +20,7 @@ import { findPath } from '@resqdocs/protocol-core/creator'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
 import { longTextSizeKey } from '../../injection.ts'
 import { LONG_TEXT_SIZES, LONG_TEXT_SIZE_DEFAULT, LONG_TEXT_SIZE_LABEL, LONG_TEXT_SIZE_PX, type LongTextSize } from '../../longTextSize.ts'
-import { keyboardCovers, visibleBox, type VisibleBox } from '../../visibleViewport.ts'
+import { useFullscreenKeyboard } from '../../fullscreenKeyboard.ts'
 import { useCaseValues } from '../../useCaseValues.ts'
 import { useDependencyHidden } from '../../useDependencies.ts'
 import RequiredMark from '../RequiredMark.vue'
@@ -49,7 +50,7 @@ const sourcePath = computed(() => {
   if (!gap || gap.own || !props.root) return ''
   return findPath(props.root, gap.id)
     .slice(1)
-    .map((n) => (n.title && n.title.trim()) || n.id)
+    .map((n) => nodeLabel(n))
     .join(' › ')
 })
 
@@ -96,70 +97,42 @@ const size = computed<LongTextSize>({
 })
 const GLYPH: Record<LongTextSize, string> = { sm: '0.8rem', md: '1rem', lg: '1.25rem' }
 
-// Sichtbarer Bereich: Höhe und Versatz des Fensters folgen ihm, solange es offen ist.
-const box = ref<VisibleBox | null>(null)
-const covered = ref(false)
-const closing = ref(false)
+// Höhe und Lage bei offener Tastatur (App: Layout-Höhe; Online-Editor: sichtbarer Bereich).
+const kb = useFullscreenKeyboard()
+const { covered, boxStyle, dialogStyle } = kb
 // Der Inhalt entsteht erst beim Öffnen: ein geschlossenes Fenster rechnet und rendert nichts mit.
 const active = ref(false)
-function measure(): void {
-  const vv = window.visualViewport
-  const layout = window.innerHeight
-  box.value = visibleBox(vv, layout)
-  covered.value = keyboardCovers(vv, layout)
-}
-function track(on: boolean): void {
-  const vv = window.visualViewport
-  if (!vv) return
-  for (const ev of ['resize', 'scroll'] as const) {
-    if (on) vv.addEventListener(ev, measure)
-    else vv.removeEventListener(ev, measure)
-  }
-}
-const boxStyle = computed(() =>
-  box.value
-    ? {
-        '--lt-h': `${box.value.height}px`,
-        transform: box.value.top ? `translateY(${box.value.top}px)` : undefined,
-        transitionProperty: closing.value ? 'opacity' : undefined,
-      }
-    : undefined,
-)
 
 /** Öffnen. Mit `startId` direkt an dieser Lücke, sonst an der ersten, die abzufragen ist. */
 async function open(startId?: string | null): Promise<void> {
   seen = new Set()
-  closing.value = false
   active.value = true
-  measure()
+  kb.prepare()
   await nextTick()
   dialog.value?.showModal()
-  track(true)
+  kb.follow()
   const first = askingAfter(-1)
   currentId.value = startId ?? (first >= 0 ? gaps.value[first].id : null)
 }
 /** Schließen: erst auf volle Höhe (nur ausblenden, nicht gegen die Tastatur fahren), dann zu. */
 async function close(): Promise<void> {
-  track(false)
-  closing.value = true
-  covered.value = false
-  box.value = { top: 0, height: window.innerHeight }
+  kb.release()
   await nextTick()
   dialog.value?.close()
 }
 function onClosed(): void {
-  track(false)
+  kb.stop()
   currentId.value = null
   active.value = false
   emit('close')
 }
-onBeforeUnmount(() => track(false))
+onBeforeUnmount(() => kb.stop())
 defineExpose({ open, close })
 </script>
 
 <template>
   <!-- Aufbau und Tastatur-Verhalten wie beim großen Textfeld (LongTextDialog). -->
-  <dialog ref="dialog" class="modal modal-top max-sm:bg-transparent sm:modal-middle" :style="covered ? { placeItems: 'start center' } : undefined" :aria-label="title" @close="onClosed">
+  <dialog ref="dialog" class="modal modal-top max-sm:bg-transparent sm:modal-middle" :style="dialogStyle" :aria-label="title" @close="onClosed">
     <div
       class="modal-box flex h-[var(--lt-h,100dvh)] max-h-none w-full max-w-none translate-none flex-col overflow-hidden rounded-none p-0 transition-[height,opacity,transform] duration-200 ease-out motion-reduce:transition-none sm:h-[min(85vh,var(--lt-h,100dvh))] sm:w-11/12 sm:max-w-2xl sm:rounded-box"
       :style="boxStyle"

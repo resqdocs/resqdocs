@@ -1,7 +1,9 @@
 // Bildschirmtastatur: iOS legt sie ÜBER die Seite und verkleinert nur den sichtbaren Bereich
 // (window.visualViewport), das Layout bleibt groß. Fenster, die sich am Layout ausrichten, enden dann
 // hinter der Tastatur. Hier wird der sichtbare Bereich einmal zentral gemessen und als CSS-Variablen am
-// <html>-Element bereitgestellt; `keyboard.css` richtet Fenster und Knopfzeilen danach aus.
+// <html>-Element bereitgestellt; `keyboard.css` und `keyboardViewport.css` richten Fenster und Knopfzeilen danach aus.
+// Nur der Online-Editor (Browser) misst so. Die App verkleinert mit @capacitor/keyboard das Layout und setzt die
+// Zustände selbst (apps/pico-pwa/src/shell/keyboard.ts).
 //   --vv-h      Höhe des sichtbaren Bereichs
 //   --vv-top    sein Abstand vom oberen Rand des Layouts (iOS schiebt die Seite beim Fokus hoch)
 //   --kb-inset  wie weit die Tastatur von unten ins Layout ragt

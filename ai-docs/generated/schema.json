@@ -456,7 +456,7 @@
         },
         "rowSeparator": {
           "type": "string",
-          "description": "Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> \" · \" (Mittelpunkt: hebt die Zeilengrenze vom Komma im Zeilenformat \"Name Staerke, Schema\" ab)."
+          "description": "Trenner zwischen Zeilen bei rowLayout='inline'. Frei waehlbar. Fehlt -> \"; \" (Semikolon: hebt die Zeilengrenze vom Komma im Zeilenformat \"Name Staerke, Schema\" ab und ist auf jeder Tastaturbelegung tippbar). Der fruehere Standard \" · \" (Mittelpunkt) gilt wie nicht gesetzt."
         },
         "rowPrefix": {
           "type": "string",

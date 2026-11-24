@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dunkles Systemthema: base-100 des Themas „resqdocs-dark“ (siehe values/colors.xml). -->
+    <color name="appChrome">#141B30</color>
+</resources>

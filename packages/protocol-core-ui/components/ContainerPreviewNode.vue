@@ -2,11 +2,10 @@
 /** Interaktive Editor-Vorschau (Struktur + Einklappen testen). Container einklappbar als <details>,
  *  sonst normaler Block; Feld = Blatt mit Standardwert-Vorschau. Der Titel dient hier der
  *  Orientierung - unabhaengig von showTitle (das wirkt nur in der Text-Ausgabe). */
+import { nodeLabel } from '../nodeLabel'
 import type { Node } from '@resqdocs/protocol-core/model'
 defineProps<{ node: Node }>()
-function label(n: Node): string {
-  return (n.title && n.title.trim()) || n.id
-}
+const label = (n: Node): string => nodeLabel(n)
 </script>
 
 <template>

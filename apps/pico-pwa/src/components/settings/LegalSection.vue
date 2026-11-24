@@ -52,12 +52,12 @@ import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
         <h4 class="mb-1 text-sm font-semibold">Datenschutz – das Wichtigste</h4>
         <div class="space-y-2 text-sm leading-relaxed text-base-content/90">
           <p>
-            <strong>Lokal:</strong> Vorlagen, Bausteine, Textbausteine und Einstellungen bleiben auf deinem
+            <strong>Lokal:</strong> Vorlagen, gespeicherte Abschnitte, Textbausteine und Einstellungen bleiben auf deinem
             Gerät. Kein Konto, keine Telemetrie, kein Tracking, keine Werbe-SDKs, keine Crash-Reporter.
           </p>
           <p>
             <strong>Einsatzeingaben:</strong> Was du im <TabRef tab="einsatz" /> einträgst, bleibt auf dem Gerät, geht nur über
-            die Bridge an dein Zielgerät und wird automatisch gelöscht – beim Abschließen oder nach der unter
+            die Bridge an dein Zielgerät und wird gelöscht – mit „Einsatz löschen“ oder automatisch nach der unter
             „Datenschutz &amp; lokale Daten“ gewählten Zeit ohne Bearbeitung. Nie an uns, nie in die
             Sicherungen der App oder in geteilte Links.
           </p>
@@ -79,7 +79,7 @@ import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
           <p class="text-xs text-base-content/75">
             Ausführliche Datenschutzerklärung (alle Verarbeitungen, Speicherdauer, Rechtsgrundlagen, deine
             Rechte, Aufsichtsbehörde):
-            <a class="link" href="https://resqdocs.app/datenschutz/" target="_blank" rel="noopener">resqdocs.app/datenschutz</a>.
+            <a draggable="false" class="link" href="https://resqdocs.app/datenschutz/" target="_blank" rel="noopener">resqdocs.app/datenschutz</a>.
             Lokale Daten kannst du jederzeit löschen (<TabRef tab="einstellungen" /> → „Datenschutz &amp; lokale Daten")
             oder durch Deinstallation. Stand: Oktober 2026
           </p>

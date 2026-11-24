@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { useStorage } from '@/storage/useStorage'
 import { useAppUpdateNotice } from '@/appUpdate/useAppUpdateNotice'
 import { speedFromDelay, delayFromSpeed, typingSpeedLabel, DELAY_MIN_MS, DELAY_MAX_MS, DELAY_STEP_MS } from '@/pico/typingSpeed'
+import { hapticsLevelLabel, normalizeHapticsLevel, HAPTICS_LEVEL_MIN, HAPTICS_LEVEL_MAX } from '@/shell/hapticsRules'
+import { previewHaptics } from '@/shell/haptics'
 
 /** App-Einstellungen (Zielgerät, Design, Erscheinung). Über die
  * gekapselte Storage-Schicht — kein Backend-Wissen.
@@ -30,6 +32,21 @@ const typingSpeed = computed({
     settings.typingDelayMs = delayFromSpeed(v)
   },
 })
+
+/**
+ * Regler „Vibration“: an wie vielen Stellen die App eine Rückmeldung gibt (0 Aus, 1 Wenig, 2 Normal, 3 Viel).
+ * Beim Loslassen wird gespeichert, und die neue Stufe ist einmal kurz zu spüren (außer bei „Aus“).
+ */
+const hapticsLevel = computed({
+  get: () => normalizeHapticsLevel(settings.hapticsLevel),
+  set: (v: number) => {
+    settings.hapticsLevel = normalizeHapticsLevel(v)
+  },
+})
+function onHapticsLevel(): void {
+  void saveSettings()
+  previewHaptics(settings.hapticsLevel)
+}
 </script>
 
 <template>
@@ -45,10 +62,10 @@ const typingSpeed = computed({
           <option value="ios">iPad (ios)</option>
         </select>
       </fieldset>
+      <!-- Design: derzeit nur ResQDocs. Das Feld bleibt, weil später weitere Designs dazukommen sollen. -->
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Design</legend>
-        <select v-model="settings.themeFamily" class="select select-sm w-full min-h-11" @change="saveSettings()">
-          <option value="classic">Klassisch</option>
+        <select v-model="settings.themeFamily" class="select select-sm w-full min-h-11" data-design-select @change="saveSettings()">
           <option value="resqdocs">ResQDocs</option>
         </select>
       </fieldset>
@@ -82,11 +99,38 @@ const typingSpeed = computed({
         </div>
       </fieldset>
 
-      <label class="flex cursor-pointer items-start gap-2 text-sm">
+      <!-- Haptik: gleiche Bauart wie die Tippgeschwindigkeit. Stufen statt Ein/Aus (hapticsRules.ts). -->
+      <fieldset class="fieldset">
+        <div class="flex items-center justify-between">
+          <legend class="fieldset-legend">Vibration</legend>
+          <span class="text-xs text-base-content/75" data-haptics-level-label>{{ hapticsLevelLabel(settings.hapticsLevel) }}</span>
+        </div>
+        <input
+          v-model.number="hapticsLevel"
+          type="range"
+          :min="HAPTICS_LEVEL_MIN"
+          :max="HAPTICS_LEVEL_MAX"
+          step="1"
+          class="range range-sm w-full"
+          aria-label="Vibration als Rückmeldung — weiter rechts an mehr Stellen"
+          :aria-valuetext="hapticsLevelLabel(settings.hapticsLevel)"
+          data-haptics-level
+          @change="onHapticsLevel"
+        />
+        <div class="mt-1 flex justify-between text-xs text-base-content/75">
+          <span>Aus</span>
+          <span>Viel</span>
+        </div>
+      </fieldset>
+
+      <!-- Ein/Aus ist ein Schalter (wie in Sicherung und in den Funktionsfenstern), kein Kästchen. Die ganze Zeile
+           ist die Trefferfläche (mindestens 44 px). -->
+      <label class="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
         <input
           type="checkbox"
-          class="checkbox checkbox-sm mt-0.5"
+          class="toggle toggle-primary shrink-0"
           :checked="settings.appUpdateCheck"
+          data-app-update-switch
           @change="onAppUpdateCheck"
         />
         <span>

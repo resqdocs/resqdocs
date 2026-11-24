@@ -11,6 +11,7 @@ import { fillValue, defaultFill, functionStatus } from './fill.ts'
 import { FUNCTION_REGISTRY } from './functions/registry.ts'
 import { clozeOf, clozeLeftovers, joinCloze } from './cloze.ts'
 import type { Cloze } from './model.ts'
+import { normalizeForTyping } from './typeable.ts'
 
 type Values = Record<string, FieldFill>
 
@@ -53,8 +54,10 @@ function elsewhere(ctx: Ctx, values: Values, id: string): Field | FunctionNode |
  *  - inclusive: width = Gesamtbreite inkl. Titel -> Zeile konstant breit.
  *  - exclusive: width = feste Anzahl Fuellzeichen nach dem Titel -> Gesamtbreite variiert. */
 export function renderHeading(title: string, heading: Heading = DEFAULT_HEADING): string {
-  const head = `${heading.prefix}${title}${heading.suffix}`
-  const fill = heading.fill ? heading.fill[0] : ''
+  // Schon hier in der getippten Form: Die Breite der Zeile zählt die Zeichen, die am Zielgerät ankommen
+  // (aus einem Auslassungszeichen werden drei Punkte, ein Emoji entfällt).
+  const head = normalizeForTyping(`${heading.prefix}${title}${heading.suffix}`)
+  const fill = heading.fill ? normalizeForTyping(heading.fill)[0] ?? '' : ''
   if (!fill || heading.width <= 0) return head
   if (heading.fillMode === 'exclusive') return head + fill.repeat(heading.width)
   return head + fill.repeat(Math.max(0, heading.width - head.length))
@@ -84,8 +87,10 @@ function isBannerNode(node: Node): boolean {
  *    Zeile, Wert in der naechsten Zeile.  - sonst inline: prefix+title+suffix+value.
  *  null = excluded ODER leer -> der Eltern-Join laesst es weg. */
 function renderFieldR(field: Field, values: Values): Rendered | null {
-  const value = fillValue(field, values[field.id])
-  if (value === null) return null // excluded
+  const raw = fillValue(field, values[field.id])
+  if (raw === null) return null // excluded
+  // In der getippten Form: Ein Wert, der nur aus Emojis oder unsichtbaren Zeichen besteht, ist leer.
+  const value = normalizeForTyping(raw)
   let text: string
   if (field.title && field.showTitle) {
     const h = field.heading ?? DEFAULT_HEADING
@@ -133,8 +138,9 @@ export function gapText(node: Field | FunctionNode, fill: FieldFill | undefined)
 }
 
 function renderFunctionR(node: FunctionNode, values: Values): Rendered | null {
-  const effectiveBody = functionBody(node, values[node.id])
-  if (effectiveBody === null) return null
+  const rawBody = functionBody(node, values[node.id])
+  if (rawBody === null) return null
+  const effectiveBody = normalizeForTyping(rawBody)
   let text: string | null
   if (node.title && node.showTitle) {
     // Mit Titel zeigt sich die Ueberschrift auch ohne Daten (Editor-Vorschau); titleInline = Titel inline.
@@ -189,7 +195,7 @@ function renderClozeR(container: Container, cloze: Cloze, values: Values, sep: s
     cloze.parts.map((part) => {
       if (typeof part === 'string') return { text: part }
       const node = own.get(part.gap) ?? elsewhere(ctx, values, part.gap)
-      return { gap: node ? gapText(node, values[node.id]) : '' }
+      return { gap: node ? normalizeForTyping(gapText(node, values[node.id])) : '' }
     }),
   )
   const rest = joinNodesR(clozeLeftovers(container, cloze), values, sep, ctx)
@@ -239,6 +245,12 @@ function renderNodeR(node: Node, values: Values, sep: string, ctx: Ctx): Rendere
 }
 
 // --- Oeffentliche String-API (unveraendert fuer App + Tests) ---
+//
+// Der Text kommt hier so heraus, wie die Bridge ihn tippt (normalizeForTyping in typeable.ts): gleichwertige
+// Zeichen ersetzt, Emojis und unsichtbare Zeichen entfernt. Das geschieht an dieser einen Stelle und nicht
+// erst bei der Übergabe an die Bridge, damit die Vorschau in App und Online-Editor genau den Text zeigt, der
+// am Zielgerät ankommt, und Zeichenzahl, Fortschritt und der Text für den Knopf an der Bridge denselben Text
+// meinen. Vorlagen und Eingaben bleiben unverändert gespeichert; ersetzt wird nur in der Ausgabe.
 
 // `root` = die ganze Vorlage. Nur nötig, wenn ein TEIL gerendert wird und ein Lückentext darin Werte von
 // anderer Stelle der Vorlage übernimmt; ohne Angabe wird nur im übergebenen Teil gesucht.
@@ -248,7 +260,7 @@ export function renderContainer(
   inheritedSep: string = DEFAULT_SEPARATOR,
   root: Container | null = container,
 ): string {
-  return renderContainerR(container, values, inheritedSep, { root })?.text ?? ''
+  return normalizeForTyping(renderContainerR(container, values, inheritedSep, { root })?.text ?? '')
 }
 
 export function renderNode(
@@ -257,7 +269,8 @@ export function renderNode(
   sep: string = DEFAULT_SEPARATOR,
   root: Container | null = node.type === 'container' ? node : null,
 ): string | null {
-  return renderNodeR(node, values, sep, { root })?.text ?? null
+  const text = renderNodeR(node, values, sep, { root })?.text
+  return text == null ? null : normalizeForTyping(text)
 }
 
 /** Wurzel-Container + Einsatz-Werte -> Klartext. */

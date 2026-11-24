@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Farbe hinter den Systemleisten (Statusleiste oben, Gestenleiste unten): wie Kopfzeile und Tab-Leiste der
+         App (base-100 des Themas „resqdocs“). Sichtbar, wenn Android einen Rand um die WebView legt (ältere
+         System-WebView). Weicht das in der App gewählte Thema ab, setzt AppChromePlugin die Farbe zur Laufzeit. -->
+    <color name="appChrome">#FFFFFF</color>
+</resources>

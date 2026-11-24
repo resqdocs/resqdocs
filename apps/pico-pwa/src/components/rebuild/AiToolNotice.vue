@@ -4,7 +4,8 @@
  * KI-Tool (ai.resqdocs.app) — der eigene KI-Assistent fragt alles ab und liefert fertiges
  * Import-JSON; von Hand im Baum bauen bleibt möglich, ist aber der mühsamere Weg.
  *
- * Einmalig wegklickbar (Preferences-Flag, Muster useUsageNotice — nur ein Flag, keine Daten).
+ * Nur solange keine Vorlage Inhalt hat (aiToolHint.ts) und einmalig wegklickbar (Preferences-Flag, nur ein Flag,
+ * keine Daten).
  * Externer Link = bewusste Nutzeraktion (Netzwerk-Policy-konform, wie InfoHelpSection).
  *
  * Der Link oeffnet bewusst den NATIVEN System-Browser: Capacitor-Default fuer externe
@@ -13,24 +14,29 @@
  * umstellen: das oeffnet trotz des Namens IN-APP (SFSafariViewController/Custom Tabs).
  */
 import { onMounted, ref, computed } from 'vue'
+import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { preferencesAdapter } from '@/storage/preferencesAdapter'
 import { useAppVersion } from '@/composables/useAppVersion'
+import { ohneEigeneVorlage } from './aiToolHint'
 
 const KEY = 'editor.aiToolNoticeDismissed'
-const visible = ref(false)
+// Nicht weggeklickt UND noch keine Vorlage mit Inhalt (die leere Start-Vorlage zählt nicht).
+const notDismissed = ref(false)
+const { protocols } = useProtocolTree()
+const visible = computed(() => notDismissed.value && ohneEigeneVorlage(protocols.value))
 // ?v=<echte App-Version> mitgeben -> die KI-Seite stempelt sie in den Prompt (Versions-Check ohne Rueckfrage).
 const { version } = useAppVersion()
 const aiUrl = computed(() => `https://ai.resqdocs.app?v=${encodeURIComponent(version.value)}`)
 
 onMounted(async () => {
   try {
-    visible.value = (await preferencesAdapter.get(KEY)) !== 'true'
+    notDismissed.value = (await preferencesAdapter.get(KEY)) !== 'true'
   } catch {
-    visible.value = true
+    notDismissed.value = true
   }
 })
 async function dismiss(): Promise<void> {
-  visible.value = false
+  notDismissed.value = false
   try {
     await preferencesAdapter.set(KEY, 'true')
   } catch {
@@ -48,11 +54,11 @@ async function dismiss(): Promise<void> {
     </span>
     <div class="flex min-w-0 flex-1 flex-col gap-2">
       <p class="text-sm">
-        <strong>Erste Vorlage?</strong> Wir empfehlen dringend das KI-Tool: Dein eigener KI-Assistent (ChatGPT, Claude, Gemini) fragt alles
-        Schritt für Schritt ab und liefert die fertige Vorlage zum Import — schneller als der Aufbau von Hand.
+        <strong>Erste Vorlage?</strong> Am schnellsten geht es mit dem KI-Tool: Dein eigener KI-Assistent (ChatGPT, Claude, Gemini) fragt
+        alles Schritt für Schritt ab und liefert die fertige Vorlage zum Import.
       </p>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <a :href="aiUrl" target="_blank" rel="noopener" class="btn btn-primary btn-sm min-h-11">KI-Tool öffnen</a>
+        <a draggable="false" :href="aiUrl" target="_blank" rel="noopener" class="btn btn-primary btn-sm min-h-11">KI-Tool öffnen</a>
         <span class="text-xs text-base-content/75">Import danach: „Aus Datei importieren…“ unter der Liste der Vorlagen</span>
       </div>
     </div>

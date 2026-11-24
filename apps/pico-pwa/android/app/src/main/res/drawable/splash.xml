@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Startbild vor Android 12 (Fensterhintergrund des Start-Themas, siehe values/styles.xml): die Farbe der App
+     (appChrome, hell und dunkel in values(-night)/colors.xml) und darauf mittig die Wort-Bild-Marke. Die Marke
+     wird nicht gestreckt (gravity center), das Bild stimmt also bei jedem Seitenverhältnis und im Querformat.
+     Die Marke liegt je Dichte als drawable(-night)-<dichte>/splash_logo.png vor; neu erzeugen mit
+     `node scripts/make-splash.mjs`. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android" android:opacity="opaque">
+    <item android:drawable="@color/appChrome" />
+    <item>
+        <bitmap android:gravity="center" android:src="@drawable/splash_logo" />
+    </item>
+</layer-list>

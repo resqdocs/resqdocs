@@ -7,10 +7,26 @@ import { DEFAULT_HEADING } from '../model.ts'
 import { packYears, packYearsShort, bmi, news2, lams, fast4d, zops, sgarbossa, egsys, EGSYS_DEFAULT_TEXT } from '../tools/scores.mjs'
 import { fast4dComplete, fast4dInput, type Fast4dCompleteRow } from '../tools/fast4dDefs.mjs'
 
-/** Inline-Default fuer FUNKTIONS-Zeilen: Mittelpunkt statt DEFAULT_SEPARATOR ", " - das Komma ist
+/** Inline-Default fuer FUNKTIONS-Zeilen: Semikolon statt DEFAULT_SEPARATOR ", " - das Komma ist
  *  seit dem Zeilenformat "Name Staerke, Schema" die Grenze INNERHALB einer Zeile; als
- *  Zeilen-Trenner waere es ambig (genau das ISMP-Fehlermuster, das das Format vermeidet). */
-export const FUNCTION_ROW_INLINE_SEPARATOR = ' · '
+ *  Zeilen-Trenner waere es ambig (genau das ISMP-Fehlermuster, das das Format vermeidet).
+ *  Das Semikolon ist die uebliche Trennung von Eintraegen, die selbst Kommas enthalten, und auf jeder
+ *  Tastaturbelegung tippbar. Frueher stand hier der Mittelpunkt " · "; ihn kann die Bridge nicht tippen
+ *  (am Zielgeraet kam [?] an, vom Maintainer am Geraet geprueft, 2026-11-24). */
+export const FUNCTION_ROW_INLINE_SEPARATOR = '; '
+
+/** Der fruehere Standard-Trenner. Vorlagen, die genau ihn ausdruecklich gespeichert haben (aus der Zeit, als
+ *  er Standard war, auch aus aelteren Beispielen der KI-Doku), meinen „Standard" und sollen nicht mit [?]
+ *  am Zielgeraet enden. */
+export const LEGACY_ROW_INLINE_SEPARATOR = ' · '
+
+/** Der Trenner, der fuer diese Konfiguration gilt. DIE EINE Stelle fuer Standard und frueheren Standard:
+ *  nicht gesetzt oder genau der fruehere Standard -> "; ". Jeder andere ausdruecklich gesetzte Trenner
+ *  bleibt, wie er ist (auch ein leerer oder ein Mittelpunkt ohne Leerzeichen). */
+export function rowSeparatorOf(config?: FunctionConfig): string {
+  const own = config?.rowSeparator
+  return own === undefined || own === LEGACY_ROW_INLINE_SEPARATOR ? FUNCTION_ROW_INLINE_SEPARATOR : own
+}
 
 export interface FunctionDef {
   /** Anzeige-Label (Editor-Knopf, Badge). */
@@ -69,7 +85,7 @@ function rowsOf(fill: FieldFill | undefined): FunctionRow[] {
 function layoutRows(texts: string[], config?: FunctionConfig): string {
   if (!texts.length) return ''
   if (config?.rowLayout === 'inline') {
-    return texts.join(config.rowSeparator ?? FUNCTION_ROW_INLINE_SEPARATOR)
+    return texts.join(rowSeparatorOf(config))
   }
   const pre = config?.rowPrefix ?? ''
   const suf = config?.rowSuffix ?? ''

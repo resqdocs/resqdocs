@@ -67,7 +67,7 @@ const ownInput = ref<HTMLInputElement | null>(null)
 function startOwn(): void {
   if (ownText.value === null) caseValues.setCustom(id.value, individuellPrefill(props.node, fill.value, caseValues.getPrevValue(id.value)))
   writing.value = true
-  void nextTick(() => ownInput.value?.focus())
+  void nextTick(() => ownInput.value?.focus({ preventScroll: true }))
 }
 
 // Freitext-Lücke: der Standardwert steht zum Überschreiben im Feld.
@@ -90,7 +90,7 @@ const textInput = ref<HTMLInputElement | null>(null)
 /** Tastatur gleich öffnen, wenn die Lücke einzeiligen Freitext erwartet. */
 function focusText(): boolean {
   if (isSelect.value || props.node.multiline || !textInput.value) return false
-  textInput.value.focus()
+  textInput.value.focus({ preventScroll: true })
   return true
 }
 defineExpose({ focusText })

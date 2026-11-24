@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useStorage } from '@/storage/useStorage'
 import { useAppVersion } from '@/composables/useAppVersion'
 import { usePznLibrary } from '@/medications/usePznLibrary'
 import { PZN_DICTIONARY_ENABLED } from '@/medications/featureFlags'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
+import { bridgePageRequest } from '@/composables/useBridgePage'
 import AppSettingsSection from './AppSettingsSection.vue'
 import DeviceSection from './DeviceSection.vue'
 import VersionHistoryPage from './VersionHistoryPage.vue'
@@ -17,6 +18,8 @@ import BackupSection from './BackupSection.vue'
 import InfoHelpSection from './InfoHelpSection.vue'
 import LegalSection from './LegalSection.vue'
 import OpenSourceSection from './OpenSourceSection.vue'
+import { scrollTabToTop, tabScroller } from '@/shell/tabScroll'
+import { registerSubpage } from '@/shell/back'
 
 /**
  * Einstellungen-Tab. Strukturierte Shell: App-Einstellungen · Gerät/Pico
@@ -51,8 +54,25 @@ onMounted(() => {
 
 type Page = 'overview' | 'device' | 'pznLibrary' | 'versions'
 const page = ref<Page>('overview')
-watch(page, (p) => {
+// Eine Unterseite öffnet oben (Zurück-Knopf und Verbindungsstatus im Bild), „‹ Einstellungen“ führt an die Stelle
+// der Übersicht zurück, von der aus sie geöffnet wurde. Der Watcher läuft vor dem Umbau der Seite: die Position der
+// Übersicht ist dann noch die alte; gesetzt wird nach dem Umbau, noch vor dem nächsten Bild.
+let overviewTop = 0
+watch(page, (p, before) => {
   if (p === 'overview') void refreshPznCount()
+  const scroller = tabScroller('einstellungen')
+  if (!scroller) return
+  if (before === 'overview') overviewTop = scroller.scrollTop
+  const top = p === 'overview' ? overviewTop : 0
+  void nextTick(() => scroller.scrollTo({ top }))
+})
+// „Zurück“ (Android) auf einer Unterseite wirkt wie „‹ Einstellungen“.
+onBeforeUnmount(registerSubpage('einstellungen', () => page.value !== 'overview', () => { page.value = 'overview' }))
+// Aus dem Einsatz („Mit ResQDocs-Bridge verbinden“): direkt die Bridge-Seite.
+watch(bridgePageRequest, () => {
+  // Schon auf der Bridge-Seite (früher geöffnet, heruntergescrollt): der Seiten-Watcher läuft dann nicht.
+  if (page.value === 'device') scrollTabToTop('einstellungen', false)
+  page.value = 'device'
 })
 </script>
 

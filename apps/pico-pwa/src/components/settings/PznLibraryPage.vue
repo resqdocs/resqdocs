@@ -747,7 +747,7 @@ async function deleteAll(): Promise<void> {
               <input v-model="deleteConfirm" type="text" placeholder="LÖSCHEN"
                      class="input input-bordered input-xs w-40" aria-label="Zum Bestätigen LÖSCHEN eintippen"
                      @keyup.enter="deleteAll" />
-              <button class="btn btn-error btn-xs" type="button" :disabled="!canDelete" @click="deleteAll">
+              <button class="btn btn-error btn-xs" type="button" :disabled="!canDelete" data-haptic="confirmDelete" @click="deleteAll">
                 Endgültig löschen
               </button>
               <button class="btn btn-ghost btn-xs" type="button" @click="deleteOpen = false; deleteConfirm = ''">Abbrechen</button>

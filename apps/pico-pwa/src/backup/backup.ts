@@ -90,7 +90,7 @@ export function parseBackup(json: string): ParseBackupResult {
   }
   const s = p.sections
   if (!s || !Array.isArray(s.protocols) || !Array.isArray(s.blocks) || !Array.isArray(s.snippets)) {
-    return { ok: false, error: 'Sicherung unvollständig (Abschnitte fehlen).' }
+    return { ok: false, error: 'Sicherung unvollständig (gespeicherte Abschnitte fehlen).' }
   }
   return { ok: true, envelope: parsed as BackupEnvelope }
 }

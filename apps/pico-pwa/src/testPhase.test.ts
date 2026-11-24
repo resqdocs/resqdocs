@@ -38,8 +38,9 @@ test('Mit Testphase: Einführung aus, Testhinweis beim Start, Streifen oben', ()
   assert.match(screen, /Testanleitung öffnen/)
   assert.match(screen, /Lösche die App nicht/, 'Hinweis gegen Datenverlust')
   assert.match(screen, /!disclaimer\.needsAck\.value/, 'erst nach dem Haftungshinweis')
-  assert.match(screen, /!usage\.visible\.value/, 'erst nach dem Nutzungshinweis')
-  assert.match(screen, /!usage\.visible\.value/, 'erst nach dem Nutzungshinweis')
+  // Haftungs- und Nutzungshinweis sind seit dem Zusammenlegen EIN Dialog (useDisclaimer): darauf wartet der Testhinweis.
+  assert.match(screen, /disclaimer\.ready\.value && !disclaimer\.needsAck\.value/, 'erst nach dem Hinweis beim Start')
+  assert.doesNotMatch(screen, /useUsageNotice/, 'kein zweiter Hinweis mehr, auf den gewartet werden müsste')
 })
 
 test('Anleitung ist über das ? immer erreichbar: Link oben links auf jeder Seite der Einführung', () => {

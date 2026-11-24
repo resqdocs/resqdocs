@@ -5,9 +5,8 @@ import { fileURLToPath, URL } from 'node:url'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { hashWebSources } from '../../scripts/web-source-hash.mjs'
 
-// Build-Kennung: App-Version + Build-Zeitpunkt. Ändert sich mit JEDEM Build und
-// damit mit jedem App-Update — der Haftungsausschluss (useDisclaimer) erscheint
-// dadurch beim Erst-Start und nach jedem Update erneut.
+// Build-Kennung: App-Version + Build-Zeitpunkt. Ändert sich mit JEDEM Build (App-Version, Einführung).
+// Der Hinweis beim Start (useDisclaimer) hängt NICHT daran, sondern an seiner Textversion.
 const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf-8'))
 const APP_BUILD_ID = `${pkg.version}+${new Date().toISOString()}`
 

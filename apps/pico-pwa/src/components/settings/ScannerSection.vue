@@ -40,7 +40,7 @@ function onDiagnostics(e: Event): void {
           gelesen mit ZXing-C++). Kamerabilder werden weder gespeichert noch übertragen.
         </p>
         <label class="flex min-h-11 cursor-pointer items-center gap-3">
-          <input type="checkbox" class="checkbox checkbox-sm" :checked="storage.settings.scannerDiagnostics" @change="onDiagnostics" />
+          <input type="checkbox" class="toggle toggle-primary shrink-0" :checked="storage.settings.scannerDiagnostics" @change="onDiagnostics" />
           <span class="text-sm">Technische Angaben im Scanner anzeigen (Kamera, Auflösung, Zoom, Versuche)</span>
         </label>
       </template>

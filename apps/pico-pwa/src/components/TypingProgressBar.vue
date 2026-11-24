@@ -17,7 +17,7 @@ const title = computed(() => {
     case 'paused': return 'Tippen angehalten'
     case 'done': return s.value.source === 'live' ? 'Fertig getippt' : 'Sollte jetzt fertig getippt sein'
     case 'cancelled': return 'Tippen abgebrochen'
-    default: return 'Protokoll wird getippt'
+    default: return 'Protokolltext wird getippt'
   }
 })
 
@@ -52,10 +52,11 @@ const barClass = computed(() => {
 </script>
 
 <template>
-  <!-- Ueber der Tab-Leiste (dock, 4rem + Safe-Area). z-20: ueber Seiteninhalt und Leiste, unter den Dialogen. -->
+  <!-- Teil der App-Hülle, direkt über der Tab-Leiste: der Tab-Bereich wird um die Anzeige kürzer, nichts liegt
+       verdeckt darunter. -->
   <div
     v-if="typing.visible.value && s"
-    class="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 px-3 pb-2"
+    class="shrink-0 px-3 py-2"
     role="status"
     aria-live="polite"
   >

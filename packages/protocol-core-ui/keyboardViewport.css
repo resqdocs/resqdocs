@@ -1,0 +1,38 @@
+/* Online-Editor: Bildschirmtastatur in iOS-Safari. Die Tastatur liegt dort ÜBER der Seite und verkleinert nur den
+   sichtbaren Bereich (window.visualViewport), das Layout bleibt groß. Die Werte liefert keyboardInset.ts
+   (installKeyboardInset). Die App braucht diese Regeln nicht: dort verkleinert die Tastatur das Layout
+   (@capacitor/keyboard, resize 'native'). Ohne @layer wie keyboard.css. Das große Textfeld und die
+   Lückentext-Fenster (.modal-top) richten sich selbst aus und sind ausgenommen. */
+
+/* Fenster bei offener Tastatur, nach dem Vorbild des großen Textfelds (LongTextDialog, Quellen in
+   docs/sources.md): Der Rahmen des Fensters bleibt bildschirmfüllend, sonst schaut zwischen Fenster und
+   Tastatur die Seite hervor (iOS zeigt dort seine durchsichtige Leiste mit ↑ ↓ ✓). Nur der Inhalt endet über
+   der Tastatur, und die Höhe gleitet, statt zu springen. Oben bleibt der Bereich der Statusleiste frei.
+
+   Fenster von unten (am Handy): Die Fläche reicht weiter bis zum unteren Rand, hinter die Tastatur, wie ein
+   Blatt in iOS. Ihr unterer Innenabstand ist so hoch wie die Tastatur; darüber scrollt der Inhalt, und die
+   Knopfzeile steht direkt über der Tastatur (sticky rechnet den Innenabstand schon ein). */
+:root[data-keyboard] .modal:is(.modal-open, [open]):not(.modal-top) > .modal-box,
+:root[data-keyboard] .overlay-backdrop > .overlay-surface {
+  max-height: calc(var(--vv-h, 100dvh) - env(safe-area-inset-top, 0px) - 1rem);
+  margin-top: var(--vv-top, 0px);
+  margin-bottom: var(--kb-inset, 0px);
+  scroll-padding-bottom: 5rem;
+}
+@media (width < 40rem) {
+  :root[data-keyboard] .modal.modal-bottom:is(.modal-open, [open]) > .modal-box,
+  :root[data-keyboard] .overlay-backdrop > .overlay-surface {
+    max-height: calc(var(--vv-h, 100dvh) + var(--kb-inset, 0px) - env(safe-area-inset-top, 0px) - 0.5rem);
+    margin-bottom: 0;
+    padding-bottom: calc(var(--kb-inset, 0px) + 1rem);
+    scroll-padding-bottom: calc(var(--kb-inset, 0px) + 5rem);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .modal:not(.modal-top) > .modal-box,
+  .overlay-backdrop > .overlay-surface {
+    transition-property: max-height, margin, padding-bottom, transform, opacity, scale;
+    transition-duration: 0.2s;
+    transition-timing-function: ease-out;
+  }
+}

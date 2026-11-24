@@ -202,7 +202,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
 
 
     <!-- nicht erhoben: Zeilen-Verwaltung aus, nur Hinweis. Daten bleiben erhalten und kommen beim Zurueckschalten wieder. -->
-    <p v-if="excluded" class="text-xs italic text-base-content/75">nicht erhoben — erscheint nicht im Protokoll</p>
+    <p v-if="excluded" class="text-xs italic text-base-content/75">nicht erhoben — erscheint nicht im Protokolltext</p>
 
     <div v-else-if="custom" class="flex flex-col gap-1">
       <!-- Freitext ersetzt in der Ausgabe die Zeilen; vorbelegt mit dem Standardtext, Zeilen bleiben erhalten. -->

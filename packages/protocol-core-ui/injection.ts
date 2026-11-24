@@ -67,3 +67,13 @@ export const longTextSizeKey: InjectionKey<Ref<import('./longTextSize.ts').LongT
 /** Die ganze Vorlage, die gerade ausgefüllt wird. Ein Lückentext braucht sie für Lücken, die ihren Wert
  *  von anderer Stelle der Vorlage übernehmen; ohne Angabe finden solche Lücken ihr Ziel nicht. */
 export const templateRootKey: InjectionKey<Ref<Container> | null> = Symbol('rd-template-root')
+
+// --- Bildschirmtastatur: Modell des Hosts ----------------------------------------------------------------------
+// Die App verkleinert bei offener Tastatur das Layout (@capacitor/keyboard) und steckt hier ein, ob eine Tastatur
+// offen ist. Vollbild-Fenster (großes Textfeld, Lückentext) füllen dann einfach die Layout-Höhe und passen sich
+// einmal an, wenn die Tastatur auf- oder zugeht. Ohne Provider (Online-Editor im Browser) folgen sie wie bisher dem
+// sichtbaren Bereich (window.visualViewport). Siehe fullscreenKeyboard.ts.
+export interface KeyboardLayout {
+  open: Readonly<Ref<boolean>>
+}
+export const keyboardLayoutKey: InjectionKey<KeyboardLayout | null> = Symbol('rd-keyboard-layout')

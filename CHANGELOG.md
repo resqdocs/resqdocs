@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [2.2.0] - 2026-11-24
+
+### Added
+
+- Connect to the bridge from the app: without a connected bridge, the case view shows "Connect to ResQDocs bridge" instead of a disabled send button; "Join bridge Wi-Fi" joins the bridge network directly (iOS via hotspot configuration, Android 10+ via a network request, no location access); "Connect manually" shows the network name and passphrase, tapping the passphrase copies it
+- Settings, Bridge: join and leave the bridge Wi-Fi; while the app is connected to it, the app itself has no internet access
+- Haptic feedback for key actions such as sending to the bridge, adjustable in settings from off to many places
+- Notice listing characters the bridge cannot type, below "Send to target device"
+
+### Changed
+
+- Fixed app shell: header and tab bar stay in place, each tab scrolls on its own and keeps its position, tabs fade in on switch
+- Keyboard handling via @capacitor/keyboard: the view adapts once to the keyboard, the large text window stays still while typing, the iOS accessory bar above the keyboard is hidden
+- Protocol text: typographic quotes, dashes and ellipses from the phone keyboard are output as ", - and ...; emoji and pictographic symbols are not accepted while filling in a case and are left out of the protocol text
+- Function rows on one line are separated by "; " instead of the middle dot, which the bridge cannot type; templates that stored the middle dot explicitly get the semicolon as well
+- First start: one notice instead of two, shown again only when its text changes
+- "Finish" is now "Delete case"; terms are unified across the app
+- Import from file opens the file picker directly, only one sheet is open at a time, the confirmation matches the current tab
+- Launch screen with the app logo in light and dark; the app starts in the chosen appearance
+- The "Classic" design is removed; ResQDocs is the only design, in light, dark or system appearance
+- Settings: on/off options are switches
+- Android back closes the topmost window, then the sub-page, then returns to the case tab
+- The spinner in the header only turns while a check was requested or the bridge is typing
+- Large text fields keep a fixed two-line preview height
+
+### Fixed
+
+- A field without a title shows "Untitled field" instead of an internal id
+- The NEWS2 result contained a dash the bridge could not type
+- Settings, Bridge opens at the top, nothing shifts while loading, the target device selection is fully readable
+- Android: the areas behind the system bars use the app background instead of grey bars
+
 ## [2.1.3] - 2026-11-23
 
 ### Changed

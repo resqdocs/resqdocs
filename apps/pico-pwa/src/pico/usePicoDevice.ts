@@ -7,6 +7,7 @@ import { useBridgeConnection } from './useBridgeConnection'
 import { useTypingProgress } from './useTypingProgress'
 import { countChars } from './typingProgress'
 import type { OsMode, PicoStatus } from './picoTypes'
+import { normalizeForTyping } from '@resqdocs/protocol-core/typeable'
 
 /**
  * Composable für den Gerät/Pico-Bereich. Kapselt die Pico-Kommunikation
@@ -77,7 +78,8 @@ export function usePicoDevice() {
       // er gesetzt ist; bridge_s2.ino faellt sonst auf 60 zurueck) - der Test lief also unabhaengig
       // vom Regler und an beiden Reglerenden gleich schnell. Genau der Knopf, mit dem man die
       // Einstellung ausprobiert, zeigte ihre Wirkung nicht.
-      const sent = testText.value
+      // In der getippten Form (wie der Protokolltext), damit der Fortschritt dieselben Zeichen zählt.
+      const sent = normalizeForTyping(testText.value)
       const r = await client.typeText({
         text: sent,
         os: os.value,

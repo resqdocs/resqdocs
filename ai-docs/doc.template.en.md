@@ -136,7 +136,7 @@ Three node types: **Container** (section with children), **Field** (input field)
 - **Must not be skipped silently?** (`required`, from app 1.2.0) — Same as a required field.
 - **Switch on only when needed?** (`defaultExcluded`, from app 1.9.0) — The function starts as "not collected" and only enters the output when the user switches it on or enters data. Not together with `required`. For older app versions: put the function into its own section with `excludable` and `defaultExcluded`.
 - **Entries stacked or on one line?** (`config.rowLayout`) — Stacked (`block`) or compact on one line (`inline`).
-- **Separator between entries?** (`rowSeparator`) — What sits between entries on one line. Default is the middle dot " · " (distinct from the comma in "Name Strength, Schema"). *Example: a semicolon "; " instead.*
+- **Separator between entries?** (`rowSeparator`) — What sits between entries on one line. Default is the semicolon "; " (distinct from the comma in "Name Strength, Schema" and typeable on every keyboard); simply omit `rowSeparator` for it. The former default " · " (middle dot) cannot be typed and is treated as "not set". *Example: a vertical bar " | " instead.*
 
 ## §5 Render rules (so your preview matches the real output)
 
@@ -152,6 +152,7 @@ The app renders the template to plain text. Rules:
 - **`emptyText`:** substitute text when the container is shown but its children output nothing.
 - **Cloze text (`cloze`, from app 2.0.0):** `cloze.parts` is a list of fixed text (strings, line breaks allowed) and gaps `{ "gap": "<id>" }`. The id points to a field or function: a child of this container (the gap asks for the value itself) or an element elsewhere in the template (the gap shows that element's value). A gap contains only the value, without the title. If a gap stays empty, the doubled space and a dangling comma are removed. Children that are not used in a gap follow below the text. When filling in, every gap comes up in order (choice and free text, with or without a default). Older app versions show the children as a regular field list.
 - **Field value:** by default the `default` (or `options[0]`, with `defaultEmpty` nothing); `options` turns the field into a select; `allowCustom` additionally allows free text; `multiline` is multi-line free text.
+- **Characters:** A keyboard types the finished text into the target device. It can only type these characters: the letters A–Z and a–z, digits, space, line break, the punctuation and special characters of the keyboard (`! " # $ % & ' ( ) * + , - . / : ; < = > ? @ [ \ ] ^ _ { | } ~` and the grave accent) and `{{TYPEABLE_NON_ASCII}}`. Use only these characters in `title`, `default`, `options`, `emptyText`, `separator`, `heading`, `config` and in the fixed text of a cloze text. Write straight quotes (`"` and `'`, in JSON as `\"`), the hyphen `-` and three dots `...` instead of typographic quotes, dashes and the ellipsis character. The app replaces those itself when it builds the text (non-breaking spaces too), but your preview should match the output from the start. Emojis and pictographic symbols (e.g. ©, ®, ™, ♀, ♂, ⚠, ☑, ✔, ↔, ▶) are removed from the text without a substitute: write the word instead ("weiblich" instead of ♀). Any other character, e.g. ç, ñ, É, ², ½, →, ≥, •, ✓, ☐ or a box-drawing line such as ═, arrives on the target device as `[?]`.
 - **FunctionNode:** medication list / doctors render their rows; `config.rowLayout` = `block` (stacked, optional `rowPrefix`/`rowSuffix` per row) or `inline` (one line, joined with `rowSeparator`). Pack-years, NEWS2, LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS and BMI output their result; `config.lineEnd` sets the character at the end of their line (missing = as before, empty = nothing); without entries or a result the `default` appears. LAMS, FAST4D, ZOPS, Sgarbossa and EGSYS read best as one line ("LAMS 4/5 (…)", "FAST4D positiv (…)", "ZOPS orientiert.", "Sgarbossa (mod. nach Smith) negativ."): `titleInline: true` and a `heading` with `"prefix": ""`, `"suffix": " "`.
 
 ### Worked example (JSON → exact output)
@@ -200,6 +201,7 @@ If a starter prompt asks you to confirm the guide is available to you: briefly n
 - ✗ WRONG: `<escape>{"schema": …}` or other text in the code block → ✓ RIGHT: The block starts with `{` and ends with `}`.
 - ✗ WRONG: `"type": "select"` or `"type": "text"` → ✓ RIGHT: `"type": "field"`, for a selection also `options`.
 - ✗ WRONG: `"functionKind": "vitalwerte"` or `"visibleIf": …` → ✓ RIGHT: only values and properties from §2; measurements are normal fields.
+- ✗ WRONG: `"fill": "═"`, emojis or symbols such as ⚠ and ♀ in a title or `"default": "“normal” – n.a.d. …"` → ✓ RIGHT: typeable characters only (§5 "Characters"), e.g. `"fill": "="` and `"default": "\"normal\" - n.a.d. ..."`.
 - ✗ WRONG: entering lists of dispatch codes in `options` → ✓ RIGHT: keep the placeholders, the user inserts their list in the app (A2).
 
 ## §8 Examples (simple → complete)
@@ -219,8 +221,8 @@ B: Kein path Atemgeräusch/Atemmuster. Atmung ist suffizient. Keine Dyspnoe.
 How the user imports the JSON (tell them after the final output):
 
 1. Open the ResQDocs app → tab **"Vorlagen"**.
-2. Below the list of templates, tap **"Aus Datei importieren…"** — it opens the **"Daten"** sheet.
-3. Paste the JSON into the text field → **"Laden"** (or pick the .json file below it).
+2. Below the list of templates, tap **"Aus Datei importieren…"** — the phone's file picker opens. Pick the saved .json file.
+3. Without a file: cancel the file picker, then in the **"Aus Datei importieren"** sheet paste the JSON under **"Oder Text einfügen"** → **"Weiter"**.
 4. If a template with the same name (the root's `title`) already exists, the app asks: "Als neue Vorlage" (import as new) or "Überschreiben" (overwrite).
 
 If the app shows an error, help the user like this (messages verbatim from the app; the app UI is German):
@@ -238,4 +240,4 @@ If the app imports without a message but something is missing or looks wrong: th
 2. Only the three node types `container` | `field` | `function`; only properties from §2; `functionKind` only with documented values **and only up to the installed app version** (A3).
 3. Every `id` unique (`A–Z a–z 0–9 _ -`); numbers/booleans without quotes; `options` = list of strings; `heading` only complete (5 properties).
 4. No patient data in `title`, `default`, `options`, `emptyText`.
-5. **Self-check before sending:** wrapper complete? Only documented properties? `id`s unique? Every titled node with an explicit `heading`? **No `functionKind` above the stated app version (A3)?** No comments, no trailing commas, parsable with `JSON.parse`? Only then: output the JSON in **one** ```json code block, followed by exactly one sentence with the import steps from §9 (short form: tab "Vorlagen" → "Aus Datei importieren…" → paste → "Laden"). Does the code block start with `{`, end with `}`, and contain nothing else? The app does not check the content on import; you are the last check. If you can run code, also verify the JSON with `JSON.parse`.
+5. **Self-check before sending:** wrapper complete? Only documented properties? `id`s unique? Every titled node with an explicit `heading`? **No `functionKind` above the stated app version (A3)?** Typeable characters only, no emojis or symbols (§5 "Characters")? No comments, no trailing commas, parsable with `JSON.parse`? Only then: output the JSON in **one** ```json code block, followed by exactly one sentence with the import steps from §9 (short form: tab "Vorlagen" → "Aus Datei importieren…" → paste → "Laden"). Does the code block start with `{`, end with `}`, and contain nothing else? The app does not check the content on import; you are the last check. If you can run code, also verify the JSON with `JSON.parse`.
