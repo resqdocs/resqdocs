@@ -1,8 +1,14 @@
 # App-Informationsarchitektur (S4)
 
-> **Umbenennung (2026-06-12):** Die Tabs heißen in der App jetzt **Einsatz, Vorlagen
-> (vorher „Protokolle"), Textbausteine (vorher „Bausteine"), Einstellungen**. Dieses Dokument
-> verwendet teils noch die alten Namen; gemeint sind dieselben Bereiche.
+> **Stand der Begriffe (2026-11-23):** Die Tabs heißen in der App **Einsatz, Vorlagen
+> (früher „Protokolle"), Bausteine, Einstellungen**. Der Tab **Bausteine** enthält Textbausteine und
+> gespeicherte Abschnitte (vom 12.06. bis 03.07.2026 hieß er kurz „Textbausteine“). Die Ausgabe heißt
+> **Protokolltext**, die löschende Aktion im Einsatz **„Einsatz löschen“**. Verbindliche Begriffe:
+> `packages/protocol-core-ui/terms.ts`.
+>
+> Der Text unten ist die Spezifikation vom Juni 2026 und verwendet deren Namen: „Protokolle“ = Vorlagen,
+> „Kreator“ = Vorlagen-Tab bzw. Online-Editor, „Blöcke“ = Abschnitte bzw. gespeicherte Abschnitte,
+> „Sitzung zurücksetzen“ = „Einsatz löschen“.
 
 
 > **Fundament-Spezifikation S4** — wie die App fachlich und strukturell aufgebaut ist, *bevor* weitere

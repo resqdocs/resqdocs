@@ -9,6 +9,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, provide, watch } from 'vue'
 import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
+import { templateLabel } from '@resqdocs/protocol-core-ui/nodeLabel'
 import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
 import { resolveInitialProtocolId } from '@resqdocs/protocol-core/library'
 import { App } from '@capacitor/app'
@@ -22,6 +23,7 @@ import { usePicoApi, type OsMode } from '@/composables/usePicoApi'
 import { useTypingProgress } from '@/pico/useTypingProgress'
 import { countChars } from '@/pico/typingProgress'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
+import { openBridgeConnect } from '@/composables/useBridgePage'
 import { requestButtonText } from '@/pico/buttonTextEntry'
 import { useStorage } from '@/storage/useStorage'
 import { render } from '@resqdocs/protocol-core/render'
@@ -32,6 +34,10 @@ import MedplanFunction from '@resqdocs/protocol-core-ui/components/functions/Med
 import AerzteFunction from '@resqdocs/protocol-core-ui/components/functions/AerzteFunction.vue'
 import ScoreFunction from '@resqdocs/protocol-core-ui/components/functions/ScoreFunction.vue'
 import OutputText from '@resqdocs/protocol-core-ui/components/OutputText.vue'
+import UntypeableHint from '@resqdocs/protocol-core-ui/components/UntypeableHint.vue'
+import { typingMarker } from '@resqdocs/protocol-core-ui/untypeableNotice'
+import { installEmojiFreeInput } from '@resqdocs/protocol-core-ui/emojiFreeInput'
+import { activeTab } from '@/composables/useActiveTab'
 import { templateRootKey } from '@resqdocs/protocol-core-ui/injection'
 import { entscheideUeberEntwurf } from '@/composables/caseDraftGuard'
 
@@ -69,7 +75,7 @@ function saveDraftGuarded(): void {
     })
     .catch((err: unknown) => {
       draftSaveError.value = true
-      console.error('Einsatz-Entwurf konnte nicht gespeichert werden:', err)
+      console.error('Einsatzentwurf konnte nicht gespeichert werden:', err)
     })
 }
 let restoring = false // Resume (setAll) soll keinen Auto-Save ausloesen (TTL nicht verlaengern)
@@ -141,11 +147,16 @@ function scrollToFirstOpen(): void {
   void nextTick(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }))
 }
 
-// Abschluss = bewusstes, bestaetigtes Loeschen der erfassten Werte (DSGVO, Art.-9-Gesundheitsdaten).
+// „Einsatz löschen“ = bewusstes, bestaetigtes Loeschen der erfassten Werte (DSGVO, Art.-9-Gesundheitsdaten).
 // Loescht NUR die Werte (useCaseValues), nicht die Vorlage. resetKey erzwingt Re-Mount der Sektionen
 // -> Falt-/Open-Zustand startet frisch (alles wieder auf Standard, eingeklappt).
 const showConfirm = ref(false)
 const resetKey = ref(0)
+// Die Rückfrage nennt die Folge, die man sonst nicht erwartet: Danach ist wieder die Standard-Vorlage gewählt.
+const resetsToDefault = computed(() => {
+  const id = storage.settings.defaultProtocolId
+  return !!id && id !== einsatzActiveId.value && protocols.value.some((p) => p.id === id)
+})
 function confirmReset(): void {
   clearDraftTimer() // laufenden Trailing-Save abbrechen (sonst schriebe er den geloeschten Entwurf neu)
   caseValues.reset()
@@ -168,9 +179,17 @@ function confirmReset(): void {
 // GETRENNT vom Abschluss: bei Fehler erneut triggerbar, loescht NICHTS.
 const storage = useStorage()
 const pico = usePicoApi()
+// Was am Zielgerät anstelle eines nicht tippbaren Zeichens steht (Hinweis unter dem Senden-Knopf).
+const marker = computed(() => typingMarker(storage.settings.defaultOs))
+// Im Einsatz nehmen die Textfelder keine Emojis an (die Bridge kann sie nicht tippen). EIN Filter am Dokument
+// statt Code in jedem Feld: Er erreicht so auch die Fenster, die außerhalb dieses Tabs im Dokument hängen
+// (großes Textfenster, Lückentext, Eingabehilfen der Funktionen). Außerhalb des Einsatzes gilt er nur für
+// Felder, die sich mit data-emoji-free dazu bekennen (Text für den Knopf an der Bridge).
+let stopEmojiFilter: (() => void) | null = null
 // Geteilter Bridge-Status (Singleton, derselbe wie im Header). Senden nur bei reachable === true.
 const { reachable, check, markReachable } = useBridgeConnection()
 onMounted(() => {
+  stopEmojiFilter = installEmojiFreeInput(document, (el) => activeTab.value === 'einsatz' || !!el.closest?.('[data-emoji-free]'))
   void check()
   // Der Ablauf wird von AUSSEN ausgeloest (App.vue prueft laufend), der sichtbare Zustand liegt aber
   // hier. Ohne diesen Handler bliebe der Tab nach dem Ablauf vollstaendig ausgefuellt (er wird nur
@@ -235,7 +254,7 @@ async function senden(): Promise<void> {
 
 // --- Slice 4: Vorlagen-Auswahl im Einsatz (ein Protokoll pro Einsatz) ---
 const collapsed = ref(true) // eingeklappt-Default: aktive Vorlage immer sichtbar
-const titleOf = (p?: { title?: string; id: string }): string => (p && ((p.title && p.title.trim()) || p.id)) || ''
+const titleOf = (p?: { title?: string; id: string }): string => (p ? templateLabel(p) : '')
 const activeTitle = computed(() => titleOf(protocols.value.find((p) => p.id === einsatzActiveId.value)))
 
 // Default-Vorauswahl: persoenlicher Standard -> zuletzt benutzt -> erste. Greift, sobald Settings UND
@@ -341,6 +360,7 @@ watch(
 )
 onUnmounted(() => {
   flushDraft() // ausstehenden Save NICHT verwerfen (frueher: clearDraftTimer) — sonst geht die letzte Aenderung verloren
+  stopEmojiFilter?.()
   document.removeEventListener('visibilitychange', onAppHidden)
   window.removeEventListener('pagehide', flushDraft)
   void appStateListener?.remove()
@@ -361,19 +381,19 @@ onUnmounted(() => {
     >
       <p class="font-semibold">Achtung: Dieser Einsatz wird gerade NICHT gespeichert.</p>
       <p class="mt-1 text-xs">
-        {{ libraryError ?? 'Der Einsatz-Entwurf liess sich nicht auf dem Geraet sichern.' }}
+        {{ libraryError ?? 'Der Einsatzentwurf ließ sich nicht auf dem Gerät sichern.' }}
       </p>
       <p class="mt-1 text-xs">
-        Bitte den Einsatz jetzt sichern — Vorschau oeffnen und den Text uebertragen oder abschreiben.
-        Nicht zuruecksetzen und nicht deinstallieren.
+        Bitte den Einsatz jetzt sichern: den Protokolltext senden, kopieren oder abschreiben.
+        Nicht zurücksetzen und nicht deinstallieren.
       </p>
     </div>
 
     <p v-if="draftNotice" class="rounded-lg bg-info/10 px-3 py-2 text-center text-xs text-info" role="status" aria-live="polite">{{ draftNotice }}</p>
 
-    <!-- Umschalter: oben zentriert + sticky (unter dem App-Header, Safe-Area beachtet),
+    <!-- Umschalter: oben zentriert + sticky am oberen Rand des Tab-Bereichs (die Kopfzeile liegt außerhalb),
          damit man jederzeit in die Vorschau springen kann. Nur < lg (ab lg beide Spalten). -->
-    <div class="sticky top-[calc(env(safe-area-inset-top,0px)+4rem)] z-[5] flex justify-center bg-base-200/95 py-2 backdrop-blur-sm lg:hidden">
+    <div class="sticky top-0 z-[5] flex justify-center bg-base-200/95 py-2 backdrop-blur-sm lg:hidden">
       <div class="join">
         <button class="btn btn-sm join-item" :class="view === 'ausfuellen' ? 'btn-primary' : ''" @click="view = 'ausfuellen'">Ausfüllen</button>
         <button class="btn btn-sm join-item" :class="view === 'vorschau' ? 'btn-primary' : ''" @click="view = 'vorschau'">Vorschau</button>
@@ -428,7 +448,7 @@ onUnmounted(() => {
           </div>
 
           <div>
-            <h2 class="text-base font-semibold">{{ (root.title && root.title.trim()) || 'Vorlage' }}</h2>
+            <h2 class="text-base font-semibold">{{ templateLabel(root) }}</h2>
             <p class="text-sm text-base-content/75">
               Felder ausfüllen: tippe auf <span class="whitespace-nowrap">✓/✎/−</span> je Feld (bestätigt · eigener Wert · nicht erhoben). Die Vorschau zeigt den Protokolltext.
             </p>
@@ -462,7 +482,7 @@ onUnmounted(() => {
 
       <!-- Vorschau: Protokolltext (gleicher reiner Renderer wie die finale Ausgabe) -->
       <div class="lg:block" :class="{ hidden: view !== 'vorschau' }">
-        <div class="card bg-base-100 shadow lg:sticky lg:top-20">
+        <div class="card bg-base-100 shadow lg:sticky lg:top-4">
           <div class="card-body gap-2 p-4">
             <OutputText :text="text" label="Protokolltext" />
           </div>
@@ -472,15 +492,28 @@ onUnmounted(() => {
 
     <!-- Untere Aktionen: in BEIDEN Ansichten (Ausfuellen + Vorschau) verfuegbar, daher UNTER dem
          Grid (auf lg unter beiden Spalten). Gestapelt, zentriert, breitenbegrenzt. Senden =
-         wiederholbar (kein „fertig"-Zustand); Abschließen destruktiv + getrennt + dezent. -->
+         wiederholbar (kein „fertig"-Zustand); „Einsatz löschen“ destruktiv + getrennt + dezent. -->
     <div v-if="root.children.length" class="border-t border-base-200 pt-4">
       <div class="mx-auto flex w-full max-w-sm flex-col items-center gap-3">
-        <button type="button" class="btn btn-primary w-full" :disabled="sending || reachable !== true || typing.busy.value" @click="senden">
+        <!-- Ohne verbundene Bridge kein gesperrter Hauptknopf, sondern der Weg dorthin: kurze Anleitung zum Verbinden.
+             Solange noch nicht geprüft wurde (null), bleibt Senden gesperrt stehen, damit nichts springt. -->
+        <button
+          v-if="reachable === false && !sending && !typing.busy.value"
+          type="button"
+          class="btn btn-primary w-full"
+          data-connect-bridge
+          @click="openBridgeConnect"
+        >
+          Mit ResQDocs-Bridge verbinden
+        </button>
+        <button v-else type="button" class="btn btn-primary w-full" :disabled="sending || reachable !== true || typing.busy.value" @click="senden">
           <span v-if="sending" class="loading loading-spinner loading-sm"></span>
           {{ sending ? 'Sende …' : typing.busy.value ? 'Bridge tippt noch …' : 'An Zielgerät senden' }}
         </button>
+        <!-- Zeichen, die die Bridge nicht tippen kann: nur ein Hinweis, Senden bleibt möglich. -->
+        <UntypeableHint :text="text" :marker="marker" class="w-full" />
         <p v-if="sendMsg" class="text-center text-xs" :class="sendMsg.kind === 'ok' ? 'text-success' : 'text-error'" role="status" aria-live="polite">{{ sendMsg.text }}</p>
-        <p v-else-if="reachable !== true" class="text-center text-xs text-base-content/75">Bridge nicht verbunden — Senden gesperrt.</p>
+        <p v-else-if="reachable === false" class="text-center text-xs text-base-content/75">Bridge nicht verbunden.</p>
         <!-- Den Protokolltext als festen Text fuer den Knopf an der Bridge ablegen (Geruest mit den Werten,
              die immer gleich sind). Oeffnet das Textfeld; gespeichert wird erst dort, mit gedruecktem Knopf. -->
         <!-- Gleiches Stick-Icon wie in der Kopfleiste: so erklaert sich die kurze Beschriftung. -->
@@ -502,18 +535,18 @@ onUnmounted(() => {
 
         <div class="divider my-1 w-full"></div>
 
-        <button type="button" class="btn btn-ghost btn-sm text-error" @click="showConfirm = true">Abschließen</button>
-        <p class="text-center text-xs text-base-content/75">Löscht alle erfassten Werte dieses Einsatzes (Datenschutz).</p>
+        <button type="button" class="btn btn-ghost btn-sm text-error" data-einsatz-loeschen @click="showConfirm = true">Einsatz löschen</button>
+        <p class="text-center text-xs text-base-content/75">Löscht alle Eingaben dieses Einsatzes. Deine Vorlagen bleiben.</p>
       </div>
     </div>
 
     <!-- Loesch-Bestaetigung (DSGVO): bewusster, expliziter Schritt -->
     <div class="modal" :class="{ 'modal-open': showConfirm }" role="dialog" aria-modal="true">
       <div class="modal-box">
-        <h3 class="text-base font-semibold">Einsatz abschließen?</h3>
+        <h3 class="text-base font-semibold">Einsatz löschen?</h3>
         <p class="py-3 text-sm">
-          Wirklich fertig? Alle erfassten Eingaben werden jetzt <strong>gezielt und endgültig gelöscht</strong> —
-          Datenschutz, besonders schützenswerte Gesundheitsdaten (Art. 9 DSGVO). Das lässt sich nicht rückgängig machen.
+          Alle Eingaben dieses Einsatzes werden <strong>endgültig gelöscht</strong>. Deine Vorlagen bleiben.<template v-if="resetsToDefault">
+          Danach ist wieder die Standard-Vorlage gewählt.</template> Das lässt sich nicht rückgängig machen.
         </p>
         <div class="modal-action">
           <button type="button" class="btn btn-ghost btn-sm" @click="showConfirm = false">Abbrechen</button>

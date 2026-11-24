@@ -19,6 +19,10 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(app.resqdocs.scanner.ScannerPlugin.class);
         // Bildschirm anlassen, solange die Bridge tippt und die App den Fortschritt zeigt.
         registerPlugin(app.resqdocs.KeepAwakePlugin.class);
+        // Direkt ins WLAN der Bridge (ab Android 10, ohne Standortberechtigung).
+        registerPlugin(app.resqdocs.BridgeWifiPlugin.class);
+        // Farbe hinter den Systemleisten passend zum Thema der App.
+        registerPlugin(app.resqdocs.AppChromePlugin.class);
         // Ein angetippter Link gehoert zu genau EINEM Start. Stellt Android die Activity spaeter wieder her
         // (Prozess beendet, Start aus „Letzte Apps"), haengt derselbe VIEW-Intent noch daran und wuerde
         // erneut zum Import angeboten. In diesen Faellen die Daten vom Intent nehmen, bevor Capacitor ihn liest.

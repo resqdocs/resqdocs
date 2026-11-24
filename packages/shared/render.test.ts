@@ -1,8 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { renderHeading, renderContainer, render } from './render.ts'
+import { renderHeading, renderContainer, renderNode, render } from './render.ts'
 import type { Container, Heading } from './model.ts'
 import { DEFAULT_SEPARATOR } from './model.ts'
+import { untypeable } from './typeable.ts'
 
 const H = (p: Partial<Heading>): Heading => ({ prefix: '', suffix: '', fill: '', width: 0, fillMode: 'inclusive', ...p })
 
@@ -522,8 +523,14 @@ test('Funktion titleInline: Titel inline vor den Zeilen (prefix+title+suffix+bod
     id: 'root',
     children: [{ type: 'function', id: 'mp', functionKind: 'medikamentenplan', title: 'Medikamente', showTitle: true, titleInline: true, heading: H({ prefix: '', suffix: ': ' }), config: { rowLayout: 'inline' } }],
   }
-  // Inline-Default ist seit dem Zeilenformat 'Name Staerke, Schema' der Mittelpunkt (Komma = Grenze IN der Zeile).
-  assert.equal(render(tree, { mp: { state: 'function', rows: [{ name: 'ASS' }, { name: 'Ramipril' }] } }), 'Medikamente: ASS · Ramipril')
+  // Inline-Default ist das Semikolon (das Komma ist im Zeilenformat 'Name Staerke, Schema' die Grenze IN der Zeile).
+  assert.equal(render(tree, { mp: { state: 'function', rows: [{ name: 'ASS' }, { name: 'Ramipril' }] } }), 'Medikamente: ASS; Ramipril')
+  // Der Protokolltext einer Funktion in einer Zeile enthält damit nur tippbare Zeichen - auch mit dem früheren
+  // Standard-Trenner, den manche Vorlagen ausdrücklich gespeichert haben.
+  const legacy: Container = { ...tree, children: [{ ...tree.children[0], config: { rowLayout: 'inline', rowSeparator: ' · ' } } as Container['children'][number]] }
+  const med = { mp: { state: 'function' as const, rows: [{ name: 'Ramipril 5 mg', dosierung: '1-0-0' }, { name: 'ASS 100 mg', dosierung: '1-0-0' }, { name: 'Metformin 1000 mg', dosierung: '1-0-1' }] } }
+  assert.equal(render(legacy, med), 'Medikamente: Ramipril 5 mg, 1-0-0; ASS 100 mg, 1-0-0; Metformin 1000 mg, 1-0-1')
+  assert.deepEqual(untypeable(render(legacy, med)), [])
   // titleInline aus -> Titel auf eigener Zeile (Regression)
   const own: Container = {
     type: 'container',
@@ -628,7 +635,7 @@ test('Funktion inline wie ein Feld (Score UND Liste); nur Titel-Banner bleibt Bl
   assert.equal(render(inlineList, rows), 'A: x, Medikamente: ASS\nRamipril')
   // ... mit rowLayout='inline' (Zeilen einzeilig) landet alles auf einer Zeile
   const inlineOneLine: Container = { type: 'container', id: 'r', separator: ', ', children: [feld, mpInline({ config: { rowLayout: 'inline' } })] }
-  assert.equal(render(inlineOneLine, rows), 'A: x, Medikamente: ASS · Ramipril')
+  assert.equal(render(inlineOneLine, rows), 'A: x, Medikamente: ASS; Ramipril')
 })
 
 test('blankLineBefore Form b: Banner-Erstkind unter BETITELTEM Container -> Absatz zwischen Titel und erstem Kind', () => {
@@ -666,4 +673,59 @@ test('blankLineBefore: doppelte transparente Verschachtelung -> genau EINE Leerz
     ],
   }
   assert.equal(render(tree), 'A\n\n> X:\nw')
+})
+
+// --- Protokolltext in der Form, die die Bridge tippt (typeable.ts) ---
+
+test('Protokolltext: gleichwertige Zeichen aus Vorlage und Eingabe sind ersetzt, Emojis entfernt', () => {
+  const tree: Container = {
+    type: 'container', id: 'root', title: 'Verlauf – Maßnahmen', showTitle: true, heading: H({ prefix: '## ' }), children: [
+      { type: 'field', id: 'a', title: 'Anamnese', showTitle: true, heading: H({ suffix: ': ' }), default: '„Sturz“ in der Küche…' },
+      { type: 'field', id: 'b', default: 'wach 😀, orientiert' },
+    ],
+  }
+  assert.equal(render(tree), '## Verlauf - Maßnahmen\nAnamnese: "Sturz" in der Küche...\nwach , orientiert')
+  const values = { b: { state: 'custom' as const, value: 'Pat. sagt: „geht’s“ — 5 mg ç' } }
+  assert.equal(render(tree, values), '## Verlauf - Maßnahmen\nAnamnese: "Sturz" in der Küche...\nPat. sagt: "geht\'s" - 5 mg ç')
+  // Vorlage und Eingaben selbst bleiben, wie sie sind.
+  assert.equal(values.b.value, 'Pat. sagt: „geht’s“ — 5 mg ç')
+  assert.equal(tree.title, 'Verlauf – Maßnahmen')
+})
+
+test('Protokolltext: auch Teile (renderContainer, renderNode) kommen in der getippten Form heraus', () => {
+  const part: Container = { type: 'container', id: 'p', children: [{ type: 'field', id: 'x', default: 'a – b…' }] }
+  assert.equal(renderContainer(part), 'a - b...')
+  assert.equal(renderNode(part.children[0]), 'a - b...')
+})
+
+test('Protokolltext: Überschrift mit fester Breite zählt die getippten Zeichen', () => {
+  const h = H({ prefix: '# ', suffix: ' ', fill: '=', width: 20, fillMode: 'inclusive' })
+  assert.equal(renderHeading('Verlauf…', h).length, 20)
+  assert.equal(renderHeading('Verlauf…', h), '# Verlauf... =======')
+  assert.equal(renderHeading('Befund 🩺', h), '# Befund ===========')
+  assert.equal(renderHeading('⚠ Befund ♀', h), '# Befund ===========')
+  // Füllzeichen: ein Gedankenstrich wird zum Bindestrich.
+  assert.equal(renderHeading('A', H({ suffix: ' ', fill: '–', width: 6, fillMode: 'inclusive' })), 'A ----')
+})
+
+test('Protokolltext: ein Wert nur aus Emojis ist leer und entfällt wie ein leeres Feld', () => {
+  const tree: Container = {
+    type: 'container', id: 'root', children: [
+      { type: 'field', id: 'a', default: 'oben' },
+      { type: 'field', id: 'b', default: '😀👍🏽 ☑ ©' },
+      { type: 'field', id: 'c', default: 'unten' },
+    ],
+  }
+  assert.equal(render(tree), 'oben\nunten')
+  assert.equal(render(tree, { b: { state: 'custom', value: '​' } }), 'oben\nunten')
+})
+
+test('Protokolltext: Lückentext mit ersetzten Zeichen in Satz und Lücke', () => {
+  const tree: Container = {
+    type: 'container', id: 'root', children: [
+      { type: 'container', id: 's', cloze: { parts: ['Pat. ist ', { gap: 'g' }, ' – laut Angabe…'] }, children: [{ type: 'field', id: 'g', default: '„wach“' }] },
+    ],
+  }
+  assert.equal(render(tree), 'Pat. ist "wach" - laut Angabe...')
+  assert.equal(render(tree, { g: { state: 'custom', value: '🙂' } }), 'Pat. ist - laut Angabe...')
 })

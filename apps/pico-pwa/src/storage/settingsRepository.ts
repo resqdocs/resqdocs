@@ -3,6 +3,7 @@
 // Protokolle, Bausteine oder Patientendaten. Frei von Capacitor → pur testbar.
 import { DEFAULT_SETTINGS, type AppSettings, type KeyValueAdapter, type SettingsRepository } from './types.ts'
 import { SCANNER_MODES, type ScannerMode } from '../medplan/scannerMode.ts'
+import { normalizeHapticsLevel } from '../shell/hapticsRules.ts'
 
 export const SETTINGS_KEY = 'app.settings'
 
@@ -18,10 +19,9 @@ function sanitize(s: Partial<AppSettings> | null | undefined): AppSettings {
     privacyNoticeAccepted: s?.privacyNoticeAccepted === true,
     // nur http(s)-URLs; sonst Default (keine Patientendaten/Secrets erlaubt).
     picoBaseUrl: typeof url === 'string' && /^https?:\/\//.test(url) ? url : DEFAULT_SETTINGS.picoBaseUrl,
-    // Beide gueltigen Familien bewahren (sonst wuerde der neue Default 'resqdocs'
-    // ein bewusst gespeichertes 'classic' ueberschreiben). Nur Ungueltiges -> Default.
-    themeFamily: s?.themeFamily === 'classic' || s?.themeFamily === 'resqdocs'
-      ? s.themeFamily : DEFAULT_SETTINGS.themeFamily,
+    // Es gibt nur noch das Design „resqdocs“. Ein gespeichertes „classic“ (frühere Auswahl, alte Sicherung)
+    // wird damit beim Laden umgestellt; hell/dunkel/System bleibt, wie es gewählt war.
+    themeFamily: DEFAULT_SETTINGS.themeFamily,
     dismissedHints: Array.isArray(s?.dismissedHints)
       ? s.dismissedHints.filter((x): x is string => typeof x === 'string').slice(0, 200)
       : DEFAULT_SETTINGS.dismissedHints,
@@ -46,6 +46,9 @@ function sanitize(s: Partial<AppSettings> | null | undefined): AppSettings {
     typingDelayMs: Number.isFinite(Number(s?.typingDelayMs))
       ? Math.max(10, Math.min(55, Math.round(Number(s?.typingDelayMs))))
       : DEFAULT_SETTINGS.typingDelayMs,
+    // Haptik: nur die Stufen 0 bis 3 des Reglers; fehlt der Wert (alter Speicherstand, alte Sicherung) oder ist
+    // er ungültig, gilt der Standard „Normal“.
+    hapticsLevel: normalizeHapticsLevel(s?.hapticsLevel),
   }
 }
 

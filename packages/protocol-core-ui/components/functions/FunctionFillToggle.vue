@@ -7,6 +7,7 @@
  *  Funktion gerade erzeugt (z. B. die FAST4D- oder NEWS2-Zeile - man bearbeitet ihn, statt neu zu tippen),
  *  sonst der Standardtext (node.default).
  *  @click.stop.prevent, damit ein Tipp keine umgebende Interaktion (focusout/Karte) ausloest. */
+import { nodeLabel } from '../../nodeLabel'
 import { computed, onMounted } from 'vue'
 import type { FunctionNode } from '@resqdocs/protocol-core/model'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
@@ -16,7 +17,7 @@ const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
 
 const status = computed(() => caseValues.getFunctionStatus(props.node.id, props.node))
-const label = computed(() => (props.node.title && props.node.title.trim()) || props.node.id)
+const label = computed(() => nodeLabel(props.node))
 
 onMounted(() => {
   // Spiegelbild der Feld-Heilung (EinsatzField): eine Pflicht-Funktion darf nicht als „nicht erhoben"
@@ -67,6 +68,7 @@ function toggle(): void {
     }"
     :title="TITLE[status]"
     :data-fill-toggle="status"
+    data-haptic="statusToggle"
     :aria-label="`${label}: ${TITLE[status]} - tippen wechselt`"
     @click.stop.prevent="toggle"
   >

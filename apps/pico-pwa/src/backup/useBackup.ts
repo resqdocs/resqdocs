@@ -240,7 +240,7 @@ async function applyEnvelope(envelope: BackupEnvelope, mode: 'merge' | 'replace'
   if (cloudEnabled.value) await cloudSyncNow()
   await refreshHistory()
   status.value = 'saved'
-  lastMessage.value = `${verb}: +${counts.protocols} Vorlagen · +${counts.blocks} Abschnitte · +${counts.snippets} Textbausteine · +${counts.pzn} PZN`
+  lastMessage.value = `${verb}: +${counts.protocols} Vorlagen · +${counts.blocks} gespeicherte Abschnitte · +${counts.snippets} Textbausteine · +${counts.pzn} PZN`
   setTimeout(() => {
     if (status.value === 'saved') status.value = 'idle'
   }, 2500)

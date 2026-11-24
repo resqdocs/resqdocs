@@ -2,6 +2,7 @@
 /** Rekursive Baum-Zeile (Container ODER Feld; self-reference ueber den Dateinamen). Aktionen
  *  rufen die zentrale Tree-API (provide/inject). Container: ＋ mit Typwahl (Container/Feld) +
  *  rekursive Kinder. Feld: Blatt (kein ＋, keine Kinder). :key="child.id" = stabile Wiederverwendung. */
+import { nodeLabel } from '../nodeLabel'
 import { ref, computed, inject, nextTick } from 'vue'
 import type { Node, FunctionKind } from '@resqdocs/protocol-core/model'
 import { FUNCTION_KINDS, FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
@@ -52,15 +53,20 @@ const addMenu = ref<HTMLElement | null>(null)
 // Zwei-Stufen-＋-Menü: die vier Funktionen sind unter „Funktion" gebündelt, damit die Liste kurz bleibt.
 const addView = ref<'root' | 'functions'>('root')
 
-function label(n: Node): string {
-  return (n.title && n.title.trim()) || n.id
-}
+const label = (n: Node): string => nodeLabel(n)
 // Sichtbarer Bereich ohne die feststehenden Leisten des Hosts (App: Kopfzeile sticky, Dock fixed unten).
 // Sonst klappt das Menue hinter die Navigationsleiste und die unteren Eintraege sind nicht erreichbar.
+// Die App scrollt jeden Tab in einem eigenen Bereich (data-tab-scroll) zwischen Kopfzeile und Tab-Leiste: das
+// Menue liegt darin und endet an dessen Rand.
 function visibleBand(): { top: number; bottom: number } {
   const vv = window.visualViewport
   let top = vv ? vv.offsetTop : 0
   let bottom = vv ? vv.offsetTop + vv.height : window.innerHeight
+  const area = addAnchor.value?.closest('[data-tab-scroll]')?.getBoundingClientRect()
+  if (area) {
+    top = Math.max(top, area.top)
+    bottom = Math.min(bottom, area.bottom)
+  }
   for (const el of document.querySelectorAll<HTMLElement>('header, .dock')) {
     const pos = getComputedStyle(el).position
     if (pos !== 'sticky' && pos !== 'fixed') continue

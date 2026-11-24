@@ -4,6 +4,7 @@
 // Datenschutz: Text ausschließlich im Body von POST /type (nie in der URL);
 // Fehler werden auf den HTTP-Status normalisiert — KEIN Payload-Logging.
 import type { HttpAdapter, OtaBeginResult, OtaManifest, PicoClient, PicoConfigResult, PicoStatus, StoredTextInfo, TypingStatus } from './picoTypes'
+import { normalizeForTyping } from '@resqdocs/protocol-core/typeable'
 
 const CONNECT_TIMEOUT = 5000
 const READ_TIMEOUT = 20000 // Tippen dauert (Per-Char-Delay) → großzügig (S2)
@@ -168,7 +169,10 @@ export function createPicoClient(
       if (!isOk(res.status)) throw new Error(`Status fehlgeschlagen (HTTP ${res.status})`)
       return parseStatus(res.data)
     },
-    async typeText({ text, os, delayMs }) {
+    async typeText({ text: raw, os, delayMs }) {
+      // Letzte Stelle vor der Bridge: Was hier durchgeht, ist in der getippten Form (typeable.ts), egal woher
+      // der Text kommt. Protokolltext aus dem Renderer ist es schon; für ihn ändert sich nichts.
+      const text = normalizeForTyping(raw)
       // Text NUR im Body — nie in der URL. Über der Firmware-Grenze chunkt die
       // App in sequenzielle Requests (Spec S2: Gesamtlänge unbegrenzt).
       // delayMs nur mitschicken, wenn gesetzt (sonst Firmware-Default 60 → rückwärtskompatibel).
@@ -219,7 +223,8 @@ export function createPicoClient(
       if (!isOk(res.status)) throw new Error(`Laden fehlgeschlagen (HTTP ${res.status})`)
       return typeof res.data === 'string' ? res.data : ''
     },
-    async storeText({ text, os, delayMs, savedAt, name }) {
+    async storeText({ text: raw, os, delayMs, savedAt, name }) {
+      const text = normalizeForTyping(raw) // wie typeText: nur die getippte Form geht auf die Bridge
       if (Array.from(text).length > TYPE_CHUNK_LIMIT) throw new Error(`Der Text ist zu lang (höchstens ${TYPE_CHUNK_LIMIT} Zeichen)`)
       const body = { text, os, delayMs, savedAt, ...(name ? { name } : {}) }
       const res = await http.post(`${base()}/stored`, body, { connectTimeout: TYPE_TIMEOUT, readTimeout: TYPE_TIMEOUT })

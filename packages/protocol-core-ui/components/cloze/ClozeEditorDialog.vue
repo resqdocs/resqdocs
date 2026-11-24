@@ -17,7 +17,7 @@ import { collectIds, createField, createFunction } from '@resqdocs/protocol-core
 import { FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 import { allowedFunctionKindsKey, longTextSizeKey } from '../../injection.ts'
 import { LONG_TEXT_SIZE_DEFAULT, LONG_TEXT_SIZE_PX } from '../../longTextSize.ts'
-import { keyboardCovers, visibleBox, type VisibleBox } from '../../visibleViewport.ts'
+import { useFullscreenKeyboard } from '../../fullscreenKeyboard.ts'
 import { useTreeEditor } from '../../treeEditor.ts'
 
 const props = defineProps<{ node: Container; root: Container }>()
@@ -234,64 +234,36 @@ function deleteGap(): void {
 const sizeRef = inject(longTextSizeKey, null)
 const fontSize = computed(() => `${LONG_TEXT_SIZE_PX[sizeRef?.value ?? LONG_TEXT_SIZE_DEFAULT]}px`)
 
-// --- Fenster: Höhe folgt dem sichtbaren Bereich ---
+// --- Fenster: Höhe und Lage bei offener Tastatur (App: Layout-Höhe; Online-Editor: sichtbarer Bereich) ---
 const dialog = ref<HTMLDialogElement | null>(null)
 const active = ref(false)
-const box = ref<VisibleBox | null>(null)
-const covered = ref(false)
-const closing = ref(false)
-function measure(): void {
-  const vv = window.visualViewport
-  const layout = window.innerHeight
-  box.value = visibleBox(vv, layout)
-  covered.value = keyboardCovers(vv, layout)
-}
-function track(on: boolean): void {
-  const vv = window.visualViewport
-  if (!vv) return
-  for (const ev of ['resize', 'scroll'] as const) {
-    if (on) vv.addEventListener(ev, measure)
-    else vv.removeEventListener(ev, measure)
-  }
-}
-const boxStyle = computed(() =>
-  box.value
-    ? {
-        '--lt-h': `${box.value.height}px`,
-        transform: box.value.top ? `translateY(${box.value.top}px)` : undefined,
-        transitionProperty: closing.value ? 'opacity' : undefined,
-      }
-    : undefined,
-)
+const kb = useFullscreenKeyboard()
+const { covered, boxStyle, dialogStyle } = kb
 async function open(): Promise<void> {
-  closing.value = false
   active.value = true
   selected.value = null
   notice.value = ''
   hasSelection.value = false
   caret.value = 0
   draft.value = text.value
-  measure()
+  kb.prepare()
   await nextTick()
   dialog.value?.showModal()
-  track(true)
+  kb.follow()
   // Leerer Lückentext: gleich schreiben.
-  if (text.value === '') requestAnimationFrame(() => area.value?.focus())
+  if (text.value === '') requestAnimationFrame(() => area.value?.focus({ preventScroll: true }))
 }
 async function close(): Promise<void> {
   commitDraft()
   leavePanel()
-  track(false)
-  closing.value = true
-  covered.value = false
-  box.value = { top: 0, height: window.innerHeight }
+  kb.release()
   await nextTick()
   dialog.value?.close()
 }
 function onClosed(): void {
   commitDraft() // auch beim Schließen über Escape oder den Rand geht nichts Getipptes verloren
   leavePanel()
-  track(false)
+  kb.stop()
   active.value = false
   emit('close')
 }
@@ -300,12 +272,12 @@ function openSettings(): void {
   const id = current.value?.id
   void close().then(() => id && tree.select(id))
 }
-onBeforeUnmount(() => track(false))
+onBeforeUnmount(() => kb.stop())
 defineExpose({ open, close })
 </script>
 
 <template>
-  <dialog ref="dialog" class="modal modal-top max-sm:bg-transparent sm:modal-middle" :style="covered ? { placeItems: 'start center' } : undefined" aria-label="Lückentext einrichten" @close="onClosed">
+  <dialog ref="dialog" class="modal modal-top max-sm:bg-transparent sm:modal-middle" :style="dialogStyle" aria-label="Lückentext einrichten" @close="onClosed">
     <div
       class="modal-box flex h-[var(--lt-h,100dvh)] max-h-none w-full max-w-none translate-none flex-col overflow-hidden rounded-none p-0 transition-[height,opacity,transform] duration-200 ease-out motion-reduce:transition-none sm:h-[min(85vh,var(--lt-h,100dvh))] sm:w-11/12 sm:max-w-2xl sm:rounded-box"
       :style="boxStyle"

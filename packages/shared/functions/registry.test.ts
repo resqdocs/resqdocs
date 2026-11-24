@@ -1,7 +1,7 @@
 // Laeuft mit:  node --test --experimental-strip-types
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { FUNCTION_REGISTRY, formatMedikament, formatArzt, medikamentRowHasData, arztRowHasData, staerkeOhneDuplikat } from './registry.ts'
+import { FUNCTION_REGISTRY, FUNCTION_ROW_INLINE_SEPARATOR, LEGACY_ROW_INLINE_SEPARATOR, rowSeparatorOf, formatMedikament, formatArzt, medikamentRowHasData, arztRowHasData, staerkeOhneDuplikat } from './registry.ts'
 import type { FieldFill, MedikamenteRow, ArztRow } from '../model.ts'
 
 const def = FUNCTION_REGISTRY.medikamentenplan
@@ -50,10 +50,33 @@ test('renderBody block + Praefix/Suffix je Zeile', () => {
   )
 })
 
-test('renderBody inline + freier Trenner; ohne Trenner -> Mittelpunkt', () => {
+test('renderBody inline + freier Trenner; ohne Trenner -> Semikolon', () => {
   assert.equal(def.renderBody(fill(R), { rowLayout: 'inline', rowSeparator: ' | ' }), 'ASS, 1-0-0 | Ramipril, 1-0-1 (nüchtern)')
-  // Inline-DEFAULT = Mittelpunkt: das Komma ist die Grenze IN der Zeile - als Zeilen-Trenner ambig.
-  assert.equal(def.renderBody(fill(R), { rowLayout: 'inline' }), 'ASS, 1-0-0 · Ramipril, 1-0-1 (nüchtern)')
+  // Inline-DEFAULT = Semikolon: das Komma ist die Grenze IN der Zeile - als Zeilen-Trenner ambig.
+  assert.equal(FUNCTION_ROW_INLINE_SEPARATOR, '; ')
+  assert.equal(def.renderBody(fill(R), { rowLayout: 'inline' }), 'ASS, 1-0-0; Ramipril, 1-0-1 (nüchtern)')
+  assert.equal(
+    def.renderBody(fill([{ name: 'Ramipril 5 mg', dosierung: '1-0-0' }, { name: 'ASS 100 mg', dosierung: '1-0-0' }, { name: 'Metformin 1000 mg', dosierung: '1-0-1' }]), { rowLayout: 'inline' }),
+    'Ramipril 5 mg, 1-0-0; ASS 100 mg, 1-0-0; Metformin 1000 mg, 1-0-1',
+  )
+})
+
+test('früherer Standard-Trenner „ · “ gilt wie nicht gesetzt; andere ausdrückliche Trenner bleiben', () => {
+  // Vorlagen aus der Zeit, als der Mittelpunkt Standard war, haben ihn teils ausdrücklich gespeichert. Die Bridge
+  // kann ihn nicht tippen; gemeint war „Standard“.
+  assert.equal(LEGACY_ROW_INLINE_SEPARATOR, ' · ')
+  assert.equal(rowSeparatorOf(undefined), '; ')
+  assert.equal(rowSeparatorOf({ rowLayout: 'inline' }), '; ')
+  assert.equal(rowSeparatorOf({ rowSeparator: ' · ' }), '; ')
+  assert.equal(def.renderBody(fill(R), { rowLayout: 'inline', rowSeparator: ' · ' }), 'ASS, 1-0-0; Ramipril, 1-0-1 (nüchtern)')
+  // Nur GENAU der frühere Standard. Alles andere ist eine eigene Entscheidung der Vorlage und bleibt.
+  for (const own of ['·', ' ·', '· ', '  ·  ', ' • ', ', ', ' / ', '', ' ']) {
+    assert.equal(rowSeparatorOf({ rowSeparator: own }), own, JSON.stringify(own))
+  }
+  assert.equal(def.renderBody(fill(R), { rowLayout: 'inline', rowSeparator: '·' }), 'ASS, 1-0-0·Ramipril, 1-0-1 (nüchtern)')
+  assert.equal(def.renderBody(fill(R), { rowLayout: 'inline', rowSeparator: '' }), 'ASS, 1-0-0Ramipril, 1-0-1 (nüchtern)')
+  // untereinander spielt der Trenner keine Rolle
+  assert.equal(def.renderBody(fill(R), { rowLayout: 'block', rowSeparator: ' · ' }), 'ASS, 1-0-0\nRamipril, 1-0-1 (nüchtern)')
 })
 
 test('renderBody: namelose Zeilen gefiltert (beide Layouts); leer -> ""', () => {
@@ -395,7 +418,9 @@ test('aerzte.renderBody: block (Default) + inline; namelose gefiltert; leer -> "
     { name: 'Dr. B', ort: 'Kiel' },
   ]
   assert.equal(aerzteDef.renderBody(fillA(A)), 'Dr. A (Hausarzt)\nDr. B, Kiel')
-  assert.equal(aerzteDef.renderBody(fillA(A), { rowLayout: 'inline', rowSeparator: ' · ' }), 'Dr. A (Hausarzt) · Dr. B, Kiel')
+  assert.equal(aerzteDef.renderBody(fillA(A), { rowLayout: 'inline' }), 'Dr. A (Hausarzt); Dr. B, Kiel')
+  assert.equal(aerzteDef.renderBody(fillA(A), { rowLayout: 'inline', rowSeparator: ' / ' }), 'Dr. A (Hausarzt) / Dr. B, Kiel')
+  assert.equal(aerzteDef.renderBody(fillA(A), { rowLayout: 'inline', rowSeparator: ' · ' }), 'Dr. A (Hausarzt); Dr. B, Kiel', 'früherer Standard')
   assert.equal(aerzteDef.renderBody(fillA([{ name: '' }, { name: 'Dr. C' }])), 'Dr. C')
   assert.equal(aerzteDef.renderBody(fillA([])), '')
 })

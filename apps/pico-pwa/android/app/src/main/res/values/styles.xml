@@ -13,15 +13,20 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Hintergrund des Fensters = Farbe hinter den Systemleisten (siehe colors.xml). Ohne diese Angabe nimmt
+             Android das Standardgrau des Themas: oben und unten standen andersfarbige Balken. -->
+        <item name="android:windowBackground">@color/appChrome</item>
     </style>
 
 
-    <!-- Kein Theme.SplashScreen-Parent (= core-splashscreen-Library) mehr: die Library
-         wurde nie genutzt (kein installSplashScreen()-Aufruf), liefert aber deprecated
-         Edge-to-Edge-APIs (setStatusBarColor/setNavigationBarColor/setDecorFitsSystemWindows)
-         als toten Bytecode im AAB mit -> Play-Console-Warnung "randlose Anzeige". Splash
-         bleibt unveraendert als Fenster-/Hintergrund-Drawable @drawable/splash erhalten. -->
+    <!-- Start-Thema der MainActivity (Capacitor wechselt in onCreate auf AppTheme.NoActionBar).
+         Kein Theme.SplashScreen-Parent (= core-splashscreen-Library): die Library wurde nie genutzt (kein
+         installSplashScreen()-Aufruf), liefert aber deprecated Edge-to-Edge-APIs
+         (setStatusBarColor/setNavigationBarColor/setDecorFitsSystemWindows) als toten Bytecode im AAB mit
+         -> Play-Console-Warnung "randlose Anzeige". Das Startbild ist deshalb der Fensterhintergrund:
+         Farbe der App mit der Marke in der Mitte (drawable/splash.xml, hell und dunkel). Ab Android 12 zeigt
+         das System sein eigenes Startbild, siehe values-v31/styles.xml. -->
     <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
-        <item name="android:background">@drawable/splash</item>
+        <item name="android:windowBackground">@drawable/splash</item>
     </style>
 </resources>

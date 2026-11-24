@@ -12,11 +12,13 @@
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
-		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
+		504EC3121FED79650016851F /* Startbild.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* Startbild.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
 		ABBFD298300D7C6100024D39 /* ICloudBackupPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABBFD297300D7C6100024D39 /* ICloudBackupPlugin.swift */; };
 		7C1E5A0B31A04D2F9E6B4C10 /* KeepAwakePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1E5A0A31A04D2F9E6B4C10 /* KeepAwakePlugin.swift */; };
+		7C1E5A0D31A04D2F9E6B4C10 /* BridgeWifiPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1E5A0C31A04D2F9E6B4C10 /* BridgeWifiPlugin.swift */; };
+		7C1E5A0F31A04D2F9E6B4C10 /* AppChromePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1E5A0E31A04D2F9E6B4C10 /* AppChromePlugin.swift */; };
 		4938EFDE53E845FBB33B72BC /* ScannerPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D072F062F424427AB37AD422 /* ScannerPlugin.swift */; };
 		C2910C5AD5D141AE814CE5FB /* ScanViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69445A58E8C34EA5B48E206B /* ScanViewController.swift */; };
 		BD7BA99EB9344A6F8E1C0ED6 /* StartZoom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35AEC27C73104480B88C1C33 /* StartZoom.swift */; };
@@ -31,15 +33,17 @@
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		504EC30E1FED79650016851F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Startbild.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		AB3A50E02FDAC241002895B4 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Main.strings; sourceTree = "<group>"; };
-		AB3A50E12FDAC241002895B4 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/LaunchScreen.strings; sourceTree = "<group>"; };
+		AB3A50E12FDAC241002895B4 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Startbild.strings; sourceTree = "<group>"; };
 		ABBFD295300D7C6100024D39 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = App.entitlements; path = App/App.entitlements; sourceTree = "<group>"; };
 		ABBFD296300D7C6100024D39 /* ICloudBackupPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ICloudBackupPlugin.m; path = App/ICloudBackupPlugin.m; sourceTree = "<group>"; };
 		ABBFD297300D7C6100024D39 /* ICloudBackupPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ICloudBackupPlugin.swift; path = App/ICloudBackupPlugin.swift; sourceTree = "<group>"; };
 		7C1E5A0A31A04D2F9E6B4C10 /* KeepAwakePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeepAwakePlugin.swift; path = App/KeepAwakePlugin.swift; sourceTree = "<group>"; };
+		7C1E5A0C31A04D2F9E6B4C10 /* BridgeWifiPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BridgeWifiPlugin.swift; path = App/BridgeWifiPlugin.swift; sourceTree = "<group>"; };
+		7C1E5A0E31A04D2F9E6B4C10 /* AppChromePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppChromePlugin.swift; path = App/AppChromePlugin.swift; sourceTree = "<group>"; };
 		D072F062F424427AB37AD422 /* ScannerPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerPlugin.swift; sourceTree = "<group>"; };
 		69445A58E8C34EA5B48E206B /* ScanViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanViewController.swift; sourceTree = "<group>"; };
 		35AEC27C73104480B88C1C33 /* StartZoom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartZoom.swift; sourceTree = "<group>"; };
@@ -76,6 +80,8 @@
 				ABBFD296300D7C6100024D39 /* ICloudBackupPlugin.m */,
 				ABBFD297300D7C6100024D39 /* ICloudBackupPlugin.swift */,
 				7C1E5A0A31A04D2F9E6B4C10 /* KeepAwakePlugin.swift */,
+				7C1E5A0C31A04D2F9E6B4C10 /* BridgeWifiPlugin.swift */,
+				7C1E5A0E31A04D2F9E6B4C10 /* AppChromePlugin.swift */,
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
 				7F8756D8B27F46E3366F6CEA /* Pods */,
@@ -108,7 +114,7 @@
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
-				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
+				504EC3101FED79650016851F /* Startbild.storyboard */,
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
@@ -192,7 +198,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */,
+				504EC3121FED79650016851F /* Startbild.storyboard in Resources */,
 				50B271D11FEDC1A000F3C39B /* public in Resources */,
 				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
@@ -246,6 +252,8 @@
 			files = (
 				ABBFD298300D7C6100024D39 /* ICloudBackupPlugin.swift in Sources */,
 				7C1E5A0B31A04D2F9E6B4C10 /* KeepAwakePlugin.swift in Sources */,
+				7C1E5A0D31A04D2F9E6B4C10 /* BridgeWifiPlugin.swift in Sources */,
+				7C1E5A0F31A04D2F9E6B4C10 /* AppChromePlugin.swift in Sources */,
 				ABBFD299300D7C6100024D39 /* ICloudBackupPlugin.m in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				073760CF4148440881D2956A /* SceneDelegate.swift in Sources */,
@@ -267,13 +275,13 @@
 			name = Main.storyboard;
 			sourceTree = "<group>";
 		};
-		504EC3101FED79650016851F /* LaunchScreen.storyboard */ = {
+		504EC3101FED79650016851F /* Startbild.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
 				504EC3111FED79650016851F /* Base */,
 				AB3A50E12FDAC241002895B4 /* de */,
 			);
-			name = LaunchScreen.storyboard;
+			name = Startbild.storyboard;
 			sourceTree = "<group>";
 		};
 /* End PBXVariantGroup section */
@@ -412,7 +420,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = App/Info.plist;
@@ -423,7 +431,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.3;
+				MARKETING_VERSION = 2.2.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.resqdocs;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -443,7 +451,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 35;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = App/Info.plist;
@@ -454,7 +462,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.3;
+				MARKETING_VERSION = 2.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.resqdocs;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";

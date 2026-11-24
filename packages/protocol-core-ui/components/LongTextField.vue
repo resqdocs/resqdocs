@@ -22,9 +22,11 @@ defineExpose({ open })
 </script>
 
 <template>
+  <!-- Feste Höhe für zwei Zeilen (2 x 24 px, Innenabstand, Rand), leer wie gefüllt gleich: nach dem Schreiben rückt
+       darunter nichts nach. Längerer Text wird nach zwei Zeilen gekürzt. -->
   <button
     type="button"
-    class="textarea textarea-bordered textarea-sm min-h-[3.5rem] w-full whitespace-pre-wrap text-left"
+    class="textarea textarea-bordered textarea-sm h-[4.125rem] min-h-0 w-full overflow-hidden whitespace-pre-wrap text-left"
     :aria-label="`${title} bearbeiten`"
     :aria-required="required || undefined"
     @click="open"

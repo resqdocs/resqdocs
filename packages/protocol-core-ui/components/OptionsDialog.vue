@@ -423,7 +423,7 @@ watch(wide, (w) => {
 
 <template>
   <Teleport to="body">
-    <div class="modal modal-open" role="dialog" aria-modal="true" :aria-label="`Optionen bearbeiten: ${fieldLabel}`" data-options-dialog :data-options-mode="wide ? 'tabelle' : 'liste'">
+    <div class="modal modal-open" role="dialog" aria-modal="true" :aria-label="`Optionen bearbeiten: ${fieldLabel}`" data-options-dialog data-back-escape :data-options-mode="wide ? 'tabelle' : 'liste'">
       <div
         ref="panel"
         class="modal-box flex flex-col overflow-hidden p-0 max-sm:h-[100dvh] max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:rounded-none sm:h-[min(85vh,52rem)] sm:w-11/12 sm:max-w-3xl"

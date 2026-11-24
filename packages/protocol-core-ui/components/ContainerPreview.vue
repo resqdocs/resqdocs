@@ -7,6 +7,7 @@ import { render } from '@resqdocs/protocol-core/render'
 import { previewValues } from '@resqdocs/protocol-core/creator'
 import ContainerPreviewNode from './ContainerPreviewNode.vue'
 import OutputText from './OutputText.vue'
+import UntypeableHint from './UntypeableHint.vue'
 
 const props = defineProps<{ root: Container }>()
 // Editor-Vorschau, umschaltbar:
@@ -30,6 +31,7 @@ const text = computed(() => render(props.root, showSample.value ? previewValues(
           </div>
         </div>
         <OutputText :text="text" label="Protokolltext" />
+        <UntypeableHint :text="text" />
       </div>
     </div>
     <div class="card bg-base-100 shadow">

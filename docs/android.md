@@ -19,6 +19,19 @@ App-ID: `com.example.resqdocs` (identisch zu iOS). App-Name: `ResQDocs`.
 - **Kamera** (`android.permission.CAMERA`) nur für den Medikationsplan-Scan (BMP,
   `@zxing/browser` im WebView). `uses-feature` ist `required="false"` — Geräte
   ohne Kamera können die App nutzen, nur der Scan entfällt.
+- **WLAN der Bridge** (`CHANGE_NETWORK_STATE`, `ACCESS_WIFI_STATE`, beide ohne Rückfrage):
+  „Mit Bridge-WLAN verbinden" bittet Android ab Version 10, die App mit dem WLAN
+  `ResQDocs-<ID>` zu verbinden (`WifiNetworkSpecifier`, lokales Plugin
+  `app/src/main/java/app/resqdocs/BridgeWifiPlugin.kt`). Das System sucht und zeigt die
+  Auswahl selbst, deshalb **keine Standortberechtigung**. Das Netz gehört dann nur der App;
+  solange sie es hält, läuft ihr ganzer Netzverkehr darüber (`bindProcessToNetwork`), und
+  das Bridge-WLAN hat kein Internet. Gelöst wird das über „Bridge-WLAN trennen"
+  (Einstellungen → Bridge), wenn das Netz verschwindet, oder mit dem Ende der App.
+  Vor Android 10 bleibt „WLAN-Einstellungen öffnen".
+- **Vibration** (`android.permission.VIBRATE`, ohne Rückfrage): für die Haptik an wenigen Stellen
+  (Einstellungen → „Vibration", Stufen Aus bis Viel). Die Berechtigung steht nicht im Manifest der App,
+  sie kommt beim Zusammenführen aus dem Manifest des Plugins `@capacitor/haptics`. Das Plugin nutzt nur
+  den Vibrationsdienst des Systems, kein Netz und keine Google Play Services.
 
 ## Voraussetzungen
 

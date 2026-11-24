@@ -16,13 +16,21 @@ test('Fenster: „Fertig" steht im Kopf vor dem Text, kein Abbrechen - jede Antw
   assert.doesNotMatch(t, /Abbrechen|Übernehmen/)
 })
 
-test('Fenster: Höhe folgt dem sichtbaren Bereich, nichts fährt gegen die Tastatur', () => {
-  assert.match(dialog, /visualViewport/)
-  assert.match(dialog, /h-\[var\(--lt-h,100dvh\)\]/)
-  assert.match(dialog, /modal modal-top /)
-  assert.match(dialog, /translate-none/)
-  assert.match(dialog, /transitionProperty: closing\.value \? 'opacity'/)
-  assert.doesNotMatch(template(dialog), /class="[^"]*modal-box[^"]*\bh-\[\d+vh\]/)
+test('Fenster: endet über der Tastatur (App: Layout-Höhe, einmal angepasst; Online-Editor: sichtbarer Bereich), nichts fährt gegen die Tastatur', () => {
+  // Höhe und Lage wie beim großen Textfeld aus fullscreenKeyboard.ts (Wächter dort: longTextDialog.test.ts).
+  for (const [name, src] of [['Ausfüllen', dialog], ['Einrichten', read('components/cloze/ClozeEditorDialog.vue')]] as const) {
+    assert.match(src, /useFullscreenKeyboard\(\)/, name)
+    assert.doesNotMatch(src, /visualViewport|translateY/, `${name}: keine eigene Rechnung mehr`)
+    assert.match(src, /h-\[var\(--lt-h,100dvh\)\]/, name)
+    assert.match(src, /modal modal-top /, name)
+    assert.match(src, /translate-none/, name)
+    assert.match(template(src), /:style="boxStyle"/, name)
+    assert.match(template(src), /:style="dialogStyle"/, name)
+    assert.doesNotMatch(template(src), /class="[^"]*modal-box[^"]*\bh-\[\d+vh\]/, name)
+    const close = src.slice(src.indexOf('async function close()'), src.indexOf('function onClosed()'))
+    assert.ok(close.indexOf('kb.release()') >= 0 && close.indexOf('kb.release()') < close.indexOf('dialog.value?.close()'), `${name}: erst volle Fläche, dann zu`)
+  }
+  assert.match(read('fullscreenKeyboard.ts'), /transitionProperty: closing\.value \? 'opacity'/)
 })
 
 test('Fenster: Weiter und Zurück halten den Fokus im Feld (Tastatur bleibt zwischen Freitext-Lücken offen)', () => {

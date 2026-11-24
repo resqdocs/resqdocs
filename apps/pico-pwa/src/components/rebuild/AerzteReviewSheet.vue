@@ -100,7 +100,7 @@ onMounted(() => {
       <div class="overlay-surface flex max-h-[85vh] w-full flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:mx-auto sm:max-w-lg sm:rounded-2xl">
         <div class="flex items-center justify-between gap-2">
           <span class="text-base font-semibold">Arzt aus Medikationsplan</span>
-          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11" aria-label="Schließen" @click="discardAndClose">✕</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11" aria-label="Schließen" data-back-close @click="discardAndClose">✕</button>
         </div>
 
         <div class="flex flex-wrap gap-2">

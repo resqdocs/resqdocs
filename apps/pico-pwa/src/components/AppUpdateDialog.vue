@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useAppUpdateNotice } from '@/appUpdate/useAppUpdateNotice'
+import { useDisclaimer } from '@/composables/useDisclaimer'
 
 /**
  * Hinweis „neue App-Version im Store" als Dialog beim Oeffnen der App, wenn resqdocs.app fuer die
  * eigene Plattform eine neuere Version meldet. Der Store-Button oeffnet die Store-Seite (target=_blank
  * -> Capacitor gibt die Adresse an das System, das den Store oeffnet). „Später" schliesst bis zum
- * naechsten App-Start; mit Haken erst wieder bei einer neueren Version. z-30: unter Haftungs-Gate (z-50)
- * und Nutzungshinweis (z-40), damit der erste Start nicht mit drei Dialogen beginnt. KEINE HTTP-Logik hier.
+ * naechsten App-Start; mit Haken erst wieder bei einer neueren Version. Erscheint erst, wenn der Hinweis beim
+ * Start bestaetigt ist (nie zwei Dialoge uebereinander); z-30 liegt zudem unter der Einfuehrung (z-40), die
+ * danach kommt. KEINE HTTP-Logik hier.
  */
 const notice = useAppUpdateNotice()
+const disclaimer = useDisclaimer()
+const startNoticeOpen = computed(() => !disclaimer.ready.value || disclaimer.needsAck.value)
 const untilNext = ref(false)
 const storeLabel = computed(() => (notice.platform.value === 'android' ? 'Bei Google Play öffnen' : 'Im App Store öffnen'))
 const storeName = computed(() => (notice.platform.value === 'android' ? 'bei Google Play' : 'im App Store'))
@@ -22,7 +26,7 @@ function close(): void {
 <template>
   <Teleport to="body">
     <div
-      v-if="notice.visible.value"
+      v-if="notice.visible.value && !startNoticeOpen"
       class="overlay-backdrop--strong fixed inset-0 z-30 flex items-center justify-center p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       role="dialog"
       aria-modal="true"
@@ -44,8 +48,8 @@ function close(): void {
             Nicht mehr anzeigen bis zur nächsten Version
           </label>
           <div class="card-actions justify-end">
-            <button class="btn btn-ghost btn-sm min-h-11" type="button" @click="close">Später</button>
-            <a
+            <button class="btn btn-ghost btn-sm min-h-11" type="button" data-back-close @click="close">Später</button>
+            <a draggable="false"
               v-if="notice.storeUrl.value"
               :href="notice.storeUrl.value"
               target="_blank"

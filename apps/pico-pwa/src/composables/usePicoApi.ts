@@ -2,6 +2,7 @@ import { useStorage } from '@/storage/useStorage'
 import { capacitorHttpAdapter } from '@/pico/httpAdapter'
 import { createPicoClient } from '@/pico/picoClient'
 import type { OsMode } from '@/pico/picoTypes'
+import { haptic } from '@/shell/haptics'
 
 /**
  * Einsatz-Send an die Pico-Bridge. Dünner Wrapper um die gekapselte Pico-Schicht
@@ -24,7 +25,15 @@ export function usePicoApi(options: PicoApiOptions = {}) {
   /** Sendet den Text an die Bridge (USB-HID). Text nur transient im Body.
    * delayMs = Tippgeschwindigkeit (ms/Zeichen) aus den Einstellungen; fehlt → Firmware-Default. */
   async function typeText(text: string, os: OsMode = 'win_de', delayMs?: number): Promise<void> {
-    await client.typeText({ text, os, delayMs })
+    // Rückmeldung für die Hand: gelungen bzw. fehlgeschlagen (Regler „Vibration“). Der Fehler geht unverändert
+    // an die Aufrufstelle weiter.
+    try {
+      await client.typeText({ text, os, delayMs })
+      haptic('sendOk')
+    } catch (err) {
+      haptic('sendFailed')
+      throw err
+    }
   }
 
   /** Prüft die Erreichbarkeit der Bridge (für die Verbindungsanzeige). */

@@ -135,8 +135,8 @@ Drei Knoten-Typen: **Container** (Abschnitt mit Kindern), **Field** (Eingabefeld
 - **Text, wenn nichts erfasst ist?** (`default`, ab App 1.1.1) — Steht in der Ausgabe, wenn die Funktion keine Einträge oder kein Ergebnis hat. *Beispiel: „keine Dauermedikation bekannt“.*
 - **Darf nicht still entfallen?** (`required`, ab App 1.2.0) — Wie beim Pflichtfeld.
 - **Erst bei Bedarf einschalten?** (`defaultExcluded`, ab App 1.9.0) — Die Funktion startet auf „nicht erhoben“ und kommt erst in die Ausgabe, wenn der Nutzer sie einschaltet oder Daten erfasst. Nicht zusammen mit `required`. Für ältere App-Versionen: Lege die Funktion in einen eigenen Abschnitt mit `excludable` und `defaultExcluded`.
-- **Einträge untereinander oder in einer Zeile?** (`config.rowLayout`) — Untereinander (`block`) oder kompakt in einer Zeile (`inline`). *Beispiel: vier Medikamente untereinander — oder „Aspirin · Paracetamol · Ibuprofen".*
-- **Trennzeichen zwischen den Einträgen?** (`rowSeparator`) — Was zwischen den Einträgen steht, wenn sie in einer Zeile sind. Standard ist der Mittelpunkt „ · " (hebt sich vom Komma in „Name Stärke, Schema" ab). *Beispiel: ein Semikolon „; " stattdessen.*
+- **Einträge untereinander oder in einer Zeile?** (`config.rowLayout`) — Untereinander (`block`) oder kompakt in einer Zeile (`inline`). *Beispiel: vier Medikamente untereinander — oder „Aspirin; Paracetamol; Ibuprofen".*
+- **Trennzeichen zwischen den Einträgen?** (`rowSeparator`) — Was zwischen den Einträgen steht, wenn sie in einer Zeile sind. Standard ist das Semikolon „; " (hebt sich vom Komma in „Name Stärke, Schema" ab und ist auf jeder Tastatur tippbar); lass `rowSeparator` dafür einfach weg. Der frühere Standard „ · " (Mittelpunkt) lässt sich nicht tippen und wird wie „nicht gesetzt" behandelt. *Beispiel: ein senkrechter Strich „ | " stattdessen.*
 
 ## §5 Render-Regeln (damit deine Vorschau der echten Ausgabe entspricht)
 
@@ -152,6 +152,7 @@ Die App rendert die Vorlage zu Klartext. Regeln:
 - **`emptyText`:** Ersatztext, wenn der Container angezeigt wird, seine Kinder aber nichts ausgeben.
 - **Lückentext (`cloze`, ab App 2.0.0):** `cloze.parts` ist eine Liste aus festem Text (Strings, auch mit Zeilenumbrüchen) und Lücken `{ "gap": "<id>" }`. Die id zeigt auf ein Feld oder eine Funktion: ein Kind dieses Containers (die Lücke fragt den Wert selbst ab) oder ein Element an anderer Stelle der Vorlage (die Lücke übernimmt dessen Wert). In der Lücke steht nur der Wert, ohne Titel. Bleibt eine Lücke leer, entfallen das doppelte Leerzeichen und ein verwaistes Komma. Kinder, die in keiner Lücke stehen, folgen unter dem Text. Beim Ausfüllen kommt jede Lücke der Reihe nach dran (Auswahl wie Freitext, auch mit Standardwert). Ältere App-Versionen zeigen die Kinder als normale Feldliste.
 - **Feld-Wert:** im Standard der `default` (bzw. `options[0]`, mit `defaultEmpty` nichts); `options` macht das Feld zu einem Select; `allowCustom` erlaubt zusätzlich Freitext; `multiline` ist mehrzeiliger Freitext.
+- **Zeichen:** Den fertigen Text tippt eine Tastatur ins Zielgerät. Sie kann nur diese Zeichen: die Buchstaben A–Z und a–z, Ziffern, Leerzeichen, Zeilenumbruch, die Satz- und Sonderzeichen der Tastatur (`! " # $ % & ' ( ) * + , - . / : ; < = > ? @ [ \ ] ^ _ { | } ~` und den Gravis) sowie `{{TYPEABLE_NON_ASCII}}`. Verwende in `title`, `default`, `options`, `emptyText`, `separator`, `heading`, `config` und im festen Text eines Lückentexts nur diese Zeichen. Schreibe gerade Anführungszeichen (`"` und `'`, im JSON als `\"`), den Bindestrich `-` und drei Punkte `...` statt typografischer Anführungszeichen, Gedankenstrich und Auslassungszeichen. Die App ersetzt diese beim Erzeugen des Textes zwar selbst (ebenso geschützte Leerzeichen), deine Vorschau soll aber von vornherein der Ausgabe entsprechen. Emojis und Bildsymbole (z. B. ©, ®, ™, ♀, ♂, ⚠, ☑, ✔, ↔, ▶) entfernt die App ersatzlos aus dem Text: Schreibe stattdessen das Wort aus („weiblich“ statt ♀). Jedes andere Zeichen, z. B. ç, ñ, É, ², ½, →, ≥, •, ✓, ☐ oder eine Rahmenlinie wie ═, kommt am Zielgerät als `[?]` an.
 - **FunctionNode:** Medikationsplan/Ärzte rendern ihre Zeilen; `config.rowLayout` = `block` (untereinander, optional `rowPrefix`/`rowSuffix` je Zeile) oder `inline` (eine Zeile, getrennt mit `rowSeparator`). Pack-Years, NEWS2, LAMS, FAST4D, ZOPS, Sgarbossa, EGSYS und BMI geben ihr Ergebnis aus; das Zeichen am Ende ihrer Zeile legt `config.lineEnd` fest (fehlt = wie bisher, leer = nichts); ohne Einträge oder Ergebnis erscheint der `default`. LAMS, FAST4D, ZOPS, Sgarbossa und EGSYS lesen sich am besten als eine Zeile („LAMS 4/5 (…)“, „FAST4D positiv (…)“, „ZOPS orientiert.“, „Sgarbossa (mod. nach Smith) negativ.“): `titleInline: true` und `heading` mit `"prefix": ""`, `"suffix": " "`.
 
 ### Durchgerechnetes Beispiel (JSON → exakte Ausgabe)
@@ -200,6 +201,7 @@ Bittet dich ein Start-Prompt zu bestätigen, dass dir diese Anleitung vorliegt: 
 - ✗ FALSCH: `<escape>{"schema": …}` oder anderer Text im Codeblock → ✓ RICHTIG: Der Block beginnt mit `{` und endet mit `}`.
 - ✗ FALSCH: `"type": "select"` oder `"type": "text"` → ✓ RICHTIG: `"type": "field"`, für eine Auswahl zusätzlich `options`.
 - ✗ FALSCH: `"functionKind": "vitalwerte"` oder `"visibleIf": …` → ✓ RICHTIG: nur Werte und Eigenschaften aus §2; Messwerte sind normale Felder.
+- ✗ FALSCH: `"fill": "═"`, Emojis oder Symbole wie ⚠ und ♀ im Titel oder `"default": "„unauffällig“ – o. B. …"` → ✓ RICHTIG: nur tippbare Zeichen (§5 „Zeichen“), z. B. `"fill": "="` und `"default": "\"unauffällig\" - o. B. ..."`.
 - ✗ FALSCH: Einsatzcode-Listen in `options` eintragen → ✓ RICHTIG: Platzhalter stehen lassen, der Nutzer setzt seine Liste in der App ein (A2).
 
 ## §8 Beispiele (einfach → vollständig)
@@ -219,8 +221,8 @@ B: Kein path Atemgeräusch/Atemmuster. Atmung ist suffizient. Keine Dyspnoe.
 So importiert der Nutzer das JSON (sag es ihm nach der finalen Ausgabe):
 
 1. ResQDocs-App öffnen → Tab **„Vorlagen"**.
-2. Unter der Liste der Vorlagen **„Aus Datei importieren…"** antippen — es öffnet das Blatt **„Daten"**.
-3. JSON in das Textfeld einfügen → **„Laden"** (oder darunter die .json-Datei wählen).
+2. Unter der Liste der Vorlagen **„Aus Datei importieren…"** antippen — die Dateiauswahl des Handys geht auf. Die gespeicherte .json-Datei wählen.
+3. Ohne Datei: die Dateiauswahl abbrechen, im Blatt **„Aus Datei importieren"** das JSON unter **„Oder Text einfügen"** einfügen → **„Weiter"**.
 4. Existiert schon eine Vorlage mit demselben Namen (`title` der Wurzel), fragt die App: „Als neue Vorlage“ oder „Überschreiben“.
 
 Zeigt die App eine Fehlermeldung, hilf dem Nutzer so (Meldungen wörtlich aus der App):
@@ -238,4 +240,4 @@ Importiert die App ohne Meldung, aber etwas fehlt oder sieht falsch aus: Die App
 2. Nur die drei Knotentypen `container` | `field` | `function`; nur Eigenschaften aus §2; `functionKind` nur mit dokumentierten Werten **und nur bis zur installierten App-Version** (A3).
 3. Jede `id` eindeutig (`A–Z a–z 0–9 _ -`); Zahlen/Booleans ohne Anführungszeichen; `options` = Liste von Strings; `heading` nur komplett (5 Eigenschaften).
 4. Keine Patientendaten in `title`, `default`, `options`, `emptyText`.
-5. **Selbstcheck vor dem Absenden:** Wrapper vollständig? Nur dokumentierte Eigenschaften? `id`s eindeutig? Jeder Titel-Knoten mit explizitem `heading`? **Kein `functionKind` über der genannten App-Version (A3)?** Keine Kommentare, keine nachgestellten Kommas, mit `JSON.parse` parsbar? Erst wenn alles erfüllt ist: das JSON in **einem** ```json-Codeblock ausgeben, gefolgt von genau einem Satz mit den Import-Schritten aus §9 (Kurzform: Tab „Vorlagen" → „Aus Datei importieren…" → einfügen → „Laden"). Beginnt der Codeblock mit `{`, endet er mit `}`, und steht nichts anderes darin? Die App prüft den Inhalt beim Import nicht, du bist die letzte Kontrolle. Kannst du Code ausführen, prüfe das JSON zusätzlich mit `JSON.parse`.
+5. **Selbstcheck vor dem Absenden:** Wrapper vollständig? Nur dokumentierte Eigenschaften? `id`s eindeutig? Jeder Titel-Knoten mit explizitem `heading`? **Kein `functionKind` über der genannten App-Version (A3)?** Nur tippbare Zeichen, keine Emojis und Symbole (§5 „Zeichen“)? Keine Kommentare, keine nachgestellten Kommas, mit `JSON.parse` parsbar? Erst wenn alles erfüllt ist: das JSON in **einem** ```json-Codeblock ausgeben, gefolgt von genau einem Satz mit den Import-Schritten aus §9 (Kurzform: Tab „Vorlagen" → „Aus Datei importieren…" → einfügen → „Laden"). Beginnt der Codeblock mit `{`, endet er mit `}`, und steht nichts anderes darin? Die App prüft den Inhalt beim Import nicht, du bist die letzte Kontrolle. Kannst du Code ausführen, prüfe das JSON zusätzlich mit `JSON.parse`.

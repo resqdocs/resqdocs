@@ -10,11 +10,13 @@
  */
 import { ref, computed, nextTick, watch } from 'vue'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
+import { templateLabel } from '@resqdocs/protocol-core-ui/nodeLabel'
 import { useTreeEditor } from '@resqdocs/protocol-core-ui/treeEditor'
 import { useStorage } from '@/storage/useStorage'
 import SaveStatusBadge from './SaveStatusBadge.vue'
 import TemplateIO from './TemplateIO.vue'
 import { incomingOpen } from '@/composables/useIncomingOpen'
+import { pendingImport } from '@/composables/useImportChoice'
 
 const tree = useProtocolTree()
 const editor = useTreeEditor()
@@ -23,7 +25,7 @@ const protocols = tree.protocols
 const editorActiveId = tree.editorActiveId
 
 const active = computed(() => protocols.value.find((p) => p.id === editorActiveId.value) ?? protocols.value[0])
-const activeTitle = computed(() => (active.value?.title && active.value.title.trim()) || active.value?.id || '')
+const activeTitle = computed(() => (active.value ? templateLabel(active.value) : ''))
 const activeIndex = computed(() => protocols.value.findIndex((p) => p.id === active.value?.id))
 const isFirst = computed(() => activeIndex.value <= 0)
 const isLast = computed(() => activeIndex.value >= protocols.value.length - 1)
@@ -100,26 +102,40 @@ function sheetDuplicate(): void {
 // Abschnitt — sauber getrennt (Teilen zeigt nie Datei-Kram und umgekehrt).
 async function rowShare(id: string): Promise<void> {
   switchTo(id) // die getippte Zeile aktiv setzen -> TemplateIO teilt genau diese Vorlage
+  dataKind.value = 'export'
   dataOpen.value = true
   await nextTick()
   dataIo.value?.openShare()
 }
 async function sheetExportFile(): Promise<void> {
   sheetOpen.value = false // active ist durch openSheet bereits gesetzt
+  dataKind.value = 'export'
   dataOpen.value = true
   await nextTick()
   dataIo.value?.openExport()
 }
 // BIBLIOTHEKS-EBENE (legen eine NEUE Vorlage an -> gehoeren neben „Neue Vorlage", NICHT an eine Zeile):
 async function receiveNewTemplate(): Promise<void> {
+  dataKind.value = 'receive'
   dataOpen.value = true
   await nextTick()
   dataIo.value?.openReceive()
 }
-async function importNewTemplate(): Promise<void> {
+// „Aus Datei importieren…“ öffnet die Dateiauswahl des Systems direkt. Der Aufruf muss im selben Tipp passieren
+// (WebKit blockiert ihn sonst), deshalb ohne await davor und mit einem eigenen Feld außerhalb des Blatts. Das Blatt
+// öffnet zugleich: Wer die Auswahl abbricht, findet dort „Datei auswählen…“ und das Einfügen als zweiten Weg.
+const fileInput = ref<HTMLInputElement | null>(null)
+function importNewTemplate(): void {
+  fileInput.value?.click()
+  dataKind.value = 'file'
   dataOpen.value = true
-  await nextTick()
   dataIo.value?.openImportFile()
+}
+function onPickedFile(e: Event): void {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // dieselbe Datei lässt sich danach erneut wählen
+  if (file) dataIo.value?.loadFile(file)
 }
 function sheetMove(delta: number): void {
   sheetOpen.value = false
@@ -133,6 +149,21 @@ function sheetDelete(): void {
 // --- Daten-Sheet (Teilen/Empfangen + Datei-Export/Import) ---
 const dataOpen = ref(false)
 const dataIo = ref<InstanceType<typeof TemplateIO> | null>(null) // fuer die Direkt-Spruenge openShare/openReceive
+// Wofür das Blatt offen ist: bestimmt Überschrift und Erklärzeile (beim Import aus Datei kein Teilen/Export-Text).
+const dataKind = ref<'export' | 'receive' | 'file'>('export')
+
+// Nie zwei Blätter übereinander: Sobald „Vorlage übernehmen“ aufgeht (ImportChoiceDialog), tritt „Daten“ zurück.
+// TemplateIO bleibt dabei eingehängt, also bleiben eingefügter Text und die Reservierung eines „1× lesen“-Links
+// unberührt. Abbrechen (onCancel) öffnet „Daten“ wieder, nach dem Übernehmen bleibt es zu.
+watch(pendingImport, (p) => {
+  if (!p || !dataOpen.value) return
+  dataOpen.value = false
+  const cancel = p.onCancel
+  p.onCancel = () => {
+    cancel?.()
+    dataOpen.value = true
+  }
+})
 
 // Von aussen geoeffneter Link / geteilte Datei: Daten-Blatt im passenden Abschnitt aufmachen und gleich abrufen.
 // Das Antippen war die Entscheidung; gefragt wird erst beim Übernehmen (ImportChoiceDialog).
@@ -141,6 +172,7 @@ watch(
   async (item) => {
     if (!item) return
     sheetOpen.value = false
+    dataKind.value = item.kind === 'transfer' ? 'receive' : 'file'
     dataOpen.value = true
     await nextTick()
     if (item.kind === 'transfer') dataIo.value?.openReceive()
@@ -188,16 +220,16 @@ const collapsed = ref(false)
             @click="switchTo(p.id)"
           >
             <span v-if="p.id === editorActiveId" class="shrink-0" aria-hidden="true">✓</span>
-            <span class="min-w-0 flex-1 truncate">{{ (p.title && p.title.trim()) || p.id }}</span>
+            <span class="min-w-0 flex-1 truncate">{{ templateLabel(p) }}</span>
           </button>
           <!-- Teilen und Menue: 48-px-Tippflaeche, 20-px-Icon, OHNE eigenen Hintergrund und in gedaempfter Farbe -
                mit Hintergrund in jeder Zeile draengten sie sich vor den Namen. Das Menue bleibt bei den drei
                Punkten (ein Zahnrad wurde probiert und verworfen), aber als Icon in derselben Groesse wie Teilen
                statt als kleines Textzeichen. -->
-          <button type="button" class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0 text-base-content/75" :aria-label="`${(p.title && p.title.trim()) || p.id} teilen (Link und QR)`" title="Teilen (Link & QR)" @click="rowShare(p.id)">
+          <button type="button" class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0 text-base-content/75" :aria-label="`${templateLabel(p)} teilen (Link und QR)`" title="Teilen (Link & QR)" @click="rowShare(p.id)">
             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
           </button>
-          <button type="button" class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0 text-base-content/75" :aria-label="`Aktionen für ${(p.title && p.title.trim()) || p.id}`" title="Aktionen" @click="openSheet(p.id)">
+          <button type="button" class="btn btn-ghost h-12 min-h-12 w-12 shrink-0 rounded-lg px-0 text-base-content/75" :aria-label="`Aktionen für ${templateLabel(p)}`" title="Aktionen" @click="openSheet(p.id)">
             <svg class="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <circle cx="12" cy="5" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="12" cy="19" r="1.9" />
             </svg>
@@ -219,6 +251,8 @@ const collapsed = ref(false)
           <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
           Aus Datei importieren…
         </button>
+        <!-- Dateiauswahl für „Aus Datei importieren…“: unsichtbar, aber nicht display:none (iOS öffnet sie sonst nicht). -->
+        <input ref="fileInput" type="file" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true" data-import-file-direct @change="onPickedFile" />
       </li>
     </ul>
 
@@ -242,8 +276,8 @@ const collapsed = ref(false)
     <!-- Daten-Sheet: Export/Import (seltene Utility-Aktion, 1 Tap entfernt) -->
     <div class="modal modal-bottom" :class="{ 'modal-open': dataOpen }" role="dialog" aria-modal="true">
       <div class="modal-box pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-        <h3 class="text-sm font-semibold">Daten</h3>
-        <p class="pb-2 text-xs text-base-content/75"><b>Teilen/Empfangen</b> = verschlüsselter Link/QR. <b>Export/Import</b> = Datei/JSON.</p>
+        <h3 class="text-sm font-semibold">{{ dataKind === 'file' ? 'Aus Datei importieren' : 'Daten' }}</h3>
+        <p v-if="dataKind === 'export'" class="pb-2 text-xs text-base-content/75"><b>Teilen</b> = verschlüsselter Link/QR. <b>Exportieren</b> = Datei/JSON.</p>
         <TemplateIO ref="dataIo" @imported="dataOpen = false" />
         <button type="button" class="kb-actions btn btn-ghost btn-block mt-2" @click="dataOpen = false">Schließen</button>
       </div>

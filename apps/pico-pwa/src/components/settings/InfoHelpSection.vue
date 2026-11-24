@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { useStorage } from '@/storage/useStorage'
-import { useUsageNotice } from '@/composables/useUsageNotice'
+import { useDisclaimer } from '@/composables/useDisclaimer'
 
 /** Info & Hilfe. Kurze, neutrale Hinweise — keine Rechtsberatung, keine Garantien.
- * Plus: Erklär-Hinweise zurücksetzen und „Hinweis zur Nutzung" erneut anzeigen. */
+ * Plus: Erklär-Hinweise zurücksetzen und den Hinweis beim Start („Wichtiger Hinweis“) zum Lesen öffnen. */
 const { settings, saveSettings } = useStorage()
-const usageNotice = useUsageNotice()
+const disclaimer = useDisclaimer()
 function resetHints(): void {
   settings.dismissedHints = []
   void saveSettings()
@@ -22,7 +22,7 @@ function resetHints(): void {
       <!-- Anleitung lebt bewusst auf der Landing-Page; Öffnen ist nutzerinitiiert
            (externer Browser) und damit konform zur No-Network-Policy der App. -->
       <p class="text-sm">
-        <a href="https://resqdocs.app/anleitung" target="_blank" rel="noopener" class="link link-primary">
+        <a draggable="false" href="https://resqdocs.app/anleitung" target="_blank" rel="noopener" class="link link-primary">
           Anleitung öffnen (resqdocs.app)
         </a>
         - Quickstart und ausführliche Kapitel zu allen Funktionen.
@@ -37,7 +37,7 @@ function resetHints(): void {
         ResQDocs ist ein <strong>Open-Source-Projekt</strong> — Mitwirken (Issues, Beiträge) ist willkommen.
       </p>
       <div class="flex flex-wrap items-center gap-2">
-        <button class="btn btn-sm min-h-11" type="button" @click="usageNotice.show()">Hinweis zur Nutzung</button>
+        <button class="btn btn-sm min-h-11" type="button" data-show-disclaimer @click="disclaimer.show()">Wichtiger Hinweis</button>
         <button class="btn btn-sm min-h-11" type="button" @click="resetHints">Alle Hinweise erneut anzeigen</button>
         <span v-if="!settings.dismissedHints.length" class="text-xs text-base-content/75">keine ausgeblendet</span>
       </div>

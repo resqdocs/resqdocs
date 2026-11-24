@@ -425,7 +425,7 @@ async function cloudDelete(id: string): Promise<void> {
           >
             <span class="text-sm">{{ absTime(s.createdAt) }}</span>
             <span class="text-xs text-base-content/75">
-              <template v-if="s.counts">{{ s.counts.protocols }} Vorlagen · {{ s.counts.blocks }} Abschnitte ·
+              <template v-if="s.counts">{{ s.counts.protocols }} Vorlagen · {{ s.counts.blocks }} gespeicherte Abschnitte ·
                 {{ s.counts.snippets }} Textbausteine · {{ s.counts.pzn }} PZN</template>
               <template v-else>{{ s.total }} Einträge</template>
               · {{ relTime(s.createdAt) }}
@@ -551,7 +551,7 @@ async function cloudDelete(id: string): Promise<void> {
           ResQDocs verschlüsselt die Sicherungen nicht zusätzlich; der Anbieter (Google bzw. Apple) kann sie
           auch in den USA verarbeiten. Du kannst die Cloud-Sicherung jederzeit ausschalten — vorhandene
           Sicherungen bleiben dabei im Konto, du löschst sie einzeln in der Liste oder in deinem Konto.
-          Details: <a class="link" href="https://resqdocs.app/datenschutz/" target="_blank" rel="noopener">Datenschutzerklärung</a>.
+          Details: <a draggable="false" class="link" href="https://resqdocs.app/datenschutz/" target="_blank" rel="noopener">Datenschutzerklärung</a>.
         </p>
         <p v-if="backup.cloudKind === 'google'" class="mt-2 text-base-content/75">
           Beim Anmelden übermittelt Google dein <strong>Basis-Profil</strong> (Name, E-Mail, Bild) an die App — das
@@ -609,7 +609,7 @@ async function cloudDelete(id: string): Promise<void> {
             <p>Diese <strong>Cloud-Sicherung löschen</strong>? Nur der Cloud-Stand wird entfernt; dein lokaler
               Verlauf bleibt. Lässt sich nicht rückgängig machen.</p>
             <div class="mt-2 flex flex-wrap gap-2">
-              <button class="btn btn-error btn-sm min-h-11" type="button" :disabled="cloudBusy" @click="cloudDelete(c.id)">
+              <button class="btn btn-error btn-sm min-h-11" type="button" :disabled="cloudBusy" data-haptic="confirmDelete" @click="cloudDelete(c.id)">
                 {{ cloudBusy ? 'Löscht …' : 'Löschen' }}
               </button>
               <button class="btn btn-outline btn-sm min-h-11" type="button" :disabled="cloudBusy" @click="confirmCloudDelete = null">Abbrechen</button>
@@ -644,7 +644,7 @@ async function cloudDelete(id: string): Promise<void> {
       <div v-else class="mt-2 rounded-lg border border-error/50 bg-error/10 p-3 text-sm">
         <p>Wirklich <strong>alle Sicherungen</strong> löschen? Das lässt sich nicht rückgängig machen.</p>
         <div class="mt-2 flex flex-wrap gap-2">
-          <button class="btn btn-error btn-sm min-h-11" type="button" :disabled="busy" @click="doDeleteAll">
+          <button class="btn btn-error btn-sm min-h-11" type="button" :disabled="busy" data-haptic="confirmDelete" @click="doDeleteAll">
             {{ busy ? 'Löscht …' : 'Alle löschen' }}
           </button>
           <button class="btn btn-outline btn-sm min-h-11" type="button" :disabled="busy" @click="confirmDeleteAll = false">Abbrechen</button>

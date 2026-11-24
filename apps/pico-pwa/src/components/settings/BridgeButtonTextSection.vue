@@ -19,8 +19,12 @@ onMounted(() => void refresh())
         Die Bridge kann einen festen Text speichern und ihn ohne Handy tippen: Ein kurzer Druck auf ihren Knopf
         startet das Tippen, ein weiterer Druck bricht es ab.
       </p>
-      <p v-if="summary" class="text-sm" role="status">{{ summary }}</p>
-      <p v-if="support === 'offline' && failReason" class="text-xs text-base-content/75">Technischer Grund: {{ failReason }}</p>
+      <!-- Der Stand kommt erst nach der Abfrage an der Bridge. Sein Platz ist von Anfang an reserviert (drei Zeilen),
+           damit die Knöpfe darunter beim Öffnen der Seite nicht nachrutschen. -->
+      <div class="min-h-[3.75rem]" data-button-text-status>
+        <p class="text-sm" role="status">{{ summary || (checking ? 'Stand an der Bridge wird abgefragt …' : '') }}</p>
+        <p v-if="support === 'offline' && failReason" class="text-xs text-base-content/75">Technischer Grund: {{ failReason }}</p>
+      </div>
       <div class="flex flex-wrap items-center gap-2">
         <!-- Gesperrt nur, wenn die Bridge es sicher nicht kann (aeltere Firmware); sonst fragt der Dialog selbst neu. -->
         <button class="btn btn-sm min-h-11" type="button" :disabled="support === 'old' || checking" @click="requestButtonText()">Text bearbeiten</button>
