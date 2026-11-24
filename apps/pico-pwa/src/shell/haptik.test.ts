@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   eventForClick,
@@ -170,13 +170,17 @@ test('nur die benannten Stellen: Aufrufe im Code und Kennzeichen in der Oberflä
 })
 
 test('gemeinsame Bauteile und Kernlogik bleiben frei von der Haptik-Schicht (Online-Editor unberührt)', () => {
-  for (const dir of ['packages/protocol-core-ui', 'packages/shared', 'apps/protocol-editor/src']) {
+  // Der Online-Editor hat ein eigenes öffentliches Repo und fehlt im öffentlichen App-Repo: dort nur die Pakete prüfen.
+  const withEditor = existsSync(join(repo, 'apps/protocol-editor/src'))
+  for (const dir of ['packages/protocol-core-ui', 'packages/shared', ...(withEditor ? ['apps/protocol-editor/src'] : [])]) {
     for (const f of files(join(repo, dir), /\.(vue|ts|mts)$/)) {
       assert.doesNotMatch(readFileSync(f, 'utf8'), /@capacitor\/haptics|shell\/haptics/, f.slice(repo.length))
     }
   }
-  const editor = JSON.parse(readFileSync(join(repo, 'apps/protocol-editor/package.json'), 'utf8'))
-  assert.equal({ ...editor.dependencies, ...editor.devDependencies }['@capacitor/haptics'], undefined)
+  if (withEditor) {
+    const editor = JSON.parse(readFileSync(join(repo, 'apps/protocol-editor/package.json'), 'utf8'))
+    assert.equal({ ...editor.dependencies, ...editor.devDependencies }['@capacitor/haptics'], undefined)
+  }
 })
 
 test('Einstellungen: Regler „Vibration“ wie die Tippgeschwindigkeit, speichert beim Ändern, Vorschau', () => {

@@ -3,7 +3,7 @@
 // vorhandenen Vorlagen da, und das Textfeld zeigte rohes JSON als Platzhalter.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { importOrt } from './importNote.ts'
 import { ohneEigeneVorlage } from './rebuild/aiToolHint.ts'
 
@@ -61,8 +61,12 @@ test('KI-Tool wird nur ohne Vorlage mit Inhalt empfohlen, ohne Druck', () => {
   assert.match(templateIo, /<p v-if="ohneEigeneVorlage\(protocols\)"/, 'der Tipp im Blatt folgt derselben Regel')
 })
 
+// Der Online-Editor hat ein eigenes öffentliches Repo und fehlt im öffentlichen App-Repo: dort nur die App prüfen.
+const EDITOR_IMPORT = '../../../protocol-editor/src/components/ImportDialog.vue'
+const withEditor = existsSync(new URL(EDITOR_IMPORT, import.meta.url))
+
 test('Textfelder zum Einfügen zeigen kein rohes JSON als Platzhalter', () => {
-  for (const f of ['./rebuild/TemplateIO.vue', './library/BlockLibrarySection.vue', './library/SnippetLibrarySection.vue', '../../../protocol-editor/src/components/ImportDialog.vue']) {
+  for (const f of ['./rebuild/TemplateIO.vue', './library/BlockLibrarySection.vue', './library/SnippetLibrarySection.vue', ...(withEditor ? [EDITOR_IMPORT] : [])]) {
     for (const m of read(f).matchAll(/<textarea\b[^>]*>/g)) assert.doesNotMatch(m[0], /placeholder=['"][^'"]*\{/, `${f}: JSON-Platzhalter`)
   }
 })
