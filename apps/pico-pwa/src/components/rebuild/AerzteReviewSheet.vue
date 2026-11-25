@@ -97,7 +97,7 @@ onMounted(() => {
   <!-- Review-Sheet (Bottom-Sheet, teleported; bewusst KEIN daisyUI .modal wegen z-999 ueber der Kamera) -->
   <Teleport to="body">
     <div class="overlay-backdrop fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center" role="dialog" aria-modal="true">
-      <div class="overlay-surface flex max-h-[85vh] w-full flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:mx-auto sm:max-w-lg sm:rounded-2xl">
+      <div class="overlay-surface flex h-dvh w-full flex-col gap-3 overflow-y-auto overscroll-contain p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] sm:mx-auto sm:h-auto sm:max-h-[85vh] sm:max-w-lg sm:rounded-2xl sm:pt-4" data-review-sheet>
         <div class="flex items-center justify-between gap-2">
           <span class="text-base font-semibold">Arzt aus Medikationsplan</span>
           <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11" aria-label="Schließen" data-back-close @click="discardAndClose">✕</button>
@@ -135,13 +135,14 @@ onMounted(() => {
         </div>
         <p v-else-if="!scanOpen" class="text-sm italic text-base-content/75">Noch nichts gescannt — „Code scannen" oder „Text einfügen".</p>
 
+        <!-- Hinweis VOR der Knopfzeile: Die Knopfzeile klebt am unteren Rand und lag sonst über seiner ersten Zeile. -->
+        <p class="mt-auto shrink-0 text-xs text-base-content/75">Nur auf dem Gerät, nichts wird gespeichert oder gesendet. Keine Patientendaten aus dem Code.</p>
+
         <!-- Aktionen -->
-        <div class="kb-actions mt-auto flex shrink-0 justify-between gap-2 pt-2">
+        <div class="kb-actions flex shrink-0 justify-between gap-2 pt-2">
           <button type="button" class="btn btn-ghost btn-sm min-h-11" @click="discardAndClose">Verwerfen</button>
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!aussteller" @click="applyAndClose">Arzt übernehmen</button>
         </div>
-
-        <p class="text-xs text-base-content/75">Nur auf dem Gerät, nichts wird gespeichert oder gesendet. Keine Patientendaten aus dem Code.</p>
       </div>
     </div>
   </Teleport>

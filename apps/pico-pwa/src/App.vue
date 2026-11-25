@@ -18,9 +18,7 @@ import { TEST_PHASE } from './testPhase'
 import EinsatzView from '@/components/rebuild/EinsatzView.vue'
 import EditorView from '@/components/rebuild/EditorView.vue'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
-import { indicatorBusy, indicatorLabel, indicatorTitle } from '@/pico/bridgeIndicator'
-import { useTypingProgress } from '@/pico/useTypingProgress'
-import { requestButtonText } from '@/pico/buttonTextEntry'
+import { isThisDevice } from '@/pico/targetDevice'
 import { useStorage } from '@/storage/useStorage'
 import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
 import { configureNativeRepositories } from '@/rebuild/configureNativeRepositories'
@@ -36,6 +34,7 @@ import { useLongTextSize } from '@/composables/useLongTextSize'
 import { useBausteine } from '@/composables/useBausteine'
 import { appListCapture } from '@/components/rebuild/listCapture'
 import { scrollTabToTop } from '@/shell/tabScroll'
+import { currentPageHeader } from '@/shell/back'
 import { keyboardOpen } from '@/shell/keyboard'
 import { syncAppearance, syncSystemBars } from '@/shell/systemBars'
 import { activeTab, type AppTab } from '@/composables/useActiveTab'
@@ -79,7 +78,7 @@ onMounted(async () => {
   }
 })
 
-// ?-Symbol im Header: blendet die Tab-Erklaerung (TabGuide) wieder ein.
+// Buch-Symbol im Header: blendet die Tab-Erklaerung (TabGuide) wieder ein.
 function reshowGuide(): void {
   guideRequested.value = true
   // Testversion: die Kennung der Einführung nicht anfassen, sie gehört zur echten Version (siehe TabGuide.dismiss).
@@ -115,10 +114,14 @@ type Tab = AppTab
 
 // Tab-Leiste. Jeder Tab scrollt in seinem eigenen Bereich (App-Hülle, siehe Template) und behält dort seine
 // Position, während er ausgeblendet ist: ein Wechsel zeigt den Tab sofort an seiner alten Stelle, ohne Sprung.
-// Erneutes Tippen auf den BEREITS aktiven Tab scrollt seinen Bereich an den Anfang.
+// Erneutes Tippen auf den BEREITS aktiven Tab führt zu seiner Startseite: Eine Unterseite mit Titelzeile (z. B.
+// eine geöffnete Vorlage) schließt sich, sonst scrollt der Bereich an den Anfang.
+// Titelzeile: Meldet die sichtbare Unterseite einen Titel, zeigt die Kopfzeile ‹ und den Titel statt der Marke.
+const pageHeader = computed(() => currentPageHeader())
 function selectTab(tab: Tab): void {
   if (activeTab.value === tab) {
-    scrollTabToTop(tab)
+    if (pageHeader.value) pageHeader.value.close()
+    else scrollTabToTop(tab)
     return
   }
   activeTab.value = tab
@@ -150,18 +153,20 @@ watch(incomingOpen, (item) => {
   if (item && activeTab.value !== 'protokolle') selectTab('protokolle')
 })
 
-// Geteilter Verbindungszustand: EINE Quelle für den Header-Indikator. Beim
-// App-Start und beim Öffnen des Einsatz-Tabs sparsam geprüft (kein Polling).
-const { reachable, requested, check, startPolling, stopPolling } = useBridgeConnection()
-// Lade-Kreis im Symbol nur, wenn jemand wartet: angeforderte Prüfung oder laufendes Tippen (bridgeIndicator.ts).
-// Die stille Prüfung im Hintergrund führt nur den Zustand (Farbe, Symbol) nach.
-const typingProgress = useTypingProgress()
-const indicatorSpins = computed(() =>
-  indicatorBusy({ requested: requested.value, typing: typingProgress.snapshot.value?.phase === 'typing' }),
-)
-onMounted(() => { void check(); startPolling() })
+// Geteilter Verbindungszustand der Bridge (useBridgeConnection): Die Kopfzeile zeigt ihn nicht mehr, der Einsatz
+// liest ihn für „Mit ResQDocs-Bridge verbinden“ und „An Zielgerät senden“. Geprüft wird beim App-Start, beim Öffnen
+// des Einsatz-Tabs und beim Zurückkehren in die App.
+const { check, startPolling, stopPolling } = useBridgeConnection()
+// Zielgerät „Dieses Gerät“ (pico/targetDevice.ts): keine Bridge im Spiel. Dann fragt die App die Bridge nicht ab.
+const thisDevice = computed(() => isThisDevice(storage.settings.defaultOs))
+onMounted(() => {
+  watch(thisDevice, (local) => {
+    if (local) stopPolling()
+    else { void check(); startPolling() }
+  }, { immediate: true })
+})
 watch(activeTab, (t) => {
-  if (t === 'einsatz') void check()
+  if (t === 'einsatz' && !thisDevice.value) void check()
 })
 
 // Temporärer Einsatzentwurf: Ablaufprüfung beim App-Resume und sparsam
@@ -173,7 +178,7 @@ const draft = useReworkCaseDraft()
 function onVisible(): void {
   if (document.visibilityState === 'visible') {
     void draft.checkExpiry()
-    void check() // beim Zurückkehren Bridge gleich neu prüfen
+    if (!thisDevice.value) void check() // beim Zurückkehren Bridge gleich neu prüfen
     void appUpdateNotice.maybeCheck() // die App bleibt oft tagelang im Speicher; jede Rueckkehr zaehlt als Oeffnen
   }
 }
@@ -210,61 +215,38 @@ onBeforeUnmount(() => {
          gibt mind. 4px Abstand, damit das Logo auf Android (env()=0) nicht oben
          klebt; auf iOS bleibt der größere Notch-Inset erhalten. Web: 4px. -->
     <header class="navbar relative z-10 shrink-0 bg-base-100 pt-[max(4px,env(safe-area-inset-top))] shadow-sm">
-      <div class="flex-1 px-3 py-2">
+      <!-- Unterseite mit Titelzeile (z. B. eine geöffnete Vorlage): ‹ führt zurück, daneben der Name der Seite.
+           Nur das Zeichen, kein Wort „Zurück“; den Namen des Knopfs liest der Screenreader. min-h wie die Marke
+           (45 px + Abstand), damit die Kopfzeile beim Wechsel nicht springt. -->
+      <div v-if="pageHeader" class="flex min-h-[61px] min-w-0 flex-1 items-center gap-1 px-1 py-2" data-header-page>
+        <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="pageHeader.backLabel" :title="pageHeader.backLabel" data-header-back @click="pageHeader.close()">
+          <span aria-hidden="true" class="text-xl leading-none">‹</span>
+        </button>
+        <h1 class="min-w-0 flex-1 truncate text-base font-semibold" data-header-title>{{ pageHeader.title }}</h1>
+      </div>
+      <div v-else class="flex-1 px-3 py-2">
         <!-- Wort-Bild-Marke; helle Variante auf dunklen Themes (Regeln in style.css) -->
         <img draggable="false" src="/brand.svg" alt="ResQDocs" class="brand-logo brand-logo-light h-[45px] w-auto" />
         <img draggable="false" src="/brand-dark.svg" alt="ResQDocs" class="brand-logo brand-logo-dark h-[45px] w-auto" />
       </div>
       <div class="flex flex-none items-center gap-1 px-2">
-        <!-- Text fuer den Knopf an der Bridge: oeffnet das Textfeld direkt (sonst unter Einstellungen > Bridge).
-             Icon = die Bridge als aufrechter USB-Stick mit ihrem Knopf, in getoenter Blase (gleiche Groesse wie
-             der Verbindungs-Indikator rechts daneben). Liegend gezeichnet liest sich der Stick als Kamera. -->
+        <!-- Einziger Knopf der Kopfzeile: Einführung und Anleitung (Buch im getönten Kreis). Verbindungs-Anzeige und
+             Knopf-Text stehen hier nicht mehr: verbunden wird im Einsatz, der Text für den Knopf an der Bridge
+             liegt unter Einstellungen > Bridge. 44-px-Tippfläche, der 32-px-Kreis ist nur die sichtbare Form. -->
         <button
           type="button"
           class="grid min-h-11 min-w-11 shrink-0 cursor-pointer place-items-center rounded-full"
-          aria-label="Text für den Knopf an der Bridge"
-          title="Text für den Knopf an der Bridge"
-          @click="requestButtonText()"
-        >
-          <span class="grid size-8 place-items-center rounded-full bg-primary/15 text-primary" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" class="size-[22px]">
-              <path d="M8.75 16.75h6.5v5.5h-6.5z" />
-              <path d="M10.6 18.7h1.1V20h-1.1zM12.3 18.7h1.1V20h-1.1z" fill="currentColor" stroke="none" />
-              <rect x="6.25" y="1.75" width="11.5" height="15" rx="3" />
-              <circle cx="12" cy="8.5" r="2.6" fill="currentColor" stroke="none" />
-            </svg>
-          </span>
-        </button>
-        <!-- Bridge-Indikator als WLAN-Icon: Farbe NUR nach Verbindungszustand (gruen verbunden /
-             rot nicht) -> kein Grau-Flackern beim Poll; feste Groesse -> springt nicht. Icon: verbunden = WLAN,
-             keine Bridge = WLAN durchgestrichen. Lade-Kreis nur bei einer angeforderten Pruefung oder solange
-             die Bridge tippt, nicht bei der stillen Pruefung im Hintergrund. -->
-        <!-- 44pt-Touch-Target (min-h/w-11); der farbige 32px-Kreis bleibt optisch gleich (innerer Span). -->
-        <button
-          type="button"
-          class="grid min-h-11 min-w-11 shrink-0 cursor-pointer place-items-center rounded-full"
-          :aria-label="indicatorLabel({ requested, reachable })"
-          :title="indicatorTitle({ requested, reachable })"
-          @click="check(true)"
-        >
-          <span class="grid size-8 place-items-center rounded-full text-white transition-colors" :class="reachable === true ? 'bg-success' : 'bg-error'" aria-hidden="true">
-            <span v-if="indicatorSpins" class="loading loading-spinner loading-sm" data-bridge-busy></span>
-            <svg v-else-if="reachable === true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z" />
-            </svg>
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z" />
-              <path stroke-linecap="round" d="M4 4 20 20" />
-            </svg>
-          </span>
-        </button>
-        <button
-          type="button"
-          class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11"
           aria-label="Einführung und Anleitung"
           title="Einführung und Anleitung"
+          data-header-guide
           @click="reshowGuide"
-        >?</button>
+        >
+          <span class="grid size-8 place-items-center rounded-full bg-primary/15 text-primary" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-[22px]">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+            </svg>
+          </span>
+        </button>
       </div>
     </header>
     <!-- Testversion: dauerhaft sichtbar, führt zur Testanleitung. -->

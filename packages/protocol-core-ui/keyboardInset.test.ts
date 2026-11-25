@@ -82,8 +82,16 @@ test('Online-Editor bindet Regel und Messung ein, die App nur die gemeinsame Reg
 
 test('Betroffene Stellen tragen die Regel', () => {
   assert.match(read('components/functions/MedplanFunction.vue'), /v-fit-keyboard/)
-  assert.match(read('components/functions/MedplanFunction.vue'), /class="kb-sticky btn/)
-  assert.match(read('components/functions/AerzteFunction.vue'), /class="kb-sticky btn/)
+  // Medikationsplan und Kontakte: Die Liste liegt in einem Fenster, „Fertig“ steht dort oben im Kopf und damit
+  // nie hinter der Tastatur. Die Karte hat keinen eigenen „Fertig“-Knopf mehr, der über der Tastatur kleben müsste.
+  for (const f of ['MedplanFunction', 'AerzteFunction']) {
+    assert.doesNotMatch(read(`components/functions/${f}.vue`), /kb-sticky/, f)
+    assert.match(read(`components/functions/${f}.vue`), /<ListSheet v-if="sheetOpen" :title="label" @close="closeSheet">/, f)
+  }
+  const sheet = read('components/functions/ListSheet.vue')
+  assert.match(sheet, /<header [^>]*>\s*<h3[^>]*>\{\{ title \}\}<\/h3>\s*<button [^>]*data-list-sheet-done[^>]*>Fertig<\/button>\s*<\/header>/)
+  assert.match(sheet, /useFullscreenKeyboard\(\)/, 'Höhe endet über der Tastatur, wie beim großen Textfeld')
+  assert.match(sheet, /overflow-y-auto overscroll-contain/, 'die Liste scrollt im Fenster')
   for (const f of ['rebuild/MedplanReviewSheet.vue', 'rebuild/AerzteReviewSheet.vue', 'rebuild/LibraryBar.vue']) {
     assert.match(read(`${APP}/src/components/${f}`), /kb-actions/, f)
   }

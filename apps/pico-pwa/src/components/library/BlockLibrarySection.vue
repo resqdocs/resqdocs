@@ -18,6 +18,7 @@ import { useShortLink } from '@resqdocs/protocol-core-ui/useShortLink'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 import InfoTip from '@resqdocs/protocol-core-ui/components/InfoTip.vue'
 import { INFO } from '@resqdocs/protocol-core-ui/terms'
+import { focusWhenAttached } from '@resqdocs/protocol-core-ui/focusAttached'
 
 /**
  * Blöcke im Bausteine-Menü (Rework Slice 2): wiederverwendbare v1-Container-Teilbäume. Mode-in-place
@@ -38,7 +39,7 @@ let focusNext = false
 function setEditTitle(el: unknown): void {
   if (el && focusNext) {
     focusNext = false
-    ;(el as HTMLInputElement).focus()
+    focusWhenAttached(el as HTMLInputElement)
   }
 }
 
@@ -147,10 +148,8 @@ function confirmDelete(): void {
   }
 }
 
-// --- Export/Import als Datei/JSON (eigenes resqdocs-block-Schema; Muster TemplateIO) ---
-const importOpen = ref(false)
+// --- Export/Import als Datei (eigenes resqdocs-block-Schema; Muster TemplateIO) ---
 const importFile = ref<HTMLInputElement | null>(null)
-const importText = ref('')
 const ioMsg = ref<{ kind: 'ok' | 'err'; text: string } | null>(null)
 
 // --- Als verschlüsselten Kurz-Link teilen (Transfer, wie bei Vorlagen) ---
@@ -192,18 +191,16 @@ async function copyBlockLink(): Promise<void> {
   }
 }
 
-function toggleImport(): void {
-  importOpen.value = !importOpen.value
+// „Aus Datei importieren“ öffnet die Dateiauswahl des Systems direkt, wie bei den Vorlagen. Der Aufruf muss im
+// selben Tipp passieren (WebKit blockiert ihn sonst). Ein Feld zum Einfügen des Datei-Inhalts gibt es hier nicht mehr.
+function pickImportFile(): void {
   ioMsg.value = null
+  importFile.value?.click()
 }
 async function doImport(text: string): Promise<void> {
   // Schema-erkennend: eine hier eingeworfene Snippet-/Vorlagen-Datei landet trotzdem am richtigen Ort.
   const outcome = await routeImport(text)
   ioMsg.value = { kind: outcome.ok ? 'ok' : 'err', text: outcome.message }
-  if (outcome.ok) {
-    importText.value = ''
-    importOpen.value = false
-  }
 }
 function onImportFile(e: Event): void {
   const input = e.target as HTMLInputElement
@@ -211,6 +208,7 @@ function onImportFile(e: Event): void {
   if (!file) return
   const reader = new FileReader()
   reader.onload = () => void doImport(String(reader.result ?? ''))
+  reader.onerror = () => (ioMsg.value = { kind: 'err', text: 'Die Datei konnte nicht gelesen werden.' })
   reader.readAsText(file)
   input.value = '' // dieselbe Datei erneut wählbar
 }
@@ -257,24 +255,13 @@ async function exportDownload(b: Container): Promise<void> {
         <h3 class="font-semibold">Gespeicherte Abschnitte</h3>
         <InfoTip :info="INFO.savedSections" />
         <span v-if="blocks.length" class="badge badge-neutral badge-sm">{{ blocks.length }}</span>
-        <button class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 px-1.5" type="button" :class="importOpen ? 'btn-active' : ''" aria-label="Gespeicherten Abschnitt aus Datei importieren" title="Aus Datei importieren" @click="toggleImport">
+        <button class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 px-1.5" type="button" aria-label="Gespeicherten Abschnitt aus Datei importieren" title="Aus Datei importieren" data-import-file @click="pickImportFile">
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
         </button>
       </div>
 
-      <!-- Import: Block-JSON einfügen oder Datei wählen (eigenes resqdocs-block-Schema, getrennt von Vorlagen) -->
-      <div v-if="importOpen" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
-        <span class="text-xs font-semibold text-base-content/75">JSON einfügen oder Datei wählen</span>
-        <textarea v-model="importText" rows="4" class="textarea textarea-bordered w-full text-xs" placeholder="Inhalt der Datei eines gespeicherten Abschnitts hier einfügen" aria-label="Inhalt einfügen"></textarea>
-        <div class="flex flex-wrap items-center gap-2">
-          <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="!importText.trim()" @click="doImport(importText)">Laden</button>
-          <!-- Datei: ein Knopf öffnet die Dateiauswahl des Systems, wie bei den Vorlagen (kein Datei-Feld im
-               Browser-Stil). Das Feld selbst ist unsichtbar, aber nicht display:none (iOS öffnet es sonst nicht). -->
-          <button class="btn btn-sm min-h-11" type="button" data-import-file @click="importFile?.click()">Datei auswählen…</button>
-          <input ref="importFile" type="file" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true" @change="onImportFile" />
-        </div>
-        <p class="text-xs text-base-content/75">Wird als neuer gespeicherter Abschnitt importiert.</p>
-      </div>
+      <!-- Dateiauswahl für den Import-Knopf oben: unsichtbar, aber nicht display:none (iOS öffnet sie sonst nicht). -->
+      <input ref="importFile" type="file" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true" @change="onImportFile" />
       <p v-if="ioMsg" class="text-xs" :class="ioMsg.kind === 'ok' ? 'text-success' : 'text-error'">{{ ioMsg.text }}</p>
 
       <!-- Einspaltige Liste über die volle Breite (konsistent zugeklappt/offen; vorher Dichte-Grid). -->
@@ -315,7 +302,7 @@ async function exportDownload(b: Container): Promise<void> {
           </div>
           <p class="px-1 text-xs text-base-content/75">Gespeicherter Abschnitt · {{ blockStructureLabel(b) }}</p>
           <div class="flex flex-wrap justify-end gap-2">
-            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="copiedId === b.id ? 'JSON kopiert' : 'JSON kopieren'" title="Kopieren" @click="exportCopy(b)">
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="copiedId === b.id ? 'Kopiert' : 'Als Text kopieren'" title="Kopieren" @click="exportCopy(b)">
               <svg v-if="copiedId === b.id" class="size-5 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
               <svg v-else class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
             </button>

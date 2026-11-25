@@ -28,7 +28,7 @@ async function routeSnippet(title: string, text: string): Promise<ImportOutcome>
 /** Vorlage(n) zur Entscheidung anbieten (ImportChoiceDialog): Name, Überschreiben oder neu - nichts wird
  *  ungefragt übernommen. */
 function offerProtocols(trees: Container[], hooks: OfferHooks = {}): ImportOutcome {
-  offerImport(trees, hooks.onDone && (() => hooks.onDone?.()), { onCancel: hooks.onCancel, hint: hooks.hint })
+  offerImport(trees, hooks.onDone && (() => hooks.onDone?.()), { onCancel: hooks.onCancel, hint: hooks.hint, needs: hooks.needs })
   return { ok: true, pending: true, message: trees.length === 1 ? 'Vorlage erkannt: bitte Namen prüfen und übernehmen.' : `${trees.length} Vorlagen erkannt: bitte auswählen und übernehmen.` }
 }
 type OkResult = Extract<DetectResult, { ok: true }>
@@ -40,10 +40,10 @@ export function routeDetected(r: OkResult, hooks: OfferHooks = {}): Promise<Impo
   if (r.kind === 'snippet') return routeSnippet(r.snippet.title, r.snippet.text)
   if (r.kind === 'bundle') {
     // Sammlung (auch mit gespeicherten Abschnitten und Textbausteinen): alles in den Auswahl-Dialog.
-    offerCollection(r, hooks.onDone && (() => hooks.onDone?.()), { onCancel: hooks.onCancel, hint: hooks.hint })
+    offerCollection(r, hooks.onDone && (() => hooks.onDone?.()), { onCancel: hooks.onCancel, hint: hooks.hint, needs: r.needs })
     return Promise.resolve({ ok: true, pending: true, message: `Sammlung erkannt (${describeCollection({ templates: r.trees, blocks: r.blocks, snippets: r.snippets })}): bitte auswählen und übernehmen.` })
   }
-  return Promise.resolve(offerProtocols([r.tree], hooks))
+  return Promise.resolve(offerProtocols([r.tree], { ...hooks, needs: r.needs }))
 }
 
 /**

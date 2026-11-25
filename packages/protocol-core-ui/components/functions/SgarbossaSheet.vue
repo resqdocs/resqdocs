@@ -13,6 +13,7 @@ import type { SgarbossaRow, SgarbossaBefund } from '@resqdocs/protocol-core/mode
 import { sgarbossa, SGARBOSSA_NEGATIVE_HINT } from '@resqdocs/protocol-core/tools/scores.mjs'
 import InfoTip from '@resqdocs/protocol-core-ui/components/InfoTip.vue'
 import { INFO } from '@resqdocs/protocol-core-ui/terms'
+import { unchangedSince } from '@resqdocs/protocol-core-ui/sheetGuard'
 
 const props = defineProps<{ initial?: SgarbossaRow }>()
 const emit = defineEmits<{ apply: [row: SgarbossaRow]; close: [] }>()
@@ -38,6 +39,8 @@ const picked = reactive<Record<ItemId, SgarbossaBefund | null>>({
   discordantElevation: props.initial?.sgbDiscordantElevation ?? null,
 })
 
+// Tipp neben das Fenster schließt nur, solange nichts geändert wurde.
+const unchanged = unchangedSince(() => picked)
 function pick(id: ItemId, v: SgarbossaBefund): void {
   picked[id] = v
 }
@@ -150,7 +153,7 @@ function apply(): void {
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!result" @click="apply">Übernehmen</button>
         </div>
       </div>
-      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="emit('close')"></button>
+      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="unchanged() && emit('close')"></button>
     </div>
   </Teleport>
 </template>

@@ -44,6 +44,8 @@ export default defineConfig({
       '@resqdocs/protocol-core-ui': fileURLToPath(new URL('../../packages/protocol-core-ui', import.meta.url)),
       // canonical, CI-validated protocol seeds live in protocols/ (single source of truth)
       '@protocols': fileURLToPath(new URL('../../protocols', import.meta.url)),
+      // ab welcher App-Version es eine Funktion gibt (dieselbe Datei wie Online-Editor und KI-Doku)
+      '@feature-versions': fileURLToPath(new URL('../../ai-docs/feature-versions.json', import.meta.url)),
     },
   },
   build: {

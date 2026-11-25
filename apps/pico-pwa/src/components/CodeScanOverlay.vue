@@ -23,8 +23,14 @@ import { normalizeScanFormat, type ScanProfile, type ScanResult } from '@/medpla
  * Netzwerk-Policy: dekodiert wird lokal; der Roh-String wird nur emittiert, nie geloggt/gespeichert.
  * Was der Aufrufer daraus extrahiert (PZN, Transfer-Link, BMP), ist seine Sache.
  */
-const props = defineProps<{ profile: ScanProfile }>()
-const emit = defineEmits<{ decoded: [result: ScanResult]; cancel: [] }>()
+/** `multi`: Der native Scanner zeigt dann einen Schalter (toggleLabel, Anfangsstellung `on`). Ein = der Bildschirm
+ *  bleibt offen, zählt mit und meldet Bekanntes (`known`); aus = ein Code, dann schließt er. `multiOn` meldet die
+ *  letzte Stellung zurück. Im Browser gibt es den Schalter nicht, die Kamera liest dort genau einen Code. */
+const props = defineProps<{
+  profile: ScanProfile
+  multi?: { on: boolean; toggleLabel: string; doneLabel: string; countOne: string; countMany: string; duplicateLabel: string; known: string[] }
+}>()
+const emit = defineEmits<{ decoded: [result: ScanResult]; decodedMany: [results: ScanResult[]]; multiOn: [on: boolean]; cancel: [] }>()
 
 const SLOW_HINT_MS = 8000
 const REFOCUS_RETURN_MS = 700
@@ -131,8 +137,15 @@ function finish(result: ScanResult): void {
 
 /** Nativer Scanner (eigene Activity/ViewController). Technische Angaben nur, wenn in den Einstellungen gewuenscht. */
 async function runNative(): Promise<void> {
-  const r = await scanNative(props.profile, { showDiagnostics: storage.settings.scannerDiagnostics })
-  if (r.status === 'found') {
+  const r = await scanNative(props.profile, { showDiagnostics: storage.settings.scannerDiagnostics, multi: props.multi })
+  if (props.multi && (r.status === 'found' || r.status === 'cancelled') && typeof r.multiOn === 'boolean') emit('multiOn', r.multiOn)
+  if (r.status === 'found' && props.multi) {
+    // Mit Schalter: alle erfassten Codes auf einmal, auch wenn es nur einer ist (der Bildschirm ist schon geschlossen).
+    if (done) return
+    done = true
+    if (slowTimer) clearTimeout(slowTimer)
+    emit('decodedMany', (r.items ?? [{ raw: r.raw, format: r.format }]).map((it) => ({ text: it.raw, format: it.format })))
+  } else if (r.status === 'found') {
     finish({ text: r.raw, format: r.format })
   } else if (r.status === 'cancelled') {
     emit('cancel')

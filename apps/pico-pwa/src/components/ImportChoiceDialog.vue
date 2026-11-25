@@ -17,6 +17,9 @@ import { useBausteine } from '@/composables/useBausteine'
 import { pendingImport, clearImport } from '@/composables/useImportChoice'
 import { activeTab } from '@/composables/useActiveTab'
 import { importOrt, type ImportZiel } from './importNote'
+import { importNotice } from '@resqdocs/protocol-core/templateNeeds'
+import { FUNCTION_KINDS } from '@resqdocs/protocol-core/functions/registry'
+import { useAppVersion } from '@/composables/useAppVersion'
 
 const tree = useProtocolTree()
 const blockLib = useBlockLibrary()
@@ -47,6 +50,12 @@ const existing = computed(() => ({
   snippets: bausteine.snippets.value.map((s) => s.title ?? ''),
 }))
 const taken = computed(() => countTaken(rows.value))
+// Nutzt die Vorlage etwas, das diese App-Version nicht kennt, steht das über der Auswahl. Übernehmen bleibt möglich.
+const { version: appVersion } = useAppVersion()
+const versionNotice = computed(() => {
+  const p = pendingImport.value
+  return p ? importNotice({ appVersion: appVersion.value, needs: p.needs, roots: [...p.trees, ...p.blocks], knownKinds: FUNCTION_KINDS }) : null
+})
 const nurVorlagen = computed(() => !!pendingImport.value && !pendingImport.value.blocks.length && !pendingImport.value.snippets.length)
 const titel = computed(() => {
   const p = pendingImport.value
@@ -106,6 +115,7 @@ function close(): void {
       <div class="modal-box flex max-h-[90vh] flex-col space-y-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <h3 class="text-base font-semibold">{{ titel }}</h3>
         <p v-if="pendingImport.hint" class="text-sm text-warning" data-import-hint>{{ pendingImport.hint }}</p>
+        <p v-if="versionNotice" class="text-sm text-warning" data-import-version-notice>{{ versionNotice }}</p>
         <ImportCollectionPick v-model:rows="rows" :content="pendingImport" :existing="existing" />
         <div class="modal-action mt-0">
           <button type="button" class="btn btn-ghost btn-sm min-h-11" data-back-close @click="close">Abbrechen</button>

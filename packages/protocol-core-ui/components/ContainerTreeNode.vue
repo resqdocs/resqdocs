@@ -3,7 +3,7 @@
  *  rufen die zentrale Tree-API (provide/inject). Container: ＋ mit Typwahl (Container/Feld) +
  *  rekursive Kinder. Feld: Blatt (kein ＋, keine Kinder). :key="child.id" = stabile Wiederverwendung. */
 import { nodeLabel } from '../nodeLabel'
-import { ref, computed, inject, nextTick } from 'vue'
+import { ref, computed, inject, nextTick, useId } from 'vue'
 import type { Node, FunctionKind } from '@resqdocs/protocol-core/model'
 import { FUNCTION_KINDS, FUNCTION_REGISTRY } from '@resqdocs/protocol-core/functions/registry'
 import { useTreeEditor } from '../treeEditor.ts'
@@ -40,8 +40,11 @@ const addOpen = ref(false)
 const pickerOpen = ref(false)
 const snippetPickerOpen = ref(false)
 const blockPickerOpen = ref(false)
-// Loeschen ist irreversibel (kein Undo) + nimmt bei einem Container ALLE Kinder mit -> bewusste Bestaetigung.
-const confirmOpen = ref(false)
+// Aktionen der Zeile (Verschieben, Duplizieren, Löschen) stehen hinter EINEM Mehr-Knopf in einem Blatt von unten,
+// wie das Menü je Vorlage. Löschen fragt nicht nach: Der Host macht es rückgängig (Meldung mit „Rückgängig“).
+const menuOpen = ref(false)
+const menuButton = ref<HTMLButtonElement | null>(null)
+const menuTitleId = useId()
 // Aufklapprichtung des ＋-Menues: nach OBEN, wenn unter dem Button zu wenig Platz ist (weniger scrollen).
 const addUp = ref(false)
 // Hoehenbegrenzung des ＋-Menues (px): passt es nicht ganz in den sichtbaren Bereich, scrollt es in sich.
@@ -153,24 +156,22 @@ function onInsertBlock(block: Container): void {
   blockPickerOpen.value = false
 }
 
-// Alle Nachfahren (rekursiv) mit Label + Typ - fuers Loesch-Confirm: zeigt, was MIT entfernt wird.
-function collectDescendants(n: Node): { label: string; type: Node['type'] }[] {
-  if (n.type !== 'container') return []
-  const acc: { label: string; type: Node['type'] }[] = []
-  for (const c of n.children) {
-    acc.push({ label: label(c), type: c.type })
-    acc.push(...collectDescendants(c))
-  }
-  return acc
+// Schließen ohne Aktion: Der Fokus geht zurück an den Knopf, der das Blatt geöffnet hat.
+function closeMenu(): void {
+  menuOpen.value = false
+  void nextTick(() => menuButton.value?.focus())
 }
-const descendants = computed(() => collectDescendants(props.node))
-// Im Confirm nur die ersten paar zeigen (sonst wird das Modal bei grossen Containern endlos lang).
-const DESC_CAP = 3
-const descendantsShown = computed(() => descendants.value.slice(0, DESC_CAP))
-const descendantsMore = computed(() => Math.max(0, descendants.value.length - DESC_CAP))
-function confirmDelete(): void {
+function menuMove(): void {
+  menuOpen.value = false
+  pickerOpen.value = true
+}
+function menuDuplicate(): void {
+  menuOpen.value = false
+  tree.duplicate?.(props.node.id)
+}
+function menuDelete(): void {
+  menuOpen.value = false
   tree.remove(props.node.id)
-  confirmOpen.value = false
 }
 </script>
 
@@ -237,47 +238,42 @@ function confirmDelete(): void {
         </template>
       </div>
 
-      <!-- Direkte Aktionen (Maintainer-Wahl): Verschieben-Icon oeffnet die Sitemap (positionsgenau, ersetzt
-           Hoch/Runter), Duplizieren (wenn der Host es anbietet), ✕ entfernt. Kein ⋮-Menue mehr. 44px-Ziele. -->
-      <template v-if="depth > 0">
-        <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5!" :aria-label="`Verschieben: ${label(node)}`" title="Verschieben" @click="pickerOpen = true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" /></svg>
-        </button>
-        <button v-if="tree.duplicate" type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5!" :aria-label="`Duplizieren: ${label(node)}`" title="Duplizieren" @click="tree.duplicate(node.id)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" /><path stroke-linecap="round" stroke-linejoin="round" d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></svg>
-        </button>
-        <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5! text-error" :aria-label="`Löschen: ${label(node)}`" title="Löschen" @click="confirmOpen = true">✕</button>
-      </template>
+      <!-- Ein Mehr-Knopf statt dreier Symbol-Knöpfe (Maintainer 2026-11-25, Quellen in docs/sources.md): Der Titel
+           bekommt 88 px mehr Platz, die Aktionen stehen als Wörter im Blatt, Löschen liegt nicht mehr neben
+           Duplizieren. Dasselbe Zeichen und dieselbe Größe wie am Menü je Vorlage; 44-px-Tippfläche. -->
+      <button
+        v-if="depth > 0"
+        ref="menuButton"
+        type="button"
+        class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5! text-base-content/75"
+        :aria-label="`Aktionen für ${label(node)}`"
+        title="Aktionen"
+        aria-haspopup="dialog"
+        :aria-expanded="menuOpen"
+        data-tree-more
+        @click="menuOpen = true"
+      >
+        <svg class="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="12" cy="19" r="1.9" /></svg>
+      </button>
     </div>
 
     <MoveToPicker v-if="pickerOpen" :node-id="node.id" :node-label="label(node)" @close="pickerOpen = false" />
     <component :is="SnippetPicker" v-if="SnippetPicker && snippetPickerOpen" title="Textbaustein als Feld einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
     <BlockPicker v-if="blockPickerOpen" title="Gespeicherten Abschnitt einfügen" @select="onInsertBlock" @close="blockPickerOpen = false" />
 
-    <!-- Loesch-Bestaetigung: irreversibel; bei einem Container werden alle Nachfahren mit-geloescht (Liste). -->
+    <!-- Blatt von unten mit den Aktionen der Zeile (wie das Menü je Vorlage). Löschen steht zuletzt und in Rot. -->
     <Teleport to="body">
-      <div v-if="confirmOpen" class="modal modal-open" role="dialog" aria-modal="true">
-        <div class="modal-box">
-          <h3 class="text-base font-semibold">„{{ label(node) }}" löschen?</h3>
-          <template v-if="descendants.length">
-            <p class="pt-2 text-sm">
-              Damit werden auch <strong>{{ descendants.length }}</strong> enthaltene Element{{ descendants.length === 1 ? '' : 'e' }} gelöscht:
-            </p>
-            <ul class="my-2 rounded-lg bg-base-200 p-2 text-sm">
-              <li v-for="(d, i) in descendantsShown" :key="i" class="flex items-center gap-1.5">
-                <span class="shrink-0 text-xs" :class="d.type === 'function' ? 'text-accent' : d.type === 'field' ? 'text-secondary' : 'text-base-content/75'" aria-hidden="true">{{ d.type === 'function' ? '⊕' : d.type === 'field' ? '◆' : '▸' }}</span>
-                <span class="truncate">{{ d.label }}</span>
-              </li>
-              <li v-if="descendantsMore" class="pl-5 text-base-content/75">… und {{ descendantsMore }} weitere</li>
-            </ul>
-          </template>
-          <p class="pt-1 text-sm text-base-content/75">Das lässt sich nicht rückgängig machen.</p>
-          <div class="modal-action">
-            <button type="button" class="btn btn-ghost btn-sm" @click="confirmOpen = false">Abbrechen</button>
-            <button type="button" class="btn btn-error btn-sm" @click="confirmDelete">Endgültig löschen</button>
-          </div>
+      <div v-if="menuOpen" class="modal modal-open modal-bottom" role="dialog" aria-modal="true" :aria-labelledby="menuTitleId" data-tree-menu>
+        <div class="modal-box pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          <h3 :id="menuTitleId" class="truncate text-sm font-semibold">{{ label(node) }}</h3>
+          <ul class="menu w-full px-0">
+            <li><button type="button" class="min-h-12" data-tree-menu-move @click="menuMove">Verschieben nach …</button></li>
+            <li v-if="tree.duplicate"><button type="button" class="min-h-12" data-tree-menu-duplicate @click="menuDuplicate">Duplizieren</button></li>
+            <li><button type="button" class="min-h-12 text-error" data-tree-menu-delete @click="menuDelete">Löschen</button></li>
+          </ul>
+          <button type="button" class="btn btn-ghost btn-block" @click="closeMenu">Schließen</button>
         </div>
-        <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="confirmOpen = false"></button>
+        <button type="button" class="modal-backdrop" aria-label="Schließen" @click="closeMenu"></button>
       </div>
     </Teleport>
 

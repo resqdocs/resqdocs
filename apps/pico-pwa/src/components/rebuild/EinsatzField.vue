@@ -274,6 +274,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
       <div class="flex items-center gap-2">
         <TriStateToggle v-if="node.allowCustom || !node.required" :model-value="selectTriState" :label="label" :allow-custom="!!node.allowCustom" :allow-excluded="!node.required" @update:model-value="onMultiTriState" />
         <span class="text-sm font-medium" :class="node.allowCustom || !node.required ? '' : 'pl-9'">{{ label }}<RequiredMark v-if="node.required" :open="isOpen" /></span>
+        <span v-if="!showMultiOptions && selectTriState !== 'custom'" class="ml-auto shrink-0 text-xs italic text-base-content/75">nicht erhoben</span>
       </div>
 
       <!-- ✓ Mehrfachauswahl: Checkboxen bei ≤6 (gleiches Raster wie die Radios), Multi-Dropdown bei >6 -->
@@ -332,8 +333,6 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
         <input v-else ref="individuellInput" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
       </div>
 
-      <!-- − nicht erhoben -->
-      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokolltext</p>
     </template>
 
     <!-- SELECT: Tri-State wie Freitext — ✓ Auswahl (Optionen sichtbar) / ✎ individuell / − nicht erhoben.
@@ -344,6 +343,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
              die Optionen sind ohnehin sofort sichtbar. Sonst normaler Tri-State. -->
         <TriStateToggle v-if="node.allowCustom || !node.required" :model-value="selectTriState" :label="label" :allow-custom="!!node.allowCustom" :allow-excluded="!node.required" @update:model-value="onSelectState" />
         <span class="text-sm font-medium" :class="node.allowCustom || !node.required ? '' : 'pl-9'">{{ label }}<RequiredMark v-if="node.required" :open="isOpen" /></span>
+        <span v-if="selectTriState === 'excluded'" class="ml-auto shrink-0 text-xs italic text-base-content/75">nicht erhoben</span>
       </div>
 
       <!-- ✓ Auswahl: Radios bei wenigen, Dropdown bei vielen Optionen -->
@@ -383,8 +383,6 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
         <input v-else ref="individuellInput" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: individuell`" :aria-required="node.required || undefined" placeholder="eigener Text" @input="onInput" />
       </div>
 
-      <!-- − nicht erhoben -->
-      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokolltext</p>
     </template>
 
     <!-- FREITEXT-Feld: Tri-State (Eingabe erst bei ✎) -->
@@ -392,6 +390,7 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
       <div class="flex items-center gap-2">
         <TriStateToggle :model-value="triState" :label="label" :allow-excluded="!node.required" @update:model-value="onState" />
         <span class="text-sm font-medium">{{ label }}<RequiredMark v-if="node.required" :open="isOpen" /></span>
+        <span v-if="triState === 'excluded'" class="ml-auto shrink-0 text-xs italic text-base-content/75">nicht erhoben</span>
         <!-- Icon-only (Bausteine-4-Quadrate-Icon aus dem Dock -> Wiedererkennung); Bedeutung via aria-label/Tooltip -->
         <button type="button" class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 shrink-0 px-1.5" aria-label="Textbaustein einfügen" title="Textbaustein einfügen" @click="snippetPickerOpen = true">
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -411,7 +410,6 @@ function onMultiTriState(next: 'confirmed' | 'custom' | 'excluded'): void {
         <LongTextField v-if="useLongText" ref="textLong" :model-value="customValue" :title="label" :required="node.required" @update:model-value="caseValues.setCustom(node.id, $event)" />
         <input v-else ref="textInput" class="input input-sm w-full" :value="customValue" :aria-label="`${label}: eigener Wert`" :aria-required="node.required || undefined" @input="onInput" />
       </div>
-      <p v-else class="pl-9 text-sm italic text-base-content/75">nicht erhoben — erscheint nicht im Protokolltext</p>
       <SnippetPicker v-if="snippetPickerOpen" multiple title="Textbausteine als Wert einfügen" @select="onInsertSnippet" @close="snippetPickerOpen = false" />
     </template>
 

@@ -57,6 +57,13 @@ for (const name of DATEIEN) {
     // Der Tap-Stempel muss am SELBEN Element haengen wie der focusout-Handler, sonst kommt der Schutz
     // nicht an. Beides steht im kompilierten Props-Objekt desselben Elements.
     const i = code.indexOf('onFocusout')
+    // Medikationsplan und Kontakte liegen in einem Fenster (ListSheet): Dort schließt eine Karte NICHT mehr beim
+    // Verlassen des Fokus (das verschob „＋ Medikament“ unter dem Finger, der Tipp ging verloren). Für sie gilt
+    // deshalb das Gegenteil: kein focusout-Handler. Alle anderen Karten brauchen ihn samt Stempel.
+    if (/Function\.vue$/.test(name)) {
+      assert.equal(i, -1, 'Listen-Funktion: die Karte darf nicht auf focusout schließen')
+      return
+    }
     assert.ok(i > 0, 'kein focusout-Handler im Template gefunden')
     const props = code.slice(Math.max(0, i - 400), i + 400)
     assert.ok(props.includes('onPointerdown'), 'focusout-Element ohne pointerdown-Stempel')

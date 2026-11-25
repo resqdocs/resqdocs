@@ -5,6 +5,7 @@
 import { computed, inject, ref, watch } from 'vue'
 import type { Condition, ConditionalDefault, Container, Field, Node, Heading, FunctionConfig } from '@resqdocs/protocol-core/model'
 import { DEFAULT_HEADING, DEFAULT_SEPARATOR } from '@resqdocs/protocol-core/model'
+import { showTitlePatch, titleOnOwnLine } from '../titleFormat.ts'
 import TabRef from './TabRef.vue'
 import { FUNCTION_REGISTRY, FUNCTION_ROW_INLINE_SEPARATOR, LEGACY_ROW_INLINE_SEPARATOR } from '@resqdocs/protocol-core/functions/registry'
 import { findNode, findPath, suggestFreeId } from '@resqdocs/protocol-core/creator'
@@ -183,8 +184,7 @@ function setHeading(patch: Partial<Heading>): void {
 const titleOwnLine = computed<boolean>(() => {
   const n = node.value
   if (!n || !n.showTitle) return false
-  if (n.type === 'container' || n.type === 'function') return !n.titleInline
-  return n.titleInline === false || (n.titleInline === undefined && !!n.multiline)
+  return titleOnOwnLine(n)
 })
 function setTitleOwnLine(on: boolean): void {
   const n = node.value
@@ -386,7 +386,7 @@ async function saveAsBaustein(): Promise<void> {
       <!-- BASIS: Ueberschrift/Titel in der Ausgabe (showTitle). Beim Feld = „Abschnitt mit Ueberschrift".
            Nur bei vorhandenem Titel: ohne Titel gibt es nichts zu zeigen -> Option ausgeblendet. -->
       <label v-if="hasTitle" class="flex w-full cursor-pointer items-center gap-2 py-0">
-        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.showTitle === true" @change="set({ showTitle: ($event.target as HTMLInputElement).checked })" />
+        <input type="checkbox" class="toggle toggle-sm shrink-0" :checked="node.showTitle === true" @change="set(showTitlePatch(node, ($event.target as HTMLInputElement).checked))" />
         <span class="text-sm">Titel im Protokolltext zeigen</span>
         <InfoTip :info="INFO.showTitle" class="ml-auto" />
       </label>

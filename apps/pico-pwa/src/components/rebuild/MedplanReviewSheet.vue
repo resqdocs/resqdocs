@@ -8,7 +8,7 @@
  * Uebernahme. DSGVO: Roh-Scan + Entwurf nur im RAM (useMedplanScan), reset() verwirft alles; erst
  * „Uebernehmen" macht die GEPRUEFTEN Zeilen zu Einsatz-Werten.
  */
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { MedikamenteRow, ArztRow } from '@resqdocs/protocol-core/model'
 import { useMedplanScan } from '@/medplan/useMedplanScan'
 import { useMedicationLookup } from '@/medications/useMedicationLookup'
@@ -19,10 +19,9 @@ import { formatMedikament, medikamentRowHasData, staerkeOhneDuplikat } from '@re
 import CodeScanOverlay from '@/components/CodeScanOverlay.vue'
 import { BMP_PROFILE } from '@/medplan/scanProfiles'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
+import { libraryOffer, librarySignature, type LibraryEntryView } from '@resqdocs/protocol-core-ui/packageScanResult'
+import { savePznEntry, shownName } from '@/medications/pznLibrarySave'
 
-// mode: 'camera' (Standard, „Plan scannen" → Kamera gleich auf) | 'scanner' („Externer Scanner" →
-// Feld für HID-/Bluetooth-Scanner fokussiert, keine Kamera).
-const props = withDefaults(defineProps<{ mode?: 'camera' | 'scanner' }>(), { mode: 'camera' })
 const emit = defineEmits<{ apply: [rows: MedikamenteRow[], doctor?: ArztRow]; close: [] }>()
 
 const lookup = useMedicationLookup()
@@ -35,20 +34,49 @@ void pznLibrary.ensureReady()
 // Existiert im Protokoll eine Aerzte-Funktion? Dann geht der Aussteller dorthin (statt als Plan-Zeile).
 const { einsatzRoot } = useProtocolTree()
 const hasAerzte = computed(() => collectFunctionNodes(einsatzRoot.value, 'aerzte').length > 0)
-const transferState = ref<Record<number, 'added' | 'exists'>>({})
+// Rückmeldung je Zeile nach dem Speichern in der eigenen PZN-Bibliothek.
+const transferState = ref<Record<number, 'added' | 'updated'>>({})
+// Was die Bibliothek zu den PZN des Plans kennt (Eintrag oder null = unbekannt), nachgeschlagen in resolveFromLibrary.
+const libEntries = ref<Map<string, LibraryEntryView | null>>(new Map())
+// Zeilen, deren Namen die Person hier selbst geändert hat (nicht das Nachziehen aus der Bibliothek).
+const editedRows = ref<Set<number>>(new Set())
+// Zuletzt gespeicherter Stand je Zeile (für den Haken); eine weitere Änderung bietet wieder an.
+const savedSig = ref<Record<number, string>>({})
+/**
+ * Knopf „in die PZN-Bibliothek“: 'add' = die Bibliothek kennt die PZN nicht und statt des Platzhalters „PZN …“ steht
+ * ein Name da; 'update' = sie kennt sie, und der Name wurde hier selbst geändert; 'done' = eben gespeichert (Haken).
+ * Die Stärke steht im Prüf-Fenster nur da und lässt sich hier nicht ändern: Sie reist beim Neuaufnehmen mit, einen
+ * vorhandenen Eintrag ändert sie nicht.
+ */
+function transferOffer(i: number): 'add' | 'update' | 'done' | null {
+  const row = structuredRows.value[i]
+  const pzn = row?.pzn
+  if (!row || !pzn) return null
+  if (savedSig.value[i] === librarySignature(row.name)) return 'done'
+  return libraryOffer({ entry: libEntries.value.get(pzn), name: row.name, edited: editedRows.value.has(i) })
+}
+const anyTransfer = computed(() => structuredRows.value.some((_, i) => transferOffer(i) === 'add' || transferOffer(i) === 'update'))
+function onRowNameInput(i: number, value: string): void {
+  if (!editedRows.value.has(i)) editedRows.value = new Set([...editedRows.value, i])
+  updateRowName(i, value)
+}
 /** Anzahl echter Medikamentenzeilen (mit Namen). */
 const medCount = computed(() => structuredRows.value.filter((r) => r.name.trim()).length)
 
-/** Entfernen + den Index-gekeyten transferState mit-reindizieren (sonst klebt das Feedback falsch). */
+/** Entfernen + die an den Zeilen-Index gebundenen Zustände mitziehen (sonst klebt die Rückmeldung an der falschen Zeile). */
 function onRemoveRow(i: number): void {
   removeRow(i)
-  const next: Record<number, 'added' | 'exists'> = {}
-  for (const [k, v] of Object.entries(transferState.value)) {
-    const idx = Number(k)
-    if (idx === i) continue
-    next[idx > i ? idx - 1 : idx] = v
+  const shift = <T,>(rec: Record<number, T>): Record<number, T> => {
+    const next: Record<number, T> = {}
+    for (const [k, v] of Object.entries(rec)) {
+      const idx = Number(k)
+      if (idx !== i) next[idx > i ? idx - 1 : idx] = v
+    }
+    return next
   }
-  transferState.value = next
+  transferState.value = shift(transferState.value)
+  savedSig.value = shift(savedSig.value)
+  editedRows.value = new Set([...editedRows.value].filter((idx) => idx !== i).map((idx) => (idx > i ? idx - 1 : idx)))
 }
 // Lösch-Schutz auch im Scan-Review: geprüfte Zeilen sind Arbeit —
 // Einzel-✕ und Verwerfen/Schließen fragen nach, solange erfasste Zeilen da sind. Index-basiert ist
@@ -86,29 +114,24 @@ function confirmPending(): void {
 const scanOpen = ref(false)
 const manualOpen = ref(false)
 const manualText = ref('')
-const manualTextarea = ref<HTMLTextAreaElement | null>(null)
-// Externer-Scanner-Modus: dieselbe große Eingabe wie „Text einfügen", aber fokussiert + Enter-Übernahme,
-// damit ein als HID-/Bluetooth-Tastatur gekoppelter Scanner (z. B. NETUM C750) hineintippt. scannerMode
-// trennt das sauber vom unveränderten Einfüge-Pfad (dort bleibt Enter ein Zeilenumbruch).
-const scannerMode = ref(false)
 
 function rowPzn(i: number): string | undefined {
   return structuredRows.value[i]?.pzn
 }
-/** Label-Vorschlag: der Name, aber NICHT der „PZN <nr>"-Platzhalter. */
-function rowLabel(i: number): string {
-  const name = structuredRows.value[i]?.name?.trim() ?? ''
-  return /^PZN \d/.test(name) ? '' : name
-}
 async function transferRow(i: number): Promise<void> {
   const pzn = rowPzn(i)
-  if (!pzn) return
-  // Stärke als eigener Vorschlag mit (Bibliothek hat inzwischen ein eigenes Stärke-Feld; Konfliktregel:
-  // vorhandene nicht-leere Stärke gewinnt) — NICHT mehr ins Label mischen.
-  const result = await pznLibrary.addOne(pzn, rowLabel(i), structuredRows.value[i]?.staerke) // genau EINE PZN
+  const offer = transferOffer(i)
+  if (!pzn || (offer !== 'add' && offer !== 'update')) return
+  const name = (structuredRows.value[i]?.name ?? '').trim()
+  // Genau EINE PZN je Tipp. Neu: mit der Stärke aus dem Plan als eigenem Feld. Vorhanden: nur der geänderte Name.
+  const result = await savePznEntry(pznLibrary, pzn, name, offer === 'add' ? structuredRows.value[i]?.staerke : undefined)
   // Gegenprobe wie in resolveFromLibrary: waehrend des awaits kann eine Zeile davor entfernt worden
   // sein (Loesch-Rueckfrage vergroessert das Fenster) -> Feedback nie an die nachgerueckte Zeile heften.
-  if (result !== 'invalid' && structuredRows.value[i]?.pzn === pzn) transferState.value = { ...transferState.value, [i]: result }
+  if (result === 'invalid' || structuredRows.value[i]?.pzn !== pzn) return
+  const vorher = libEntries.value.get(pzn)
+  libEntries.value = new Map(libEntries.value).set(pzn, { name, staerke: vorher?.staerke ?? structuredRows.value[i]?.staerke ?? '' })
+  savedSig.value = { ...savedSig.value, [i]: librarySignature(name) }
+  transferState.value = { ...transferState.value, [i]: offer === 'add' ? 'added' : 'updated' }
 }
 /** Nach dem Parse: „PZN <nr>"-Platzhalter aus DER EIGENEN Bibliothek nachziehen (Wirkstoff > Label). */
 async function resolveFromLibrary(): Promise<void> {
@@ -116,8 +139,10 @@ async function resolveFromLibrary(): Promise<void> {
   // updateRowName per PZN gegen die AKTUELLE Zeile pruefen (kein falscher Treffer nach Reorder).
   const snapshot = structuredRows.value.map((r, i) => ({ i, pzn: r.pzn, name: (r.name ?? '').trim() }))
   for (const { i, pzn, name } of snapshot) {
-    if (!pzn || !/^PZN \d/.test(name)) continue
+    if (!pzn) continue
     const e = await pznLibrary.entry(pzn)
+    if (!libEntries.value.has(pzn)) libEntries.value = new Map(libEntries.value).set(pzn, e ? { name: shownName(e), staerke: e.staerke } : null)
+    if (!/^PZN \d/.test(name)) continue // nur Platzhalter-Namen werden aus der Bibliothek ersetzt
     const resolved = e ? e.wirkstoff || e.label : ''
     if (resolved && structuredRows.value[i]?.pzn === pzn) {
       updateRowName(i, resolved)
@@ -141,39 +166,9 @@ async function onManualAdd(): Promise<void> {
   }
 }
 
-/** „Text einfügen" (Zwischenablage): Verhalten UNVERÄNDERT – Toggle, kein Auto-Fokus, Enter = Zeilenumbruch. */
+/** „Text einfügen“ (Zwischenablage): Feld auf- und zuklappen, kein Auto-Fokus, Enter ist ein Zeilenumbruch. */
 function openManual(): void {
-  if (manualOpen.value && !scannerMode.value) { manualOpen.value = false; return }
-  scannerMode.value = false
-  manualOpen.value = true
-}
-/** „Externer Scanner" (HID-/Bluetooth-Tastatur, z. B. NETUM C750): dieselbe Eingabe öffnen + fokussieren,
- *  damit die getippten Zeichen dort landen; danach identischer Pfad wie ein Kamera-Scan. */
-function openScanner(): void {
-  scannerMode.value = true
-  manualOpen.value = true
-  void nextTick(() => manualTextarea.value?.focus())
-}
-/** Enter im Feld NUR im Scanner-Modus übernehmen (abschließendes CR = freihändig); Einfüge-Modus: Zeilenumbruch. */
-function onTextareaEnter(ev: KeyboardEvent): void {
-  if (!scannerMode.value) return
-  ev.preventDefault()
-  void onScannerSubmit()
-}
-async function onScannerSubmit(): Promise<void> {
-  // Trim-Guard: leeres Feld nicht an den Parser geben. Synchron leeren VOR dem await (keine Kollision mit
-  // nächstem Seiten-Burst); Feld BLEIBT offen (kein manualOpen=false) für mehrseitige Pläne. Identischer
-  // Pfad wie Kamera-Scan: ingest() + resolveFromLibrary() (PZN-Abgleich, Dosierung/Stärke, Aussteller).
-  const text = manualText.value.trim()
-  if (!text) return
-  manualText.value = ''
-  if (ingest(text)) await resolveFromLibrary()
-  void nextTick(() => manualTextarea.value?.focus())
-}
-/** „Übernehmen": im Scanner-Modus mit Refokus (Mehrseiten), im Einfüge-Modus unverändert. */
-function onManualSubmitClick(): void {
-  if (scannerMode.value) void onScannerSubmit()
-  else void onManualAdd()
+  manualOpen.value = !manualOpen.value
 }
 function applyAndClose(): void {
   if (!medCount.value) return
@@ -201,9 +196,7 @@ function discardAndClose(): void {
 }
 
 onMounted(() => {
-  // „Plan" -> Kamera gleich öffnen; „Externer Scanner" -> Scanner-Feld öffnen + fokussieren (keine Kamera).
-  if (props.mode === 'scanner') openScanner()
-  else scanOpen.value = true
+  scanOpen.value = true // die Kamera öffnet gleich
 })
 </script>
 
@@ -213,10 +206,12 @@ onMounted(() => {
     <CodeScanOverlay v-if="scanOpen" :profile="BMP_PROFILE" @decoded="onDecoded($event.text)" @cancel="scanOpen = false" />
   </Teleport>
 
-  <!-- Review-Sheet (Bottom-Sheet, teleported; bewusst KEIN daisyUI .modal wegen z-999 ueber der Kamera) -->
+  <!-- Prüf-Fenster (teleported; bewusst KEIN daisyUI .modal wegen z-999 über der Kamera). Am Handy füllt es den
+       ganzen Bildschirm: Es öffnet aus dem Listen-Fenster heraus (ebenfalls Vollbild), ein halbhohes Blatt darüber
+       ergäbe zwei Fenster übereinander. Auf breiten Bildschirmen bleibt es ein mittiger Dialog. -->
   <Teleport to="body">
     <div class="overlay-backdrop fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center" role="dialog" aria-modal="true">
-      <div class="overlay-surface flex max-h-[85vh] w-full flex-col gap-3 overflow-hidden rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:mx-auto sm:max-w-lg sm:rounded-2xl">
+      <div class="overlay-surface flex h-dvh w-full flex-col gap-3 overflow-hidden p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] sm:mx-auto sm:h-auto sm:max-h-[85vh] sm:max-w-lg sm:rounded-2xl sm:pt-4" data-review-sheet>
         <div class="flex items-center justify-between gap-2">
           <span class="text-base font-semibold">Medikationsplan scannen</span>
           <div class="flex items-center gap-2">
@@ -234,28 +229,20 @@ onMounted(() => {
         </div>
 
         <div v-if="manualOpen" class="flex flex-col gap-2">
-          <p v-if="scannerMode" id="medplan-ext-scanner-hint" class="text-xs text-base-content/75">
-            Externer Scanner (per Bluetooth oder Kabel als Tastatur gekoppelt): Feld ist aktiv – jetzt den
-            Medikationsplan-Code scannen. Er wird automatisch übernommen (oder „Übernehmen" tippen); Prüfung, PZN-Abgleich
-            und Dosierung/Stärke laufen genau wie beim Kamera-Scan.
-          </p>
           <textarea
-            ref="manualTextarea"
             v-model="manualText"
             rows="3"
             class="textarea textarea-bordered textarea-sm w-full font-mono"
-            :placeholder="scannerMode ? 'Code hierher scannen (externer Scanner)…' : 'Inhalt des Codes (XML, beginnt mit <MP …>) einfügen'"
-            :aria-label="scannerMode ? 'Code scannen (externer Scanner)' : 'Inhalt des Codes'"
-            :aria-describedby="scannerMode ? 'medplan-ext-scanner-hint' : undefined"
-            @keydown.enter="onTextareaEnter"
+            placeholder="Inhalt des Codes (XML, beginnt mit <MP …>) einfügen"
+            aria-label="Inhalt des Codes"
           />
-          <button type="button" class="btn btn-sm self-start min-h-11" :disabled="!manualText.trim()" @click="onManualSubmitClick">Übernehmen</button>
+          <button type="button" class="btn btn-sm self-start min-h-11" :disabled="!manualText.trim()" @click="onManualAdd">Übernehmen</button>
         </div>
 
         <p v-if="error" class="text-sm text-error" role="alert">{{ error }}</p>
 
         <!-- EIN Scrollbereich fuer Ausstellende Praxis UND Medikamentenliste. Vorher stand die Praxis
-             fest ueber der Liste: im externen-Scanner-Modus (Eingabefeld + Hinweis bleiben offen) blieb auf
+             fest ueber der Liste: bei offenem Eingabefeld („Text einfügen“) blieb auf
              kleinen Displays fuer die Liste keine Hoehe mehr - die Medikamente waren nicht zu sehen und damit
              nicht zu scrollen. Jetzt scrollt die Praxis mit weg. min-h-0: sonst behaelt das flex-Kind
              min-height:auto und schrumpft nicht unter seine Inhaltshoehe. -->
@@ -275,28 +262,48 @@ onMounted(() => {
             <p v-if="ausstellerRolle" class="text-xs text-success">→ wird in Kontakte/Ärzte übernommen</p>
           </div>
 
+          <!-- Erklärt das Symbol, bevor man tippt (am Handy gibt es keinen Tooltip). Nur wenn ein Knopf zu sehen ist. -->
+          <p v-if="anyTransfer" class="flex shrink-0 items-center gap-2 text-xs text-base-content/75" data-pzn-legend>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-5 w-5 shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>
+            <span>übernimmt die PZN mit dem Namen der Zeile in deine PZN-Bibliothek bzw. speichert deine Änderung dort. Die App erkennt das Medikament dann beim nächsten Scan und schlägt es beim Tippen vor.</span>
+          </p>
+
           <!-- Review-Liste: Name editierbar, PZN im Hintergrund (Transfer), entfernen -->
           <ul class="flex shrink-0 flex-col gap-1.5">
             <li v-for="(row, i) in structuredRows" :key="i" class="flex flex-col gap-0.5">
               <div class="flex items-center gap-1">
-                <input :value="row.name" class="input input-sm flex-1" :aria-label="`Medikament ${i + 1} Name`" @input="updateRowName(i, ($event.target as HTMLInputElement).value)" />
+                <input :value="row.name" class="input input-sm flex-1" :aria-label="`Medikament ${i + 1} Name`" @input="onRowNameInput(i, ($event.target as HTMLInputElement).value)" />
                 <span v-if="row.staerke" class="badge badge-ghost badge-sm shrink-0" :aria-label="`Wirkstärke ${row.staerke}`">{{ row.staerke }}</span>
-                <button v-if="rowPzn(i)" type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11" :aria-label="`PZN ${rowPzn(i)} in die Bibliothek übernehmen`" :title="`PZN ${rowPzn(i)} in deine Bibliothek übernehmen`" @click="transferRow(i)">→</button>
+                <!-- Ablage-Symbol statt Pfeil; nach dem Tipp ein Haken. Nur bei einer PZN, die die Bibliothek noch nicht kennt. -->
+                <button
+                  v-if="transferOffer(i)"
+                  type="button"
+                  class="btn btn-ghost btn-sm min-h-11 min-w-11 px-0"
+                  :class="transferOffer(i) === 'done' ? 'text-success' : ''"
+                  :aria-label="transferOffer(i) === 'done' ? `PZN ${rowPzn(i)} ist in der PZN-Bibliothek gespeichert` : transferOffer(i) === 'update' ? `Änderung zu PZN ${rowPzn(i)} in der PZN-Bibliothek speichern` : `PZN ${rowPzn(i)} in die PZN-Bibliothek übernehmen`"
+                  :aria-disabled="transferOffer(i) === 'done' || undefined"
+                  data-pzn-transfer
+                  @click="transferRow(i)"
+                >
+                  <svg v-if="transferOffer(i) === 'done'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-6 w-6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>
+                </button>
                 <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 text-error" :aria-label="`Medikament ${i + 1} entfernen`" @click="requestRemoveRow(i)">✕</button>
               </div>
-              <span v-if="transferState[i]" class="pl-1 text-xs text-success">{{ transferState[i] === 'added' ? 'PZN in Bibliothek übernommen.' : 'PZN war bereits in der Bibliothek.' }}</span>
+              <span v-if="transferState[i] && transferOffer(i) === 'done'" class="pl-1 text-xs text-success">{{ transferState[i] === 'added' ? 'PZN in Bibliothek übernommen.' : 'In der PZN-Bibliothek gespeichert.' }}</span>
             </li>
           </ul>
         </div>
         <p v-else-if="!scanOpen" class="text-sm italic text-base-content/75">Noch nichts gescannt — „Code scannen" oder „Text einfügen".</p>
 
+        <!-- Hinweis VOR der Knopfzeile: Die Knopfzeile klebt am unteren Rand und lag sonst über seiner ersten Zeile. -->
+        <p class="mt-auto shrink-0 text-xs text-base-content/75">Nur auf dem Gerät, nichts wird gespeichert oder gesendet. Keine Patientendaten aus dem Code — Einträge vor der Übernahme prüfen.</p>
+
         <!-- Aktionen -->
-        <div class="kb-actions mt-auto flex shrink-0 justify-between gap-2 pt-2">
+        <div class="kb-actions flex shrink-0 justify-between gap-2 pt-2">
           <button type="button" class="btn btn-ghost btn-sm min-h-11" @click="requestDiscard">Verwerfen</button>
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!medCount" @click="applyAndClose">{{ medCount }} Medikament{{ medCount === 1 ? '' : 'e' }} übernehmen</button>
         </div>
-
-        <p class="text-xs text-base-content/75">Nur auf dem Gerät, nichts wird gespeichert oder gesendet. Keine Patientendaten aus dem Code — Einträge vor der Übernahme prüfen.</p>
       </div>
     </div>
   </Teleport>

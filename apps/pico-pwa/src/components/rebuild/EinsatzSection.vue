@@ -34,7 +34,7 @@ const visibleChildren = computed(() =>
   (cloze.value ? clozeLeftovers(props.node, cloze.value) : props.node.children).filter((child) => !dependencyHidden.value.has(child.id)),
 )
 
-// excludable + „nicht erhoben" -> ganze Sektion gedimmt, Kinder weg (entfallen in der Ausgabe).
+// excludable + „nicht erhoben" -> Kinder weg (entfallen in der Ausgabe); der Abschnitt behält seine Form (siehe Template).
 const excluded = computed(() => Boolean(props.node.excludable) && caseValues.get(props.node.id, props.node).state === 'excluded')
 
 // Abweichungen vom Standard im Teilbaum (reaktiv) -> "N abweichend"-Vorschau im Kopf
@@ -65,11 +65,28 @@ const headingClass = computed(() => {
 </script>
 
 <template>
-  <!-- nicht erhoben: gedimmter Kopf + Status, Kinder weg (entfallen in der Ausgabe) -->
-  <div v-if="excluded" class="flex items-center gap-2" :class="depth === 1 ? 'border-l border-base-200 pl-3' : ''">
+  <!-- nicht erhoben: Der Abschnitt behält seine Form, Kinder entfallen (auch in der Ausgabe). Maintainer 2026-11-25,
+       Quellen in docs/sources.md. Als Kasten bleibt er ein Kasten in derselben Größe, nur hohl (ohne Fläche):
+       Kästchen, Titel und Status stehen an denselben Stellen wie beim erhobenen Abschnitt, die Liste springt beim
+       Umschalten nicht. Abgeschwächt wird nur die Fläche; die Schrift behält ihren vollen Kontrast (der Zustand
+       steht ohnehin als − im Kästchen und als Worte da). Gleiche Klassen wie die Kopfzeile des Kastens unten. -->
+  <div v-if="excluded && renderAsCollapse" class="collapse rounded-lg border border-base-300" data-section-excluded>
+    <div class="collapse-title flex min-h-0 cursor-default items-center justify-between gap-2 py-3 pr-10 text-sm font-medium">
+      <span class="inline-flex items-center gap-2">
+        <ContainerFillToggle :node="node" />
+        {{ label(node) }}
+      </span>
+      <span class="flex shrink-0 items-center gap-1.5">
+        <span class="text-xs italic text-base-content/75">nicht erhoben</span>
+      </span>
+    </div>
+  </div>
+  <!-- nicht erhoben, Abschnitt ohne Kasten: an derselben Stelle wie sein Kopf, wenn er erhoben ist (gleiche Abstände
+       und Einrückung wie die <section> unten). -->
+  <div v-else-if="excluded" class="flex items-center gap-2" :class="[depth >= 1 ? 'mt-5' : '', depth === 1 ? 'border-l border-base-200/70 pl-3' : '']">
     <ContainerFillToggle :node="node" />
     <component :is="headingTag" :class="headingClass">{{ label(node) }}</component>
-    <span class="text-xs italic text-base-content/75">nicht erhoben</span>
+    <span class="ml-auto shrink-0 text-xs italic text-base-content/75">nicht erhoben</span>
   </div>
 
   <details v-else-if="renderAsCollapse" class="collapse-arrow collapse rounded-lg border border-base-300 bg-base-100" :open="open" @toggle="open = ($event.target as HTMLDetailsElement).open">

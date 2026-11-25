@@ -46,9 +46,9 @@ test('ungültige oder fehlende Werte werden zum Standard, gültige bleiben', () 
 test('Tabelle Stufe → Stellen: Aus nie, jede höhere Stufe enthält die niedrigeren', () => {
   assert.deepEqual(firing(0), [], 'Aus: nie')
   // Wenig: nur das Ergebnis einer Aktion.
-  assert.deepEqual(firing(1), ['sendOk', 'sendFailed', 'bridgeConnected'])
+  assert.deepEqual(firing(1), ['sendOk', 'sendFailed', 'bridgeConnected', 'copyOk'])
   // Normal: dazu löschende Bestätigung, Zustandsschalter, Greifen und Ablegen.
-  assert.deepEqual(firing(2), ['sendOk', 'sendFailed', 'bridgeConnected', 'confirmDelete', 'statusToggle', 'dragGrab', 'dragDrop'])
+  assert.deepEqual(firing(2), ['sendOk', 'sendFailed', 'bridgeConnected', 'copyOk', 'confirmDelete', 'statusToggle', 'dragGrab', 'dragDrop'])
   // Viel: dazu Tab-Wechsel, Schalter der Einstellungen, Fenster auf und zu.
   assert.deepEqual(firing(3), [...firing(2), 'tabSwitch', 'settingSwitch', 'windowOpen', 'windowClose'])
   for (const level of [1, 2, 3]) for (const e of firing(level - 1)) assert.ok(firing(level).includes(e), `${e} bleibt ab Stufe ${level}`)
@@ -136,14 +136,15 @@ function files(dir: string, ext: RegExp): string[] {
 }
 
 test('nur die benannten Stellen: Aufrufe im Code und Kennzeichen in der Oberfläche', () => {
-  // Aufrufe aus dem Code: Senden (gelungen, fehlgeschlagen), „Verbunden“ im Bridge-Fenster.
+  // Aufrufe aus dem Code: Senden (gelungen, fehlgeschlagen), „Verbunden“ im Bridge-Fenster, Kopieren gelungen
+  // (nur bei Zielgerät „Dieses Gerät“).
   const calls: string[] = []
   for (const f of files(join(app, 'src'), /\.(vue|ts)$/)) {
     const rel = f.slice(app.length)
     if (rel === 'src/shell/haptics.ts') continue
     for (const m of readFileSync(f, 'utf8').matchAll(/\bhaptic\('(\w+)'\)/g)) calls.push(`${rel}:${m[1]}`)
   }
-  assert.deepEqual(calls.sort(), ['src/components/BridgeConnectDialog.vue:bridgeConnected', 'src/composables/usePicoApi.ts:sendFailed', 'src/composables/usePicoApi.ts:sendOk'])
+  assert.deepEqual(calls.sort(), ['src/components/BridgeConnectDialog.vue:bridgeConnected', 'src/components/rebuild/EinsatzView.vue:copyOk', 'src/composables/usePicoApi.ts:sendFailed', 'src/composables/usePicoApi.ts:sendOk'])
   const api = code('src/composables/usePicoApi.ts')
   assert.match(api, /try \{\s*await client\.typeText\(\{ text, os, delayMs \}\)\s*haptic\('sendOk'\)\s*\} catch \(err\) \{\s*haptic\('sendFailed'\)\s*throw err\s*\}/, 'der Fehler geht unverändert weiter')
 

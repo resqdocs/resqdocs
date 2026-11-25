@@ -9,6 +9,7 @@ import { buttonTextRequest, takeButtonTextRequest } from '@/pico/buttonTextEntry
 import { normalizeForTyping } from '@resqdocs/protocol-core/typeable'
 import { typingMarker } from '@resqdocs/protocol-core-ui/untypeableNotice'
 import UntypeableHint from '@resqdocs/protocol-core-ui/components/UntypeableHint.vue'
+import { bridgeOs } from '@/pico/targetDevice'
 
 /**
  * Text fuer den Knopf an der Bridge: ein schlichtes Textfeld. Der Text liegt auf der Bridge und wird
@@ -105,7 +106,7 @@ const save = (): Promise<void> =>
   withButton(async () => {
     await client.storeText({
       text: typed.value,
-      os: storage.settings.defaultOs ?? 'win_de',
+      os: bridgeOs(storage.settings.defaultOs),
       delayMs: storage.settings.typingDelayMs,
       savedAt: Math.floor(Date.now() / 1000),
     })

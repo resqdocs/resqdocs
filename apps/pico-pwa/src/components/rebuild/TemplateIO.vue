@@ -28,6 +28,7 @@ import { takeIncomingOpen } from '@/composables/useIncomingOpen'
 import { offerImport, offerCollection } from '@/composables/useImportChoice'
 import { readIncomingFile } from '@/utils/fileTransfer'
 import { ohneEigeneVorlage } from './aiToolHint'
+import { FEATURE_VERSIONS } from '@/featureVersions'
 
 // Optionaler Dev-Override der Transfer-Dienst-URL (sonst Default aus dem Client).
 const transferCfg = (import.meta.env.VITE_TRANSFER_URL as string | undefined)
@@ -85,7 +86,7 @@ watch(mode, (m) => {
   if (!bausteine.loaded.value) void bausteine.reload().catch(() => {})
 })
 const exportJson = computed(() =>
-  selectedCount.value ? exportCollection({ templates: selectedTemplates.value, blocks: selectedBlocks.value, snippets: selectedSnippets.value }) : '',
+  selectedCount.value ? exportCollection({ templates: selectedTemplates.value, blocks: selectedBlocks.value, snippets: selectedSnippets.value }, FEATURE_VERSIONS) : '',
 )
 
 function toggle(m: 'export' | 'import'): void {
@@ -288,7 +289,7 @@ async function runLoad(text: string, incoming: boolean): Promise<void> {
     await releaseLink(mine)
     return
   }
-  const extras = { onCancel: () => void releaseLink(mine), hint: linkHint(mine) }
+  const extras = { onCancel: () => void releaseLink(mine), hint: linkHint(mine), needs: 'needs' in r ? r.needs : undefined }
   const done = (added: Container[]): void => afterImport(added, mine)
   if (r.kind === 'protocol' || r.kind === 'bundle') {
     // Vorlage(n): Name wählen, bei Namensgleichheit überschreiben oder als neue Vorlage - im ImportChoiceDialog
@@ -377,9 +378,9 @@ const fileInput = ref<HTMLInputElement | null>(null)
       <div v-if="focus !== 'link'" class="flex flex-col gap-2">
         <!-- Darf umbrechen: bei 393 px passen Überschrift und beide Knöpfe nicht in eine Zeile („Als Datei“ ragte hinaus). -->
         <div class="flex flex-wrap items-center justify-between gap-x-2">
-          <span class="min-w-0 text-xs font-semibold text-base-content/75">Exportieren — als Datei/JSON</span>
+          <span class="min-w-0 text-xs font-semibold text-base-content/75">Exportieren — als Datei</span>
           <div class="ml-auto flex shrink-0 gap-1">
-            <button class="btn btn-ghost btn-xs" type="button" :disabled="!selectedCount" @click="copyExport">{{ copied ? 'Kopiert' : 'JSON kopieren' }}</button>
+            <button class="btn btn-ghost btn-xs" type="button" :disabled="!selectedCount" @click="copyExport">{{ copied ? 'Kopiert' : 'Als Text kopieren' }}</button>
             <button class="btn btn-ghost btn-xs" type="button" :disabled="sharing || !selectedCount" @click="downloadExport">Als Datei</button>
           </div>
         </div>
@@ -423,7 +424,7 @@ const fileInput = ref<HTMLInputElement | null>(null)
     <div v-if="mode === 'import'" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
       <!-- Datei zuerst (Hauptweg), Einfügen als zweiter Weg. „Weiter“ führt zu „Vorlage übernehmen“. -->
       <div v-if="focus !== 'link'" class="flex flex-col gap-2">
-        <span v-if="focus === 'all'" class="text-xs font-semibold text-base-content/75">Importieren — aus Datei/JSON</span>
+        <span v-if="focus === 'all'" class="text-xs font-semibold text-base-content/75">Importieren — aus Datei</span>
         <button class="btn btn-primary min-h-11 w-full" type="button" :disabled="loadBusy || receiveBusy || incomingBusy" data-import-file @click="fileInput?.click()">Datei auswählen…</button>
         <input ref="fileInput" type="file" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true" @change="onFile" />
         <p class="text-xs text-base-content/75">Wird als neue Vorlage importiert — bei gleichem Namen wird gefragt.</p>

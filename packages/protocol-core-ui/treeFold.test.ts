@@ -86,7 +86,8 @@ test('Baum: Pfeil ist Schalter mit 44 px Tippfläche, Name wählt weiter aus, F�
   assert.match(src, /canFold = computed\(\(\) => props\.node\.type === 'container' && props\.depth > 0 && props\.node\.children\.length > 0\)/, 'leere Abschnitte haben keinen Pfeil')
   assert.match(src, /@click="tree\.select\(node\.id\)"/, 'Name springt weiter zu den Eigenschaften')
   assert.match(src, /data-tree-children :class="depth > 0 && depth <= 8 \? '[^']*border-l-2[^']*' : ''"/, 'Führungslinie unter dem Pfeil, Einrückung endet nach acht Ebenen')
-  assert.equal((src.match(/min-w-11 px-1\.5!/g) ?? []).length, 4, 'Knöpfe der Zeile bleiben 44 px breit, nicht breiter (Platz für den Namen)')
+  // Zwei Knöpfe je Zeile (+ bei Abschnitten, der Mehr-Knopf): 44 px breit, nicht breiter (Platz für den Namen).
+  assert.equal((src.match(/min-w-11 px-1\.5!/g) ?? []).length, 2, 'Knöpfe der Zeile bleiben 44 px breit, nicht breiter (Platz für den Namen)')
   assert.match(src, /data-tree-folded-count/)
 })
 

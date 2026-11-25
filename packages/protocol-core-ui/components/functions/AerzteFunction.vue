@@ -10,18 +10,19 @@
  * AUSSTELLENDE ARZT primaer; existiert auch ein Medikamentenplan im Protokoll, koennen die Medikamente
  * optional mit angelegt werden (Cross-Uebernahme, AerzteReviewSheet).
  */
-import { computed, inject, ref } from 'vue'
+import { computed, inject, nextTick, ref } from 'vue'
 import type { FunctionNode, ArztRow, MedikamenteRow } from '@resqdocs/protocol-core/model'
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
-import { formatArzt, arztRowHasData, medikamentRowHasData } from '@resqdocs/protocol-core/functions/registry'
+import { FUNCTION_REGISTRY, formatArzt, arztRowHasData, medikamentRowHasData } from '@resqdocs/protocol-core/functions/registry'
 import { listCaptureKey } from '@resqdocs/protocol-core-ui/injection'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 import FunctionFillToggle from '@resqdocs/protocol-core-ui/components/functions/FunctionFillToggle.vue'
 import RequiredMark from '@resqdocs/protocol-core-ui/components/RequiredMark.vue'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
-import { shouldCloseCard, tapIsPending } from '@resqdocs/protocol-core-ui/cardFocusGuard'
+import ListSheet from '@resqdocs/protocol-core-ui/components/functions/ListSheet.vue'
+import { focusWhenAttached } from '@resqdocs/protocol-core-ui/focusAttached'
 
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
@@ -59,7 +60,7 @@ let focusNext = false
 function setEditName(el: unknown): void {
   if (el && focusNext) {
     focusNext = false
-    ;(el as HTMLInputElement).focus()
+    focusWhenAttached(el as HTMLInputElement)
   }
 }
 
@@ -132,29 +133,24 @@ function openEdit(i: number): void {
 function closeEdit(): void {
   editingIndex.value = null
 }
-// Tap-Stempel: pointerdown/mousedown liegen VOR dem Fokuswechsel, ein @click-Handler nicht. Ohne das
-// schliesst der Tap auf ein Bedienelement der Karte sie, waehrend der Fokus noch in einem Feld steht -
-// eine schuetzende Flagge waere immer zu spaet. Gleiche Mechanik wie in den Bausteine-Bibliotheken.
-let lastTapAt = 0
-function onCardTap(): void {
-  lastTapAt = Date.now()
+// Die Liste liegt in einem Fenster (ListSheet); im Einsatz steht nur die Ergebnis-Zeile, wie bei den Rechnern.
+// Im Fenster schließt eine Karte nicht mehr beim Verlassen des Fokus: Das verschob beim Tipp auf „＋ Eintrag“ den
+// Knopf unter dem Finger, der Tipp ging verloren. Sie schließt über „＋ Eintrag“, eine andere Zeile oder „Fertig“.
+const sheetOpen = ref(false)
+const opener = ref<HTMLButtonElement | null>(null)
+/** Text der Zeile: die Einträge so, wie sie im Protokolltext stehen (dieselbe Quelle wie der Renderer). */
+const ergebnis = computed(() => FUNCTION_REGISTRY[props.node.functionKind]?.renderBody(caseValues.get(props.node.id), props.node.config) ?? '')
+const standardText = computed(() => (props.node.default ?? '').trim())
+function openSheet(): void {
+  sheetOpen.value = true
 }
-function onFocusOut(e: FocusEvent): void {
-  const card = e.currentTarget as HTMLElement
-  // Geteilter Waechter (cardFocusGuard). Wichtig hier: das Rollen-Auswahlfeld gibt den Fokus nach
-  // draussen, und die Rollenwahl blendet erst DANACH andere Felder ein (Patientenverfuegung/Vollmacht
-  // bei Kontaktpersonen, Ort/Arztnummer bei Aerzten). Ohne den Tap-Stempel klappte die Karte genau in
-  // dem Moment zu, in dem die neuen Felder erscheinen.
-  if (
-    !shouldCloseCard({
-      pendingDelete: pendingRemove.value !== null,
-      tapPending: tapIsPending(lastTapAt, Date.now()),
-      focusStaysInside: card.contains(e.relatedTarget as Node | null),
-    })
-  ) {
-    return
-  }
-  closeEdit()
+function closeSheet(): void {
+  // Leer gebliebene Zeilen aufräumen (wie „＋ Eintrag“ es tut); Zeilen mit Inhalt bleiben immer.
+  if (rows.value.some((r) => !arztRowHasData(r))) caseValues.setRows(props.node.id, rows.value.filter(arztRowHasData))
+  editingIndex.value = null
+  bmpOpen.value = false
+  sheetOpen.value = false
+  void nextTick(() => opener.value?.focus({ preventScroll: true })) // Fokus zurück auf die Zeile, von der man kam
 }
 function addRow(): void {
   const cleaned = rows.value.filter(arztRowHasData) // nur WIRKLICH leere Zeilen aufraeumen
@@ -185,6 +181,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
   }
   editingIndex.value = null
   bmpOpen.value = false
+  closeSheet() // Arzt aus dem Plan übernommen: zurück in den Einsatz, wie nach dem Plan-Scan im Medikationsplan
 }
 </script>
 
@@ -202,7 +199,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
 
 
     <!-- nicht erhoben: Zeilen-Verwaltung aus, nur Hinweis. Daten bleiben erhalten und kommen beim Zurueckschalten wieder. -->
-    <p v-if="excluded" class="text-xs italic text-base-content/75">nicht erhoben — erscheint nicht im Protokolltext</p>
+    <p v-if="excluded" class="text-right text-xs italic text-base-content/75">nicht erhoben</p>
 
     <div v-else-if="custom" class="flex flex-col gap-1">
       <!-- Freitext ersetzt in der Ausgabe die Zeilen; vorbelegt mit dem Standardtext, Zeilen bleiben erhalten. -->
@@ -218,6 +215,22 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
     </div>
 
     <template v-else>
+    <!-- Ergebnis-Zeile wie bei den Rechnern: zeigt die Einträge wie im Protokolltext; Antippen öffnet das Fenster. -->
+    <button
+      ref="opener"
+      type="button"
+      class="flex min-h-11 w-full items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-left shadow-sm active:bg-base-200"
+      :aria-label="`${label}: ${ergebnis || standardText || 'noch nichts erfasst'} — eingeben`"
+      aria-haspopup="dialog"
+      data-list-open
+      @click="openSheet"
+    >
+      <span v-if="ergebnis || standardText" class="min-w-0 flex-1 whitespace-pre-line break-words text-sm">{{ ergebnis || standardText }}</span>
+      <span v-else class="min-w-0 flex-1 truncate text-sm italic text-base-content/75">Noch nichts erfasst — antippen zum Eingeben</span>
+      <span class="shrink-0 text-base-content/75" aria-hidden="true">✎</span>
+    </button>
+
+    <ListSheet v-if="sheetOpen" :title="label" @close="closeSheet">
     <template v-for="(r, i) in rows" :key="i">
       <!-- READ: kompakte Summary-Zeile (Antippen -> bearbeiten) -->
       <button
@@ -236,10 +249,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
       <div
         v-else
         class="flex flex-col gap-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
-        @focusout="onFocusOut"
-        @pointerdown="onCardTap"
-        @mousedown="onCardTap"
-        @keydown.esc="closeEdit"
+        @keydown.esc.stop="closeEdit"
       >
         <!-- Rolle zuerst: zeigt sofort, dass jede Rolle ihren eigenen Feldsatz hat. „Arzt" ist der Wert
              OHNE Rolle (Datenmodell unveraendert: rolle bleibt leer, Ausgabe ohne Klammerzusatz) und damit
@@ -286,7 +296,6 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
             <span class="text-sm">Vollmacht/Betreuung liegt vor</span>
           </label>
         </div>
-        <button type="button" class="kb-sticky btn btn-primary btn-sm min-h-11 self-end" @click="closeEdit">Fertig</button>
       </div>
     </template>
 
@@ -306,6 +315,7 @@ function onScanApply(doctor: ArztRow, meds?: MedikamenteRow[]): void {
         Arzt aus Medikationsplan scannen
       </button>
     </div>
+    </ListSheet>
 
     </template>
 

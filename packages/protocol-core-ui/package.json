@@ -9,7 +9,7 @@
     "npm": ">=12"
   },
   "scripts": {
-    "test": "node --test --experimental-strip-types blockId.test.ts blockSummary.test.ts infoTipPosition.test.ts defaultYield.test.ts terms.test.ts terms.examples.test.ts nomenclature.test.ts nodeLabel.test.ts useProtocolTree.test.ts webkitGap.test.ts importPick.test.ts importNamed.test.ts editorParity.test.ts keineAppImporte.test.ts backLayer.test.ts useTreeHistory.test.ts longTextSize.test.ts visibleViewport.test.ts longTextDialog.test.ts clozeFill.test.ts keyboardInset.test.ts contrast.test.ts shareConfirm.test.ts fieldsetMinWidth.test.ts importHinweise.test.ts handyBedienung.test.ts feldEntwurf.test.ts kurzlinkQr.test.ts treeFold.test.ts emojiFreeInput.test.ts untypeableNotice.test.ts"
+    "test": "node --test --experimental-strip-types blockId.test.ts blockSummary.test.ts infoTipPosition.test.ts defaultYield.test.ts terms.test.ts terms.examples.test.ts titleFormat.test.ts listSheet.test.ts packageScanResult.test.ts nomenclature.test.ts nodeLabel.test.ts useProtocolTree.test.ts webkitGap.test.ts importPick.test.ts importNamed.test.ts editorParity.test.ts keineAppImporte.test.ts backLayer.test.ts useTreeHistory.test.ts longTextSize.test.ts visibleViewport.test.ts longTextDialog.test.ts clozeFill.test.ts keyboardInset.test.ts contrast.test.ts shareConfirm.test.ts fieldsetMinWidth.test.ts importHinweise.test.ts handyBedienung.test.ts feldEntwurf.test.ts kurzlinkQr.test.ts treeFold.test.ts emojiFreeInput.test.ts untypeableNotice.test.ts sheetGuard.test.ts focusAttached.test.ts"
   },
   "dependencies": {
     "@resqdocs/protocol-core": "file:../shared"
@@ -18,6 +18,6 @@
     "vue": "^3.5.0"
   },
   "devDependencies": {
-    "vue": "^3.5.45"
+    "vue": "^3.5.46"
   }
 }

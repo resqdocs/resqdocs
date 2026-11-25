@@ -15,6 +15,7 @@ import { decodeMaybeGzip } from '@/utils/gzip'
 import { checkImportUrl, downloadImportBytes, NOT_A_LIBRARY_MESSAGE, PznUrlImportError } from '@/medications/pznUrlImport'
 import { pznImportHttpGet } from '@/medications/pznUrlImportHttp'
 import { requestScreenWakeLock } from '@/utils/wakeLock'
+import { focusWhenAttached } from '@resqdocs/protocol-core-ui/focusAttached'
 
 /**
  * PZN-Bibliothek als eigene Einstellungs-Seite. Backend-agnostisch über
@@ -199,7 +200,7 @@ let focusStaerkeNext = false
 function setStaerkeEl(el: unknown): void {
   if (el && focusStaerkeNext) {
     focusStaerkeNext = false
-    ;(el as HTMLInputElement).focus()
+    focusWhenAttached(el as HTMLInputElement)
   }
 }
 // Reaktiver Entwurf des Staerke-Felds der EINEN offenen Karte (v-model). Einziger Commit-Pfad

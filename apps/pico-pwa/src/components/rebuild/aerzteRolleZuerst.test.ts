@@ -48,8 +48,9 @@ const elements = (el: Node): Node[] => (el.children ?? []).filter((c: Node) => c
 const text = (el: Node): string => (el.children ?? []).filter((c: Node) => c.type === TEXT).map((c: Node) => c.content).join('').trim()
 
 function karte(): Node {
-  const k = find(templateAst(), (n) => n.type === ELEMENT && hasDirective(n, 'on', 'focusout', /onFocusOut/))
-  assert.ok(k, 'Bearbeiten-Karte (@focusout="onFocusOut") nicht gefunden - Template geaendert? Dann Test anpassen.')
+  // Die Karte liegt im Listen-Fenster und schließt per Esc (nicht mehr beim Verlassen des Fokus).
+  const k = find(templateAst(), (n) => n.type === ELEMENT && n.tag === 'div' && hasDirective(n, 'on', 'keydown', /^closeEdit$/))
+  assert.ok(k, 'Bearbeiten-Karte (@keydown.esc.stop="closeEdit") nicht gefunden - Template geaendert? Dann Test anpassen.')
   return k
 }
 const istRollenAuswahl = (n: Node): boolean => n.type === ELEMENT && n.tag === 'select' && attr(n, 'aria-label') === 'Rolle'

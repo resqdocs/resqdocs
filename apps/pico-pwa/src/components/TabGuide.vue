@@ -24,7 +24,7 @@ import { TEST_PHASE } from '@/testPhase'
  * wenige Seiten, EINE Idee pro Seite, fokussiert aufs Neuartige (Bridge-Konzept,
  * Tri-State), jederzeit ueberspringbar ("fast, fun, and optional").
  * "Los geht's"/"Ueberspringen" blendet dauerhaft aus (settings.dismissedHints);
- * wieder abrufbar ueber das ?-Symbol im Header und den Hinweis-Reset.
+ * wieder abrufbar ueber das Buch-Symbol im Header und den Hinweis-Reset.
  */
 const HINT_ID = TAB_GUIDE_HINT_ID
 const storage = useStorage()
@@ -64,7 +64,7 @@ function dismiss(): void {
     storage.settings.dismissedHints = [...storage.settings.dismissedHints, HINT_ID]
     void storage.saveSettings()
   }
-  step.value = 0 // beim naechsten Abruf (?-Symbol) wieder vorn beginnen
+  step.value = 0 // beim naechsten Abruf (Buch-Symbol) wieder vorn beginnen
   guideRequested.value = false
 }
 // Jede Seite beginnt oben - sonst bliebe man nach einer langen Seite mitten in der naechsten stehen.
@@ -291,7 +291,7 @@ function onTouchEnd(e: TouchEvent): void {
         </div>
 
         <p class="pt-4 text-center text-xs text-base-content/75">
-          Diese Einführung und die Anleitung findest du jederzeit über das ?-Symbol oben rechts.
+          Diese Einführung und die Anleitung findest du jederzeit über das Buch-Symbol oben rechts.
         </p>
 
         <!-- Fortschritts-Dots + Navigation: kleben am unteren Rand (sticky), der Inhalt scrollt dahinter.
