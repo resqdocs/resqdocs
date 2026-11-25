@@ -48,6 +48,7 @@ export const HAPTIC_EVENTS = {
   sendOk: { from: 1, kind: 'success', where: 'Senden an die Bridge gelungen („An Gerät übertragen“)' },
   sendFailed: { from: 1, kind: 'error', where: 'Senden an die Bridge fehlgeschlagen' },
   bridgeConnected: { from: 1, kind: 'success', where: 'Fenster „Mit ResQDocs-Bridge verbinden“ meldet „Verbunden“' },
+  copyOk: { from: 1, kind: 'success', where: 'Protokolltext kopiert (Zielgerät „Dieses Gerät“)' },
   // Stufe 2 „Normal“: dazu die Stellen, an denen ein Systembauteil von selbst Rückmeldung gäbe.
   confirmDelete: { from: 2, kind: 'warning', where: 'löschende Bestätigung (roter Knopf einer Rückfrage)' },
   statusToggle: { from: 2, kind: 'light', where: 'Zustandsschalter ✓ / ✎ / − eines Felds, Abschnitts oder einer Funktion' },

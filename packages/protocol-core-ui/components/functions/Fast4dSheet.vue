@@ -16,6 +16,7 @@ import { fast4d } from '@resqdocs/protocol-core/tools/scores.mjs'
 import { FAST4D_UHRZEIT, FAST4D_ZEICHEN, fast4dInput, type Fast4dId } from '@resqdocs/protocol-core/tools/fast4dDefs.mjs'
 import InfoTip from '@resqdocs/protocol-core-ui/components/InfoTip.vue'
 import { INFO } from '@resqdocs/protocol-core-ui/terms'
+import { unchangedSince } from '@resqdocs/protocol-core-ui/sheetGuard'
 
 const props = defineProps<{ initial?: FAST4DRow }>()
 const emit = defineEmits<{ apply: [row: FAST4DRow]; close: [] }>()
@@ -68,6 +69,8 @@ const side = reactive<Record<'face' | 'arm', Seite | null>>({
 })
 const timeMode = ref<ZeitArt | null>(props.initial?.fastTimeMode ?? null)
 const time = ref(props.initial?.fastTime ?? '')
+// Tipp neben das Fenster schließt nur, solange nichts geändert wurde.
+const unchanged = unchangedSince(() => [picked, side, timeMode.value, time.value])
 
 function pick(id: ItemId, v: Fast4dBefund): void {
   picked[id] = v
@@ -245,7 +248,7 @@ function apply(): void {
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!result" @click="apply">Übernehmen</button>
         </div>
       </div>
-      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="emit('close')"></button>
+      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="unchanged() && emit('close')"></button>
     </div>
   </Teleport>
 </template>

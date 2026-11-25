@@ -12,6 +12,7 @@ import type { Container } from './model.ts'
 import { exportTemplate, exportTemplates } from './templateIO.ts'
 import { exportBlock } from './blockIO.ts'
 import { exportSnippet, type SnippetPayload } from './snippetIO.ts'
+import type { FeatureVersions } from './templateNeeds.ts'
 
 export interface Collection {
   templates: readonly Container[]
@@ -20,16 +21,17 @@ export interface Collection {
 }
 
 /** Gewählte Teile als Datei-/Link-Inhalt. Wirft, wenn nichts gewählt ist oder ein Textbaustein leer ist
- *  (die Gegenseite würde sonst die ganze Sammlung ablehnen). */
-export function exportCollection(c: Collection): string {
+ *  (die Gegenseite würde sonst die ganze Sammlung ablehnen). Mit `fv` tragen die Vorlagen ihren Vermerk
+ *  (siehe exportTemplate). */
+export function exportCollection(c: Collection, fv?: FeatureVersions): string {
   const n = c.templates.length + c.blocks.length + c.snippets.length
   if (!n) throw new Error('Nichts zum Teilen ausgewählt.')
   const leer = c.snippets.find((s) => !s.text.trim())
   if (leer) throw new Error(`Der Textbaustein „${leer.title || 'ohne Titel'}“ ist leer und kann nicht geteilt werden.`)
-  if (!c.blocks.length && !c.snippets.length) return exportTemplates(c.templates)
+  if (!c.blocks.length && !c.snippets.length) return exportTemplates(c.templates, fv)
   if (n === 1) return c.blocks.length ? exportBlock(c.blocks[0]) : exportSnippet(c.snippets[0])
   const items = [
-    ...c.templates.map((t) => JSON.parse(exportTemplate(t))),
+    ...c.templates.map((t) => JSON.parse(exportTemplate(t, fv))),
     ...c.blocks.map((b) => JSON.parse(exportBlock(b))),
     ...c.snippets.map((s) => JSON.parse(exportSnippet(s))),
   ]

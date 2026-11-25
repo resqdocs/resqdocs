@@ -9,16 +9,18 @@ import type { Container } from './model.ts'
 import { parseTemplate, PROTOCOL_SCHEMA } from './templateIO.ts'
 import { parseBlock, BLOCK_SCHEMA } from './blockIO.ts'
 import { parseSnippet, SNIPPET_SCHEMA, type SnippetPayload } from './snippetIO.ts'
+import { mergeNeeds, type Needs } from './templateNeeds.ts'
 
 export type DetectedKind = 'protocol' | 'block' | 'snippet' | 'bundle'
 
 export type DetectResult =
-  | { ok: true; kind: 'protocol'; tree: Container }
+  // needs: Vermerk der Datei, welche Funktionen die Vorlage(n) ab welcher App-Version brauchen (templateNeeds)
+  | { ok: true; kind: 'protocol'; tree: Container; needs?: Needs }
   | { ok: true; kind: 'block'; tree: Container }
   | { ok: true; kind: 'snippet'; snippet: SnippetPayload }
   // Sammlung: JSON-Liste von Einzel-Hüllen - Vorlagen, seit collectionIO auch gespeicherte Abschnitte und
   // Textbausteine (so exportieren „Alle“ im Online-Editor und das Teilen mehrerer Teile in der App)
-  | { ok: true; kind: 'bundle'; trees: Container[]; blocks: Container[]; snippets: SnippetPayload[] }
+  | { ok: true; kind: 'bundle'; trees: Container[]; blocks: Container[]; snippets: SnippetPayload[]; needs?: Needs }
   // Fehler: kind gesetzt, wenn das Schema ERKANNT wurde, der Parser aber ablehnt (z. B. Version zu neu)
   // -> die UI kann "Vorlage erkannt, aber ..." statt eines nackten Schema-Fehlers zeigen.
   | { ok: false; kind?: DetectedKind; error: string }
@@ -43,7 +45,7 @@ export function detectAndParse(json: string): DetectResult {
   }
   if (schema === PROTOCOL_SCHEMA) {
     const r = parseTemplate(json)
-    return r.ok ? { ok: true, kind: 'protocol', tree: r.tree } : { ok: false, kind: 'protocol', error: r.error }
+    return r.ok ? { ok: true, kind: 'protocol', tree: r.tree, ...(r.needs ? { needs: r.needs } : {}) } : { ok: false, kind: 'protocol', error: r.error }
   }
   if (schema === BLOCK_SCHEMA) {
     const r = parseBlock(json)
@@ -66,6 +68,7 @@ function parseBundle(items: unknown[]): DetectResult {
   const trees: Container[] = []
   const blocks: Container[] = []
   const snippets: SnippetPayload[] = []
+  const allNeeds: (Needs | undefined)[] = []
   for (const [i, item] of items.entries()) {
     const pos = `Eintrag ${i + 1} von ${items.length}`
     const schema = (item as { schema?: unknown } | null)?.schema
@@ -74,6 +77,7 @@ function parseBundle(items: unknown[]): DetectResult {
       const r = parseTemplate(json)
       if (!r.ok) return { ok: false, kind: 'bundle', error: `${pos} (Vorlage): ${r.error}` }
       trees.push(r.tree)
+      allNeeds.push(r.needs)
     } else if (schema === BLOCK_SCHEMA) {
       const r = parseBlock(json)
       if (!r.ok) return { ok: false, kind: 'bundle', error: `${pos} (gespeicherter Abschnitt): ${r.error}` }
@@ -86,5 +90,6 @@ function parseBundle(items: unknown[]): DetectResult {
       return { ok: false, kind: 'bundle', error: `${pos} ist keine ResQDocs-Vorlage, kein gespeicherter Abschnitt und kein Textbaustein.` }
     }
   }
-  return { ok: true, kind: 'bundle', trees, blocks, snippets }
+  const needs = mergeNeeds(allNeeds)
+  return { ok: true, kind: 'bundle', trees, blocks, snippets, ...(needs ? { needs } : {}) }
 }

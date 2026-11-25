@@ -51,12 +51,12 @@ function classOf(el: Node): string {
 const isAuswahl = (n: Node): boolean =>
   n.type === ELEMENT &&
   (n.props ?? []).some(
-    (p: Node) => p.type === DIRECTIVE && p.name === 'on' && p.arg?.content === 'click' && /^switchTo\(/.test(p.exp?.content ?? ''),
+    (p: Node) => p.type === DIRECTIVE && p.name === 'on' && p.arg?.content === 'click' && /^(switchTo|pick)\(/.test(p.exp?.content ?? ''),
   )
 
 function zeile(): { auswahl: Node; buttons: Node[] } {
   const chain = pathTo(templateAst(), isAuswahl)
-  assert.ok(chain, 'Auswahlflaeche (@click="switchTo(...)") nicht gefunden - Template geaendert? Dann Test anpassen.')
+  assert.ok(chain, 'Auswahlflaeche (@click="pick(...)") nicht gefunden - Template geaendert? Dann Test anpassen.')
   const auswahl = chain[chain.length - 1]
   const reihe = chain[chain.length - 2]
   return { auswahl, buttons: reihe.children.filter((c: Node) => c.type === ELEMENT && c !== auswahl) }

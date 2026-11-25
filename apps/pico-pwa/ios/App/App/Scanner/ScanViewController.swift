@@ -11,6 +11,10 @@ import ZXingCpp
  * Treffer aus, fokussiert der Controller periodisch auf die Bildmitte nach. Dekodiert wird mit ZXing-C++
  * direkt aus dem CVPixelBuffer (Y-Ebene), auf einer eigenen Queue, höchstens ein Frame gleichzeitig.
  *
+ * Mehrfach-Modus (Optionen multi / multiToggleLabel): Der Bildschirm bleibt nach einem Treffer offen und
+ * sammelt Codes, bis Fertig oder Schließen ihn beenden. Mit multiToggleLabel schaltet ein Schalter im
+ * Kamerabild zwischen Einzel- und Mehrfach-Scan um. Ohne beide Optionen läuft alles wie beim Einzel-Scan.
+ *
  * Datenschutz: Jedes Kamerabild lebt nur für die Dauer des read-Aufrufs. Kein Speichern, kein Logging
  * von Bild oder Inhalt, kein Netz. Zurück geht nur der gelesene Inhalt an das Plugin.
  */
@@ -21,6 +25,14 @@ final class ScanViewController: UIViewController {
     /// Anteil der Bildbreite für den Zielrahmen (wie Android).
     private static let frameFill: Double = 0.72
     private static let refocusInterval: TimeInterval = 4
+    /// Mehrfach-Modus: Pause nach einem neuen Code, damit die Hand die Packung wechseln kann.
+    private static let multiPause: TimeInterval = 0.7
+    /// Mehrfach-Modus: so lange steht die Meldung „schon erfasst“ im Kamerabild.
+    private static let duplicateShow: TimeInterval = 1.5
+    /// Mehrfach-Modus: dieselbe Meldung für denselben Code frühestens nach dieser Zeit erneut.
+    private static let duplicateRepeat: TimeInterval = 2
+    /// Schlüssel eines Codes ohne PZN: der gelesene Inhalt mit diesem Vorsatz (eine PZN hat keinen).
+    private static let rawKeyPrefix = "raw:"
 
     private let options: ScanOptions
     private let session = AVCaptureSession()
@@ -35,6 +47,29 @@ final class ScanViewController: UIViewController {
     /// Nutzer hat selbst gezoomt (Geste oder Regler) – ein verzögerter Start-Zoom überschreibt das nicht. Nur Main.
     private var userZoomed = false
     private var torchOn = false
+
+    // Mehrfach-Modus. Alle Felder werden NUR auf dem Main-Thread geschrieben und gelesen.
+    /// Mehrfach-Modus an? Mit Schalter dessen Stellung, sonst fest options.multi.
+    private var multiOn = false
+    /// Erfasste Codes in Scan-Reihenfolge und ihre Schlüssel für die Dublettenprüfung.
+    private var items: [ScanItem] = []
+    private var itemKeys = Set<String>()
+    /// Bis zu diesem Zeitpunkt (ProcessInfo.systemUptime) werden keine Treffer angenommen.
+    private var pauseUntil: TimeInterval = 0
+    private var lastDuplicateKey: String?
+    private var lastDuplicateAt: TimeInterval = 0
+    private var duplicateHide: DispatchWorkItem?
+    private let doneButton = UIButton(type: .system)
+    private let doneHolder = UIView()
+    private let multiSwitch = UISwitch()
+    private let multiSwitchLabel = UILabel()
+    private let multiPill = UIView()
+    private let duplicateLabel = UILabel()
+    private let duplicatePill = UIView()
+
+    private var showsToggle: Bool { !options.multiToggleLabel.isEmpty }
+    /// Mit Schalter oder festem Mehrfach-Modus laufen Treffer und Beenden über die Liste der Codes.
+    private var multiCapable: Bool { options.multi || showsToggle }
 
     private let titleLabel = UILabel()
     private let hintLabel = UILabel()
@@ -55,6 +90,7 @@ final class ScanViewController: UIViewController {
 
     init(options: ScanOptions) {
         self.options = options
+        multiOn = options.multi
         let ro = ZXIReaderOptions()
         // Formate erst fertig berechnen und dann EINMAL setzen, nie zurücklesen: der Getter
         // ZXIReaderOptions.formats in zxing-cpp 3.1.1 iteriert über eine Referenz in eine temporäre
@@ -212,7 +248,7 @@ final class ScanViewController: UIViewController {
             self?.updateDiag()
             guard delayed else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                guard let s = self, !s.done, !s.userZoomed else { return }
+                guard let s = self, !s.done, !s.userZoomed, s.items.isEmpty else { return }
                 s.setZoom(zoom)
                 s.zoomSlider.value = Float(s.sliderPosition(for: zoom))
             }
@@ -297,6 +333,124 @@ final class ScanViewController: UIViewController {
         if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
 
+    // ---------------------------------------------------------------- Mehrfach-Modus
+
+    /// Treffer mit Schalter bzw. im Mehrfach-Modus. Nur Main.
+    private func onMultiHit(format: String, bytes: Data, text: String) {
+        let now = ProcessInfo.processInfo.systemUptime
+        guard !done, now >= pauseUntil else { return }
+        // Bytes 1:1 als ISO-8859-1 lesen, wie es das Packungs-Profil in scanProfiles.ts vorgibt.
+        let raw = bytes.isEmpty ? text : (String(data: bytes, encoding: .isoLatin1) ?? text)
+        let pzn = ScanViewController.extractPznFromPackageCode(raw, format: format)
+        let key = pzn ?? (ScanViewController.rawKeyPrefix + raw)
+        let captured = itemKeys.contains(key)
+        if !multiOn {
+            // Schalter aus: Der erste Code schließt den Bildschirm wie beim Einzel-Scan, ohne Prüfung gegen
+            // known. Sind aus der Zeit mit Schalter an schon Codes erfasst, zählt nur ein Code, der noch
+            // nicht dabei ist; er kommt dazu und der Bildschirm schließt mit allen.
+            if captured { return }
+            addItem(format: format, bytes: bytes, text: text, key: key)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            finishCollected()
+            return
+        }
+        var known = false
+        if let p = pzn { known = options.known.contains(p) }
+        if captured || known {
+            // Die Packung liegt meist noch im Bild: dieselbe Meldung nicht ständig neu auslösen.
+            if key == lastDuplicateKey && now - lastDuplicateAt < ScanViewController.duplicateRepeat { return }
+            lastDuplicateKey = key
+            lastDuplicateAt = now
+            showDuplicate()
+            return
+        }
+        addItem(format: format, bytes: bytes, text: text, key: key)
+        pauseUntil = now + ScanViewController.multiPause
+        // Auch die eben erfasste Packung liegt meist noch im Bild: Meldung für sie erst nach der Sperrzeit.
+        lastDuplicateKey = key
+        lastDuplicateAt = now
+        hideDuplicateNow()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        updateMultiUi()
+        UIAccessibility.post(notification: .announcement, argument: hintLabel.text)
+    }
+
+    private func addItem(format: String, bytes: Data, text: String, key: String) {
+        items.append(ScanItem(format: format, bytes: bytes, text: text))
+        itemKeys.insert(key)
+    }
+
+    /// Beenden mit Schalter bzw. im Mehrfach-Modus (Fertig, Schließen, Treffer bei Schalter aus):
+    /// Erfasste Codes gehen zurück; ohne Codes gilt das Ergebnis als abgebrochen.
+    private func finishCollected() {
+        let switchState: Bool? = showsToggle ? multiOn : nil
+        if !items.isEmpty {
+            finish(.foundMany(items: items, diag: diagText(), multiOn: switchState))
+        } else if let on = switchState {
+            finish(.cancelledWithSwitch(diag: diagText(), multiOn: on))
+        } else {
+            finish(.cancelled(diag: diagText()))
+        }
+    }
+
+    /// Zähler und Fertig-Knopf: sichtbar, solange der Mehrfach-Modus an ist oder schon Codes erfasst sind.
+    private func updateMultiUi() {
+        let n = items.count
+        doneButton.isHidden = !(multiOn || n > 0)
+        // Ohne Codes bleibt der normale Hinweistext stehen.
+        guard n > 0 else { return }
+        let text = n == 1 ? options.countOne : options.countMany.replacingOccurrences(of: "{n}", with: String(n))
+        hintLabel.text = text
+        hintLabel.accessibilityLabel = text
+        hintLabel.textColor = options.theme.baseContent
+        hintLabel.font = .boldSystemFont(ofSize: 16)
+    }
+
+    /// Meldung „schon erfasst“ kurz im Kamerabild zeigen, mit anderer Haptik als beim Erfolg.
+    private func showDuplicate() {
+        duplicatePill.isHidden = false
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        UIAccessibility.post(notification: .announcement, argument: options.duplicateLabel)
+        duplicateHide?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.duplicatePill.isHidden = true }
+        duplicateHide = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + ScanViewController.duplicateShow, execute: work)
+    }
+
+    private func hideDuplicateNow() {
+        duplicateHide?.cancel()
+        duplicateHide = nil
+        duplicatePill.isHidden = true
+    }
+
+    /// PZN eines Packungscodes, 8-stellig, oder nil. Gleiche Regel wie extractPznFromPackageCode in
+    /// apps/pico-pwa/src/medications/packageScan.ts (dort die maßgebliche Fassung; Änderungen dort hier und
+    /// in der Android-ScanActivity nachziehen): bei Data Matrix oder unbekanntem Format zuerst das PPN-Muster
+    /// 9N11 + 8 Ziffern; Data Matrix ohne diesen Treffer hat keine PZN; sonst führendes „-“ und alle
+    /// Nicht-Ziffern entfernen, 4 bis 8 Ziffern links mit Nullen auf 8 Stellen auffüllen.
+    ///
+    /// format ist der Formatname, wie formatName ihn liefert. Wie normalizeScanFormat in scanProfiles.ts:
+    /// DATA_MATRIX ist Data Matrix, QR_CODE, CODE_39 und PZN sind bekannte andere Formate, alles andere gilt
+    /// als unbekannt. Der Inhalt wird hier weder gespeichert noch ausgegeben.
+    static func extractPznFromPackageCode(_ raw: String, format: String) -> String? {
+        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if s.isEmpty { return nil }
+        let dataMatrix = format == "DATA_MATRIX"
+        let unknown = !dataMatrix && format != "QR_CODE" && format != "CODE_39" && format != "PZN"
+        if dataMatrix || unknown {
+            if let re = try? NSRegularExpression(pattern: "9N11([0-9]{8})"),
+               let m = re.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)),
+               let r = Range(m.range(at: 1), in: s) {
+                return String(s[r])
+            }
+            if dataMatrix { return nil }
+        }
+        let body = s.hasPrefix("-") ? String(s.dropFirst()) : s
+        let digits = body.filter { $0.isASCII && $0.isNumber }
+        if digits.count < 4 || digits.count > 8 { return nil }
+        return String(repeating: "0", count: 8 - digits.count) + digits
+    }
+
     private func diagText() -> String {
         [diagCamera, diagAnalysis, diagFocus, "Versuche \(attempts) · \(lastDecodeMs) ms"]
             .filter { !$0.isEmpty }.joined(separator: " · ")
@@ -362,9 +516,36 @@ final class ScanViewController: UIViewController {
         paintRound(cancelButton, background: th.base300, foreground: th.baseContent)
         cancelButton.addTarget(self, action: #selector(onCancel), for: .touchUpInside)
 
-        let spacer = UIView()
-        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        let buttons = UIStackView(arrangedSubviews: [cancelButton, spacer, torchButton])
+        let buttons: UIStackView
+        if multiCapable {
+            // Mit Schalter bzw. im Mehrfach-Modus sitzt zwischen Schließen und Licht der Fertig-Knopf
+            // (mindestens 48 pt hoch, primary/primaryContent); updateMultiUi blendet ihn ein und aus.
+            // Der Halter bleibt dabei stehen, damit Schließen und Licht ihren Platz behalten.
+            doneButton.setTitle(options.doneLabel, for: .normal)
+            doneButton.setTitleColor(th.primaryContent, for: .normal)
+            doneButton.titleLabel?.font = .boldSystemFont(ofSize: 17)
+            doneButton.backgroundColor = th.primary
+            doneButton.tintColor = th.primaryContent
+            doneButton.layer.cornerRadius = 12
+            doneButton.clipsToBounds = true
+            doneButton.accessibilityLabel = options.doneLabel
+            doneButton.addTarget(self, action: #selector(onDone), for: .touchUpInside)
+            doneButton.translatesAutoresizingMaskIntoConstraints = false
+            doneHolder.addSubview(doneButton)
+            NSLayoutConstraint.activate([
+                doneButton.topAnchor.constraint(equalTo: doneHolder.topAnchor),
+                doneButton.bottomAnchor.constraint(equalTo: doneHolder.bottomAnchor),
+                doneButton.leadingAnchor.constraint(equalTo: doneHolder.leadingAnchor),
+                doneButton.trailingAnchor.constraint(equalTo: doneHolder.trailingAnchor),
+                doneButton.heightAnchor.constraint(greaterThanOrEqualToConstant: 48),
+            ])
+            buttons = UIStackView(arrangedSubviews: [cancelButton, doneHolder, torchButton])
+            buttons.spacing = 12
+        } else {
+            let spacer = UIView()
+            spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            buttons = UIStackView(arrangedSubviews: [cancelButton, spacer, torchButton])
+        }
         buttons.axis = .horizontal
         buttons.alignment = .center
         let bottom = UIStackView(arrangedSubviews: [zoomSlider, buttons])
@@ -399,6 +580,77 @@ final class ScanViewController: UIViewController {
         ])
         topBar = top
         bottomBar = bottom
+        if multiCapable {
+            buildDuplicatePill(below: top)
+            if showsToggle { buildMultiSwitch(above: bottom) }
+            updateMultiUi()
+        }
+    }
+
+    /// Meldung „schon erfasst“ im Kamerabild, direkt unter der oberen Leiste.
+    private func buildDuplicatePill(below top: UIView) {
+        let th = options.theme
+        duplicatePill.backgroundColor = th.base100
+        duplicatePill.layer.cornerRadius = 12
+        duplicatePill.isHidden = true
+        duplicatePill.isUserInteractionEnabled = false
+        duplicatePill.translatesAutoresizingMaskIntoConstraints = false
+        duplicateLabel.text = options.duplicateLabel
+        duplicateLabel.textColor = th.baseContent
+        duplicateLabel.font = .boldSystemFont(ofSize: 16)
+        duplicateLabel.textAlignment = .center
+        duplicateLabel.numberOfLines = 0
+        duplicateLabel.translatesAutoresizingMaskIntoConstraints = false
+        duplicatePill.addSubview(duplicateLabel)
+        view.addSubview(duplicatePill)
+        NSLayoutConstraint.activate([
+            duplicateLabel.topAnchor.constraint(equalTo: duplicatePill.topAnchor, constant: 10),
+            duplicateLabel.bottomAnchor.constraint(equalTo: duplicatePill.bottomAnchor, constant: -10),
+            duplicateLabel.leadingAnchor.constraint(equalTo: duplicatePill.leadingAnchor, constant: 16),
+            duplicateLabel.trailingAnchor.constraint(equalTo: duplicatePill.trailingAnchor, constant: -16),
+            duplicatePill.topAnchor.constraint(equalTo: top.bottomAnchor, constant: 12),
+            duplicatePill.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            duplicatePill.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 16),
+            duplicatePill.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -16),
+        ])
+    }
+
+    /// Schalter für den Mehrfach-Modus im Kamerabild, direkt über der unteren Leiste.
+    private func buildMultiSwitch(above bottom: UIView) {
+        let th = options.theme
+        multiSwitchLabel.text = options.multiToggleLabel
+        multiSwitchLabel.textColor = th.baseContent
+        multiSwitchLabel.font = .systemFont(ofSize: 16)
+        multiSwitchLabel.numberOfLines = 0
+        // Für Bedienhilfen trägt der Schalter die Beschriftung selbst.
+        multiSwitchLabel.isAccessibilityElement = false
+        multiSwitch.isOn = multiOn
+        multiSwitch.onTintColor = th.primary
+        multiSwitch.accessibilityLabel = options.multiToggleLabel
+        multiSwitch.addTarget(self, action: #selector(onMultiSwitch), for: .valueChanged)
+        let row = UIStackView(arrangedSubviews: [multiSwitchLabel, multiSwitch])
+        row.axis = .horizontal
+        row.alignment = .center
+        row.spacing = 12
+        row.translatesAutoresizingMaskIntoConstraints = false
+        multiPill.backgroundColor = th.base100
+        multiPill.layer.cornerRadius = 24
+        multiPill.translatesAutoresizingMaskIntoConstraints = false
+        // Die ganze Fläche (mindestens 48 pt hoch) schaltet um, nicht nur der Schalter selbst.
+        multiPill.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(onMultiPillTap)))
+        multiPill.addSubview(row)
+        view.addSubview(multiPill)
+        NSLayoutConstraint.activate([
+            row.topAnchor.constraint(equalTo: multiPill.topAnchor, constant: 8),
+            row.bottomAnchor.constraint(equalTo: multiPill.bottomAnchor, constant: -8),
+            row.leadingAnchor.constraint(equalTo: multiPill.leadingAnchor, constant: 16),
+            row.trailingAnchor.constraint(equalTo: multiPill.trailingAnchor, constant: -12),
+            multiPill.heightAnchor.constraint(greaterThanOrEqualToConstant: 48),
+            multiPill.bottomAnchor.constraint(equalTo: bottom.topAnchor, constant: -12),
+            multiPill.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            multiPill.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 16),
+            multiPill.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -16),
+        ])
     }
 
     private var topBar: UIStackView?
@@ -461,7 +713,23 @@ final class ScanViewController: UIViewController {
         paintRound(torchButton, background: on ? th.primary : th.base300, foreground: on ? th.primaryContent : th.baseContent)
     }
 
-    @objc private func onCancel() { finish(.cancelled(diag: diagText())) }
+    @objc private func onCancel() {
+        if multiCapable { finishCollected() } else { finish(.cancelled(diag: diagText())) }
+    }
+
+    @objc private func onDone() { finishCollected() }
+
+    @objc private func onMultiSwitch() {
+        multiOn = multiSwitch.isOn
+        if !multiOn { hideDuplicateNow() }
+        updateMultiUi()
+    }
+
+    /// Tippen auf die Fläche neben dem Schalter: setOn löst valueChanged nicht aus, deshalb von Hand.
+    @objc private func onMultiPillTap() {
+        multiSwitch.setOn(!multiSwitch.isOn, animated: true)
+        onMultiSwitch()
+    }
 
     /// Abgedunkelter Rand mit quadratischem Zielrahmen in der Bildmitte (rein beratend).
     private final class FrameOverlayView: UIView {
@@ -513,6 +781,11 @@ extension ScanViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
             s.lastDecodeMs = ms
             if s.attempts % 10 == 0 { s.updateDiag() }
             guard let r = hit, !s.done else { return }
+            if s.multiCapable {
+                // Mit Schalter bzw. im Mehrfach-Modus entscheidet onMultiHit (Liste, Pause, Dubletten).
+                s.onMultiHit(format: ScanViewController.formatName(r.format), bytes: r.bytes, text: r.text)
+                return
+            }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             s.finish(.found(format: ScanViewController.formatName(r.format), bytes: r.bytes, text: r.text, diag: s.diagText()))
         }

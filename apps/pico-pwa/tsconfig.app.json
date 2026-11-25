@@ -17,6 +17,7 @@
       "@resqdocs/protocol-core/*": ["../../packages/shared/*"],
       "@resqdocs/protocol-core-ui/*": ["../../packages/protocol-core-ui/*"],
       "@protocols/*": ["../../protocols/*"],
+      "@feature-versions": ["../../ai-docs/feature-versions.json"],
       // Das geteilte UI-Paket liegt außerhalb dieses node_modules-Baums (kein Workspace). Damit vue-tsc
       // beim Kompilieren der Paket-.vue 'vue' findet, hier auf das App-node_modules mappen (eine vue-Instanz).
       "vue": ["./node_modules/vue"]

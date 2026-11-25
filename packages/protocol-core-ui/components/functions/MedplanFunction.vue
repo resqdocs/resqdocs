@@ -13,16 +13,18 @@ import type { FunctionNode, MedikamenteRow, ArztRow } from '@resqdocs/protocol-c
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { collectFunctionNodes } from '@resqdocs/protocol-core/creator'
-import { formatMedikament, medikamentRowHasData, arztRowHasData, staerkeOhneDuplikat } from '@resqdocs/protocol-core/functions/registry'
+import { FUNCTION_REGISTRY, formatMedikament, medikamentRowHasData, arztRowHasData, staerkeOhneDuplikat } from '@resqdocs/protocol-core/functions/registry'
 import { meaningfulLength } from '@resqdocs/protocol-core/textSearch'
 import { listCaptureKey, type MedicationSuggestion } from '@resqdocs/protocol-core-ui/injection'
 import ConfirmDialog from '@resqdocs/protocol-core-ui/components/ConfirmDialog.vue'
 import FunctionFillToggle from '@resqdocs/protocol-core-ui/components/functions/FunctionFillToggle.vue'
 import RequiredMark from '@resqdocs/protocol-core-ui/components/RequiredMark.vue'
 import { isRequiredOpen } from '@resqdocs/protocol-core/required'
-import { shouldCloseCard, tapIsPending } from '@resqdocs/protocol-core-ui/cardFocusGuard'
+import ListSheet from '@resqdocs/protocol-core-ui/components/functions/ListSheet.vue'
+import { libraryOffer, librarySignature, packageScanMessage, planPackageScan, pznKey, type LibraryEntryView, type PackageScanMessage } from '@resqdocs/protocol-core-ui/packageScanResult'
 
 import { vFitKeyboard } from '../../keyboardInset.ts'
+import { focusWhenAttached } from '@resqdocs/protocol-core-ui/focusAttached'
 const props = defineProps<{ node: FunctionNode }>()
 const caseValues = useCaseValues()
 // Wurzel der aktiven Einsatz-Vorlage (Singleton) -> Cross-Funktion-Suche (Arzt an eine Aerzte-Funktion).
@@ -68,7 +70,7 @@ let focusNext = false
 function setEditName(el: unknown): void {
   if (el && focusNext) {
     focusNext = false
-    ;(el as HTMLInputElement).focus()
+    focusWhenAttached(el as HTMLInputElement)
   }
 }
 
@@ -145,30 +147,25 @@ function closeEdit(): void {
   closeSuggest()
   pendingStaerke.value = null
 }
-// Tap-Stempel: pointerdown/mousedown liegen VOR dem Fokuswechsel, ein @click-Handler nicht. Ohne das
-// schliesst der Tap auf ein Bedienelement der Karte sie, waehrend der Fokus noch in einem Feld steht -
-// eine schuetzende Flagge waere immer zu spaet. Gleiche Mechanik wie in den Bausteine-Bibliotheken.
-let lastTapAt = 0
-function onCardTap(): void {
-  lastTapAt = Date.now()
+// Die Liste liegt in einem Fenster (ListSheet); im Einsatz steht nur die Ergebnis-Zeile, wie bei den Rechnern.
+// Im Fenster schließt eine Karte nicht mehr beim Verlassen des Fokus: Das verschob beim Tipp auf „＋ Medikament“
+// den Knopf unter dem Finger, der Tipp ging verloren. Sie schließt über „＋ Medikament“, eine andere Zeile oder
+// „Fertig“. Rückfragen, Vorschläge und der Scan öffnen über dem Fenster.
+const sheetOpen = ref(false)
+const opener = ref<HTMLButtonElement | null>(null)
+/** Text der Zeile: die Einträge so, wie sie im Protokolltext stehen (dieselbe Quelle wie der Renderer). */
+const ergebnis = computed(() => FUNCTION_REGISTRY[props.node.functionKind]?.renderBody(caseValues.get(props.node.id), props.node.config) ?? '')
+const standardText = computed(() => (props.node.default ?? '').trim())
+function openSheet(): void {
+  sheetOpen.value = true
 }
-function onFocusOut(e: FocusEvent): void {
-  const card = e.currentTarget as HTMLElement
-  // Geteilter Waechter (cardFocusGuard) - wie in AerzteFunction. Hier gibt es aktuell kein Element,
-  // das den Fokus regulaer nach draussen gibt; der Schutz steht vorsorglich, damit ein spaeter
-  // ergaenztes Auswahlfeld oder Modal nicht dieselbe Falle aufmacht.
-  if (
-    !shouldCloseCard({
-      // Ein offener Dialog (Loeschung ODER Staerke-Rueckfrage) haelt die Karte offen: der Fokuswechsel
-      // ins teleportierte Modal darf sie nicht schliessen (und damit die Rueckfrage abraeumen).
-      pendingDelete: pendingRemove.value !== null || pendingStaerke.value !== null,
-      tapPending: tapIsPending(lastTapAt, Date.now()),
-      focusStaysInside: card.contains(e.relatedTarget as Node | null),
-    })
-  ) {
-    return
-  }
+function closeSheet(): void {
   closeEdit()
+  // Leer gebliebene Zeilen aufräumen (wie „＋ Medikament“ es tut); Zeilen mit Inhalt bleiben immer.
+  if (rows.value.some((r) => !medikamentRowHasData(r))) caseValues.setRows(props.node.id, rows.value.filter(medikamentRowHasData))
+  scanPickerOpen.value = false
+  sheetOpen.value = false
+  void nextTick(() => opener.value?.focus({ preventScroll: true })) // Fokus zurück auf die Zeile, von der man kam
 }
 function addRow(): void {
   const cleaned = rows.value.filter(medikamentRowHasData) // nur WIRKLICH leere Zeilen aufraeumen (Eingaben nie stumm verwerfen)
@@ -183,25 +180,70 @@ function addRow(): void {
 
 // --- Packung-Scan: EINE Zeile, direkt anhaengen (bewusst kompakt, kein Auto-Open) ---
 const pkgScanOpen = ref(false)
-const pkgScanMsg = ref<string | null>(null)
+const pkgScanMsg = ref<PackageScanMessage | null>(null)
+/** PZN, die schon in der Liste stehen (achtstellig): Mit dem Schalter „Mehrere Packungen“ im Kamerabild bleibt die
+ *  Kamera offen und meldet sie als schon vorhanden. */
+const knownPzn = computed(() => rows.value.map((r) => pznKey(r.pzn)).filter((k): k is string => k !== null))
 function startPackageScan(): void {
   pkgScanMsg.value = null
   pkgScanOpen.value = true
 }
-async function onPackageDecoded(p: unknown): Promise<void> {
-  pkgScanOpen.value = false // Overlay ist nach einem Decode „done" -> schliessen
+/** Eine oder mehrere gelesene Packungen in die Liste übernehmen. Jede PZN steht höchstens einmal dort: Was schon
+ *  in der Liste steht oder im selben Durchgang doppelt kam, wird nicht noch einmal aufgenommen (Meldung darunter). */
+async function onPackagesDecoded(results: unknown[]): Promise<void> {
+  pkgScanOpen.value = false // die Kamera ist fertig -> schließen; das Listen-Fenster bleibt offen
   if (!medplanScan) return
-  const pzn = medplanScan.pznFromPackage(p)
-  if (!pzn) {
-    pkgScanMsg.value = 'Keine PZN auf der Packung erkannt — näher heranführen oder manuell eintippen.'
-    return
-  }
-  // Strukturiert aus der EIGENEN Bibliothek: Wirkstoff (wichtiger als Bezeichnung,
-  // konsistent zu resolveFromLibrary der Review-Sheets) + Wirkstärke als eigenes Feld —
-  // ausser der Name (z. B. Label "Ibuflam 400 mg") trägt sie schon (keine Doppel-Doku). Abbildung: packageScanRow.
-  const row = await medplanScan.rowForPzn(pzn)
-  const cleaned = rows.value.filter(medikamentRowHasData)
-  caseValues.setRows(props.node.id, [...cleaned, row]) // anhaengen, kompakt (kein Edit-Open)
+  const scan = medplanScan
+  const plan = planPackageScan(results.map((p) => scan.pznFromPackage(p)), rows.value.map((r) => r.pzn))
+  // Strukturiert aus der EIGENEN Bibliothek: Wirkstoff (wichtiger als Bezeichnung, konsistent zu
+  // resolveFromLibrary der Review-Sheets) + Wirkstärke als eigenes Feld, außer der Name trägt sie schon.
+  const neu: MedikamenteRow[] = []
+  for (const pzn of plan.add) neu.push(await scan.rowForPzn(pzn))
+  if (neu.length) caseValues.setRows(props.node.id, [...rows.value.filter(medikamentRowHasData), ...neu]) // anhängen, kompakt
+  pkgScanMsg.value = packageScanMessage(plan)
+}
+function onPackageDecoded(p: unknown): Promise<void> {
+  return onPackagesDecoded([p])
+}
+
+// --- Eigene PZN-Bibliothek: einen Eintrag der Liste aufnehmen oder ändern -------------------------------------
+// Nach einem Packungs-Scan mit unbekannter PZN steht in der Zeile nur „PZN …“. Trägt man in der Karte den Namen
+// ein, bietet sie an, die PZN mit diesem Namen in die eigene Bibliothek zu übernehmen (dasselbe Symbol wie im
+// Prüf-Fenster nach dem Plan-Scan). Kennt die Bibliothek die PZN schon, bietet sie das Speichern nur an, wenn man
+// Name oder Stärke selbst geändert hat. Die PZN bleibt im Hintergrund an der Zeile. Genau eine PZN je Tipp.
+const libEntries = ref<Map<string, LibraryEntryView | null>>(new Map()) // nachgeschlagen: Eintrag oder null (unbekannt)
+const libEdited = ref<Set<string>>(new Set()) // Name oder Stärke in dieser Sitzung selbst geändert
+const libSaved = ref<Map<string, string>>(new Map()) // zuletzt gespeicherter Stand je PZN (für den Haken)
+async function checkLibrary(pzn: string | undefined): Promise<void> {
+  const key = pznKey(pzn)
+  if (!pzn || !key || !medplanScan?.libraryEntry || libEntries.value.has(key)) return
+  const e = await medplanScan.libraryEntry(pzn)
+  libEntries.value = new Map(libEntries.value).set(key, e)
+}
+watch(editingIndex, (i) => void checkLibrary(i === null ? undefined : rows.value[i]?.pzn), { immediate: true })
+function markLibraryEdit(i: number): void {
+  const key = pznKey(rows.value[i]?.pzn)
+  if (key && !libEdited.value.has(key)) libEdited.value = new Set([...libEdited.value, key])
+}
+/** 'add' = neu aufnehmen, 'update' = Änderung speichern, 'done' = eben gespeichert (Haken), null = nichts. */
+function libraryState(r: MedikamenteRow): 'add' | 'update' | 'done' | null {
+  const key = pznKey(r.pzn)
+  if (!key || !medplanScan?.saveToLibrary) return null
+  if (libSaved.value.get(key) === librarySignature(r.name, r.staerke)) return 'done'
+  return libraryOffer({ entry: libEntries.value.get(key), name: r.name, staerke: r.staerke, edited: libEdited.value.has(key) })
+}
+async function saveToLibrary(i: number): Promise<void> {
+  const r = rows.value[i]
+  const key = pznKey(r?.pzn)
+  const state = r ? libraryState(r) : null
+  if (!r?.pzn || !key || !medplanScan?.saveToLibrary || (state !== 'add' && state !== 'update')) return
+  const name = r.name.trim()
+  const result = await medplanScan.saveToLibrary(r.pzn, name, r.staerke)
+  if (result === 'invalid') return
+  // Stand der Bibliothek nachführen: Der Haken gilt für genau diesen Stand, eine weitere Änderung bietet wieder an.
+  const vorher = libEntries.value.get(key)
+  libEntries.value = new Map(libEntries.value).set(key, { name, staerke: (r.staerke ?? '').trim() || vorher?.staerke || '' })
+  libSaved.value = new Map(libSaved.value).set(key, librarySignature(r.name, r.staerke))
 }
 
 // --- Typeahead: das manuelle Namensfeld sucht in der PZN-Bibliothek --------------------------------
@@ -281,8 +323,6 @@ function closeSuggest(): void {
 
 // --- BMP-Plan-Scan: Review-Sheet (mehrere Zeilen) -> nach Pruefung anhaengen ---
 const bmpOpen = ref(false)
-// Kamera (Standard) vs. externer HID-/Bluetooth-Scanner (öffnet das Feld statt der Kamera).
-const bmpMode = ref<'camera' | 'scanner'>('camera')
 function onBmpApply(scanned: MedikamenteRow[], doctor?: ArztRow): void {
   const cleaned = rows.value.filter(medikamentRowHasData)
   caseValues.setRows(props.node.id, [...cleaned, ...scanned]) // gepruefte Zeilen anhaengen
@@ -301,16 +341,18 @@ function onBmpApply(scanned: MedikamenteRow[], doctor?: ArztRow): void {
   }
   editingIndex.value = null // BMP -> alles kompakt, Liste bleibt lesbar
   bmpOpen.value = false
+  // Ein ganzer Plan ist übernommen: Das Listen-Fenster schließt gleich mit, man steht wieder im Einsatz und sieht
+  // die Einträge in der Zeile. Nach einer einzelnen Packung bleibt es offen (onPackageDecoded), dort folgt meist
+  // die nächste Packung.
+  closeSheet()
 }
 
 // Scan-Art-Auswahl: EIN „Scannen"-Knopf -> kleines Sheet (Packung/Plan) statt zwei Direktbuttons.
 const scanPickerOpen = ref(false)
-function pickScan(kind: 'package' | 'plan' | 'external'): void {
+function pickScan(kind: 'package' | 'plan'): void {
   scanPickerOpen.value = false
   if (kind === 'package') { startPackageScan(); return }
-  // 'plan' -> Kamera; 'external' -> Plan-Sheet direkt im Scanner-Modus (Feld statt Kamera).
-  bmpMode.value = kind === 'external' ? 'scanner' : 'camera'
-  bmpOpen.value = true
+  bmpOpen.value = true // Plan: das Prüf-Fenster öffnet die Kamera gleich
 }
 </script>
 
@@ -329,7 +371,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
 
 
     <!-- nicht erhoben: Zeilen-Verwaltung aus, nur Hinweis. Daten bleiben erhalten und kommen beim Zurueckschalten wieder. -->
-    <p v-if="excluded" class="text-xs italic text-base-content/75">nicht erhoben — erscheint nicht im Protokolltext</p>
+    <p v-if="excluded" class="text-right text-xs italic text-base-content/75">nicht erhoben</p>
 
     <div v-else-if="custom" class="flex flex-col space-y-1">
       <!-- Freitext ersetzt in der Ausgabe die Zeilen; vorbelegt mit dem Standardtext, Zeilen bleiben erhalten. -->
@@ -345,6 +387,22 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
     </div>
 
     <template v-else>
+    <!-- Ergebnis-Zeile wie bei den Rechnern: zeigt die Einträge wie im Protokolltext; Antippen öffnet das Fenster. -->
+    <button
+      ref="opener"
+      type="button"
+      class="flex min-h-11 w-full items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-left shadow-sm active:bg-base-200"
+      :aria-label="`${label}: ${ergebnis || standardText || 'noch nichts erfasst'} — eingeben`"
+      aria-haspopup="dialog"
+      data-list-open
+      @click="openSheet"
+    >
+      <span v-if="ergebnis || standardText" class="min-w-0 flex-1 whitespace-pre-line break-words text-sm">{{ ergebnis || standardText }}</span>
+      <span v-else class="min-w-0 flex-1 truncate text-sm italic text-base-content/75">Noch nichts erfasst — antippen zum Eingeben</span>
+      <span class="shrink-0 text-base-content/75" aria-hidden="true">✎</span>
+    </button>
+
+    <ListSheet v-if="sheetOpen" :title="label" @close="closeSheet">
     <template v-for="(r, i) in rows" :key="i">
       <!-- READ: kompakte Summary-Zeile (Antippen -> bearbeiten) -->
       <button
@@ -363,10 +421,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
       <div
         v-else
         class="flex flex-col space-y-2 rounded-xl border border-primary/40 bg-base-200 p-3 ring-1 ring-primary/20"
-        @focusout="onFocusOut"
-        @pointerdown="onCardTap"
-        @mousedown="onCardTap"
-        @keydown.esc="closeEdit"
+        @keydown.esc.stop="closeEdit"
       >
         <div class="flex items-center gap-2">
           <input
@@ -378,13 +433,33 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
             :aria-expanded="capture?.suggestMedication ? suggestForRow === i && suggestions.length > 0 : undefined"
             :aria-autocomplete="capture?.suggestMedication ? 'list' : undefined"
             :aria-label="`Medikament ${i + 1}`"
-            @input="onNameInput(i, ($event.target as HTMLInputElement).value)"
+            @input="markLibraryEdit(i); onNameInput(i, ($event.target as HTMLInputElement).value)"
             @keydown.esc.stop="closeSuggest"
           />
+          <!-- In die eigene PZN-Bibliothek: neu aufnehmen (erst mit eigenem Namen) oder eine eigene Änderung speichern.
+               Dasselbe Symbol wie im Prüf-Fenster; nach dem Tipp ein Haken, bis wieder etwas geändert wird. -->
+          <button
+            v-if="libraryState(r)"
+            type="button"
+            class="btn btn-ghost btn-sm min-h-11 min-w-11 px-0"
+            :class="libraryState(r) === 'done' ? 'text-success' : ''"
+            :aria-label="libraryState(r) === 'done' ? `PZN ${r.pzn} ist in der PZN-Bibliothek gespeichert` : libraryState(r) === 'update' ? `Änderung zu PZN ${r.pzn} in der PZN-Bibliothek speichern` : `PZN ${r.pzn} in die PZN-Bibliothek übernehmen`"
+            :aria-disabled="libraryState(r) === 'done' || undefined"
+            data-pzn-transfer
+            @click="saveToLibrary(i)"
+          >
+            <svg v-if="libraryState(r) === 'done'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-6 w-6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>
+          </button>
           <button type="button" class="btn btn-ghost btn-sm btn-circle min-h-11 min-w-11 text-error" :aria-label="`${r.name || 'Medikament ' + (i + 1)} löschen`" @click="requestRemove(i)">✕</button>
         </div>
-        <!-- Vorschlaege aus der PZN-Bibliothek: INNERHALB der Karte, damit der Tap-Guard
-             (onCardTap/focusout) den Tap nicht als „Karte verlassen" wertet. Auswahl fuellt die Zeile. -->
+        <p v-if="libraryState(r) === 'add' || libraryState(r) === 'update'" class="flex items-center gap-2 text-xs text-base-content/75" data-pzn-legend>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-5 w-5 shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>
+          <span v-if="libraryState(r) === 'update'">speichert deine Änderung in der PZN-Bibliothek. Beim nächsten Scan steht das Medikament so in der Liste.</span>
+          <span v-else>übernimmt die PZN mit diesem Namen in deine PZN-Bibliothek. Die App erkennt das Medikament dann beim nächsten Scan und schlägt es beim Tippen vor.</span>
+        </p>
+        <p v-else-if="libraryState(r) === 'done'" class="pl-1 text-xs text-success">In der PZN-Bibliothek gespeichert.</p>
+        <!-- Vorschläge aus der PZN-Bibliothek, direkt unter dem Namen. Die Auswahl füllt die Zeile. -->
         <div
           v-if="suggestForRow === i && suggestions.length"
           v-fit-keyboard
@@ -403,11 +478,10 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
           <p v-if="suggestCapped" class="px-3 pb-2 pt-0 text-xs italic text-base-content/75">Viele Treffer — weiter tippen zum Eingrenzen.</p>
         </div>
         <div class="flex gap-2">
-          <input class="input input-sm min-w-0 flex-1" :value="r.staerke ?? ''" placeholder="Stärke (z. B. 400 mg)" aria-label="Wirkstärke" @input="setRow(i, { staerke: ($event.target as HTMLInputElement).value })" />
+          <input class="input input-sm min-w-0 flex-1" :value="r.staerke ?? ''" placeholder="Stärke (z. B. 400 mg)" aria-label="Wirkstärke" @input="markLibraryEdit(i); setRow(i, { staerke: ($event.target as HTMLInputElement).value })" />
           <input class="input input-sm w-28 shrink-0 text-center font-mono" :value="r.dosierung ?? ''" placeholder="1-0-1-0" aria-label="Dosierung" @input="setRow(i, { dosierung: ($event.target as HTMLInputElement).value })" />
         </div>
         <input class="input input-sm w-full" :value="r.kommentar ?? ''" placeholder="Hinweis (z. B. nüchtern)" aria-label="Hinweis" @input="setRow(i, { kommentar: ($event.target as HTMLInputElement).value })" />
-        <button type="button" class="kb-sticky btn btn-primary btn-sm min-h-11 self-end" @click="closeEdit">Fertig</button>
       </div>
     </template>
 
@@ -426,7 +500,8 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
         Scannen
       </button>
     </div>
-    <p v-if="pkgScanMsg" class="text-xs text-warning" role="status">{{ pkgScanMsg }}</p>
+    <p v-if="pkgScanMsg" class="text-xs" :class="pkgScanMsg.kind === 'ok' ? 'text-success' : 'text-warning'" role="status" data-package-scan-msg>{{ pkgScanMsg.text }}</p>
+    </ListSheet>
     </template>
 
     <!-- BEWAHREN: getippter Freitext ruht (Status ✓/−) -> antippbar zum verlustfreien Zurueckholen. UNTER der Eingabe (Maintainer), wie beim Feld. -->
@@ -438,8 +513,8 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
     <!-- Scan-Art waehlen: komfortable Tiles (bewusste Wahl, sourced scan-sheet-beauty). daisyUI .modal
          modal-bottom wie MoveToPicker; 56px-Zeilen mit gefasstem Icon-Chip (Theme-Akzent). Teleport, weil ein
          backdrop-blur-Vorfahr des Einsatz-Shells fixed/Modal sonst einsperrt; schliesst VOR der Kamera -> kein z-Konflikt. -->
-    <Teleport to="body">
-      <div v-if="scanPickerOpen" class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true">
+    <Teleport v-if="scanPickerOpen" to="body">
+      <div class="modal modal-open modal-bottom sm:modal-middle" role="dialog" aria-modal="true">
         <div class="modal-box flex flex-col space-y-2 pb-[env(safe-area-inset-bottom)]">
           <h3 class="text-base font-semibold">Scannen</h3>
           <button type="button" class="flex min-h-14 w-full items-center gap-4 rounded-xl bg-base-200 px-3 text-base font-normal transition-colors active:bg-base-300" @click="pickScan('package')">
@@ -448,7 +523,7 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
             </span>
             <span class="flex flex-col text-left">
               <span>Packung scannen</span>
-              <span class="text-xs text-base-content/75">Einzelnes Medikament von der Packung</span>
+              <span class="text-xs text-base-content/75">Eine oder mehrere Packungen nacheinander</span>
             </span>
           </button>
           <button type="button" class="flex min-h-14 w-full items-center gap-4 rounded-xl bg-base-200 px-3 text-base font-normal transition-colors active:bg-base-300" @click="pickScan('plan')">
@@ -458,15 +533,6 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
             <span class="flex flex-col text-left">
               <span>Medikationsplan scannen</span>
               <span class="text-xs text-base-content/75">Ganzer Plan mit der Kamera</span>
-            </span>
-          </button>
-          <button type="button" class="flex min-h-14 w-full items-center gap-4 rounded-xl bg-base-200 px-3 text-base font-normal transition-colors active:bg-base-300" @click="pickScan('external')">
-            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-6 w-6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.5v15M7.5 4.5v15M11.25 4.5v15M15 4.5v15M18.75 4.5v15" /></svg>
-            </span>
-            <span class="flex flex-col text-left">
-              <span>Externer Scanner</span>
-              <span class="text-xs text-base-content/75">Ganzer Plan mit Bluetooth-/Kabel-Scanner</span>
             </span>
           </button>
           <div class="mt-1 flex justify-end">
@@ -479,12 +545,12 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
 
     <!-- Teleport an body: das Vollbild-Overlay (fixed inset-0) wuerde sonst von einem transformierten/
          backdrop-blur-Vorfahren des Einsatz-Shells auf den Inhaltsbereich eingesperrt. -->
-    <Teleport to="body">
-      <component :is="medplanScan.packageScanner" v-if="pkgScanOpen && medplanScan" @decoded="onPackageDecoded" @cancel="pkgScanOpen = false" />
+    <Teleport v-if="pkgScanOpen && medplanScan" to="body">
+      <component :is="medplanScan.packageScanner" :known="knownPzn" @decoded="onPackageDecoded" @decoded-many="onPackagesDecoded" @cancel="pkgScanOpen = false" />
     </Teleport>
 
     <!-- BMP-Plan-Scan + Review (teleportet sich selbst) -->
-    <component :is="medplanScan.planSheet" v-if="bmpOpen && medplanScan" :mode="bmpMode" @apply="onBmpApply" @close="bmpOpen = false" />
+    <component :is="medplanScan.planSheet" v-if="bmpOpen && medplanScan" @apply="onBmpApply" @close="bmpOpen = false" />
 
     <!-- Lösch-Rückfrage: Einzelzeile mit Daten oder „alle zurücksetzen" (teleportet sich selbst) -->
     <ConfirmDialog
@@ -498,9 +564,8 @@ function pickScan(kind: 'package' | 'plan' | 'external'): void {
 
     <!-- Rückfrage Wirkstoffstärke: kleines BENIGNES Modal (primär „Übernehmen", kein Destruktiv-
          Stil, keine Scharfschalt-Sperre). ESC/Backdrop/„Nein" = nicht übernehmen. -->
-    <Teleport to="body">
+    <Teleport v-if="pendingStaerke" to="body">
       <div
-        v-if="pendingStaerke"
         class="modal modal-open"
         role="dialog"
         aria-modal="true"

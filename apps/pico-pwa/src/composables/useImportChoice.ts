@@ -7,6 +7,7 @@
 import { ref } from 'vue'
 import type { Container } from '@resqdocs/protocol-core/model'
 import type { SnippetPayload } from '@resqdocs/protocol-core/snippetIO'
+import type { Needs } from '@resqdocs/protocol-core/templateNeeds'
 
 export interface PendingImport {
   trees: Container[]
@@ -18,10 +19,12 @@ export interface PendingImport {
   onCancel?: () => void
   /** Kurzer Hinweis über der Auswahl (z. B. Link wurde vorher schon geöffnet). */
   hint?: string
+  /** Vermerk der Datei: welche Funktionen die Vorlagen ab welcher App-Version brauchen (Hinweis im Dialog). */
+  needs?: Needs
 }
 
-/** Zusätze eines Angebots: Abbrechen-Rückruf und Hinweis. */
-export type OfferExtras = Pick<PendingImport, 'onCancel' | 'hint'>
+/** Zusätze eines Angebots: Abbrechen-Rückruf, Hinweis und Vermerk der Datei. */
+export type OfferExtras = Pick<PendingImport, 'onCancel' | 'hint' | 'needs'>
 
 export const pendingImport = ref<PendingImport | null>(null)
 

@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [2.3.0] - 2026-11-25
+
+### Added
+
+- Scan several packages in a row: a "Multiple packages" switch in the camera view keeps the camera open, counts the packages and adds them all with "Done"; a medication that is already in the list shows "Already in the list" and is not added again
+- Maintain the own PZN library while scanning: an icon next to a medication adds its PZN with the entered name, in the review window after a plan scan and in the list; it appears once a name replaces the "PZN" placeholder, and changes to name or strength of a known entry can be saved
+- Target device "This device": when documenting on the phone that runs the app, the case view offers "Copy protocol text" instead of the bridge
+- Import notice: a template that uses functions of a newer app version names them when it is imported; exported files record which functions a template uses
+
+### Changed
+
+- Medication list and contacts: the case view shows one line with the entries, like the scores; a tap opens the list in a full-screen window with "Done" at the top, and adding the next medication takes one tap
+- After a medication plan scan, applying the medications returns directly to the case view; the review window fills the screen
+- The header shows only the logo and one button for the introduction and the manual
+- Templates on phones: the list comes first, a tap opens the template as its own page with a back button
+- Template structure: each row has a "more" button with move, duplicate and delete; deleted rows come back with "Undo", including their values in the running case
+- Case view: the explanation of the fill states sits behind an info button, "not collected" is shown on the right, a section set to "not collected" keeps its frame
+- Building blocks: the import button opens the file picker directly
+- Plain wording instead of technical terms in the settings and when sharing
+- The external scanner mode of the medication plan is removed; pasting the code as text remains
+- Enabling "Show title in protocol text" on a new field produces "Pulse: 80"
+
+### Fixed
+
+- Tapping outside an input window such as NEWS2 discarded all entered values; it now closes only while nothing was changed
+- After adding a medication, a contact or a text snippet, the cursor is placed in the new field again
+- The areas behind the system bars follow what the page shows
+- Tapping a section highlights it within its rounded corners
+
 ## [2.2.0] - 2026-11-24
 
 ### Added

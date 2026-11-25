@@ -12,6 +12,7 @@ import type { ZOPSRow, ZopsBefund } from '@resqdocs/protocol-core/model'
 import { zops } from '@resqdocs/protocol-core/tools/scores.mjs'
 import InfoTip from '@resqdocs/protocol-core-ui/components/InfoTip.vue'
 import { INFO } from '@resqdocs/protocol-core-ui/terms'
+import { unchangedSince } from '@resqdocs/protocol-core-ui/sheetGuard'
 
 const props = defineProps<{ initial?: ZOPSRow }>()
 const emit = defineEmits<{ apply: [row: ZOPSRow]; close: [] }>()
@@ -39,6 +40,8 @@ const picked = reactive<Record<ItemId, ZopsBefund | null>>({
   situation: props.initial?.zopsSituation ?? null,
 })
 
+// Tipp neben das Fenster schließt nur, solange nichts geändert wurde.
+const unchanged = unchangedSince(() => picked)
 function pick(id: ItemId, v: ZopsBefund): void {
   picked[id] = v
 }
@@ -144,7 +147,7 @@ function apply(): void {
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!result" @click="apply">Übernehmen</button>
         </div>
       </div>
-      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="emit('close')"></button>
+      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="unchanged() && emit('close')"></button>
     </div>
   </Teleport>
 </template>

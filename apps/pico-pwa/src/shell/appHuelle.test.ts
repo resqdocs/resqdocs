@@ -65,8 +65,9 @@ test('Tab-Wechsel blendet weich ein: nur Deckkraft, etwa 150 ms, nicht bei „Be
   assert.doesNotMatch(css.replace(rule[0], ''), /\[data-tab-scroll\][^{]*\{[^}]*(animation|transition|transform)/, 'sonst keine Bewegung am Tab-Bereich')
   // Der Wechsel selbst bleibt sofort: v-show am Bereich, keine <Transition>, die den alten Tab stehen ließe.
   assert.doesNotMatch(template, /<Transition|<transition/)
-  // Derselbe Tab noch einmal: kein neues Einblenden, nur nach oben (der Bereich wird nicht aus- und eingeblendet).
-  assert.match(app, /if \(activeTab\.value === tab\) \{\s*scrollTabToTop\(tab\)\s*return\s*\}\s*activeTab\.value = tab/)
+  // Derselbe Tab noch einmal: kein neues Einblenden (der Bereich wird nicht aus- und eingeblendet). Eine Unterseite
+  // mit Titelzeile schließt sich, sonst geht es nur nach oben.
+  assert.match(app, /if \(activeTab\.value === tab\) \{\s*if \(pageHeader\.value\) pageHeader\.value\.close\(\)\s*else scrollTabToTop\(tab\)\s*return\s*\}\s*activeTab\.value = tab/)
 })
 
 test('kein Fenster-Scroll mehr in der App: alles läuft über den Bereich des Tabs', () => {
@@ -79,8 +80,8 @@ test('kein Fenster-Scroll mehr in der App: alles läuft über den Bereich des Ta
   }
   assert.deepEqual(bad, [])
   assert.match(read('shell/tabScroll.ts'), /\[\$\{TAB_SCROLL_ATTR\}="\$\{tab\}"\]/)
-  // Erneutes Antippen des aktiven Tabs bringt dessen Bereich nach oben.
-  assert.match(app, /if \(activeTab\.value === tab\) \{\s*scrollTabToTop\(tab\)/)
+  // Erneutes Antippen des aktiven Tabs bringt dessen Bereich nach oben (außer eine Unterseite mit Titelzeile ist offen).
+  assert.match(app, /if \(activeTab\.value === tab\) \{\s*if \(pageHeader\.value\) pageHeader\.value\.close\(\)\s*else scrollTabToTop\(tab\)/)
 })
 
 test('klebende Umschalter hängen am Tab-Bereich, ohne feste Annahme über die Höhe der Kopfzeile', () => {

@@ -39,6 +39,15 @@ const CLOZE = 'Ein frei geschriebener Text, in dem Felder als Lücken stehen. Im
 const SAVED_SECTION = 'Ein Abschnitt samt Inhalt, den du für andere Vorlagen gespeichert hast. Eingefügt wird immer eine Kopie: Spätere Änderungen wirken nicht auf bereits eingefügte Kopien.'
 
 export const INFO = {
+  fillStates: {
+    title: 'Felder ausfüllen',
+    text: 'Tippe je Feld auf das Zeichen links. Die Vorschau zeigt den Protokolltext.',
+    items: [
+      { term: '✓', text: 'bestätigt' },
+      { term: '✎', text: 'eigener Wert' },
+      { term: '−', text: 'nicht erhoben, erscheint nicht im Protokolltext' },
+    ],
+  },
   addMenu: {
     title: 'Was kann ich hinzufügen?',
     items: [

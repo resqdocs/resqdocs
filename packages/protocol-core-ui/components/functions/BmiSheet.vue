@@ -7,6 +7,7 @@
 import { computed, ref } from 'vue'
 import type { BMIRow } from '@resqdocs/protocol-core/model'
 import { bmi } from '@resqdocs/protocol-core/tools/scores.mjs'
+import { unchangedSince } from '@resqdocs/protocol-core-ui/sheetGuard'
 
 const props = defineProps<{ initial?: BMIRow }>()
 const emit = defineEmits<{ apply: [row: BMIRow]; close: [] }>()
@@ -14,6 +15,8 @@ const emit = defineEmits<{ apply: [row: BMIRow]; close: [] }>()
 // Leeres Feld = null (nichts unterstellen). v-model.number liefert bei leerem Input NaN -> auf null normieren.
 const weight = ref<number | null>(props.initial?.bmiWeight ?? null)
 const height = ref<number | null>(props.initial?.bmiHeight ?? null)
+// Tipp neben das Fenster schließt nur, solange nichts geändert wurde.
+const unchanged = unchangedSince(() => [weight.value, height.value])
 const norm = (v: number | null): number | null => (v == null || !Number.isFinite(v) || v <= 0 ? null : v)
 
 const result = computed(() => {
@@ -59,7 +62,7 @@ function apply(): void {
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!result" @click="apply">Übernehmen</button>
         </div>
       </div>
-      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="emit('close')"></button>
+      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="unchanged() && emit('close')"></button>
     </div>
   </Teleport>
 </template>

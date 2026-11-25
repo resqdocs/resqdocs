@@ -12,6 +12,7 @@
 import { computed, ref } from 'vue'
 import type { NEWS2Row } from '@resqdocs/protocol-core/model'
 import { news2 } from '@resqdocs/protocol-core/tools/scores.mjs'
+import { unchangedSince } from '@resqdocs/protocol-core-ui/sheetGuard'
 
 const props = defineProps<{ initial?: NEWS2Row }>()
 const emit = defineEmits<{ apply: [row: NEWS2Row]; close: [] }>()
@@ -25,6 +26,8 @@ const temp = ref<number | null>(props.initial?.temp ?? null)
 const consciousness = ref<'A' | 'C' | 'V' | 'P' | 'U'>(props.initial?.consciousness ?? 'A')
 const onOxygen = ref<boolean>(props.initial?.onOxygen ?? false)
 const scale2 = ref<boolean>(props.initial?.scale2 ?? false)
+// Tipp neben das Fenster schließt nur, solange nichts geändert wurde.
+const unchanged = unchangedSince(() => [rr.value, spo2.value, systolic.value, pulse.value, temp.value, consciousness.value, onOxygen.value, scale2.value])
 
 const num = (v: number | null): number | null => (v == null || !Number.isFinite(v) || v < 0 ? null : v)
 // SpO₂ ist physiologisch 0-100 % - >100 ist unmoeglich. Das HTML-max erzwingt bei
@@ -138,7 +141,7 @@ function apply(): void {
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!result" @click="apply">Übernehmen</button>
         </div>
       </div>
-      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="emit('close')"></button>
+      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="unchanged() && emit('close')"></button>
     </div>
   </Teleport>
 </template>

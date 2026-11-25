@@ -18,6 +18,11 @@ import TemplateIO from './TemplateIO.vue'
 import { incomingOpen } from '@/composables/useIncomingOpen'
 import { pendingImport } from '@/composables/useImportChoice'
 
+// navigate (Handy): Die Liste ist die Startseite des Tabs, ein Tipp auf eine Zeile öffnet die Vorlage als eigene
+// Seite (open). Dann gibt es kein Häkchen und keine Hervorhebung: Die Zeile führt weiter, sie wählt nichts aus.
+const props = defineProps<{ navigate?: boolean }>()
+const emit = defineEmits<{ open: [id: string] }>()
+
 const tree = useProtocolTree()
 const editor = useTreeEditor()
 const storage = useStorage()
@@ -32,6 +37,10 @@ const isLast = computed(() => activeIndex.value >= protocols.value.length - 1)
 
 function switchTo(id: string): void {
   if (id !== editorActiveId.value) editor.selectProtocol(id)
+}
+function pick(id: string): void {
+  switchTo(id)
+  if (props.navigate) emit('open', id)
 }
 
 // --- Inline-Rename (Modus-Feedback: abweichender Hintergrund) ---
@@ -190,7 +199,8 @@ const collapsed = ref(false)
   <div class="flex flex-col gap-2 rounded-lg border border-base-300 bg-base-100 p-2">
     <!-- Kopf: Collapse-Toggle (zugeklappt = aktive Vorlage) + Mehr-Menue (⋮) + Save-Status -->
     <div class="flex items-center justify-between gap-2">
-      <button type="button" class="flex min-h-9 items-center gap-1 truncate text-left text-sm font-semibold text-base-content/75" :aria-expanded="!collapsed" @click="collapsed = !collapsed">
+      <h2 v-if="navigate" class="flex min-h-9 items-center px-1 text-sm font-semibold text-base-content/75">Vorlagen</h2>
+      <button v-else type="button" class="flex min-h-9 items-center gap-1 truncate text-left text-sm font-semibold text-base-content/75" :aria-expanded="!collapsed" @click="collapsed = !collapsed">
         <span aria-hidden="true">{{ collapsed ? '▸' : '▾' }}</span>
         <span v-if="collapsed" class="truncate">{{ activeTitle }}</span>
         <span v-else>Vorlagen</span>
@@ -201,7 +211,7 @@ const collapsed = ref(false)
     </div>
 
     <!-- vertikale Vorlagen-Liste: eine Zeile pro Vorlage (einklappbar) -->
-    <ul v-if="!collapsed" class="flex flex-col gap-1">
+    <ul v-if="navigate || !collapsed" class="flex flex-col gap-1">
       <li v-for="p in protocols" :key="p.id">
         <!-- Rename-Modus: input ersetzt die Zeile -->
         <form v-if="renamingId === p.id" class="join w-full" @submit.prevent="commitRename(p.id)">
@@ -215,12 +225,15 @@ const collapsed = ref(false)
           <button
             type="button"
             class="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 text-left text-sm"
-            :class="p.id === editorActiveId ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-base-200'"
-            :aria-current="p.id === editorActiveId ? 'true' : undefined"
-            @click="switchTo(p.id)"
+            :class="!navigate && p.id === editorActiveId ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-base-200'"
+            :aria-current="!navigate && p.id === editorActiveId ? 'true' : undefined"
+            :aria-label="navigate ? `${templateLabel(p)} öffnen` : undefined"
+            data-template-row
+            @click="pick(p.id)"
           >
-            <span v-if="p.id === editorActiveId" class="shrink-0" aria-hidden="true">✓</span>
+            <span v-if="!navigate && p.id === editorActiveId" class="shrink-0" aria-hidden="true">✓</span>
             <span class="min-w-0 flex-1 truncate">{{ templateLabel(p) }}</span>
+            <span v-if="navigate" class="shrink-0 text-base-content/75" aria-hidden="true">›</span>
           </button>
           <!-- Teilen und Menue: 48-px-Tippflaeche, 20-px-Icon, OHNE eigenen Hintergrund und in gedaempfter Farbe -
                mit Hintergrund in jeder Zeile draengten sie sich vor den Namen. Das Menue bleibt bei den drei
@@ -277,7 +290,7 @@ const collapsed = ref(false)
     <div class="modal modal-bottom" :class="{ 'modal-open': dataOpen }" role="dialog" aria-modal="true">
       <div class="modal-box pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <h3 class="text-sm font-semibold">{{ dataKind === 'file' ? 'Aus Datei importieren' : 'Daten' }}</h3>
-        <p v-if="dataKind === 'export'" class="pb-2 text-xs text-base-content/75"><b>Teilen</b> = verschlüsselter Link/QR. <b>Exportieren</b> = Datei/JSON.</p>
+        <p v-if="dataKind === 'export'" class="pb-2 text-xs text-base-content/75"><b>Teilen</b> = verschlüsselter Link/QR. <b>Exportieren</b> = Datei.</p>
         <TemplateIO ref="dataIo" @imported="dataOpen = false" />
         <button type="button" class="kb-actions btn btn-ghost btn-block mt-2" @click="dataOpen = false">Schließen</button>
       </div>

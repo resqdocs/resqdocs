@@ -9,6 +9,12 @@ import Capacitor
  * scan(options) -> { status: 'found', format, bytesBase64, text, diag }
  *                | { status: 'cancelled', diag } | { status: 'denied' } | { status: 'error', code }
  *
+ * Mehrfach-Modus (Optionen multi, multiToggleLabel, doneLabel, countOne, countMany, duplicateLabel, known):
+ * 'found' trägt zusätzlich items: [{ format, bytesBase64, text }] mit allen Codes in Scan-Reihenfolge;
+ * format/bytesBase64/text auf oberster Ebene sind die des ersten Codes. Mit multiToggleLabel (Schalter im
+ * Kamerabild) tragen 'found' und 'cancelled' außerdem multiOn = letzte Schalterstellung. Ohne diese
+ * Optionen bleibt die Rückgabe wie oben.
+ *
  * Datenschutz (harte Grenze): Kamerabilder bleiben im Arbeitsspeicher des ScanViewController und werden
  * nie gespeichert, geloggt oder übertragen. An die WebView geht nur der gelesene Inhalt. Weder dieses
  * Plugin noch der ViewController enthalten Netzwerkcode; ZXing-C++ ebenso nicht (geprüft).
@@ -88,6 +94,21 @@ struct ScanOptions {
     let torchLabel: String
     let showDiagnostics: Bool
     let theme: ScanTheme
+    /// Mehrfach-Modus: Der Bildschirm bleibt nach einem Treffer offen und sammelt Codes bis zum Beenden.
+    /// Mit multiToggleLabel ist das nur die Anfangsstellung des Schalters.
+    let multi: Bool
+    /// Beschriftung des Schalters für den Mehrfach-Modus im Kamerabild; leer = kein Schalter.
+    let multiToggleLabel: String
+    /// Beschriftung des Knopfs, der den Mehrfach-Modus beendet.
+    let doneLabel: String
+    /// Zähler-Text bei genau einem erfassten Code.
+    let countOne: String
+    /// Zähler-Text ab zwei Codes; {n} wird durch die Anzahl ersetzt.
+    let countMany: String
+    /// Meldung, wenn ein Code schon erfasst ist oder seine PZN in known steht.
+    let duplicateLabel: String
+    /// PZN (8-stellig), die der Aufrufer schon hat – sie werden im Mehrfach-Modus nicht noch einmal aufgenommen.
+    let known: Set<String>
 
     init(call: CAPPluginCall) {
         formats = call.getArray("formats", String.self) ?? ["DataMatrix"]
@@ -104,6 +125,13 @@ struct ScanOptions {
         torchLabel = call.getString("torchLabel") ?? "Licht"
         showDiagnostics = call.getBool("showDiagnostics") ?? false
         theme = ScanTheme(call.getObject("theme"))
+        multi = call.getBool("multi") ?? false
+        multiToggleLabel = call.getString("multiToggleLabel") ?? ""
+        doneLabel = call.getString("doneLabel") ?? "Fertig"
+        countOne = call.getString("countOne") ?? "1 Code erfasst"
+        countMany = call.getString("countMany") ?? "{n} Codes erfasst"
+        duplicateLabel = call.getString("duplicateLabel") ?? "Schon in der Liste"
+        known = Set(call.getArray("known", String.self) ?? [])
     }
 }
 
@@ -138,18 +166,47 @@ struct ScanTheme {
     }
 }
 
+/// Ein erfasster Code im Mehrfach-Modus.
+struct ScanItem {
+    let format: String
+    let bytes: Data
+    let text: String
+}
+
 /// Ergebnis des Scanners, wie es an JS geht. Formatnamen wie in der Android-Brücke (zxing-cpp-Namen).
 enum ScanOutcome {
     case found(format: String, bytes: Data, text: String, diag: String)
+    /// Mit Schalter bzw. im Mehrfach-Modus: alle Codes in Scan-Reihenfolge; multiOn nur mit Schalter.
+    case foundMany(items: [ScanItem], diag: String, multiOn: Bool?)
     case cancelled(diag: String)
+    /// Abbruch mit Schalter im Kamerabild: dessen letzte Stellung geht mit zurück.
+    case cancelledWithSwitch(diag: String, multiOn: Bool)
     case cameraError(diag: String)
 
     func asDictionary() -> [String: Any] {
         switch self {
         case let .found(format, bytes, text, diag):
             return ["status": "found", "format": format, "bytesBase64": bytes.base64EncodedString(), "text": text, "diag": diag]
+        case let .foundMany(items, diag, multiOn):
+            // Oberste Ebene = erster Code (wie beim Einzel-Scan), items enthält alle, auch den ersten.
+            let first = items.first
+            let list: [[String: String]] = items.map {
+                ["format": $0.format, "bytesBase64": $0.bytes.base64EncodedString(), "text": $0.text]
+            }
+            var out: [String: Any] = [
+                "status": "found",
+                "format": first?.format ?? "",
+                "bytesBase64": first?.bytes.base64EncodedString() ?? "",
+                "text": first?.text ?? "",
+                "diag": diag,
+                "items": list,
+            ]
+            if let on = multiOn { out["multiOn"] = on }
+            return out
         case let .cancelled(diag):
             return ["status": "cancelled", "diag": diag]
+        case let .cancelledWithSwitch(diag, multiOn):
+            return ["status": "cancelled", "diag": diag, "multiOn": multiOn]
         case let .cameraError(diag):
             return ["status": "error", "code": "camera", "diag": diag]
         }

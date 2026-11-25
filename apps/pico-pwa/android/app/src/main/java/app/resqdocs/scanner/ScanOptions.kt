@@ -65,6 +65,23 @@ data class ScanOptions(
     val torchLabel: String,
     val showDiagnostics: Boolean,
     val theme: ScanTheme,
+    /**
+     * Mehrfach-Modus: Der Bildschirm bleibt nach einem Treffer offen und sammelt Codes bis zum Beenden.
+     * Mit multiToggleLabel ist das nur die Anfangsstellung des Schalters.
+     */
+    val multi: Boolean,
+    /** Beschriftung des Schalters fuer den Mehrfach-Modus im Kamerabild; leer = kein Schalter. */
+    val multiToggleLabel: String,
+    /** Beschriftung des Knopfs, der den Mehrfach-Modus beendet. */
+    val doneLabel: String,
+    /** Zaehler-Text bei genau einem erfassten Code. */
+    val countOne: String,
+    /** Zaehler-Text ab zwei Codes; {n} wird durch die Anzahl ersetzt. */
+    val countMany: String,
+    /** Meldung, wenn ein Code schon erfasst ist oder seine PZN in known steht. */
+    val duplicateLabel: String,
+    /** PZN (8-stellig), die der Aufrufer schon hat - sie werden im Mehrfach-Modus nicht noch einmal aufgenommen. */
+    val known: Set<String>,
 ) {
     fun readerOptions(): BarcodeReader.Options = BarcodeReader.Options().also { o ->
         o.formats = formats.mapNotNull { FORMAT_MAP[it] }.toSet().ifEmpty { setOf(BarcodeReader.Format.DATA_MATRIX) }
@@ -88,6 +105,9 @@ data class ScanOptions(
         intent.putExtra(K_TEXTS, arrayOf(title, hint, cancelLabel, torchLabel))
         intent.putExtra(K_DIAG, showDiagnostics)
         intent.putExtra(K_THEME, theme.toIntArray())
+        intent.putExtra(K_MULTI, multi)
+        intent.putExtra(K_MULTI_TEXTS, arrayOf(doneLabel, countOne, countMany, duplicateLabel, multiToggleLabel))
+        intent.putExtra(K_KNOWN, known.toTypedArray())
     }
 
     companion object {
@@ -98,6 +118,11 @@ data class ScanOptions(
         private const val K_TEXTS = "scan.texts"
         private const val K_DIAG = "scan.diag"
         private const val K_THEME = "scan.theme"
+        private const val K_MULTI = "scan.multi"
+        private const val K_MULTI_TEXTS = "scan.multiTexts"
+        private const val K_KNOWN = "scan.known"
+        /** Reihenfolge: doneLabel, countOne, countMany, duplicateLabel, multiToggleLabel. */
+        private val MULTI_TEXT_DEFAULTS = arrayOf("Fertig", "1 Code erfasst", "{n} Codes erfasst", "Schon in der Liste", "")
 
         /** Formatnamen der JS-API -> ZXing-C++. */
         val FORMAT_MAP = mapOf(
@@ -125,12 +150,20 @@ data class ScanOptions(
                 torchLabel = call.getString("torchLabel") ?: "Licht",
                 showDiagnostics = call.getBoolean("showDiagnostics", false) ?: false,
                 theme = ScanTheme.fromJs(call.getObject("theme")),
+                multi = call.getBoolean("multi", false) ?: false,
+                multiToggleLabel = call.getString("multiToggleLabel") ?: MULTI_TEXT_DEFAULTS[4],
+                doneLabel = call.getString("doneLabel") ?: MULTI_TEXT_DEFAULTS[0],
+                countOne = call.getString("countOne") ?: MULTI_TEXT_DEFAULTS[1],
+                countMany = call.getString("countMany") ?: MULTI_TEXT_DEFAULTS[2],
+                duplicateLabel = call.getString("duplicateLabel") ?: MULTI_TEXT_DEFAULTS[3],
+                known = call.getArray("known")?.toList<String>()?.toSet() ?: emptySet(),
             )
         }
 
         fun fromIntent(intent: Intent): ScanOptions {
             val t = intent.getBooleanArrayExtra(K_TRY) ?: booleanArrayOf(true, true, false, true, false)
             val texts = intent.getStringArrayExtra(K_TEXTS) ?: arrayOf("Code scannen", "Code in den Rahmen halten", "Abbrechen", "Licht")
+            val multiTexts = intent.getStringArrayExtra(K_MULTI_TEXTS) ?: MULTI_TEXT_DEFAULTS
             return ScanOptions(
                 formats = intent.getStringArrayExtra(K_FORMATS)?.toList() ?: listOf("DataMatrix"),
                 tryHarder = t[0], tryRotate = t[1], tryInvert = t[2], tryDownscale = t[3], tryDenoise = t[4],
@@ -139,6 +172,10 @@ data class ScanOptions(
                 title = texts[0], hint = texts[1], cancelLabel = texts[2], torchLabel = texts[3],
                 showDiagnostics = intent.getBooleanExtra(K_DIAG, false),
                 theme = ScanTheme.fromIntArray(intent.getIntArrayExtra(K_THEME)),
+                multi = intent.getBooleanExtra(K_MULTI, false),
+                multiToggleLabel = multiTexts[4],
+                doneLabel = multiTexts[0], countOne = multiTexts[1], countMany = multiTexts[2], duplicateLabel = multiTexts[3],
+                known = intent.getStringArrayExtra(K_KNOWN)?.toSet() ?: emptySet(),
             )
         }
     }

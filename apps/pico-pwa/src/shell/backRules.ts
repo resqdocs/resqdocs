@@ -29,11 +29,20 @@ export function nextBackStep(s: BackState): BackStep {
   return 'system'
 }
 
+/** Titelzeile einer Unterseite: ersetzt in der Kopfzeile die Marke (Zurück-Zeichen und Name der Seite). */
+export interface SubpageHeader {
+  title: string
+  /** Name des Zurück-Knopfs für Screenreader, z. B. „Zurück zu den Vorlagen“. Sichtbar ist nur das Zeichen ‹. */
+  backLabel: string
+}
+
 /** Eine Unterseite, die „Zurück“ schließen kann. Gemeldet von der Stelle, die sie zeigt (registerSubpage). */
 export interface Subpage {
   tab: BackTab
   isOpen: () => boolean
   close: () => void
+  /** Nur Seiten mit eigener Titelzeile melden sie; Ansichten innerhalb einer Seite (Umschalter) nicht. */
+  header?: () => SubpageHeader
 }
 
 /** Die zuletzt gemeldete offene Unterseite des sichtbaren Tabs (Unterseiten anderer Tabs sieht man nicht). */
@@ -41,6 +50,15 @@ export function openSubpage(subpages: readonly Subpage[], tab: BackTab): Subpage
   for (let i = subpages.length - 1; i >= 0; i--) {
     const s = subpages[i]
     if (s.tab === tab && s.isOpen()) return s
+  }
+  return null
+}
+
+/** Die offene Unterseite des sichtbaren Tabs, die eine Titelzeile meldet (zuletzt gemeldete zuerst). */
+export function headerSubpage(subpages: readonly Subpage[], tab: BackTab): Subpage | null {
+  for (let i = subpages.length - 1; i >= 0; i--) {
+    const s = subpages[i]
+    if (s.tab === tab && s.header && s.isOpen()) return s
   }
   return null
 }

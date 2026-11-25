@@ -5,7 +5,7 @@
     "node": ">=26",
     "npm": ">=12"
   },
-  "packageManager": "npm@12.2.2",
+  "packageManager": "npm@12.2.3",
   "scripts": {
     "gen:ai-docs": "node --experimental-strip-types scripts/ai-docs/gen-ai-docs.mjs",
     "gen:ai-docs:verify": "node scripts/ai-docs/verify-ai-docs.mjs",
@@ -14,6 +14,6 @@
   },
   "devDependencies": {
     "ajv": "^8.20.0",
-    "ts-json-schema-generator": "^2.9.0"
+    "ts-json-schema-generator": "^2.10.0"
   }
 }

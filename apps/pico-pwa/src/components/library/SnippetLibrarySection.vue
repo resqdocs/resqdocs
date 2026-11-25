@@ -17,6 +17,7 @@ import QrCode from '@/components/QrCode.vue'
 import { scrollIntoViewSoon } from '@/shell/tabScroll'
 import ShortLinkToggle from '@resqdocs/protocol-core-ui/components/ShortLinkToggle.vue'
 import { useShortLink } from '@resqdocs/protocol-core-ui/useShortLink'
+import { focusWhenAttached } from '@resqdocs/protocol-core-ui/focusAttached'
 
 /**
  * Snippets im Bausteine-Menü. Mode-in-place wie Medikamente/Ärzte (Wiedererkennung): kompakte
@@ -51,7 +52,7 @@ let focusNext = false
 function setEditTitle(el: unknown): void {
   if (el && focusNext) {
     focusNext = false
-    ;(el as HTMLInputElement).focus()
+    focusWhenAttached(el as HTMLInputElement)
   }
 }
 
@@ -188,10 +189,8 @@ function confirmDelete(): void {
   }
 }
 
-// --- Export/Import als Datei/JSON (eigenes resqdocs-snippet-Schema; Muster wie BlockLibrarySection) ---
-const importOpen = ref(false)
+// --- Export/Import als Datei (eigenes resqdocs-snippet-Schema; Muster wie BlockLibrarySection) ---
 const importFile = ref<HTMLInputElement | null>(null)
-const importText = ref('')
 const ioMsg = ref<{ kind: 'ok' | 'err'; text: string } | null>(null)
 
 // --- Als verschlüsselten Kurz-Link teilen (Transfer, wie bei Vorlagen/Blöcken) ---
@@ -235,18 +234,16 @@ async function copySnippetLink(): Promise<void> {
   }
 }
 
-function toggleImport(): void {
-  importOpen.value = !importOpen.value
+// „Aus Datei importieren“ öffnet die Dateiauswahl des Systems direkt, wie bei den Vorlagen. Der Aufruf muss im
+// selben Tipp passieren (WebKit blockiert ihn sonst). Ein Feld zum Einfügen des Datei-Inhalts gibt es hier nicht mehr.
+function pickImportFile(): void {
   ioMsg.value = null
+  importFile.value?.click()
 }
 async function doImport(text: string): Promise<void> {
   // Schema-erkennend: eine hier eingeworfene Block-/Vorlagen-Datei landet trotzdem am richtigen Ort.
   const outcome = await routeImport(text)
   ioMsg.value = { kind: outcome.ok ? 'ok' : 'err', text: outcome.message }
-  if (outcome.ok) {
-    importText.value = ''
-    importOpen.value = false
-  }
 }
 function onImportFile(e: Event): void {
   const input = e.target as HTMLInputElement
@@ -254,6 +251,7 @@ function onImportFile(e: Event): void {
   if (!file) return
   const reader = new FileReader()
   reader.onload = () => void doImport(String(reader.result ?? ''))
+  reader.onerror = () => (ioMsg.value = { kind: 'err', text: 'Die Datei konnte nicht gelesen werden.' })
   reader.readAsText(file)
   input.value = '' // dieselbe Datei erneut wählbar
 }
@@ -299,25 +297,14 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
         <h3 class="font-semibold">Textbausteine</h3>
         <InfoTip :info="INFO.snippets" />
         <span v-if="snippets.length" class="badge badge-neutral badge-sm">{{ snippets.length }}</span>
-        <button class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 px-1.5" type="button" :class="importOpen ? 'btn-active' : ''" aria-label="Textbaustein aus Datei importieren" title="Aus Datei importieren" @click="toggleImport">
+        <button class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 px-1.5" type="button" aria-label="Textbaustein aus Datei importieren" title="Aus Datei importieren" data-import-file @click="pickImportFile">
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
         </button>
         <button class="btn btn-primary btn-sm min-h-11 min-w-11 px-1.5" type="button" :disabled="adding" aria-label="Neuer Textbaustein" title="Neuer Textbaustein" @click="addAndEdit"><span class="text-lg leading-none" aria-hidden="true">＋</span></button>
       </div>
 
-      <!-- Import: Snippet-JSON einfügen oder Datei wählen (eigenes resqdocs-snippet-Schema, getrennt von Blöcken/Vorlagen) -->
-      <div v-if="importOpen" class="flex flex-col gap-2 rounded-lg border border-base-300 p-3">
-        <span class="text-xs font-semibold text-base-content/75">JSON einfügen oder Datei wählen</span>
-        <textarea v-model="importText" rows="4" class="textarea textarea-bordered w-full text-xs" placeholder="Inhalt der Datei eines Textbausteins hier einfügen" aria-label="Inhalt einfügen"></textarea>
-        <div class="flex flex-wrap items-center gap-2">
-          <button class="btn btn-primary btn-sm min-h-11" type="button" :disabled="!importText.trim()" @click="doImport(importText)">Laden</button>
-          <!-- Datei: ein Knopf öffnet die Dateiauswahl des Systems, wie bei den Vorlagen (kein Datei-Feld im
-               Browser-Stil). Das Feld selbst ist unsichtbar, aber nicht display:none (iOS öffnet es sonst nicht). -->
-          <button class="btn btn-sm min-h-11" type="button" data-import-file @click="importFile?.click()">Datei auswählen…</button>
-          <input ref="importFile" type="file" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true" @change="onImportFile" />
-        </div>
-        <p class="text-xs text-base-content/75">Wird als neuer Textbaustein importiert.</p>
-      </div>
+      <!-- Dateiauswahl für den Import-Knopf oben: unsichtbar, aber nicht display:none (iOS öffnet sie sonst nicht). -->
+      <input ref="importFile" type="file" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true" @change="onImportFile" />
       <p v-if="ioMsg" class="text-xs" :class="ioMsg.kind === 'ok' ? 'text-success' : 'text-error'">{{ ioMsg.text }}</p>
 
       <!-- Einspaltige Liste über die volle Breite: zugeklappt UND offen gleich breit (konsistent auf iPad;
@@ -374,7 +361,7 @@ async function exportDownload(s: LibrarySnippet): Promise<void> {
           <!-- Knopfzeile bewusst NICHT an die Tastatur gebunden (kein kb-sticky): sie schob sich beim Tippen des
                Titels über Titel und Text (iPhone-Video). Stattdessen rückt die ganze Karte über die Tastatur. -->
           <div class="flex flex-wrap justify-end gap-2">
-            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="copiedId === s.id ? 'JSON kopiert' : 'JSON kopieren'" title="Kopieren" @click="exportCopy(s)">
+            <button type="button" class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :aria-label="copiedId === s.id ? 'Kopiert' : 'Als Text kopieren'" title="Kopieren" @click="exportCopy(s)">
               <svg v-if="copiedId === s.id" class="size-5 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
               <svg v-else class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
             </button>

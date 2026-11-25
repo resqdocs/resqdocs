@@ -51,6 +51,13 @@ test('Rückmeldung beim Antippen für eigene Bedienelemente', () => {
   assert.match(css, /button:not\(\.btn\):not\(:disabled\):active,\s*\[role="button"\]:active,\s*summary:active,/)
   assert.match(css, /box-shadow: inset 0 0 0 100vmax color-mix\(in oklab, var\(--color-base-content\) 12%, transparent\)/)
   assert.match(css, /prefers-reduced-motion: reduce/)
+  // Die Kopfzeile eines Kastens wird nur getönt, nicht verkleinert, und die Tönung ist selbst rund: Der Kasten
+  // schneidet seinen Inhalt nicht zu (overflow: visible), sonst steht beim Antippen ein eckiges Rechteck im runden
+  // Rahmen. Radius = der des Kastens (rounded-lg) minus 1 px Rahmen; aufgeklappt endet die Tönung unten gerade.
+  assert.match(css, /\.collapse > summary:active \{\s*transform: none;\s*border-radius: calc\(var\(--radius-lg\) - 1px\);\s*\}/)
+  assert.match(css, /\.collapse\[open\] > summary:active \{\s*border-end-start-radius: 0;\s*border-end-end-radius: 0;\s*\}/)
+  const section = readFileSync(join(HERE, '../../apps/pico-pwa/src/components/rebuild/EinsatzSection.vue'), 'utf8')
+  assert.match(section, /<details v-else-if="renderAsCollapse" class="[^"]*\brounded-lg\b[^"]*\bborder\b/, 'der Kasten nutzt genau diesen Radius und einen 1 px breiten Rahmen')
 })
 
 test('NEWS2: Statuszeile nennt einen unmöglichen SpO₂-Wert, Schalter stehen zusammen', () => {

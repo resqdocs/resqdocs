@@ -5,6 +5,7 @@ import { useAppUpdateNotice } from '@/appUpdate/useAppUpdateNotice'
 import { speedFromDelay, delayFromSpeed, typingSpeedLabel, DELAY_MIN_MS, DELAY_MAX_MS, DELAY_STEP_MS } from '@/pico/typingSpeed'
 import { hapticsLevelLabel, normalizeHapticsLevel, HAPTICS_LEVEL_MIN, HAPTICS_LEVEL_MAX } from '@/shell/hapticsRules'
 import { previewHaptics } from '@/shell/haptics'
+import { THIS_DEVICE } from '@/pico/targetDevice'
 
 /** App-Einstellungen (Zielgerät, Design, Erscheinung). Über die
  * gekapselte Storage-Schicht — kein Backend-Wissen.
@@ -60,6 +61,8 @@ function onHapticsLevel(): void {
           <option value="win_de">Windows DE (z. B. NIDA)</option>
           <option value="mac_de">macOS</option>
           <option value="ios">iPad (ios)</option>
+          <!-- Dokumentation auf dem Gerät mit der App: keine Bridge, der Einsatz bietet Kopieren an (pico/targetDevice.ts). -->
+          <option :value="THIS_DEVICE">Dieses Gerät</option>
         </select>
       </fieldset>
       <!-- Design: derzeit nur ResQDocs. Das Feld bleibt, weil später weitere Designs dazukommen sollen. -->
