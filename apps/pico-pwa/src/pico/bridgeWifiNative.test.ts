@@ -79,6 +79,8 @@ test('keine Standortberechtigung, keine Google-Dienste, kein Abfragen des WLAN-N
   assert.doesNotMatch(manifest, /LOCATION|NEARBY_WIFI_DEVICES/)
   assert.match(manifest, /<uses-permission android:name="android\.permission\.CHANGE_NETWORK_STATE" \/>/)
   assert.match(manifest, /<uses-permission android:name="android\.permission\.ACCESS_WIFI_STATE" \/>/)
+  // ACCESS_WIFI_STATE zieht sonst android.hardware.wifi als Pflicht nach (Play-Warnung zu 2.2.0): Geräte ohne WLAN bleiben unterstützt.
+  assert.match(manifest, /<uses-feature android:name="android\.hardware\.wifi" android:required="false" \/>/)
   assert.doesNotMatch(code(kotlin), /com\.google\.|\.gms\.|LocationManager|getScanResults|startScan|connectionInfo/)
   assert.doesNotMatch(code(swift), /CoreLocation|CLLocationManager|fetchCurrent|CNCopyCurrentNetworkInfo/)
   assert.doesNotMatch(ios('App/App.entitlements'), /wifi-info/)

@@ -3,24 +3,32 @@
 
 import type { Container } from './model.ts'
 import { pruneCloze } from './cloze.ts'
+import { parseNeeds, templateNeeds, type FeatureVersions, type Needs } from './templateNeeds.ts'
 
 export const PROTOCOL_SCHEMA = 'resqdocs-protocol'
 export const PROTOCOL_VERSION = 1
 
-export function exportTemplate(root: Container): string {
-  return JSON.stringify({ schema: PROTOCOL_SCHEMA, version: PROTOCOL_VERSION, tree: root }, null, 2)
+/**
+ * Mit `fv` (ai-docs/feature-versions.json) trägt die Datei einen Vermerk `requires`: welche Funktionen die Vorlage
+ * nutzt und ab welcher App-Version es sie gibt. Eine ältere App kann so beim Import sagen, was ihr fehlt. Nutzt die
+ * Vorlage nichts oberhalb der Grundversion, bleibt die Datei wie bisher. Ältere Apps überlesen den Vermerk.
+ */
+export function exportTemplate(root: Container, fv?: FeatureVersions): string {
+  const requires = fv ? templateNeeds(fv, [root]) : null
+  return JSON.stringify({ schema: PROTOCOL_SCHEMA, version: PROTOCOL_VERSION, ...(requires ? { requires } : {}), tree: root }, null, 2)
 }
 
 /**
  * Eine oder mehrere Vorlagen exportieren (Datei, Link, QR). Eine Vorlage = das bekannte Einzelformat (auch ältere
  * Apps lesen es); mehrere = Sammlung als JSON-Liste von Einzelvorlagen (importRouter erkennt sie als 'bundle').
  */
-export function exportTemplates(roots: readonly Container[]): string {
-  if (roots.length === 1) return exportTemplate(roots[0])
-  return JSON.stringify(roots.map((r) => JSON.parse(exportTemplate(r))), null, 2)
+export function exportTemplates(roots: readonly Container[], fv?: FeatureVersions): string {
+  if (roots.length === 1) return exportTemplate(roots[0], fv)
+  return JSON.stringify(roots.map((r) => JSON.parse(exportTemplate(r, fv))), null, 2)
 }
 
-export type ParseResult = { ok: true; tree: Container } | { ok: false; error: string }
+/** `needs`: Vermerk der Datei (siehe exportTemplate), falls vorhanden und wohlgeformt. */
+export type ParseResult = { ok: true; tree: Container; needs?: Needs } | { ok: false; error: string }
 
 function isContainerLike(x: unknown): x is Container {
   return (
@@ -39,11 +47,12 @@ export function parseTemplate(json: string): ParseResult {
   } catch {
     return { ok: false, error: 'Kein gueltiges JSON.' }
   }
-  const o = parsed as { schema?: unknown; version?: unknown; tree?: unknown }
+  const o = parsed as { schema?: unknown; version?: unknown; tree?: unknown; requires?: unknown }
   if (o?.schema !== PROTOCOL_SCHEMA) return { ok: false, error: 'Keine ResQDocs-Vorlage (schema fehlt oder falsch).' }
   if (typeof o.version !== 'number' || o.version > PROTOCOL_VERSION) {
     return { ok: false, error: `Version ${String(o.version)} wird von dieser App-Version nicht unterstuetzt.` }
   }
   if (!isContainerLike(o.tree)) return { ok: false, error: 'Die Vorlage hat keinen gültigen Aufbau.' }
-  return { ok: true, tree: pruneCloze(o.tree) } // Lücken ohne Ziel (fremde/gekürzte Vorlage) entfernen
+  const needs = parseNeeds(o.requires)
+  return { ok: true, tree: pruneCloze(o.tree), ...(needs ? { needs } : {}) } // Lücken ohne Ziel (fremde/gekürzte Vorlage) entfernen
 }

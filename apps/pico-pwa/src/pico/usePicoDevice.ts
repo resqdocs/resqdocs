@@ -7,6 +7,7 @@ import { useBridgeConnection } from './useBridgeConnection'
 import { useTypingProgress } from './useTypingProgress'
 import { countChars } from './typingProgress'
 import type { OsMode, PicoStatus } from './picoTypes'
+import { bridgeOs } from './targetDevice'
 import { normalizeForTyping } from '@resqdocs/protocol-core/typeable'
 
 /**
@@ -23,7 +24,7 @@ export function usePicoDevice() {
   const reachable = ref<boolean | null>(null)
   const status = ref<PicoStatus | null>(null)
   const testText = ref('') // flüchtig, niemals persistiert
-  const os = ref<OsMode>((storage.settings.defaultOs as OsMode) ?? 'win_de')
+  const os = ref<OsMode>(bridgeOs(storage.settings.defaultOs))
   const busy = ref(false)
   const error = ref<string | null>(null)
 

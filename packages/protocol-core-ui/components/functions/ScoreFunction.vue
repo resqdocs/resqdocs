@@ -105,7 +105,7 @@ function doReset(): void {
 
 
     <!-- − nicht erhoben: Rechner entfaellt in der Ausgabe. -->
-    <p v-if="supported && excluded" class="text-xs italic text-base-content/75">nicht erhoben — erscheint nicht im Protokolltext</p>
+    <p v-if="supported && excluded" class="text-right text-xs italic text-base-content/75">nicht erhoben</p>
 
     <!-- ✎ Freitext: ersetzt im Protokolltext das Ergebnis (vorbelegt mit Standardtext). -->
     <div v-else-if="supported && custom" class="flex flex-col gap-1">

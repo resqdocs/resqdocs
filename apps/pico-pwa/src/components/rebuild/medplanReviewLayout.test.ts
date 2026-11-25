@@ -73,7 +73,7 @@ test('Praxis-Block und Medikamentenliste liegen im SELBEN Scrollbereich', () => 
   assert.ok(scrollListe, 'Die Medikamentenliste liegt in keinem Scrollbereich (overflow-y-auto).')
   assert.ok(
     scrollPraxis,
-    'Die Ausstellende Praxis steht AUSSERHALB des Scrollbereichs - im Scanner-Modus verdeckt sie auf ' +
+    'Die Ausstellende Praxis steht AUSSERHALB des Scrollbereichs - bei offenem Eingabefeld verdeckt sie auf ' +
       'kleinen Displays die Liste.',
   )
   assert.equal(scrollPraxis, scrollListe, 'Praxis und Liste muessen denselben Scrollbereich teilen.')

@@ -84,6 +84,9 @@
          CHANGE_NETWORK_STATE = Netz anfragen, ACCESS_WIFI_STATE = pruefen, ob WLAN eingeschaltet ist. -->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- ACCESS_WIFI_STATE meldet bei Play implizit WLAN-Hardware als Pflicht. Die App laeuft auch ohne WLAN
+         (z. B. Tablet nur mit Mobilfunk, Zielgeraet „Dieses Geraet“), deshalb ausdruecklich nicht verlangt. -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
 
     <!-- Werbe-ID (AD_ID) beim Manifest-Merge hart entfernen: die App nutzt KEINE
          Werbe-ID (keine Ads-/Analytics-/Firebase-SDKs). tools:node="remove" wirft die

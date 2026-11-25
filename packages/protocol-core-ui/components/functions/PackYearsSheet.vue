@@ -10,6 +10,7 @@
 import { computed, ref } from 'vue'
 import type { PackYearsRow } from '@resqdocs/protocol-core/model'
 import { packYears, packYearsShort } from '@resqdocs/protocol-core/tools/scores.mjs'
+import { unchangedSince } from '@resqdocs/protocol-core-ui/sheetGuard'
 
 const props = defineProps<{ initial?: PackYearsRow }>()
 const emit = defineEmits<{ apply: [row: PackYearsRow]; close: [] }>()
@@ -17,6 +18,8 @@ const emit = defineEmits<{ apply: [row: PackYearsRow]; close: [] }>()
 // Leeres Feld = null (kein 0 unterstellen). v-model.number liefert bei leerem Input NaN -> auf null normieren.
 const cig = ref<number | null>(props.initial?.cigarettesPerDay ?? null)
 const yrs = ref<number | null>(props.initial?.years ?? null)
+// Tipp neben das Fenster schließt nur, solange nichts geändert wurde.
+const unchanged = unchangedSince(() => [cig.value, yrs.value])
 const norm = (v: number | null): number | null => (v == null || !Number.isFinite(v) || v < 0 ? null : v)
 
 const preview = computed(() => {
@@ -62,7 +65,7 @@ function apply(): void {
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="preview == null" @click="apply">Übernehmen</button>
         </div>
       </div>
-      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="emit('close')"></button>
+      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="unchanged() && emit('close')"></button>
     </div>
   </Teleport>
 </template>

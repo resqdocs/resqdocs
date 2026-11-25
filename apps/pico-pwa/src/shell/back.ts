@@ -10,22 +10,36 @@
 //
 // iOS hat keine Zurück-Taste und bleibt unberührt. Im Browser (Vorschau der App) schließt Escape das oberste
 // Fenster, und das Ereignis `backbutton` am Dokument spielt die Android-Taste nach (so wird es geprüft).
+import { ref } from 'vue'
 import { App as CapApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { closeLayer, installEscapeClose, topLayer } from '@resqdocs/protocol-core-ui/backLayer'
 import { activeTab } from '@/composables/useActiveTab'
-import { HOME_TAB, nextBackStep, openSubpage, type BackStep, type BackTab, type Subpage } from './backRules'
+import { HOME_TAB, headerSubpage, nextBackStep, openSubpage, type BackStep, type BackTab, type Subpage, type SubpageHeader } from './backRules'
 
 const subpages: Subpage[] = []
+// Zählt An- und Abmeldungen, damit die Kopfzeile (currentPageHeader) auch darauf reagiert.
+const subpagesChanged = ref(0)
 
-/** Eine Unterseite anmelden (z. B. Einstellungen → Bridge). Die Rückgabe meldet sie wieder ab. */
-export function registerSubpage(tab: BackTab, isOpen: () => boolean, close: () => void): () => void {
-  const entry: Subpage = { tab, isOpen, close }
+/** Eine Unterseite anmelden (z. B. Einstellungen → Bridge). Die Rückgabe meldet sie wieder ab.
+ *  `header` meldet eine Titelzeile: Die Kopfzeile zeigt dann ‹ und den Titel statt der Marke. */
+export function registerSubpage(tab: BackTab, isOpen: () => boolean, close: () => void, header?: () => SubpageHeader): () => void {
+  const entry: Subpage = { tab, isOpen, close, header }
   subpages.push(entry)
+  subpagesChanged.value++
   return () => {
     const i = subpages.indexOf(entry)
     if (i >= 0) subpages.splice(i, 1)
+    subpagesChanged.value++
   }
+}
+
+/** Titelzeile für die Kopfzeile: die offene Unterseite des sichtbaren Tabs, die eine meldet. Reaktiv lesbar
+ *  (in einem computed), weil isOpen und header reaktive Werte lesen. */
+export function currentPageHeader(): (SubpageHeader & { close: () => void }) | null {
+  void subpagesChanged.value
+  const page = headerSubpage(subpages, activeTab.value)
+  return page?.header ? { ...page.header(), close: page.close } : null
 }
 
 /** Ein „Zurück“ ausführen. Gibt zurück, was getan wurde ('system' = an der Wurzel, das System ist dran). */

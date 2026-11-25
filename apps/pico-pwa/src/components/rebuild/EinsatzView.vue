@@ -8,6 +8,8 @@
  */
 import { ref, computed, onMounted, onUnmounted, nextTick, provide, watch } from 'vue'
 import TabRef from '@resqdocs/protocol-core-ui/components/TabRef.vue'
+import InfoTip from '@resqdocs/protocol-core-ui/components/InfoTip.vue'
+import { INFO } from '@resqdocs/protocol-core-ui/terms'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
 import { templateLabel } from '@resqdocs/protocol-core-ui/nodeLabel'
 import { useProtocolPersistence } from '@resqdocs/protocol-core-ui/protocolPersistence'
@@ -19,12 +21,15 @@ import { CASE_DRAFT_DELETED_NOTICE, nextDraftDebounceWait, type ReworkCaseDraft 
 import { useCaseValues } from '@resqdocs/protocol-core-ui/useCaseValues'
 import { useDependencySync, useDependencyHidden } from '@resqdocs/protocol-core-ui/useDependencies'
 import { hasManualInput, manualValues } from '@resqdocs/protocol-core/dependencies'
-import { usePicoApi, type OsMode } from '@/composables/usePicoApi'
+import { usePicoApi } from '@/composables/usePicoApi'
 import { useTypingProgress } from '@/pico/useTypingProgress'
 import { countChars } from '@/pico/typingProgress'
 import { useBridgeConnection } from '@/pico/useBridgeConnection'
 import { openBridgeConnect } from '@/composables/useBridgePage'
 import { requestButtonText } from '@/pico/buttonTextEntry'
+import { bridgeOs, isThisDevice } from '@/pico/targetDevice'
+import { copyToClipboard } from '@/utils/fileTransfer'
+import { haptic } from '@/shell/haptics'
 import { useStorage } from '@/storage/useStorage'
 import { render } from '@resqdocs/protocol-core/render'
 import { countOpenRequired } from '@resqdocs/protocol-core/required'
@@ -181,6 +186,10 @@ const storage = useStorage()
 const pico = usePicoApi()
 // Was am Zielgerät anstelle eines nicht tippbaren Zeichens steht (Hinweis unter dem Senden-Knopf).
 const marker = computed(() => typingMarker(storage.settings.defaultOs))
+// Zielgerät „Dieses Gerät“: dokumentiert wird auf dem Gerät mit der App. Dann gibt es unten statt Bridge-Verbinden
+// und Senden NUR „Protokolltext kopieren“ (der Text wechselt nur zwischen zwei Apps). Bei jedem anderen Zielgerät
+// bleibt es bei der Bridge, Kopieren als Hauptaktion gibt es dort nicht (Datensparsamkeit, pico/targetDevice.ts).
+const thisDevice = computed(() => isThisDevice(storage.settings.defaultOs))
 // Im Einsatz nehmen die Textfelder keine Emojis an (die Bridge kann sie nicht tippen). EIN Filter am Dokument
 // statt Code in jedem Feld: Er erreicht so auch die Fenster, die außerhalb dieses Tabs im Dokument hängen
 // (großes Textfenster, Lückentext, Eingabehilfen der Funktionen). Außerhalb des Einsatzes gilt er nur für
@@ -190,7 +199,7 @@ let stopEmojiFilter: (() => void) | null = null
 const { reachable, check, markReachable } = useBridgeConnection()
 onMounted(() => {
   stopEmojiFilter = installEmojiFreeInput(document, (el) => activeTab.value === 'einsatz' || !!el.closest?.('[data-emoji-free]'))
-  void check()
+  if (!thisDevice.value) void check()
   // Der Ablauf wird von AUSSEN ausgeloest (App.vue prueft laufend), der sichtbare Zustand liegt aber
   // hier. Ohne diesen Handler bliebe der Tab nach dem Ablauf vollstaendig ausgefuellt (er wird nur
   // ausgeblendet, nie abgeraeumt) und der naechste Tastendruck schriebe den Entwurf mit frischer Frist
@@ -234,7 +243,7 @@ async function senden(): Promise<void> {
   sendMsg.value = null
   try {
     const sent = text.value
-    await pico.typeText(sent, (storage.settings.defaultOs ?? 'win_de') as OsMode, storage.settings.typingDelayMs)
+    await pico.typeText(sent, bridgeOs(storage.settings.defaultOs), storage.settings.typingDelayMs)
     markReachable(true) // erfolgreicher Kontakt -> Status frisch halten
     typing.start({ total: countChars(sent), delayMs: storage.settings.typingDelayMs })
     // Wiederholbar: KEIN „fertig"-Zustand. Erfolg verschwindet nach kurzer Zeit von selbst,
@@ -250,6 +259,24 @@ async function senden(): Promise<void> {
   } finally {
     sending.value = false
   }
+}
+
+// Nur bei Zielgerät „Dieses Gerät“: Protokolltext in die Zwischenablage. „Kopiert“ verschwindet nach kurzer Zeit
+// von selbst (wiederholbar wie Senden), ein Fehler bleibt stehen.
+const copied = ref(false)
+const copyFailed = ref(false)
+let copiedTimer: ReturnType<typeof setTimeout> | null = null
+async function kopieren(): Promise<void> {
+  copyFailed.value = false
+  if (!(await copyToClipboard(text.value))) {
+    copied.value = false
+    copyFailed.value = true
+    return
+  }
+  haptic('copyOk')
+  copied.value = true
+  if (copiedTimer) clearTimeout(copiedTimer)
+  copiedTimer = setTimeout(() => (copied.value = false), 2000)
 }
 
 // --- Slice 4: Vorlagen-Auswahl im Einsatz (ein Protokoll pro Einsatz) ---
@@ -448,10 +475,8 @@ onUnmounted(() => {
           </div>
 
           <div>
-            <h2 class="text-base font-semibold">{{ templateLabel(root) }}</h2>
-            <p class="text-sm text-base-content/75">
-              Felder ausfüllen: tippe auf <span class="whitespace-nowrap">✓/✎/−</span> je Feld (bestätigt · eigener Wert · nicht erhoben). Die Vorschau zeigt den Protokolltext.
-            </p>
+            <!-- Erklärung der Zeichen auf Abruf (ⓘ) statt als Dauerabsatz: mehr Platz für die Felder. -->
+            <h2 class="flex items-center gap-1 text-base font-semibold"><span class="min-w-0 truncate">{{ templateLabel(root) }}</span><InfoTip :info="INFO.fillStates" /></h2>
           </div>
 
           <!-- Pflichtfeld-Vollstaendigkeit: dezent, nicht blockierend. Antippen springt zum ersten offenen
@@ -495,43 +520,53 @@ onUnmounted(() => {
          wiederholbar (kein „fertig"-Zustand); „Einsatz löschen“ destruktiv + getrennt + dezent. -->
     <div v-if="root.children.length" class="border-t border-base-200 pt-4">
       <div class="mx-auto flex w-full max-w-sm flex-col items-center gap-3">
-        <!-- Ohne verbundene Bridge kein gesperrter Hauptknopf, sondern der Weg dorthin: kurze Anleitung zum Verbinden.
-             Solange noch nicht geprüft wurde (null), bleibt Senden gesperrt stehen, damit nichts springt. -->
-        <button
-          v-if="reachable === false && !sending && !typing.busy.value"
-          type="button"
-          class="btn btn-primary w-full"
-          data-connect-bridge
-          @click="openBridgeConnect"
-        >
-          Mit ResQDocs-Bridge verbinden
-        </button>
-        <button v-else type="button" class="btn btn-primary w-full" :disabled="sending || reachable !== true || typing.busy.value" @click="senden">
-          <span v-if="sending" class="loading loading-spinner loading-sm"></span>
-          {{ sending ? 'Sende …' : typing.busy.value ? 'Bridge tippt noch …' : 'An Zielgerät senden' }}
-        </button>
-        <!-- Zeichen, die die Bridge nicht tippen kann: nur ein Hinweis, Senden bleibt möglich. -->
-        <UntypeableHint :text="text" :marker="marker" class="w-full" />
-        <p v-if="sendMsg" class="text-center text-xs" :class="sendMsg.kind === 'ok' ? 'text-success' : 'text-error'" role="status" aria-live="polite">{{ sendMsg.text }}</p>
-        <p v-else-if="reachable === false" class="text-center text-xs text-base-content/75">Bridge nicht verbunden.</p>
-        <!-- Den Protokolltext als festen Text fuer den Knopf an der Bridge ablegen (Geruest mit den Werten,
-             die immer gleich sind). Oeffnet das Textfeld; gespeichert wird erst dort, mit gedruecktem Knopf. -->
-        <!-- Gleiches Stick-Icon wie in der Kopfleiste: so erklaert sich die kurze Beschriftung. -->
-        <button
-          type="button"
-          class="btn btn-outline min-h-11 w-full gap-2"
-          aria-label="Als Text für den Knopf an der Bridge speichern"
-          :disabled="!text.trim()"
-          @click="requestButtonText({ prefill: text })"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" class="size-5" aria-hidden="true">
-            <path d="M8.75 16.75h6.5v5.5h-6.5z" />
-            <path d="M10.6 18.7h1.1V20h-1.1zM12.3 18.7h1.1V20h-1.1z" fill="currentColor" stroke="none" />
-            <rect x="6.25" y="1.75" width="11.5" height="15" rx="3" />
-            <circle cx="12" cy="8.5" r="2.6" fill="currentColor" stroke="none" />
-          </svg>
-          Auf Knopf speichern
-        </button>
+        <!-- Zielgerät „Dieses Gerät“ (Einstellungen): keine Bridge, der Text wechselt nur zwischen zwei Apps auf
+             demselben Gerät. NUR hier gibt es Kopieren als Hauptaktion; sonst verlässt der Text die App über die Bridge. -->
+        <template v-if="thisDevice">
+          <button type="button" class="btn btn-primary w-full" data-einsatz-kopieren :disabled="!text.trim()" @click="kopieren">
+            {{ copied ? 'Kopiert' : 'Protokolltext kopieren' }}
+          </button>
+          <p v-if="copyFailed" class="text-center text-xs text-error" role="status" aria-live="polite">Kopieren hat nicht geklappt, bitte erneut versuchen.</p>
+        </template>
+        <template v-else>
+          <!-- Ohne verbundene Bridge kein gesperrter Hauptknopf, sondern der Weg dorthin: kurze Anleitung zum Verbinden.
+               Solange noch nicht geprüft wurde (null), bleibt Senden gesperrt stehen, damit nichts springt. -->
+          <button
+            v-if="reachable === false && !sending && !typing.busy.value"
+            type="button"
+            class="btn btn-primary w-full"
+            data-connect-bridge
+            @click="openBridgeConnect"
+          >
+            Mit ResQDocs-Bridge verbinden
+          </button>
+          <button v-else type="button" class="btn btn-primary w-full" :disabled="sending || reachable !== true || typing.busy.value" @click="senden">
+            <span v-if="sending" class="loading loading-spinner loading-sm"></span>
+            {{ sending ? 'Sende …' : typing.busy.value ? 'Bridge tippt noch …' : 'An Zielgerät senden' }}
+          </button>
+          <!-- Zeichen, die die Bridge nicht tippen kann: nur ein Hinweis, Senden bleibt möglich. -->
+          <UntypeableHint :text="text" :marker="marker" class="w-full" />
+          <p v-if="sendMsg" class="text-center text-xs" :class="sendMsg.kind === 'ok' ? 'text-success' : 'text-error'" role="status" aria-live="polite">{{ sendMsg.text }}</p>
+          <p v-else-if="reachable === false" class="text-center text-xs text-base-content/75">Bridge nicht verbunden.</p>
+          <!-- Den Protokolltext als festen Text fuer den Knopf an der Bridge ablegen (Geruest mit den Werten,
+               die immer gleich sind). Oeffnet das Textfeld; gespeichert wird erst dort, mit gedruecktem Knopf. -->
+          <!-- Gleiches Stick-Icon wie in der Kopfleiste: so erklaert sich die kurze Beschriftung. -->
+          <button
+            type="button"
+            class="btn btn-outline min-h-11 w-full gap-2"
+            aria-label="Als Text für den Knopf an der Bridge speichern"
+            :disabled="!text.trim()"
+            @click="requestButtonText({ prefill: text })"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" class="size-5" aria-hidden="true">
+              <path d="M8.75 16.75h6.5v5.5h-6.5z" />
+              <path d="M10.6 18.7h1.1V20h-1.1zM12.3 18.7h1.1V20h-1.1z" fill="currentColor" stroke="none" />
+              <rect x="6.25" y="1.75" width="11.5" height="15" rx="3" />
+              <circle cx="12" cy="8.5" r="2.6" fill="currentColor" stroke="none" />
+            </svg>
+            Auf Knopf speichern
+          </button>
+        </template>
 
         <div class="divider my-1 w-full"></div>
 

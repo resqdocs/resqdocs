@@ -27,14 +27,23 @@ export interface MedicationSuggestion {
 
 /** Scan im Medikationsplan. */
 export interface MedplanScan {
-  /** Kamera für eine Packung. Events: `decoded(result)`, `cancel`. */
+  /** Kamera für Packungen. Im Kamerabild der App schaltet ein Schalter „Mehrere Packungen“ um: aus = eine Packung,
+   *  dann schließt die Kamera; ein = sie bleibt offen, bis „Fertig“. Prop `known?: string[]` (PZN, die schon in der
+   *  Liste stehen; die Kamera meldet sie im Mehrfach-Modus als schon vorhanden). Events: `decoded(result)` für eine
+   *  Packung, `decodedMany(results)` für alle eines Durchgangs, `cancel`. */
   packageScanner: Component
   /** PZN aus dem gelesenen Packungscode, sonst null (synchron: die Meldung erscheint sofort). */
   pznFromPackage(result: unknown): string | null
   /** Zeile zur PZN: aus der eigenen Bibliothek, sonst ein Platzhalter. */
   rowForPzn(pzn: string): Promise<import('@resqdocs/protocol-core/model').MedikamenteRow>
-  /** Medikationsplan (BMP) scannen und prüfen. Prop `mode: 'camera' | 'scanner'`; Events `apply(rows, doctor?)`, `close`. */
+  /** Medikationsplan (BMP) scannen und prüfen: öffnet die Kamera gleich. Events `apply(rows, doctor?)`, `close`. */
   planSheet: Component
+  /** Eintrag der eigenen PZN-Bibliothek zu einer PZN (Name und Stärke), `null` wenn sie dort nicht steht. Ohne Angabe
+   *  gibt es in der Liste keinen Knopf zum Übernehmen. */
+  libraryEntry?(pzn: string): Promise<import('./packageScanResult.ts').LibraryEntryView | null>
+  /** Genau EINE PZN in die eigene PZN-Bibliothek schreiben (bewusste Handlung, nie mehrere): neu aufnehmen oder den
+   *  vorhandenen Eintrag auf Name und Stärke der Zeile bringen. */
+  saveToLibrary?(pzn: string, name: string, staerke?: string): Promise<'added' | 'updated' | 'unchanged' | 'invalid'>
 }
 
 export interface ListCapture {

@@ -6,7 +6,7 @@
  * Small-screen-first: drei Segmente (Aufbau / Eigenschaften / Vorschau) einzeln am Handy,
  * ab lg drei Spalten. Zentrale Tree-API per provide/inject an die rekursiven Knoten.
  */
-import { ref, computed, provide, toRaw, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, provide, toRaw, watch, onMounted, onUnmounted } from 'vue'
 import { useTreeHistory } from '@resqdocs/protocol-core-ui/useTreeHistory'
 import { duplicateNode } from '@resqdocs/protocol-core/treeOps'
 import { useProtocolTree } from '@resqdocs/protocol-core-ui/useProtocolTree'
@@ -15,15 +15,19 @@ import { findNode, collectIds, canMoveUp as canMoveUpOp, canMoveDown as canMoveD
 import { TREE_EDITOR, type TreeEditorApi } from '@resqdocs/protocol-core-ui/treeEditor'
 import { TREE_FOLD, sectionIds, useTreeFold } from '@resqdocs/protocol-core-ui/treeFold'
 import { useBlockLibrary } from '@resqdocs/protocol-core-ui/useBlockLibrary'
-import type { Container } from '@resqdocs/protocol-core/model'
+import type { Container, FieldFill } from '@resqdocs/protocol-core/model'
 import ContainerTreeNode from '@resqdocs/protocol-core-ui/components/ContainerTreeNode.vue'
 import ContainerProperties from '@resqdocs/protocol-core-ui/components/ContainerProperties.vue'
 import ContainerPreview from '@resqdocs/protocol-core-ui/components/ContainerPreview.vue'
 import LibraryBar from './LibraryBar.vue'
+import SaveStatusBadge from './SaveStatusBadge.vue'
 import AiToolNotice from './AiToolNotice.vue'
 import SnippetPicker from '@resqdocs/protocol-core-ui/components/SnippetPicker.vue'
 import { snippetPickerKey } from '@resqdocs/protocol-core-ui/injection'
 import { registerSubpage } from '@/shell/back'
+import { scrollTabToTop, tabScroller } from '@/shell/tabScroll'
+import { incomingOpen } from '@/composables/useIncomingOpen'
+import { nodeLabel, templateLabel } from '@resqdocs/protocol-core-ui/nodeLabel'
 
 const tree = useProtocolTree()
 const caseValues = useCaseValues()
@@ -54,9 +58,104 @@ function onLgChange(): void {
 }
 onMounted(() => mql?.addEventListener('change', onLgChange))
 onUnmounted(() => mql?.removeEventListener('change', onLgChange))
-// „Zurück“ (Android): aus Eigenschaften oder Vorschau zurück in den Aufbau. Nur am Handy, wo immer eine der drei
-// Ansichten allein zu sehen ist; ab lg stehen alle nebeneinander, dort gibt es nichts zu schließen.
-onUnmounted(registerSubpage('protokolle', () => !isLg.value && view.value !== 'aufbau', () => { view.value = 'aufbau' }))
+// Am Handy zwei Seiten: erst die Liste der Vorlagen, ein Tipp öffnet die Vorlage als eigene Seite. Die Kopfzeile
+// zeigt dann ‹ und den Namen der Vorlage statt der Marke (registerSubpage mit Titelzeile). Ab lg steht alles
+// nebeneinander wie bisher. Die Liste behält beim Zurückgehen ihre Stelle.
+const screen = ref<'liste' | 'vorlage'>('liste')
+const showList = computed(() => isLg.value || screen.value === 'liste')
+const showEditor = computed(() => isLg.value || screen.value === 'vorlage')
+let listScrollTop = 0
+function openTemplate(): void {
+  listScrollTop = tabScroller('protokolle')?.scrollTop ?? 0
+  screen.value = 'vorlage'
+  view.value = 'aufbau'
+  void nextTick(() => scrollTabToTop('protokolle', false))
+}
+function backToList(): void {
+  screen.value = 'liste'
+  view.value = 'aufbau'
+  void nextTick(() => tabScroller('protokolle')?.scrollTo({ top: listScrollTop }))
+}
+// Ein eingehender Link oder eine geöffnete Datei wird in der Liste angenommen (LibraryBar zeigt das Fenster dazu).
+watch(incomingOpen, (item) => {
+  if (item) screen.value = 'liste'
+})
+onUnmounted(registerSubpage('protokolle', () => !isLg.value && screen.value === 'vorlage', backToList, () => ({ title: templateLabel(root.value), backLabel: 'Zurück zu den Vorlagen' })))
+// „Zurück“ (Android): aus Eigenschaften oder Vorschau zurück in den Aufbau, erst danach zur Liste. Nur am Handy, wo
+// immer eine der drei Ansichten allein zu sehen ist; ab lg stehen alle nebeneinander, dort gibt es nichts zu schließen.
+onUnmounted(registerSubpage('protokolle', () => !isLg.value && screen.value === 'vorlage' && view.value !== 'aufbau', () => { view.value = 'aufbau' }))
+
+// Löschen im Aufbau fragt nicht nach, sondern bietet „Rückgängig“ an (Maintainer 2026-11-25; Quellen in
+// docs/sources.md). Die Meldung steht ein paar Sekunden über der Tab-Leiste; danach holt ↶ das Gelöschte weiter
+// zurück. Zurück kommen auch die Eingaben des laufenden Einsatzes zu diesen Elementen: Sie werden beim Löschen
+// entfernt und hier nur im Arbeitsspeicher zurückgehalten, höchstens für die letzten Löschungen und nur für
+// denselben Einsatz (caseValues.epoch).
+interface Removed {
+  id: string
+  ids: string[]
+  values: Record<string, FieldFill>
+  epoch: number
+  dropped: boolean
+}
+const REMOVED_KEEP = 20
+const REMOVED_NOTE_MS = 8000
+const removedStash: Removed[] = []
+const removedNote = ref<{ label: string; inside: number } | null>(null)
+const removedText = computed(() => {
+  const n = removedNote.value
+  if (!n) return ''
+  if (n.inside <= 0) return `„${n.label}“ gelöscht.`
+  return `„${n.label}“ mit ${n.inside === 1 ? '1 Element' : `${n.inside} Elementen`} gelöscht.`
+})
+let removedTimer: number | undefined
+let removedAt: unknown = null
+function hideRemoved(): void {
+  window.clearTimeout(removedTimer)
+  removedNote.value = null
+}
+function showRemoved(label: string, inside: number): void {
+  window.clearTimeout(removedTimer)
+  removedNote.value = { label, inside }
+  removedAt = tree.protocols.value
+  removedTimer = window.setTimeout(hideRemoved, REMOVED_NOTE_MS)
+}
+// Jede weitere Änderung am Baum nimmt die Meldung weg: „Rückgängig“ gälte sonst dem neueren Schritt.
+watch(tree.protocols, (v) => {
+  if (removedNote.value && v !== removedAt) hideRemoved()
+})
+/** Nach Rückgängig/Wiederholen: Ist ein gelöschtes Element wieder da, bekommt es seine Eingaben zurück; ist es
+ *  wieder weg, werden sie erneut entfernt. */
+function syncRemoved(): void {
+  for (let i = removedStash.length - 1; i >= 0; i--) {
+    const r = removedStash[i]
+    if (r.epoch !== caseValues.epoch.value) {
+      removedStash.splice(i, 1) // anderer Einsatz: nichts zurückgeben, nichts behalten
+      continue
+    }
+    const present = !!findNode(root.value, r.id)
+    if (present && r.dropped) {
+      caseValues.values.value = { ...r.values, ...caseValues.values.value }
+      r.dropped = false
+    } else if (!present && !r.dropped) {
+      caseValues.drop(r.ids)
+      r.dropped = true
+    }
+  }
+}
+function undo(): void {
+  hideRemoved()
+  hist.undo()
+  syncRemoved()
+}
+function redo(): void {
+  hideRemoved()
+  hist.redo()
+  syncRemoved()
+}
+onUnmounted(() => {
+  window.clearTimeout(removedTimer)
+  removedStash.length = 0
+})
 
 const api: TreeEditorApi = {
   selectedId,
@@ -115,9 +214,20 @@ const api: TreeEditorApi = {
   remove(id) {
     if (id === root.value.id) return
     const node = findNode(root.value, id)
+    const ids = node ? collectIds(node) : [id]
+    // Eingaben des laufenden Einsatzes zu diesen Elementen: für „Rückgängig“ zurückhalten (nur im Arbeitsspeicher).
+    const kept: Record<string, FieldFill> = {}
+    for (const i of ids) {
+      const v = caseValues.values.value[i]
+      if (v !== undefined) kept[i] = v
+    }
     change(null, () => tree.remove(id))
-    caseValues.drop(node ? collectIds(node) : [id]) // verwaiste Einsatz-Werte (inkl. Gesundheitsdaten) mit raus
+    if (findNode(root.value, id)) return // nichts gelöscht
+    caseValues.drop(ids) // verwaiste Einsatz-Werte (inkl. Gesundheitsdaten) mit raus
     if (selectedId.value === id) selectedId.value = root.value.id
+    removedStash.push({ id, ids, values: kept, epoch: caseValues.epoch.value, dropped: true })
+    if (removedStash.length > REMOVED_KEEP) removedStash.shift()
+    showRemoved(node ? nodeLabel(node) : id, ids.length - 1)
   },
   move(childId, delta) {
     change(null, () => tree.move(childId, delta))
@@ -175,27 +285,34 @@ provide(snippetPickerKey, SnippetPicker)
 <template>
   <div class="flex flex-col gap-3">
     <!-- Vorlagen-Bibliothek: auswaehlen/anlegen/umbenennen/duplizieren/loeschen + Save-Status -->
-    <LibraryBar />
+    <!-- v-show statt v-if: Die Liste nimmt auch eingehende Links und Dateien an und muss dafür eingehängt bleiben. -->
+    <LibraryBar v-show="showList" :navigate="!isLg" @open="openTemplate" />
 
     <!-- KI-Empfehlung fuer die erste Vorlage (einmalig wegklickbar) -->
-    <AiToolNotice />
+    <AiToolNotice v-show="showList" />
 
-    <p class="text-sm text-base-content/75">
-      Abschnitte anlegen, verschachteln und konfigurieren. Die Vorschau zeigt den Protokolltext.
-    </p>
+    <template v-if="showEditor">
+    <div>
+      <p class="text-sm text-base-content/75">
+        Abschnitte anlegen, verschachteln und konfigurieren. Die Vorschau zeigt den Protokolltext.
+      </p>
+      <!-- Am Handy ist die Liste (mit ihrem Speicher-Status) auf dieser Seite nicht zu sehen. Eigene Zeile mit
+           fester Höhe: Der Status kommt und geht beim Speichern und darf den Text darüber nicht umbrechen lassen. -->
+      <div v-if="!isLg" class="flex min-h-4 justify-end" data-editor-save-status><SaveStatusBadge /></div>
+    </div>
 
     <!-- small-screen-first: ein Bereich nach dem anderen; ab lg alle drei nebeneinander -->
     <!-- Umschalter: oben zentriert + sticky am oberen Rand des Tab-Bereichs (die Kopfzeile liegt außerhalb).
          Nur < lg (ab lg drei Spalten nebeneinander). Volle Breite (-mx-4), damit ↶/↷ mit 44 px und die drei
          Knöpfe (13 px wie ein iOS-Segment) auch bei 360 px passen und nichts seitlich durchscheint. -->
     <div class="sticky top-0 z-[5] -mx-4 flex items-center justify-center gap-0.5 bg-base-200/95 px-1 py-2 backdrop-blur-sm lg:hidden">
-      <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canUndo.value" aria-label="Rückgängig" title="Rückgängig" data-undo @click="hist.undo()">↶</button>
+      <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canUndo.value" aria-label="Rückgängig" title="Rückgängig" data-undo @click="undo">↶</button>
       <div class="join">
         <button class="btn btn-sm join-item px-2! text-[13px]!" :class="view === 'aufbau' ? 'btn-primary' : ''" @click="view = 'aufbau'">Aufbau</button>
         <button class="btn btn-sm join-item px-2! text-[13px]!" :class="view === 'eigenschaften' ? 'btn-primary' : ''" @click="view = 'eigenschaften'">Eigenschaften</button>
         <button class="btn btn-sm join-item px-2! text-[13px]!" :class="view === 'vorschau' ? 'btn-primary' : ''" @click="view = 'vorschau'">Vorschau</button>
       </div>
-      <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canRedo.value" aria-label="Wiederholen" title="Wiederholen" data-redo @click="hist.redo()">↷</button>
+      <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canRedo.value" aria-label="Wiederholen" title="Wiederholen" data-redo @click="redo">↷</button>
     </div>
 
     <div class="lg:grid lg:grid-cols-3 lg:items-start lg:gap-4">
@@ -214,8 +331,8 @@ provide(snippetPickerKey, SnippetPicker)
               </span>
               <!-- ab lg (drei Spalten, kein Umschalter) sitzen Rückgängig/Wiederholen hier -->
               <span class="hidden gap-1 lg:flex" :class="hasSections ? '' : 'ml-auto'">
-                <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canUndo.value" aria-label="Rückgängig" title="Rückgängig" @click="hist.undo()">↶</button>
-                <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canRedo.value" aria-label="Wiederholen" title="Wiederholen" @click="hist.redo()">↷</button>
+                <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canUndo.value" aria-label="Rückgängig" title="Rückgängig" @click="undo">↶</button>
+                <button class="btn btn-ghost btn-sm min-h-11 min-w-11 px-1.5" :disabled="!hist.canRedo.value" aria-label="Wiederholen" title="Wiederholen" @click="redo">↷</button>
               </span>
             </div>
             <ContainerTreeNode :node="root" :depth="0" />
@@ -231,6 +348,16 @@ provide(snippetPickerKey, SnippetPicker)
       <section v-if="isLg || view === 'vorschau'" class="lg:block">
         <ContainerPreview :root="root" />
       </section>
+    </div>
+    </template>
+
+    <!-- Gelöscht: Meldung mit „Rückgängig“ über der Tab-Leiste. Die Live-Region steht immer im DOM, damit
+         Screenreader die Meldung vorlesen. Nach dem Ausblenden holt ↶ das Gelöschte weiter zurück. -->
+    <div class="pointer-events-none fixed inset-x-0 z-[1000] flex justify-center px-4" style="bottom: calc(4.5rem + env(safe-area-inset-bottom))" role="status" aria-live="polite">
+      <div v-if="removedNote" class="pointer-events-auto flex max-w-md items-center gap-2 rounded-box border border-base-300 bg-base-100 py-1 pl-4 pr-1 text-sm shadow-lg" data-removed-note>
+        <span class="min-w-0 flex-1">{{ removedText }}</span>
+        <button type="button" class="btn btn-ghost btn-sm min-h-11 shrink-0 text-primary" data-removed-undo @click="undo">Rückgängig</button>
+      </div>
     </div>
   </div>
 </template>

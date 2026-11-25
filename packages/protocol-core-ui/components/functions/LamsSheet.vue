@@ -13,6 +13,7 @@ import type { LAMSRow } from '@resqdocs/protocol-core/model'
 import { lams } from '@resqdocs/protocol-core/tools/scores.mjs'
 import InfoTip from '@resqdocs/protocol-core-ui/components/InfoTip.vue'
 import { INFO } from '@resqdocs/protocol-core-ui/terms'
+import { unchangedSince } from '@resqdocs/protocol-core-ui/sheetGuard'
 
 const props = defineProps<{ initial?: LAMSRow }>()
 const emit = defineEmits<{ apply: [row: LAMSRow]; close: [] }>()
@@ -31,6 +32,8 @@ const picked = reactive<Record<ItemId, Punkte | null>>({
   grip: props.initial?.lamsGrip ?? null,
 })
 
+// Tipp neben das Fenster schließt nur, solange nichts geändert wurde.
+const unchanged = unchangedSince(() => picked)
 // Vollständig = alle drei Befunde gewählt. VOR dem lams-Aufruf prüfen (scores.lams wirft sonst).
 const values = computed<Required<LAMSRow> | null>(() => {
   const { face, arm, grip } = picked
@@ -103,7 +106,7 @@ function apply(): void {
           <button type="button" class="btn btn-primary btn-sm min-h-11" :disabled="!result" @click="apply">Übernehmen</button>
         </div>
       </div>
-      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="emit('close')"></button>
+      <button type="button" class="modal-backdrop" aria-label="Abbrechen" @click="unchanged() && emit('close')"></button>
     </div>
   </Teleport>
 </template>

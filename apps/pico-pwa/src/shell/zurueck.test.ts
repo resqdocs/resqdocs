@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { HOME_TAB, nextBackStep, openSubpage, type Subpage } from './backRules.ts'
+import { HOME_TAB, headerSubpage, nextBackStep, openSubpage, type Subpage } from './backRules.ts'
 
 const app = new URL('../..', import.meta.url).pathname
 const read = (f: string): string => readFileSync(join(app, f), 'utf8')
@@ -75,7 +75,9 @@ test('Unterseiten melden sich an: Einstellungen (Bridge, PZN-Bibliothek, Version
   // Zurück wirkt wie „‹ Einstellungen“: derselbe Zustand, die alte Stelle der Übersicht kommt aus dem Seiten-Watcher.
   assert.match(settings, /@click="page = 'overview'"/)
   const editor = code('src/components/rebuild/EditorView.vue')
-  assert.match(editor, /registerSubpage\('protokolle', \(\) => !isLg\.value && view\.value !== 'aufbau', \(\) => \{ view\.value = 'aufbau' \}\)/)
+  // Vorlagen: die geöffnete Vorlage (zurück zur Liste) und darin die Ansichten (zurück in den Aufbau).
+  assert.match(editor, /registerSubpage\('protokolle', \(\) => !isLg\.value && screen\.value === 'vorlage', backToList,/)
+  assert.match(editor, /registerSubpage\('protokolle', \(\) => !isLg\.value && screen\.value === 'vorlage' && view\.value !== 'aufbau', \(\) => \{ view\.value = 'aufbau' \}\)/)
 })
 
 // Jede Datei, die ein Fenster zeichnet, hat einen Schließen-Weg, den die zentrale Stelle findet: den Rand von
@@ -120,4 +122,18 @@ test('gekennzeichnete Schließen-Knöpfe: Einführung, Testhinweis, Versionshinw
     'src/components/rebuild/AerzteReviewSheet.vue': /aria-label="Schließen" data-back-close @click="discardAndClose"/,
   }
   for (const [file, pattern] of Object.entries(marked)) assert.match(read(file), pattern, file)
+})
+
+test('Titelzeile: nur offene Unterseiten des sichtbaren Tabs, die eine melden; Ansichten ohne Titel zählen nicht', () => {
+  const page = (tab: Subpage['tab'], open: boolean, title?: string): Subpage => ({
+    tab, isOpen: () => open, close: () => {}, header: title ? () => ({ title, backLabel: `Zurück: ${title}` }) : undefined,
+  })
+  // Vorlage geöffnet, darüber die Ansicht „Eigenschaften“ (ohne Titel): Die Kopfzeile zeigt weiter die Vorlage,
+  // „Zurück“ (Android) schließt zuerst die Ansicht.
+  const list = [page('protokolle', true, 'Meine Vorlage'), page('protokolle', true)]
+  assert.equal(headerSubpage(list, 'protokolle')?.header?.().title, 'Meine Vorlage')
+  assert.equal(openSubpage(list, 'protokolle'), list[1])
+  assert.equal(headerSubpage(list, 'einsatz'), null, 'anderer Tab: Marke')
+  assert.equal(headerSubpage([page('protokolle', false, 'zu')], 'protokolle'), null, 'geschlossen: Marke')
+  assert.equal(headerSubpage([page('einstellungen', true)], 'einstellungen'), null, 'ohne Titel: Marke')
 })

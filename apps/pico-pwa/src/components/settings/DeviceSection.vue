@@ -179,12 +179,12 @@ async function onSetSsid(): Promise<void> {
       </div>
 
       <label class="form-control">
-        <span class="label-text mb-1">Base-URL der Bridge</span>
+        <span class="label-text mb-1">Adresse der Bridge</span>
         <input
           v-model="draftUrl"
           class="input input-bordered input-sm w-full max-w-xs min-h-11"
           placeholder="http://10.10.10.1"
-          aria-label="Base-URL der Bridge"
+          aria-label="Adresse der Bridge"
           :aria-invalid="urlError ? 'true' : undefined"
           aria-describedby="bridge-url-error"
           @change="commitUrl"

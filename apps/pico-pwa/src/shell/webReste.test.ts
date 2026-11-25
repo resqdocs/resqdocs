@@ -52,16 +52,43 @@ test('kein Datei-Feld im Browser-Stil: ein Knopf öffnet die Dateiauswahl, wie b
       assert.match(input, /class="(sr-only|hidden)"/, `${file}: das Feld des Browsers ist nicht zu sehen`)
     }
   }
+  // Bausteine: Der Import-Knopf öffnet die Dateiauswahl direkt, wie „Aus Datei importieren…“ bei den Vorlagen.
+  // Ein Feld zum Einfügen des Datei-Inhalts gibt es dort nicht mehr (Entscheidung des Maintainers).
   for (const f of ['src/components/library/SnippetLibrarySection.vue', 'src/components/library/BlockLibrarySection.vue']) {
     const t = read(f)
-    assert.match(t, /<button class="btn btn-sm min-h-11" type="button" data-import-file @click="importFile\?\.click\(\)">Datei auswählen…<\/button>/, f)
+    assert.match(t, /<button class="btn btn-ghost btn-sm ml-auto min-h-11 min-w-11 px-1\.5" type="button" aria-label="[^"]* aus Datei importieren" title="Aus Datei importieren" data-import-file @click="pickImportFile">/, f)
+    assert.match(t, /function pickImportFile\(\): void \{\n  ioMsg\.value = null\n  importFile\.value\?\.click\(\)\n\}/, `${f}: die Auswahl öffnet im selben Tipp`)
     assert.match(t, /<input ref="importFile" type="file" accept="application\/json,\.json" class="sr-only" tabindex="-1" aria-hidden="true" @change="onImportFile" \/>/, f)
-    // Einfügen bleibt als zweiter Weg (Entscheidung des Maintainers steht aus).
-    assert.match(t, /JSON einfügen oder Datei wählen/, f)
-    assert.match(t, /@click="doImport\(importText\)">Laden</, f)
+    assert.doesNotMatch(t, /<textarea[^>]*importText|importOpen|>Laden</, `${f}: kein Einfüge-Feld mehr`)
+    assert.match(t, /<p v-if="ioMsg" class="text-xs"/, `${f}: das Ergebnis steht unter der Überschrift`)
   }
   // Gleiche Beschriftung wie beim Import einer Vorlage.
   assert.match(read('src/components/rebuild/TemplateIO.vue'), /data-import-file @click="fileInput\?\.click\(\)">Datei auswählen…</)
+})
+
+test('keine Entwicklerwörter in der Oberfläche: benannt wird, was es ist', () => {
+  const sichtbar = (f: string): string => read(f).replace(/<!--[\s\S]*?-->/g, '').replace(/<script[\s\S]*?<\/script>/g, '')
+  const device = sichtbar('src/components/settings/DeviceSection.vue')
+  assert.match(device, /<span class="label-text mb-1">Adresse der Bridge<\/span>/)
+  assert.match(device, /aria-label="Adresse der Bridge"/)
+  assert.doesNotMatch(device, /Base-URL/)
+  const scanner = read('src/components/settings/ScannerSection.vue')
+  assert.match(scanner, /<h3 class="font-medium">Scanner für den Medikationsplan<\/h3>/)
+  // Am Gerät gibt es keine Auswahl: Der Satz über eine Voreinstellung „WebView Standard“ stand trotzdem dort.
+  assert.doesNotMatch(scanner, /Strategie für den Medikationsplan-Scan|Vergleichstests/)
+  const vorDerAuswahl = scanner.slice(scanner.indexOf('<template>'), scanner.indexOf('<select'))
+  assert.doesNotMatch(vorDerAuswahl, /WebView/, 'vor der Auswahl (nur im Browser) steht kein „WebView“')
+  for (const f of ['src/components/library/SnippetLibrarySection.vue', 'src/components/library/BlockLibrarySection.vue', 'src/components/rebuild/TemplateIO.vue', 'src/components/rebuild/LibraryBar.vue']) {
+    assert.doesNotMatch(sichtbar(f), /JSON/, `${f}: „JSON“ steht nicht in der Oberfläche`)
+  }
+  const io = read('src/components/rebuild/TemplateIO.vue')
+  assert.match(io, />Exportieren — als Datei<\/span>/)
+  assert.match(io, />Importieren — aus Datei<\/span>/)
+  assert.match(io, /\{\{ copied \? 'Kopiert' : 'Als Text kopieren' \}\}/)
+  for (const f of ['src/components/library/SnippetLibrarySection.vue', 'src/components/library/BlockLibrarySection.vue']) {
+    assert.match(read(f), /'Kopiert' : 'Als Text kopieren'/, f)
+  }
+  assert.match(read('src/components/rebuild/LibraryBar.vue'), /<b>Exportieren<\/b> = Datei\./)
 })
 
 test('Einstellungen: Ein/Aus ist ein Schalter mit mindestens 44 px Trefferfläche, die Beschriftung bleibt', () => {

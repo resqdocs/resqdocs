@@ -437,3 +437,152 @@ vergleicht beide.
   → zwischen `compositionstart` und `compositionend` greift der Filter nicht ein, bereinigt wird am Ende.
 - Hinweis statt Sperre (Maintainer, 2026-11-24): Zeichen ohne Taste nennt die App vor dem Senden mit Anzahl;
   Senden bleibt möglich. Die Erklärung steht hinter dem ⓘ (Tippfläche 44 × 44 px, wie im Abschnitt „Lückentext“).
+
+## Einsatz-Maske: Erklärung auf Abruf, „nicht erhoben“ in der Zeile
+
+> Recherche-Stand 2026-11-24, Entscheidung Maintainer am selben Tag. Angewandt in
+> `apps/pico-pwa/src/components/rebuild/EinsatzView.vue`, `EinsatzField.vue`, `EinsatzSection.vue` und den
+> Funktionen in `packages/protocol-core-ui/components/functions/`.
+
+- Selten Gebrauchtes konkurriert mit dem Wichtigen: „Every extra unit of information in an interface competes with
+  the relevant units of information and diminishes their relative visibility.“ Nielsen Norman Group, Aesthetic and
+  Minimalist Design: <https://www.nngroup.com/articles/aesthetic-minimalist-design/>
+  → der Erklärabsatz zu ✓/✎/− steht hinter dem ⓘ neben dem Namen der Vorlage, nicht dauerhaft über den Feldern.
+- Anweisungen dürfen abrufbar sein, zu viel schadet: W3C, Understanding SC 3.3.2 Labels or Instructions:
+  <https://www.w3.org/WAI/WCAG22/Understanding/labels-or-instructions.html>
+- Hinter dem ⓘ nur Ergänzendes: „Don't use tooltips for information that is vital to task completion.“ NN/g, Tooltip
+  Guidelines: <https://www.nngroup.com/articles/tooltip-guidelines/>
+  → der Zustand bleibt am Schalter und als Wort in der Zeile lesbar („nicht erhoben“, rechtsbündig); nur der Zusatz
+  „erscheint nicht im Protokolltext“ steht im ⓘ.
+- Ein Abschnitt auf „nicht erhoben“ behält seine Form (Maintainer, 2026-11-25): Als Kasten bleibt er ein Kasten in
+  derselben Größe, nur hohl (ohne Fläche); ohne Kasten steht er an der Stelle seines Kopfs. Gleiche Muster überall:
+  „they should use the same patterns everywhere inside the system“. Nielsen Norman Group, Consistency and Standards:
+  <https://www.nngroup.com/articles/consistency-and-standards/>
+  → Kästchen, Titel und Status stehen an denselben Stellen wie beim erhobenen Abschnitt, die Liste springt beim
+  Umschalten nicht (vorher: 28 statt 54 px hoch, Kästchen 17 px weiter links).
+- Abgeschwächt wird nur die Fläche, nie die Schrift: „The visual presentation of text and images of text has a
+  contrast ratio of at least 4.5:1“; die Ausnahme für „inactive user interface component“ greift nicht, weil sich
+  der Abschnitt jederzeit wieder einschalten lässt. W3C, Understanding SC 1.4.3 Contrast (Minimum):
+  <https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html>
+  → gemessen in der Vorschau: Titel 13,0:1 (dunkel) und 12,8:1 (hell), „nicht erhoben“ 7,9:1 und 6,0:1. Verworfen:
+  die ganze Karte auf 60 % Deckkraft (3,9:1 und 2,6:1 für „nicht erhoben“) und ein gestrichelter Rahmen (zweite
+  Linienart in der Liste).
+
+## Kopfzeile: Marke und ein Knopf, Titelzeile auf Unterseiten
+
+> Recherche-Stand 2026-11-24, Entscheidung Maintainer am selben Tag. Angewandt in `apps/pico-pwa/src/App.vue`,
+> `apps/pico-pwa/src/shell/back.ts` und `backRules.ts`.
+
+- Rot liest sich als Fehler: NN/g, Error-Message Guidelines: <https://www.nngroup.com/articles/error-message-guidelines/>;
+  dieselbe Farbe nicht für Verschiedenes: Apple HIG, Color: <https://developer.apple.com/design/human-interface-guidelines/color>
+  → die Verbindungs-Anzeige der Bridge steht nicht mehr in der Kopfzeile (ohne Bridge ist nichts falsch); verbunden
+  wird im Einsatz. Der Stick-Knopf entfällt, der Text für den Knopf an der Bridge liegt unter Einstellungen → Bridge.
+- Der eine verbleibende Knopf (Einführung und Anleitung) zeigt ein Buch im getönten Kreis, ohne Text (Maintainer,
+  an der bedienbaren Vorschau entschieden; Buttons mit Text neben der Marke drängten sich vor die Marke).
+- Zurück gehört in eine feste Zeile oben: „people expect to find a Back button in a top toolbar that lets them return
+  to the previous view with a single tap“. Apple HIG, Gestures:
+  <https://developer.apple.com/design/human-interface-guidelines/gestures>
+- Nur das Zeichen, und der Titel der Seite statt des App-Namens: „don’t use a text label that says Back or Close“,
+  „Don’t title windows with your app name.“ Apple HIG, Toolbars:
+  <https://developer.apple.com/design/human-interface-guidelines/toolbars>
+  → meldet eine Unterseite eine Titelzeile, zeigt die Kopfzeile ‹ und ihren Namen statt der Marke; der Name des
+  Knopfs („Zurück zu den Vorlagen“) steht nur für den Screenreader da.
+
+## Vorlagen-Tab: Liste, dann Vorlage
+
+> Recherche-Stand 2026-11-24, Entscheidung Maintainer 2026-11-25 (Weg 1). Angewandt in
+> `apps/pico-pwa/src/components/rebuild/EditorView.vue` und `LibraryBar.vue`.
+
+- Auf schmalen Bildschirmen entweder Liste oder Detail: „Medium- and compact-width displays show either the list or
+  the detail … pressing the back button redisplays the list.“ Android Developers, Canonical layouts:
+  <https://developer.android.com/develop/ui/compose/layouts/adaptive/canonical-layouts>; Apple HIG, Split views
+  („Prefer using a split view in a regular — not a compact — environment.“):
+  <https://developer.apple.com/design/human-interface-guidelines/split-views>
+  → unter lg ist die Liste die Startseite des Tabs, ein Tipp öffnet die Vorlage als eigene Seite; ab lg bleibt
+  alles nebeneinander.
+- Ein Häkchen bedeutet gewählte Option, nicht Ziel einer Navigation: Apple HIG, Lists and tables:
+  <https://developer.apple.com/design/human-interface-guidelines/lists-and-tables>
+  → am Handy trägt die Zeile ein ›, kein ✓ und keine Hervorhebung. Teilen und das Menü bleiben an der Zeile
+  (Maintainer, 2026-11-15).
+- Zurück der Plattform tut dasselbe wie der Pfeil: „Within your app's task, the Up and Back buttons behave
+  identically.“ Android Developers, Principles of navigation: <https://developer.android.com/guide/navigation/principles>
+  → „Zurück“ führt von der Vorlage zur Liste. Bewusst eine Stufe feiner (Maintainer, 2026-11-22): aus Eigenschaften
+  oder Vorschau geht „Zurück“ zuerst in den Aufbau; ‹ in der Kopfzeile führt immer zur Liste.
+- Tipp auf den aktiven Tab zeigt dessen Startseite: „User taps always display the root view of the tab … This is
+  true even if the tab was already selected.“ Apple, UITabBarController:
+  <https://developer.apple.com/documentation/uikit/uitabbarcontroller>
+- Die Stelle bleibt beim Zurückgehen erhalten: Baymard, Return to the same place (Tests von Online-Shops, hier als
+  Analogie): <https://baymard.com/blog/return-same-place> → die Liste merkt sich ihre Scroll-Position.
+- Umschalter für eng verwandte Ansichten bleibt: Apple HIG, Segmented controls:
+  <https://developer.apple.com/design/human-interface-guidelines/segmented-controls>
+
+## Aufbau der Vorlage: Aktionen einer Zeile, Löschen mit „Rückgängig“
+
+> Recherche-Stand 2026-11-25, Entscheidung Maintainer am selben Tag (Weg A, „Rückgängig“ statt Rückfrage). Angewandt in
+> `packages/protocol-core-ui/components/ContainerTreeNode.vue` und `apps/pico-pwa/src/components/rebuild/EditorView.vue`.
+> Ersetzt die Entscheidung vom 2026-06-26 (drei Symbol-Knöpfe je Zeile, kein Mehr-Menü). Verworfen
+> wurden ein Mittelweg, ein Bearbeiten-Modus und Aktionen in den Eigenschaften.
+
+- Nicht mehrere Symbole nebeneinander in einer Zeile: „Don’t place two icons or actions next to one another“.
+  Material-Archiv, Lists: Controls: <https://m1.material.io/components/lists-controls.html>
+  → je Zeile der Name (öffnet die Eigenschaften), bei Abschnitten das + und EIN Mehr-Knopf. Der Titel bekommt 88 px
+  mehr Platz (eigenes UX-Review, M6: 7 bis 23 von 81 Titeln abgeschnitten).
+- Das Mehr-Zeichen wird verstanden: „both kebab (⋮) and meatball (⋯) icons were generally recognized to mean 'more
+  options' or 'other actions'“. Nielsen Norman Group, Contextual Menus Guidelines:
+  <https://www.nngroup.com/articles/contextual-menus-guidelines/>. Dieselbe Quelle: Der Inhalt ist nicht vorhersehbar,
+  häufige Aktionen gehören nicht dahinter. Wie oft verschoben wird, ist nicht gemessen; der Mittelweg (Verschieben
+  bleibt sichtbar) ist der vorgesehene Rückweg, falls es am Gerät zu umständlich ist.
+- Wörter statt Symbole helfen vor allem, wer selten kommt: Wiedenbeck (1999), Behaviour & Information Technology
+  18(2), DOI 10.1080/014492999119129 (Desktop-Programm).
+  → im Blatt stehen „Verschieben nach …“, „Duplizieren“, „Löschen“.
+- Löschen abseits von Harmlosem: „Confirmatory and destructive actions should be far apart from each other“. NN/g,
+  Proximity of Consequential Options: <https://www.nngroup.com/articles/proximity-consequential-options/>
+  → „Löschen“ ist der letzte Eintrag, in Rot.
+- Blatt von unten als Menü, der Aufbau bleibt dahinter sichtbar: NN/g, Bottom Sheets:
+  <https://www.nngroup.com/articles/bottom-sheet/>; daisyUI, Modal (`modal-bottom`) und Menu:
+  <https://daisyui.com/components/modal/>. Dasselbe Blatt wie beim Menü je Vorlage; mit Namen für Screenreader
+  (`aria-labelledby`) und Rückgabe des Fokus (W3C, ARIA APG, Dialog (Modal):
+  <https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/>).
+- Rückgängig statt Rückfrage: „Avoid displaying alerts for common, undoable actions, even when they’re destructive.“
+  Apple HIG, Alerts: <https://developer.apple.com/design/human-interface-guidelines/alerts>; „Confirmation isn't
+  necessary when the consequences of an action are reversible or negligible.“ Material-Archiv, Confirmation and
+  acknowledgement: <https://m1.material.io/patterns/confirmation-acknowledgement.html>; Android Developers, Snackbar:
+  <https://developer.android.com/develop/ui/compose/components/snackbar>
+  → gelöscht wird sofort, eine Meldung über der Tab-Leiste bietet 8 Sekunden lang „Rückgängig“; danach holt ↶ das
+  Gelöschte zurück. Zurück kommen auch die Eingaben des laufenden Einsatzes zu diesen Elementen. Gilt nur für den
+  Aufbau der Vorlage; im Einsatz bleibt die Rückfrage (Produktregel).
+
+## Listen-Funktionen: Ergebnis-Zeile und Fenster
+
+> Stand 2026-11-25, Entscheidung des Maintainers nach bedienbarer Vorschau. Angewandt in
+> `packages/protocol-core-ui/components/functions/` (`ListSheet.vue`, `MedplanFunction.vue`, `AerzteFunction.vue`).
+> Vorher standen Medikationsplan und Kontakte/Ärzte als Liste direkt im Einsatz, die Rechner (NEWS2, Pack-Years,
+> BMI …) als Ergebnis-Zeile mit Fenster. Die Zitate stammen aus dem Abruf vom 2026-11-17 (Abschnitt „Großes
+> Textfeld“), nicht neu abgerufen.
+
+- Eine Liste mit mehreren Einträgen, Vorschlägen und Scan ist eine eigene Aufgabe: „Consider using a full-screen
+  modal style for in-depth content or a complex task“. Apple, Human Interface Guidelines, Modality:
+  <https://developer.apple.com/design/human-interface-guidelines/modality>; ein Fenster von unten „should not be
+  used for displaying complex content“. Nielsen Norman Group, P. Laubheimer (2023):
+  <https://www.nngroup.com/articles/bottom-sheet/>
+  → am Handy ein Fenster über den ganzen Bildschirm, nicht das Blatt von unten der Rechner; auf breiten Bildschirmen
+  ein mittiger Dialog.
+- Schließen steht oben: „Always give people an obvious way to dismiss a modal view“, in iOS „people typically
+  expect to find a button in the top toolbar“. Apple, Modality (wie oben)
+  → „Fertig“ im Kopf, über der Tastatur immer zu sehen. Die Karte eines Eintrags hat kein eigenes „Fertig“ mehr
+  (zwei gleich benannte Knöpfe übereinander); sie schließt über „＋“, eine andere Zeile oder „Fertig“.
+- Ein Muster für alle Funktionen: Im Einsatz steht eine Zeile mit dem Ergebnis, ein Tipp öffnet die Eingabe. Die
+  Zeile zeigt die Einträge so, wie sie im Protokolltext stehen (dieselbe Quelle wie der Renderer), bei leerer Liste
+  den Standardtext der Vorlage.
+- Eingaben gelten sofort, wie bisher in der Liste: kein „Abbrechen“, „Fertig“ schließt nur. Löschen fragt im
+  Einsatz weiter nach (Produktregel); die Rückfrage liegt über dem Fenster, ebenso Scan-Auswahl und Vorschläge.
+- Fokus und Zurück-Taste: Beim Schließen geht der Fokus zurück auf die Zeile (W3C, ARIA APG, Dialog (Modal):
+  <https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/>); die Zurück-Taste von Android löst „Fertig“ aus.
+- Eigene Messung (Build, WebKit und Chromium, 393 px breit): Abschnitt „Dauermedikation“ vorher 314 bis 356 px hoch,
+  jetzt 146 px (leer) bis 196 px (drei Einträge); „Angehörige & Ärzte“ vorher 330 bis 512 px, jetzt 154 bis 184 px.
+  Drei Medikamente nur mit Namen: 5 Tipps (Zeile, dreimal „＋ Medikament“, „Fertig“). Vorher schloss ein Tipp auf
+  „＋ Medikament“ nach dem Tippen eines Namens nur die offene Karte, der nächste Eintrag brauchte einen zweiten Tipp:
+  Die Karte schloss beim Verlassen des Fokus und verschob den Knopf unter dem Finger. Ein Kontakt kostet einen Tipp
+  mehr als vorher (3 statt 2).
+- Nicht am Gerät gemessen: Bedienung mit einer Hand und mit Bildschirmtastatur. Geplant ist eine Testrunde vor der
+  Veröffentlichung.

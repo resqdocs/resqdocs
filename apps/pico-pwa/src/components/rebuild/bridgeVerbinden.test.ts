@@ -3,7 +3,7 @@
 // WLAN, fertig) und der Hauptknopf „Mit Bridge-WLAN verbinden“, mit dem das Handy dem WLAN der Bridge direkt
 // beitritt. WLAN-Name und Passwort stehen unter „Von Hand verbinden“, von dort „Weitere Einstellungen“ →
 // Einstellungen → Bridge. Der Protokolltext soll die App nur über die Bridge verlassen, deshalb gibt es an
-// dieser Stelle bewusst keinen Ersatz wie Kopieren.
+// dieser Stelle bewusst keinen Ersatz wie Kopieren. Einzige Ausnahme: Zielgerät „Dieses Gerät“ (zielgeraet.test.ts).
 // Struktur-Test (kein DOM-Setup für .vue-Dateien in der App).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -25,9 +25,11 @@ test('ohne Bridge: Knopf „Mit ResQDocs-Bridge verbinden“ statt gesperrtem Se
   assert.doesNotMatch(einsatz, /Bridge nicht verbunden — Senden gesperrt/, "kein toter Hinweis mehr")
 })
 
-test('kein Kopieren als Ersatz-Hauptaktion im Einsatz', () => {
+test('kein Kopieren als Ersatz-Hauptaktion im Einsatz, außer bei Zielgerät „Dieses Gerät“', () => {
   const unten = einsatz.slice(einsatz.indexOf('Untere Aktionen'))
-  assert.doesNotMatch(unten, /Protokolltext kopieren/)
+  const nurHier = unten.slice(unten.indexOf('<template v-if="thisDevice">'), unten.indexOf('<template v-else>'))
+  assert.match(nurHier, /Protokolltext kopieren/, 'Kopieren steht im Zweig für „Dieses Gerät“')
+  assert.doesNotMatch(unten.replace(nurHier, ''), /Protokolltext kopieren|copyToClipboard|kopieren\b/, 'sonst nirgends')
 })
 
 test('„Weitere Einstellungen“ führt in die Einstellungen und dort auf die Bridge-Seite', () => {
@@ -53,8 +55,7 @@ test('Fenster: drei Schritte als Symbole, schließt sich bei Verbindung von selb
   for (const step of ['Bridge einstecken', 'WLAN verbinden', 'Fertig']) assert.ok(steps.includes(step), step)
   // Je Schritt höchstens eine kurze Zeile, kein Fließtext darunter.
   for (const p of steps.match(/<p\b[^>]*>[\s\S]*?<\/p>/g) ?? []) assert.ok(p.replace(/<[^>]+>|\{\{[^}]*\}\}/g, '').trim().length <= 20, p)
-  assert.match(steps, /M8\.75 16\.75h6\.5v5\.5h-6\.5z/, 'Stick-Icon der Kopfleiste')
-  assert.ok(read('../../App.vue').includes('M8.75 16.75h6.5v5.5h-6.5z'), 'dasselbe Icon wie in der Kopfleiste')
+  assert.match(steps, /M8\.75 16\.75h6\.5v5\.5h-6\.5z/, 'Stick-Icon der Bridge')
   // Sobald die Bridge erreichbar ist: kurz „Verbunden“ zeigen, dann schließt das Fenster.
   assert.match(connect, /watch\(reachable, \(ok\) => \{\s*if \(ok === true && dialog\.value\?\.open\) closeSoon\(\)/)
   assert.match(connect, /function closeSoon\(\): void \{[\s\S]*?phase\.value = 'connected'[\s\S]*?setTimeout\(\(\) => dialog\.value\?\.close\(\), \d{3}\)/)

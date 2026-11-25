@@ -3,6 +3,7 @@ import type { Container } from '@resqdocs/protocol-core/model'
 import { exportTemplate, exportTemplates } from '@resqdocs/protocol-core/templateIO'
 import { exportCollection, type Collection } from '@resqdocs/protocol-core/collectionIO'
 import { shareJson } from '@/utils/fileTransfer'
+import { FEATURE_VERSIONS } from '@/featureVersions'
 
 /**
  * Eine EINZELNE Vorlage als versioniertes JSON teilen (nativ: System-Share-Sheet, Web: Download).
@@ -18,7 +19,7 @@ export function useTemplateExport() {
     try {
       // shareJson: nativ Cache-Datei + System-Share-Sheet, Web -> Blob-Download (roher <a download>-Blob
       // funktioniert in der nativen WebView NICHT).
-      await shareJson(`protokoll-${name}.json`, exportTemplate(template), 'Vorlage exportieren')
+      await shareJson(`protokoll-${name}.json`, exportTemplate(template, FEATURE_VERSIONS), 'Vorlage exportieren')
       return { ok: true }
     } catch (err) {
       const m = err instanceof Error ? err.message : String(err)
@@ -33,7 +34,7 @@ export function useTemplateExport() {
     if (sharing.value || !templates.length) return { ok: false }
     sharing.value = true
     try {
-      await shareJson('resqdocs-vorlagen.json', exportTemplates(templates), 'Vorlagen exportieren')
+      await shareJson('resqdocs-vorlagen.json', exportTemplates(templates, FEATURE_VERSIONS), 'Vorlagen exportieren')
       return { ok: true }
     } catch (err) {
       const m = err instanceof Error ? err.message : String(err)
@@ -48,7 +49,7 @@ export function useTemplateExport() {
     if (sharing.value) return { ok: false }
     sharing.value = true
     try {
-      await shareJson('resqdocs-sammlung.json', exportCollection(c), 'Sammlung exportieren')
+      await shareJson('resqdocs-sammlung.json', exportCollection(c, FEATURE_VERSIONS), 'Sammlung exportieren')
       return { ok: true }
     } catch (err) {
       const m = err instanceof Error ? err.message : String(err)

@@ -8,10 +8,14 @@ import type { FieldFill, FunctionRow } from '@resqdocs/protocol-core/model'
 import { defaultFill, cycleFill, functionStatus } from '@resqdocs/protocol-core/fill'
 
 const values = ref<Record<string, FieldFill>>({})
+// Zählt hoch, sobald die Werte als Ganzes ersetzt werden (neuer Einsatz, wiederhergestellter Entwurf). Wer Werte
+// kurz zurückhält (Rückgängig nach dem Löschen eines Felds), gibt sie nur in denselben Einsatz zurück.
+const epoch = ref(0)
 
 export function useCaseValues() {
   return {
     values,
+    epoch,
     /** Fuellzustand eines Knotens. `node` mitgeben, damit der AUSGANGSZUSTAND knotenabhaengig
      *  aufgeloest wird (UNO Reverse: defaultExcluded startet auf „nicht erhoben"). Ohne node bleibt
      *  es beim bisherigen Standard „bestaetigt" - so brechen Altaufrufer nicht. */
@@ -81,10 +85,12 @@ export function useCaseValues() {
     },
     reset(): void {
       values.value = {}
+      epoch.value++
     },
     /** Alle Werte ersetzen (z. B. Wiederherstellen eines temporaeren Einsatzentwurfs). */
     setAll(next: Record<string, FieldFill>): void {
       values.value = { ...next }
+      epoch.value++
     },
     /** Funktions-Daten lesen (Medikamenten- oder Aerzte-Zeilen); kein Funktions-Wert -> leere Liste.
      *  Aufrufer kastelliert je functionKind (z. B. `as MedikamenteRow[]` / `as ArztRow[]`). */
