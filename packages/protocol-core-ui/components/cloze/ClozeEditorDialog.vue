@@ -129,6 +129,29 @@ const current = computed(() => gaps.value.find((g) => g.id === selected.value) ?
 watch(selected, (id) => {
   if (id && document.activeElement === area.value) area.value?.blur()
 })
+// Die Lückenliste scrollt bei vielen Lücken in sich: Die gewählte (auch eine gerade neu angelegte) Lücke dort sichtbar
+// machen. Nur die Liste selbst verschieben, nicht das Fenster (scrollIntoView würde auch dieses bewegen).
+// Abstand zum Home-Balken nur für das unterste Element, solange weder Tastatur noch Einstellungen darunter liegen.
+const bottomPad = computed(() => (covered.value || current.value ? 'pb-2' : 'pb-[calc(0.5rem+env(safe-area-inset-bottom))]'))
+// Höhe der Lückenliste samt Rand: höchstens gut zweieinhalb Reihen (7.625rem), mindestens eine ganze (2.75rem); der
+// Abstand zum Home-Balken kommt dazu, damit er der Liste keine Reihe wegnimmt.
+const gapsArea = computed(() =>
+  covered.value || current.value
+    ? 'pb-2 max-h-[calc(7.625rem+1rem)] min-h-[calc(2.75rem+1rem)]'
+    : 'pb-[calc(0.5rem+env(safe-area-inset-bottom))] max-h-[calc(7.625rem+1rem+env(safe-area-inset-bottom))] min-h-[calc(2.75rem+1rem+env(safe-area-inset-bottom))]',
+)
+const gapList = ref<HTMLElement | null>(null)
+watch(selected, async (id) => {
+  if (!id) return
+  await nextTick()
+  const list = gapList.value
+  const chip = list ? [...list.querySelectorAll<HTMLElement>('[data-cloze-editor-gap]')].find((el) => el.dataset.clozeEditorGap === id) : undefined
+  if (!list || !chip) return
+  const top = chip.offsetTop
+  const bottom = top + chip.offsetHeight
+  if (top < list.scrollTop) list.scrollTop = top
+  else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight
+})
 
 // --- Einstellungen der gewählten Lücke ---
 const allowedKinds = inject(allowedFunctionKindsKey, null)
@@ -313,12 +336,20 @@ defineExpose({ open, close })
           />
         </div>
 
-        <!-- Unten am Rand (ohne Tastatur, ohne Einstellungen) hält die Leiste Abstand zum Home-Balken. -->
-        <div class="shrink-0 space-y-2 border-t border-base-300 px-4 pt-2" :class="covered || current ? 'pb-2' : 'pb-[calc(0.5rem+env(safe-area-inset-bottom))]'" data-cloze-editor-actions>
+        <!-- Unten am Rand (ohne Tastatur, ohne Einstellungen) hält das unterste Element Abstand zum Home-Balken.
+             Viele Lücken: Die Liste ist ein eigener Teil des Fensters und scrollt in sich (gut zweieinhalb Reihen, die
+             angeschnittene Reihe zeigt, dass es weitergeht). Wird es eng (Tastatur, Einstellungen offen), schrumpft
+             zuerst die Liste bis auf eine ganze Reihe (shrink-[100]), dann die Einstellungen; der Text behält seine
+             Mindesthöhe.
+             In die Leiste verschachtelt schrumpfte die Liste entweder gar nicht oder lief über die Einstellungen. -->
+        <div class="shrink-0 space-y-2 border-t border-base-300 px-4 pt-2" :class="gaps.length ? '' : bottomPad" data-cloze-editor-actions>
           <p v-if="notice" class="text-sm font-medium" role="status">{{ notice }}</p>
           <!-- pointerdown.prevent: Fokus und Markierung bleiben im Text stehen. -->
           <button type="button" class="btn btn-neutral btn-sm min-h-11 w-full" data-cloze-editor-mark @pointerdown.prevent @click="onMark">{{ markLabel }}</button>
-          <div v-if="gaps.length" class="flex flex-wrap gap-1.5" role="group" aria-label="Lücken in diesem Text" data-cloze-editor-gaps>
+          <p v-if="!gaps.length" class="text-sm text-base-content/80">Noch keine Lücken. Markiere ein Wort und tippe „Lücke aus Markierung“, oder tippe {Name} in den Text.</p>
+        </div>
+        <div v-if="gaps.length" class="flex shrink-[100] flex-col px-4 pt-2" :class="gapsArea" data-cloze-editor-gaps-area>
+          <div ref="gapList" class="relative flex min-h-0 flex-1 flex-wrap content-start gap-1.5 overflow-y-auto overscroll-contain" role="group" aria-label="Lücken in diesem Text" data-cloze-editor-gaps>
             <button
               v-for="g in gaps"
               :key="g.id"
@@ -334,7 +365,6 @@ defineExpose({ open, close })
               {{ names.get(g.id) ?? g.id }}
             </button>
           </div>
-          <p v-else class="text-sm text-base-content/80">Noch keine Lücken. Markiere ein Wort und tippe „Lücke aus Markierung“, oder tippe {Name} in den Text.</p>
         </div>
 
         <!-- Einstellungen der gewählten Lücke -->
