@@ -17,9 +17,13 @@ test('Fenster: Vollbild am Handy, „Fertig“ oben, Eingaben gelten sofort', ()
   assert.match(tpl, /h-\[var\(--lt-h,100dvh\)\] max-h-none w-full max-w-none translate-none[^"]*rounded-none p-0/, 'am Handy die ganze Fläche')
   // Rückfragen, Vorschläge und der Scan öffnen als weitere Fenster darüber: kein natives <dialog> in der obersten Ebene.
   assert.doesNotMatch(tpl, /<dialog/)
-  // Die Zurück-Taste von Android löst „Fertig“ aus (backLayer), Esc schließt ebenfalls.
+  // Die Zurück-Taste von Android und Esc lösen „Fertig“ aus (backLayer, immer nur das oberste Fenster). Ein eigenes
+  // @keydown.esc schloss bei offener Kamera (Arzt aus Medikationsplan scannen) Kamera UND Liste: Der Fokus lag noch
+  // auf dem Scan-Knopf in der Liste.
   assert.match(tpl, /data-list-sheet-done data-back-close @click="emit\('close'\)">Fertig</)
-  assert.match(tpl, /@keydown\.esc\.stop="emit\('close'\)"/)
+  assert.doesNotMatch(tpl, /@keydown\.esc/)
+  // Hardware-Tastatur in der App (dort ist der gemeinsame Escape-Weg nicht eingehängt): Escape nur, wenn zuoberst.
+  assert.match(tpl, /ref="win"[^>]*@keydown="escapeIfTop\(\$event, win, \(\) => emit\('close'\)\)"/)
   assert.doesNotMatch(tpl, />Abbrechen</, 'kein Abbrechen: es gibt nichts zu verwerfen')
   assert.match(tpl, />Wird automatisch gespeichert</)
   // Am Handy gibt es keinen Rand zum Danebentippen; im mittigen Dialog schließt der Rand wie „Fertig“.

@@ -43,7 +43,7 @@ Dialog rules:
 
 ## A5 Preview & final output
 Before you build the preview **and** before you output the final JSON: re-read §10 (format reminder) and run its self-check. First show the structure as a human-readable **outline** (sections, fields, layout — form as in §5) and ask **"Does this look right?"**. Only after confirmation, your final message consists of **one single** ```json code block (valid JSON with `schema`, `version`, `tree`) plus exactly one sentence after it:
-"Import: ResQDocs app → tab 'Vorlagen' → 'Aus Datei importieren…' → paste the JSON → 'Laden'."
+"Import: ResQDocs app → tab 'Vorlagen' → 'Aus Datei importieren…' → cancel the file picker → paste the JSON under 'Oder Text einfügen' → 'Weiter'."
 
 The code block contains **only** the JSON: first character `{`, last character `}`. No `<escape>` or other tags or markers, no text before or after. The app accepts pure JSON only and corrects nothing. The user should copy it with the code block's copy button.
 
