@@ -22,15 +22,56 @@ test('Fenster: endet über der Tastatur (App: Layout-Höhe, einmal angepasst; On
     assert.match(src, /useFullscreenKeyboard\(\)/, name)
     assert.doesNotMatch(src, /visualViewport|translateY/, `${name}: keine eigene Rechnung mehr`)
     assert.match(src, /h-\[var\(--lt-h,100dvh\)\]/, name)
-    assert.match(src, /modal modal-top /, name)
+    assert.match(src, /modal (?:modal-open )?modal-top /, name)
     assert.match(src, /translate-none/, name)
     assert.match(template(src), /:style="boxStyle"/, name)
     assert.match(template(src), /:style="dialogStyle"/, name)
     assert.doesNotMatch(template(src), /class="[^"]*modal-box[^"]*\bh-\[\d+vh\]/, name)
     const close = src.slice(src.indexOf('async function close()'), src.indexOf('function onClosed()'))
-    assert.ok(close.indexOf('kb.release()') >= 0 && close.indexOf('kb.release()') < close.indexOf('dialog.value?.close()'), `${name}: erst volle Fläche, dann zu`)
+    const shut = name === 'Ausfüllen' ? 'onClosed()' : 'dialog.value?.close()'
+    assert.ok(close.indexOf('kb.release()') >= 0 && close.indexOf('kb.release()') < close.indexOf(shut), `${name}: erst volle Fläche, dann zu`)
   }
   assert.match(read('fullscreenKeyboard.ts'), /transitionProperty: closing\.value \? 'opacity'/)
+})
+
+test('Fenster: Funktionen in einer Lücke öffnen ihr Fenster DARÜBER (kein showModal, Ebene unter dem Listen-Fenster)', () => {
+  // Ein showModal-Fenster liegt in der obersten Ebene des Browsers: Das Fenster einer Funktion (ZOPS, NEWS2 …, an body
+  // gehängt) lag dahinter, „Antippen zum Eingeben“ tat scheinbar nichts. Die Ebene entscheidet wie beim ListSheet.
+  assert.doesNotMatch(dialog, /\.showModal\(/)
+  assert.doesNotMatch(template(dialog), /<dialog\s+ref=/)
+  const t = template(dialog)
+  assert.match(t, /<Teleport v-if="active" to="body">/)
+  const z = Number(t.match(/class="modal modal-open modal-top z-\[(\d+)\]/)?.[1])
+  const list = Number(read('components/functions/ListSheet.vue').match(/modal modal-open modal-top z-\[(\d+)\]/)?.[1])
+  assert.ok(z > 30 && z < list, `Ausfüllen z-[${z}] muss über der App-Hülle und unter dem Listen-Fenster z-[${list}] liegen`)
+  assert.match(t.match(/<button[^>]*data-cloze-done[^>]*>/)?.[0] ?? '', /data-back-close/, 'Zurück (Android) und Escape schließen über „Fertig“')
+  // Hardware-Tastatur in der App: Escape nur, wenn das Fenster zuoberst liegt (sonst ginge ein Rechner darüber mit zu).
+  assert.match(t, /@keydown="escapeIfTop\(\$event, dialog, close\)"/)
+  assert.doesNotMatch(t, /@keydown\.esc/)
+  // Fokus wie früher bei showModal: beim Öffnen ins Fenster, beim Schließen zurück an den Auslöser.
+  assert.match(t, /<div ref="dialog"[^>]*tabindex="-1"/)
+  const open = dialog.slice(dialog.indexOf('async function open('), dialog.indexOf('async function close('))
+  assert.match(open, /dialog\.value\?\.focus\(\{ preventScroll: true \}\)/)
+  assert.match(dialog.slice(dialog.indexOf('function onClosed()')), /opener\?\.isConnected\) opener\.focus/)
+  // Zwei Schließ-Aufrufe im selben Moment: nur einer läuft durch.
+  assert.match(dialog.slice(dialog.indexOf('async function close('), dialog.indexOf('function onClosed()')), /if \(!active\.value \|\| closing\) return\s+closing = true/)
+})
+
+test('Einrichten: viele Lücken - die Liste scrollt in sich, schrumpft bei Platznot zuerst, nie unter eine Reihe', () => {
+  // Mit 32 Lücken drückte die Liste den Text auf drei Zeilen und lief unten aus dem Fenster; verschachtelt in die Leiste
+  // schrumpfte sie gar nicht oder lief über die Einstellungen. Jetzt ein eigener Teil des Fensters.
+  const t = template(read('components/cloze/ClozeEditorDialog.vue'))
+  const area = t.match(/<div v-if="gaps\.length" class="([^"]*)"[^>]*data-cloze-editor-gaps-area>/)?.[1] ?? ''
+  assert.match(area, /\bshrink-\[100\]/, 'die Liste gibt zuerst Platz ab')
+  const list = t.match(/<div ref="gapList" class="([^"]*)"/)?.[1] ?? ''
+  assert.match(list, /\boverflow-y-auto\b/)
+  const src = read('components/cloze/ClozeEditorDialog.vue')
+  assert.equal([...src.matchAll(/max-h-\[calc\(7\.625rem\+1rem[^\]]*\)\] min-h-\[calc\(2\.75rem\+1rem/g)].length, 2, 'mit und ohne Abstand zum Home-Balken: höchstens zweieinhalb, mindestens eine Reihe')
+  assert.match(t.match(/<div class="([^"]*)"[^>]*data-cloze-editor-actions>/)?.[1] ?? '', /\bshrink-0\b/, 'der Knopf darüber bleibt ganz')
+})
+
+test('Ausfüllen: die aktuelle Lücke rollt mit Abstand zum Rand ins Bild', () => {
+  assert.match(template(dialog).match(/<div class="([^"]*)"[^>]*data-cloze-sentence>/)?.[1] ?? '', /\bscroll-py-\d+\b/)
 })
 
 test('Fenster: Weiter und Zurück halten den Fokus im Feld (Tastatur bleibt zwischen Freitext-Lücken offen)', () => {

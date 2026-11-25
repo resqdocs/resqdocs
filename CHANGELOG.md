@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+## [2.3.1] - 2026-11-25
+
+### Fixed
+
+- Filling in a cloze text: a function in a gap (for example ZOPS, the medication list or contacts) opens its window above the fill-in view again; before, tapping it did nothing
+- Setting up a cloze text with many gaps: the list of gaps scrolls, the text and the settings of the gap stay usable, and the selected gap moves into view
+- Filling in a cloze text: the current gap keeps a distance from the edge and is no longer cut off
+- With a connected keyboard, Escape closes only the topmost window in the cloze text, the medication list and the contacts
+
 ## [2.3.0] - 2026-11-25
 
 ### Added

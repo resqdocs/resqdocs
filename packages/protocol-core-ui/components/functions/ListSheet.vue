@@ -10,14 +10,16 @@
  * Eingaben gelten sofort (kein „Abbrechen“); „Fertig“ schließt nur.
  * Quellen: docs/sources.md („Listen-Funktionen: Ergebnis-Zeile und Fenster“).
  */
-import { nextTick, onBeforeUnmount, onMounted } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useFullscreenKeyboard } from '../../fullscreenKeyboard.ts'
+import { escapeIfTop } from '../../backLayer.ts'
 
 defineProps<{ title: string }>()
 const emit = defineEmits<{ close: [] }>()
 // Höhe bei offener Tastatur: App = Layout-Höhe, Online-Editor = sichtbarer Bereich (wie das große Textfeld).
 const kb = useFullscreenKeyboard()
 const { covered, boxStyle, dialogStyle } = kb
+const win = ref<HTMLElement | null>(null)
 onMounted(async () => {
   kb.prepare()
   await nextTick()
@@ -30,8 +32,11 @@ onBeforeUnmount(() => kb.stop())
   <Teleport to="body">
     <!-- z-[35]: über der App-Hülle (z-10 bis z-30), aber UNTER allem, was aus der Liste heraus öffnet: Prüf-Fenster nach
          dem Plan-Scan (z-40), Kamera (z-50), Rückfragen und Scan-Auswahl (daisyUI .modal, z-999). Mit dem z-999 von
-         .modal lag das Prüf-Fenster nach dem Scan unsichtbar hinter der Liste. -->
-    <div class="modal modal-open modal-top z-[35] max-sm:bg-transparent sm:modal-middle" :style="dialogStyle" role="dialog" aria-modal="true" :aria-label="title" data-list-sheet @keydown.esc.stop="emit('close')">
+         .modal lag das Prüf-Fenster nach dem Scan unsichtbar hinter der Liste.
+         Zurück (Android) und Esc im Browser laufen über „Fertig“ (data-back-close, backLayer.ts). Esc per Hardware-
+         Tastatur in der App behandelt das Fenster selbst, aber nur zuoberst (escapeIfTop): Ein einfacher Esc-Handler
+         schloss bei offener Kamera Kamera und Liste zugleich. -->
+    <div class="modal modal-open modal-top z-[35] max-sm:bg-transparent sm:modal-middle" :style="dialogStyle" role="dialog" aria-modal="true" :aria-label="title" data-list-sheet ref="win" @keydown="escapeIfTop($event, win, () => emit('close'))">
       <div
         class="modal-box flex h-[var(--lt-h,100dvh)] max-h-none w-full max-w-none translate-none flex-col overflow-hidden rounded-none p-0 sm:h-[min(85vh,var(--lt-h,100dvh))] sm:w-11/12 sm:max-w-2xl sm:rounded-box"
         :style="boxStyle"

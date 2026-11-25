@@ -21,6 +21,7 @@ import { isRequiredOpen } from '@resqdocs/protocol-core/required'
 import { longTextSizeKey } from '../../injection.ts'
 import { LONG_TEXT_SIZES, LONG_TEXT_SIZE_DEFAULT, LONG_TEXT_SIZE_LABEL, LONG_TEXT_SIZE_PX, type LongTextSize } from '../../longTextSize.ts'
 import { useFullscreenKeyboard } from '../../fullscreenKeyboard.ts'
+import { escapeIfTop } from '../../backLayer.ts'
 import { useCaseValues } from '../../useCaseValues.ts'
 import { useDependencyHidden } from '../../useDependencies.ts'
 import RequiredMark from '../RequiredMark.vue'
@@ -74,7 +75,7 @@ function prev(): void {
   if (i >= 0) currentId.value = gaps.value[i].id
 }
 
-const dialog = ref<HTMLDialogElement | null>(null)
+const dialog = ref<HTMLElement | null>(null)
 const answer = ref<{ focusText: () => boolean } | null>(null)
 watch(currentId, async () => {
   await nextTick()
@@ -104,35 +105,56 @@ const { covered, boxStyle, dialogStyle } = kb
 const active = ref(false)
 
 /** Öffnen. Mit `startId` direkt an dieser Lücke, sonst an der ersten, die abzufragen ist. */
+// Wer das Fenster geöffnet hat (Knopf „Ausfüllen“ oder eine Lücke der Karte): bekommt den Fokus beim Schließen zurück.
+let opener: HTMLElement | null = null
 async function open(startId?: string | null): Promise<void> {
   seen = new Set()
+  opener = document.activeElement instanceof HTMLElement && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) ? document.activeElement : null
   active.value = true
   kb.prepare()
   await nextTick()
-  dialog.value?.showModal()
   kb.follow()
+  // Fokus ins Fenster (wie früher showModal): Sonst bliebe er auf dem Knopf dahinter, Leertaste/Enter öffnete erneut
+  // und ein Bildschirmleser bliebe auf der Seite. Eine Freitext-Lücke holt ihn danach in ihr Feld.
+  dialog.value?.focus({ preventScroll: true })
   const first = askingAfter(-1)
   currentId.value = startId ?? (first >= 0 ? gaps.value[first].id : null)
 }
 /** Schließen: erst auf volle Höhe (nur ausblenden, nicht gegen die Tastatur fahren), dann zu. */
+// Gegen doppeltes Schließen im selben Moment (Doppeltipp auf „Fertig“, Escape und Rand zugleich).
+let closing = false
 async function close(): Promise<void> {
+  if (!active.value || closing) return
+  closing = true
   kb.release()
   await nextTick()
-  dialog.value?.close()
+  onClosed()
+  closing = false
 }
 function onClosed(): void {
   kb.stop()
   currentId.value = null
   active.value = false
   emit('close')
+  if (opener?.isConnected) opener.focus({ preventScroll: true })
+  opener = null
 }
 onBeforeUnmount(() => kb.stop())
 defineExpose({ open, close })
 </script>
 
 <template>
-  <!-- Aufbau und Tastatur-Verhalten wie beim großen Textfeld (LongTextDialog). -->
-  <dialog ref="dialog" class="modal modal-top max-sm:bg-transparent sm:modal-middle" :style="dialogStyle" :aria-label="title" @close="onClosed">
+  <!-- Aufbau und Tastatur-Verhalten wie beim großen Textfeld (LongTextDialog).
+       Bewusst KEIN natives <dialog> mit showModal(): Eine Funktion in einer Lücke öffnet ihr eigenes Fenster (ZOPS,
+       NEWS2, Medikationsplan …), das an body hängt. Neben einem showModal-Fenster lag es unsichtbar dahinter und war
+       nicht bedienbar („Antippen zum Eingeben“ tat nichts). Wie beim Listen-Fenster (ListSheet) entscheidet die Ebene:
+       z-[34] liegt über der App-Hülle (bis z-30) und UNTER allem, was aus einer Lücke heraus öffnet: Listen-Fenster
+       (z-[35]), Prüf-Fenster nach dem Scan (z-40), Kamera (z-50), Rechner und Rückfragen (daisyUI .modal, z-999).
+       Zurück (Android) und Escape im Browser schließen über „Fertig“ (data-back-close, backLayer.ts). Escape per
+       Hardware-Tastatur in der App behandelt das Fenster selbst (escapeIfTop), aber nur, wenn es zuoberst liegt; ein
+       einfaches Escape am Fenster schlösse bei offenem Rechner beide. tabindex="-1": nimmt beim Öffnen den Fokus. -->
+  <Teleport v-if="active" to="body">
+  <div ref="dialog" class="modal modal-open modal-top z-[34] outline-none max-sm:bg-transparent sm:modal-middle" :style="dialogStyle" role="dialog" aria-modal="true" :aria-label="title" tabindex="-1" data-cloze-fill-window @keydown="escapeIfTop($event, dialog, close)">
     <div
       class="modal-box flex h-[var(--lt-h,100dvh)] max-h-none w-full max-w-none translate-none flex-col overflow-hidden rounded-none p-0 transition-[height,opacity,transform] duration-200 ease-out motion-reduce:transition-none sm:h-[min(85vh,var(--lt-h,100dvh))] sm:w-11/12 sm:max-w-2xl sm:rounded-box"
       :style="boxStyle"
@@ -141,11 +163,13 @@ defineExpose({ open, close })
       <template v-if="active">
       <header class="flex shrink-0 items-center gap-2 border-b border-base-300 px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))] sm:pt-2">
         <h3 class="min-w-0 flex-1 text-base font-semibold [overflow-wrap:anywhere]">{{ title }}</h3>
-        <button type="button" class="btn btn-primary btn-sm min-h-11 shrink-0" data-cloze-done @click="close">Fertig</button>
+        <button type="button" class="btn btn-primary btn-sm min-h-11 shrink-0" data-cloze-done data-back-close @click="close">Fertig</button>
       </header>
 
-      <!-- Über der Tastatur wird es eng: der Text behält mindestens eine Zeile, die Abfrage gibt Platz ab. -->
-      <div class="min-h-10 flex-1 overflow-y-auto px-4" :class="covered ? 'py-1.5' : 'py-3'" :style="{ fontSize: `${LONG_TEXT_SIZE_PX[size]}px` }" data-cloze-sentence>
+      <!-- Über der Tastatur wird es eng: der Text behält mindestens eine Zeile, die Abfrage gibt Platz ab.
+           scroll-py-6: Beim Durchtippen rollt der Text die aktuelle Lücke mit etwas Abstand zum Rand ins Bild
+           (ohne klebte sie am unteren Rand und war angeschnitten). -->
+      <div class="min-h-10 flex-1 scroll-py-6 overflow-y-auto px-4" :class="covered ? 'py-1.5' : 'py-3'" :style="{ fontSize: `${LONG_TEXT_SIZE_PX[size]}px` }" data-cloze-sentence>
         <ClozeText :node="node" :root="root" :selected="currentId" @pick="currentId = $event" />
       </div>
 
@@ -198,6 +222,7 @@ defineExpose({ open, close })
       </footer>
       </template>
     </div>
-    <form method="dialog" class="modal-backdrop"><button aria-label="Schließen">close</button></form>
-  </dialog>
+    <button type="button" class="modal-backdrop max-sm:hidden" aria-label="Schließen" tabindex="-1" @click="close"></button>
+  </div>
+  </Teleport>
 </template>

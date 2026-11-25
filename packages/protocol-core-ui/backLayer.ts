@@ -65,6 +65,19 @@ export function topLayer(doc: Document = document): Element | null {
   return layerOf(hits as unknown as LayerEl[]) as unknown as Element | null
 }
 
+/**
+ * Escape für ein einzelnes Fenster, das Escape selbst behandeln muss, weil der gemeinsame Weg (installEscapeClose) nicht
+ * überall eingehängt ist (in der App auf iOS und Android nicht; dort schlossen das frühere native Ausfüll-Fenster und
+ * die Liste per Hardware-Tastatur selbst). Schließt nur, wenn dieses Fenster zuoberst liegt; liegt ein anderes darüber
+ * (Rechner, Kamera, Rückfrage), bleibt es offen. preventDefault: Im Browser lässt der gemeinsame Weg dieses Escape dann
+ * aus, so geht nie ein zweites Fenster mit zu.
+ */
+export function escapeIfTop(e: KeyboardEvent, win: Element | null, close: () => void, doc: Document = document): void {
+  if (e.key !== 'Escape' || e.defaultPrevented || !win) return
+  if (topLayer(doc) !== win) return
+  e.preventDefault()
+  close()
+}
 /** Ergebnis von closeLayer: geschlossen (bzw. angestoßen) oder ohne eigenen Schließen-Weg. */
 export type CloseResult = 'closed' | 'locked'
 

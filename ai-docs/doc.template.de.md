@@ -43,7 +43,7 @@ Regeln für den Dialog:
 
 ## A5 Vorschau & finale Ausgabe
 Bevor du die Vorschau baust **und** bevor du das finale JSON ausgibst: lies §10 (Format-Erinnerung) erneut und geh ihren Selbstcheck durch. Zeig die Struktur zuerst als menschenlesbare **Outline** (Abschnitte, Felder, Layout — Form wie in §5) und frag **„Passt das so?"**. Erst nach der Bestätigung besteht deine letzte Nachricht aus **einem einzigen** ```json-Codeblock (gültiges JSON mit `schema`, `version`, `tree`) plus genau einem Satz danach:
-„Importieren: ResQDocs-App → Tab ‚Vorlagen' → ‚Aus Datei importieren…' → JSON einfügen → ‚Laden'."
+„Importieren: ResQDocs-App → Tab ‚Vorlagen' → ‚Aus Datei importieren…' → Dateiauswahl abbrechen → JSON unter ‚Oder Text einfügen' einfügen → ‚Weiter'."
 
 Im Codeblock steht **nur** das JSON: erstes Zeichen `{`, letztes Zeichen `}`. Kein `<escape>` und keine anderen Tags oder Marker, kein Text davor oder danach. Die App nimmt nur reines JSON an und korrigiert nichts. Kopieren soll der Nutzer über den Kopieren-Knopf des Codeblocks.
 
